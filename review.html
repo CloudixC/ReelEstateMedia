@@ -144,18 +144,18 @@ function renderMedia(){
       p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading photos…</div>';
       fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + r.id + "' in parents and mimeType contains 'image/' and trashed=false") +
         '&key=' + gkey + '&fields=files(id,name)&orderBy=name&pageSize=200')
-      .then(x => { if(!x.ok) throw new Error(x.status); return x.json(); })
+      .then(x => x.json().then(j => { if(!x.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + x.status)); return j; }))
       .then(j => {
         const files = (j.files || []);
-        if(files.length === 0) throw new Error('empty');
+        if(files.length === 0) throw new Error('no images found — is the folder shared as \u201CAnyone with the link\u201D?');
         buildGallery(files.map(fl => ({
           thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
           big: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
           name: fl.name.replace(/\.[a-z0-9]+$/i,'')
         })));
       })
-      .catch(() => folderFallback(r));
-    } else folderFallback(r);
+      .catch(e => folderFallback(r, 'gallery couldn\u2019t load: ' + e.message + '. Checklist: folder shared as \u201CAnyone with link\u201D \u00B7 Drive API enabled \u00B7 key website restriction is https://cloudixc.github.io/*'));
+    } else folderFallback(r, 'this link has no gallery key. In the app, tap \uD83C\uDFAC Review room again after saving your Drive API key so a fresh link is generated.');
   } else if(r.kind === 'dfile'){
     p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
     tman.style.display = ''; tman.placeholder = '1:24';
@@ -166,9 +166,10 @@ function renderMedia(){
     hint.textContent = 'Add your notes below — include a time or photo reference so we know where to look.';
   }
 }
-function folderFallback(r){
+function folderFallback(r, reason){
   const p = document.getElementById('player');
-  p.innerHTML = '<iframe class="tall" src="' + r.src + '"></iframe>';
+  p.innerHTML = (reason ? '<div style="background:rgba(227,34,44,.14);border-bottom:1px solid var(--line);padding:10px 14px;font-size:12.5px;color:var(--dim)">📷 Plain folder view — ' + reason + '</div>' : '') +
+    '<iframe class="tall" src="' + r.src + '"></iframe>';
   const tman = document.getElementById('tman');
   tman.style.display = ''; tman.placeholder = 'Photo # / filename';
   document.getElementById('chint').textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.';
