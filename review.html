@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review</title>
+<style>
+:root{--red:#e3222c;--bg:#0a0a0c;--panel:#161619;--line:#2c2c33;--txt:#f4f1ea;--dim:#a6a49d;--teal:#4cc38a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',sans-serif;padding:18px 14px 80px;line-height:1.5}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-family:Georgia,serif;font-size:23px}h1 em{color:var(--red);font-style:italic}
+.sub{color:var(--dim);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;margin:2px 0 4px;font-weight:600}
+.proj{color:var(--dim);font-size:14px;margin-bottom:14px}
+.vtabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.vtabs button{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+.vtabs button.on{background:var(--red);border-color:var(--red);color:#fff}
+.player{background:#000;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.player video{width:100%;display:block;max-height:72vh;background:#000}
+.player iframe{width:100%;aspect-ratio:16/9;border:none;display:block}
+.player iframe.tall{aspect-ratio:auto;height:74vh}
+.player.vertical video{aspect-ratio:9/16;max-height:72vh;margin:0 auto}
+.bigimg{width:100%;max-height:72vh;object-fit:contain;display:block;background:#000}
+.gnav{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border-top:1px solid var(--line)}
+.gnav button{background:transparent;border:1px solid #6d6d77;color:var(--txt);border-radius:4px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
+.gnav .lbl{font-weight:700;font-size:13px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;margin-top:10px}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;background:#000}
+.thumbs img.on{border-color:var(--red)}
+.compose{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
+.crow{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.tchip{background:var(--red);color:#fff;border:none;border-radius:4px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+input,textarea{background:#1b1b20;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:11px 12px;font-size:16px;width:100%;font-family:inherit;outline:none}
+input:focus,textarea:focus{border-color:var(--red)}
+.tin{width:130px;text-align:center}
+textarea{flex:1;min-width:200px}
+.addbtn{background:transparent;border:1px solid #6d6d77;color:var(--txt);border-radius:4px;padding:11px 18px;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.hint{color:var(--dim);font-size:12px;margin-top:8px}
+.clist{margin-top:14px}
+.cmt{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 12px;margin-bottom:8px}
+.cmt .tt{background:rgba(227,34,44,.18);color:#ff7078;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.cmt .tt.na{background:rgba(76,195,138,.16);color:var(--teal);cursor:default}
+.cmt .x{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;margin-left:auto}
+.actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.send{flex:1;min-width:220px;background:var(--red);color:#fff;border:none;border-radius:4px;padding:15px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer}
+.ok{flex:1;min-width:180px;background:transparent;color:var(--teal);border:1px solid var(--teal);border-radius:4px;padding:15px;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer}
+#out{display:none;margin-top:12px}
+.small{font-size:12px;color:var(--dim)}
+</style></head><body><div class="wrap">
+<h1 id="brand"></h1><div class="sub" id="subline"></div>
+<div class="proj" id="proj"></div>
+<div class="vtabs" id="vtabs"></div>
+<div class="player" id="player"></div>
+<div class="thumbs" id="thumbs"></div>
+<div class="compose">
+  <div class="crow">
+    <button class="tchip" id="refbtn" style="display:none" onclick="stampNow()"></button>
+    <input class="tin" id="tman" style="display:none">
+    <textarea id="ctext" rows="2" placeholder="Your note — what to change, keep, or fix…"></textarea>
+    <button class="addbtn" onclick="addCmt()">Add</button>
+  </div>
+  <div class="hint" id="chint"></div>
+</div>
+<div class="clist" id="clist"></div>
+<div class="actions">
+  <button class="ok" onclick="approve()">✓ Approve this version</button>
+  <a class="send" id="sendlink" href="#">📧 Send feedback</a>
+</div>
+<div id="out"><textarea rows="8" id="blob" readonly></textarea><div class="hint">Copied to clipboard as backup — text it over if email didn't open.</div></div>
+<div class="hint" style="margin-top:14px"><a href="#" style="color:var(--dim)" onclick="if(confirm('Clear all your comments on this review?')){localStorage.removeItem(KEY);location.reload();}return false;">✕ Clear my comments</a></div>
+
+<script>
+const q = new URLSearchParams(location.search);
+const pin = (q.get('t') || 'pin') === 'pin';
+const project = q.get('p') || 'Review';
+const dname = q.get('d') || '';
+const who = q.get('n') || '';
+const vertical = q.get('o') === 'v';
+const email = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
+const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComponent);
+const KEY = 'rem_rev_' + project + '_' + dname;
+let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
+let cmts = [];
+try{ cmts = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){}
+
+document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
+document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Client Review';
+document.getElementById('proj').textContent = project + (dname ? ' — ' + dname : '') + (who ? ' · for ' + who : '');
+document.title = 'Review — ' + project;
+
+function direct(u){
+  if(u.includes('www.dropbox.com')) u = u.replace('www.dropbox.com','dl.dropboxusercontent.com').replace(/([?&])dl=0/,'$1raw=1');
+  return u;
+}
+const isImg = u => /\.(jpe?g|png|webp|gif|heic|avif)(\?|#|$)/i.test(u);
+function resolve(entry){
+  const parts = entry.split(',').map(s => s.trim()).filter(Boolean);
+  if(parts.length > 1 && parts.every(p => isImg(direct(p)))) return {kind:'gallery', imgs: parts.map(direct)};
+  const url = parts[0] || '';
+  const fm = url.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/);
+  if(fm) return {kind:'dfolder', src:'https://drive.google.com/embeddedfolderview?id=' + fm[1] + '#grid'};
+  const dm = url.match(/\/file\/d\/([^\/?#]+)/) || url.match(/[?&]id=([^&#]+)/);
+  if(url.includes('drive.google.com') && dm) return {kind:'dfile', src:'https://drive.google.com/file/d/' + dm[1] + '/preview'};
+  const du = direct(url);
+  if(isImg(du)) return {kind:'img', src:du};
+  if(/\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(du) || du.includes('dl.dropboxusercontent')) return {kind:'video', src:du};
+  return {kind:'frame', src:url};
+}
+function fmt(s){ s = Math.floor(s); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+function parseT(t){ const m = (t||'').trim().match(/^(\d+):(\d{1,2})$/); if(m) return +m[1]*60 + +m[2]; return null; }
+
+function renderTabs(){
+  const el = document.getElementById('vtabs'); el.innerHTML = '';
+  versions.forEach((u,i) => {
+    const b = document.createElement('button');
+    b.textContent = 'V' + (i+1) + (i === versions.length-1 ? ' · Latest' : '');
+    if(i === cur) b.classList.add('on');
+    b.onclick = () => { cur = i; curImg = 0; renderTabs(); renderMedia(); renderList(); };
+    el.appendChild(b);
+  });
+}
+function renderMedia(){
+  const p = document.getElementById('player');
+  const th = document.getElementById('thumbs');
+  const refbtn = document.getElementById('refbtn');
+  const tman = document.getElementById('tman');
+  const hint = document.getElementById('chint');
+  p.className = 'player' + (vertical ? ' vertical' : '');
+  th.innerHTML = ''; vid = null; gallery = []; stamped = null;
+  refbtn.style.display = 'none'; tman.style.display = 'none';
+  const r = resolve(versions[cur] || '');
+  if(r.kind === 'video'){
+    p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
+    vid = p.querySelector('video');
+    refbtn.style.display = ''; refbtn.textContent = '⏱ 0:00';
+    hint.textContent = 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.';
+    const upd = () => { if(stamped === null) refbtn.textContent = '⏱ ' + fmt(vid.currentTime); };
+    vid.addEventListener('timeupdate', upd); vid.addEventListener('pause', upd);
+  } else if(r.kind === 'gallery'){
+    gallery = r.imgs;
+    p.innerHTML = '<img class="bigimg" id="bigimg" src="' + gallery[0].replace(/"/g,'&quot;') + '">' +
+      '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button></div>';
+    gallery.forEach((u,i) => { const im = document.createElement('img'); im.src = u; im.loading = 'lazy';
+      im.onclick = () => { curImg = i; syncGallery(); }; th.appendChild(im); });
+    refbtn.style.display = '';
+    hint.textContent = 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
+    syncGallery();
+  } else if(r.kind === 'img'){
+    p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
+    hint.textContent = 'Type your note and Add — it attaches to this image.';
+  } else if(r.kind === 'dfolder'){
+    p.innerHTML = '<iframe class="tall" src="' + r.src + '"></iframe>';
+    tman.style.display = ''; tman.placeholder = 'Photo # / filename';
+    hint.textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041 or "photo 7"), your note, then Add.';
+  } else if(r.kind === 'dfile'){
+    p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+    tman.style.display = ''; tman.placeholder = '1:24';
+    hint.textContent = 'Type the time from the player (like 1:24), your note, then Add. Pause first so the time is easy to read.';
+  } else {
+    p.innerHTML = '<iframe src="' + r.src.replace(/"/g,'&quot;') + '" allowfullscreen></iframe>';
+    tman.style.display = ''; tman.placeholder = 'time / photo ref (optional)';
+    hint.textContent = 'Add your notes below — include a time or photo reference so we know where to look.';
+  }
+}
+function syncGallery(){
+  document.getElementById('bigimg').src = gallery[curImg];
+  document.getElementById('glbl').textContent = 'Photo ' + (curImg+1) + ' / ' + gallery.length;
+  document.getElementById('refbtn').textContent = '📷 Photo ' + (curImg+1);
+  [...document.getElementById('thumbs').children].forEach((im,i) => im.classList.toggle('on', i === curImg));
+}
+function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
+function stampNow(){
+  if(vid){ vid.pause(); stamped = {t: vid.currentTime}; document.getElementById('refbtn').textContent = '⏱ ' + fmt(stamped.t) + ' ✓'; }
+  else if(gallery.length){ stamped = {img: 'Photo ' + (curImg+1), idx: curImg}; }
+  document.getElementById('ctext').focus();
+}
+function addCmt(){
+  const txt = document.getElementById('ctext').value.trim();
+  if(!txt) return;
+  let ref = {};
+  if(vid) ref = stamped || {t: vid.currentTime};
+  else if(gallery.length) ref = stamped || {img: 'Photo ' + (curImg+1), idx: curImg};
+  else { const man = document.getElementById('tman').value.trim();
+    if(man){ const t = parseT(man); ref = t !== null ? {t} : {img: man}; } }
+  cmts.push(Object.assign({id: Date.now(), ver: cur, txt}, ref));
+  stamped = null;
+  document.getElementById('ctext').value = ''; document.getElementById('tman').value = '';
+  if(gallery.length) syncGallery(); else if(vid) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime);
+  save(); renderList();
+}
+function approve(){ cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version'}); save(); renderList(); }
+function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
+function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
+function renderList(){
+  const el = document.getElementById('clist'); el.innerHTML = '';
+  const mine = cmts.filter(c => c.ver === cur);
+  mine.forEach(c => {
+    const row = document.createElement('div'); row.className = 'cmt';
+    const lbl = refLabel(c);
+    const tt = document.createElement('span'); tt.className = 'tt' + (lbl === null ? ' na' : '');
+    tt.textContent = lbl === null ? '✓' : (c.img && !c.img.startsWith('Photo') ? '📷 ' + lbl : (c.img ? '📷 ' + lbl.replace('Photo ','') : lbl));
+    if(c.t !== undefined && c.t !== null && vid) tt.onclick = () => { vid.currentTime = c.t; vid.pause(); window.scrollTo({top:0, behavior:'smooth'}); };
+    if(c.idx !== undefined && gallery.length){ tt.onclick = () => { curImg = Math.min(c.idx, gallery.length-1); syncGallery(); window.scrollTo({top:0, behavior:'smooth'}); }; }
+    const tx = document.createElement('span'); tx.textContent = c.txt; tx.style.flex = '1';
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => delCmt(c.id);
+    row.appendChild(tt); row.appendChild(tx); row.appendChild(x);
+    el.appendChild(row);
+  });
+  if(mine.length === 0) el.innerHTML = '<div class="small" style="text-align:center;padding:14px">No comments on V' + (cur+1) + ' yet.</div>';
+}
+function blob(){
+  const lines = ['=== FEEDBACK: ' + project + (dname ? ' — ' + dname : '') + ' ===', who ? 'From: ' + who : ''];
+  versions.forEach((u, i) => {
+    const vs = cmts.filter(c => c.ver === i);
+    if(vs.length === 0) return;
+    lines.push('', 'Version ' + (i+1) + ':');
+    vs.forEach(c => { const l = refLabel(c); lines.push((l ? '[' + l + '] ' : '') + c.txt); });
+  });
+  lines.push('', '=== END ===');
+  return lines.join('\n');
+}
+document.getElementById('sendlink').addEventListener('click', function(){
+  this.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Feedback: ' + project + (dname ? ' — ' + dname : '')) + '&body=' + encodeURIComponent(blob());
+  document.getElementById('out').style.display = 'block';
+  const b = document.getElementById('blob'); b.value = blob();
+  if(navigator.clipboard) navigator.clipboard.writeText(b.value).catch(function(){});
+});
+renderTabs(); renderMedia(); renderList();
+</script></div></body></html>

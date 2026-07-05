@@ -379,7 +379,7 @@ const rateFor = (tier, s) => tier === 'direct' ? s.retail : s.partner;
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [],
-  settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: ''}
+  settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: ''}
 };
 function load(){ try{
   const d = JSON.parse(localStorage.getItem(LS_KEY));
@@ -457,7 +457,8 @@ const copyText = async (t) => {
 function reviewMsg(d, o, c){
   const first = ((c && c.name) || 'there').split(' ')[0];
   const ttl = dlTitle(d);
-  return `Hi ${first} — ${ttl}${o && o.project && o.project !== ttl ? ` for ${o.project}` : ''} is ready for your review${d.link ? ': ' + d.link : '!'}` +
+  const rl = d.reviewUrl || d.link;
+  return `Hi ${first} — ${ttl}${o && o.project && o.project !== ttl ? ` for ${o.project}` : ''} is ready for your review${rl ? ': ' + rl : '!'}` +
     `\n\nTake a look and reply with any tweaks (timestamps or notes work great) — I'll turn revisions around quickly. If it's all good, just say the word and I'll send the finals.\n\n— Reel Estate Media`;
 }
 
@@ -919,6 +920,12 @@ function App(){
       const jf = async (url) => {
         const r = await fetch(url, {headers: H});
         if(r.status === 401) throw new Error('AUTH');
+        if(r.status === 403){
+          let detail = '';
+          try { const j = await r.json(); detail = j.message || j.title || ''; } catch(e){}
+          const which = url.includes('/users/me') ? 'users:read' : 'scheduled_events:read';
+          throw new Error('SCOPE:' + which + (detail ? ' — Calendly says: "' + detail + '"' : ''));
+        }
         if(!r.ok) throw new Error('Calendly returned ' + r.status);
         return r.json();
       };
@@ -952,7 +959,9 @@ function App(){
     } catch(err){
       console.error('Calendly sync error:', err);
       setSyncMsg(err.message === 'AUTH'
-        ? '⚠ Calendly rejected the token — it may be expired. Tap ⚙ below to paste a fresh one.'
+        ? '⚠ Calendly rejected the token — it may be expired. Tap ⚙ to paste a fresh one.'
+        : (err.message || '').startsWith('SCOPE:')
+        ? '⚠ Token is missing the ' + err.message.slice(6).split(' ')[0] + ' scope. Scopes are locked in at creation — generate a NEW token in Calendly with BOTH scheduled_events:read and users:read ticked before hitting Create, then tap ⚙ here and paste it.' + (err.message.includes('—') ? ' (' + err.message.slice(err.message.indexOf('—') + 2) + ')' : '')
         : '⚠ Sync failed: ' + (err.message || 'network error') + ' — will retry automatically.');
     }
     setSyncing(false);
@@ -2296,6 +2305,28 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 if(v && v.trim()) updateSettings({briefFormUrl: v.trim()});
               }}>⚙</button>}
             <button className="btn ghost sm" onClick={() => downloadBriefForm(d, order, client)}>📝 Form file</button>
+            <button className="btn ghost sm" onClick={() => {
+              if(!(d.link || '').trim()){ alert('Put the content link in the Delivery Link field first — video (Drive / Dropbox / MP4), a Drive photo FOLDER link, or comma-separated direct image links for a tappable gallery. That becomes the latest version.'); return; }
+              let base = db.settings.reviewPageUrl;
+              if(!base){
+                base = prompt('One-time setup — where is review.html hosted?', 'https://cloudixc.github.io/ReelEstateMedia/review.html');
+                if(!base) return;
+                updateSettings({reviewPageUrl: base.trim()});
+              }
+              const vers = [...(d.reviewVersions || [])];
+              if(!vers.includes(d.link.trim())) vers.push(d.link.trim());
+              updateDeliverable(d.id, {reviewVersions: vers});
+              const pinC = client && (client.tier === 'partner' || client.tier === 'internal');
+              const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
+                '&d=' + encodeURIComponent(dlTitle(d)) +
+                '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
+                '&t=' + (pinC ? 'pin' : 'rem') +
+                (b.orientation === 'Vertical' ? '&o=v' : '') +
+                '&v=' + vers.map(encodeURIComponent).join('|');
+              updateDeliverable(d.id, {reviewUrl: u});
+              copyText(u);
+              window.open(u, '_blank');
+            }}>🎬 Review room{d.reviewVersions && d.reviewVersions.length > 1 ? ' · V' + d.reviewVersions.length : ''}</button>
             <button className="btn ghost sm" onClick={() => setShowImport(s => !s)}>📥 Import answers</button>
           </div>
           {showImport &&
@@ -2441,7 +2472,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
           <button className="btn ghost sm" title="Change or remove token" onClick={() => {
             const v = prompt('Calendly Personal Access Token (clear the field to disconnect):', '········');
             if(v === null) return;
-            updateSettings(v.trim() && v.trim() !== '········' ? {calendlyToken: v.trim(), calendlyUser: ''} : (v.trim() === '' ? {calendlyToken: '', calendlyUser: ''} : {}));
+            updateSettings(v.trim() && v.trim() !== '········' ? {calendlyToken: v.trim(), calendlyUser: ''} : (v.trim() === '' ? {calendlyToken: '', calendlyUser: '', reviewPageUrl: ''} : {}));
           }}>⚙</button>
           <button className="btn ghost sm" disabled={syncing} onClick={syncCalendly}>{syncing ? 'Syncing…' : '⟳ Sync now'}</button>
         </>}
