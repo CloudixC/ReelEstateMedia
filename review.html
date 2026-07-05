@@ -75,6 +75,7 @@ const who = q.get('n') || '';
 const vertical = q.get('o') === 'v';
 const email = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
 const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComponent);
+const gkey = q.get('k') || '';
 const KEY = 'rem_rev_' + project + '_' + dname;
 let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
 let cmts = [];
@@ -92,10 +93,10 @@ function direct(u){
 const isImg = u => /\.(jpe?g|png|webp|gif|heic|avif)(\?|#|$)/i.test(u);
 function resolve(entry){
   const parts = entry.split(',').map(s => s.trim()).filter(Boolean);
-  if(parts.length > 1 && parts.every(p => isImg(direct(p)))) return {kind:'gallery', imgs: parts.map(direct)};
+  if(parts.length > 1 && parts.every(p => isImg(direct(p)))) return {kind:'gallery', imgs: parts.map((p,i) => ({thumb: direct(p), big: direct(p), name: 'Photo ' + (i+1)}))};
   const url = parts[0] || '';
   const fm = url.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/);
-  if(fm) return {kind:'dfolder', src:'https://drive.google.com/embeddedfolderview?id=' + fm[1] + '#grid'};
+  if(fm) return {kind:'dfolder', id: fm[1], src:'https://drive.google.com/embeddedfolderview?id=' + fm[1] + '#grid'};
   const dm = url.match(/\/file\/d\/([^\/?#]+)/) || url.match(/[?&]id=([^&#]+)/);
   if(url.includes('drive.google.com') && dm) return {kind:'dfile', src:'https://drive.google.com/file/d/' + dm[1] + '/preview'};
   const du = direct(url);
@@ -134,21 +135,27 @@ function renderMedia(){
     const upd = () => { if(stamped === null) refbtn.textContent = '⏱ ' + fmt(vid.currentTime); };
     vid.addEventListener('timeupdate', upd); vid.addEventListener('pause', upd);
   } else if(r.kind === 'gallery'){
-    gallery = r.imgs;
-    p.innerHTML = '<img class="bigimg" id="bigimg" src="' + gallery[0].replace(/"/g,'&quot;') + '">' +
-      '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button></div>';
-    gallery.forEach((u,i) => { const im = document.createElement('img'); im.src = u; im.loading = 'lazy';
-      im.onclick = () => { curImg = i; syncGallery(); }; th.appendChild(im); });
-    refbtn.style.display = '';
-    hint.textContent = 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
-    syncGallery();
+    buildGallery(r.imgs);
   } else if(r.kind === 'img'){
     p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
     hint.textContent = 'Type your note and Add — it attaches to this image.';
   } else if(r.kind === 'dfolder'){
-    p.innerHTML = '<iframe class="tall" src="' + r.src + '"></iframe>';
-    tman.style.display = ''; tman.placeholder = 'Photo # / filename';
-    hint.textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041 or "photo 7"), your note, then Add.';
+    if(gkey){
+      p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading photos…</div>';
+      fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + r.id + "' in parents and mimeType contains 'image/' and trashed=false") +
+        '&key=' + gkey + '&fields=files(id,name)&orderBy=name&pageSize=200')
+      .then(x => { if(!x.ok) throw new Error(x.status); return x.json(); })
+      .then(j => {
+        const files = (j.files || []);
+        if(files.length === 0) throw new Error('empty');
+        buildGallery(files.map(fl => ({
+          thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
+          big: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
+          name: fl.name.replace(/\.[a-z0-9]+$/i,'')
+        })));
+      })
+      .catch(() => folderFallback(r));
+    } else folderFallback(r);
   } else if(r.kind === 'dfile'){
     p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
     tman.style.display = ''; tman.placeholder = '1:24';
@@ -159,16 +166,38 @@ function renderMedia(){
     hint.textContent = 'Add your notes below — include a time or photo reference so we know where to look.';
   }
 }
+function folderFallback(r){
+  const p = document.getElementById('player');
+  p.innerHTML = '<iframe class="tall" src="' + r.src + '"></iframe>';
+  const tman = document.getElementById('tman');
+  tman.style.display = ''; tman.placeholder = 'Photo # / filename';
+  document.getElementById('chint').textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.';
+}
+function buildGallery(items){
+  gallery = items;
+  const p = document.getElementById('player');
+  const th = document.getElementById('thumbs');
+  p.innerHTML = '<img class="bigimg" id="bigimg">' +
+    '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button></div>';
+  th.innerHTML = '';
+  items.forEach((g,i) => { const im = document.createElement('img'); im.src = g.thumb; im.loading = 'lazy'; im.title = g.name;
+    im.onclick = () => { curImg = i; syncGallery(); }; th.appendChild(im); });
+  document.getElementById('refbtn').style.display = '';
+  document.getElementById('chint').textContent = 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
+  curImg = Math.min(curImg, items.length - 1);
+  syncGallery();
+}
 function syncGallery(){
-  document.getElementById('bigimg').src = gallery[curImg];
-  document.getElementById('glbl').textContent = 'Photo ' + (curImg+1) + ' / ' + gallery.length;
-  document.getElementById('refbtn').textContent = '📷 Photo ' + (curImg+1);
+  const g = gallery[curImg];
+  document.getElementById('bigimg').src = g.big;
+  document.getElementById('glbl').textContent = g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
+  document.getElementById('refbtn').textContent = '📷 ' + (g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name);
   [...document.getElementById('thumbs').children].forEach((im,i) => im.classList.toggle('on', i === curImg));
 }
 function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
 function stampNow(){
   if(vid){ vid.pause(); stamped = {t: vid.currentTime}; document.getElementById('refbtn').textContent = '⏱ ' + fmt(stamped.t) + ' ✓'; }
-  else if(gallery.length){ stamped = {img: 'Photo ' + (curImg+1), idx: curImg}; }
+  else if(gallery.length){ stamped = {img: gallery[curImg].name, idx: curImg}; }
   document.getElementById('ctext').focus();
 }
 function addCmt(){
@@ -176,7 +205,7 @@ function addCmt(){
   if(!txt) return;
   let ref = {};
   if(vid) ref = stamped || {t: vid.currentTime};
-  else if(gallery.length) ref = stamped || {img: 'Photo ' + (curImg+1), idx: curImg};
+  else if(gallery.length) ref = stamped || {img: gallery[curImg].name, idx: curImg};
   else { const man = document.getElementById('tman').value.trim();
     if(man){ const t = parseT(man); ref = t !== null ? {t} : {img: man}; } }
   cmts.push(Object.assign({id: Date.now(), ver: cur, txt}, ref));
