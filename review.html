@@ -22,16 +22,13 @@ h1{font-family:Georgia,serif;font-size:23px}h1 em{color:var(--red);font-style:it
 .gnav button{background:transparent;border:1px solid #6d6d77;color:var(--txt);border-radius:4px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
 .gnav .lbl{font-weight:700;font-size:13px}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;margin-top:10px}
-.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;background:#000}
+.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;background:#000;display:block}
 .thumbs img.on{border-color:var(--red)}
 .thumbwrap{position:relative;cursor:pointer}
 .thumbwrap .pb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9);pointer-events:none}
-.vprev{width:100%;aspect-ratio:16/9;border:none;display:block;max-height:72vh;background:#000}
+.thumbph{width:100%;aspect-ratio:1;border-radius:6px;background:#1b1b20;border:2px solid transparent;display:flex;align-items:center;justify-content:center;font-size:22px}
 .tsec{grid-column:1/-1;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:800;margin-top:8px}
-.dl{display:none;background:rgba(76,195,138,.08);border:1px solid var(--teal);border-radius:10px;padding:16px;margin-top:14px}
-.dlh{font-weight:800;color:var(--teal);margin-bottom:10px;letter-spacing:.03em}
-.dlbtn{display:inline-block;background:var(--teal);color:#08130d;border:none;border-radius:4px;padding:13px 20px;font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;margin:0 8px 8px 0;cursor:pointer}
-.dlnote{font-size:12px;color:var(--dim);margin-top:2px}
+.vprev{width:100%;aspect-ratio:16/9;border:none;display:block;max-height:72vh;background:#000}
 .compose{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
 .crow{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
 .tchip{background:var(--red);color:#fff;border:none;border-radius:4px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
@@ -49,6 +46,10 @@ textarea{flex:1;min-width:200px}
 .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
 .send{flex:1;min-width:220px;background:var(--red);color:#fff;border:none;border-radius:4px;padding:15px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer}
 .ok{flex:1;min-width:180px;background:transparent;color:var(--teal);border:1px solid var(--teal);border-radius:4px;padding:15px;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer}
+.dl{display:none;background:rgba(76,195,138,.08);border:1px solid var(--teal);border-radius:10px;padding:16px;margin-top:14px}
+.dlh{font-weight:800;color:var(--teal);margin-bottom:10px;letter-spacing:.03em}
+.dlbtn{display:inline-block;background:var(--teal);color:#08130d;border:none;border-radius:4px;padding:13px 20px;font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;margin:0 8px 8px 0;cursor:pointer}
+.dlnote{font-size:12px;color:var(--dim);margin-top:2px}
 #out{display:none;margin-top:12px}
 .small{font-size:12px;color:var(--dim)}
 </style></head><body><div class="wrap">
@@ -85,9 +86,10 @@ const project = q.get('p') || 'Review';
 const dname = q.get('d') || '';
 const who = q.get('n') || '';
 const vertical = q.get('o') === 'v';
+const mboth = q.get('m') === 'both';
+const gkey = q.get('k') || '';
 const email = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
 const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComponent);
-const gkey = q.get('k') || '';
 const KEY = 'rem_rev_' + project + '_' + dname;
 let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
 let cmts = [];
@@ -103,14 +105,11 @@ function direct(u){
   return u;
 }
 const isImg = u => /\.(jpe?g|png|webp|gif|heic|avif)(\?|#|$)/i.test(u);
-function resolve(entry){
-  const parts = entry.split(',').map(s => s.trim()).filter(Boolean);
-  if(parts.length > 1 && parts.every(p => isImg(direct(p)))) return {kind:'gallery', imgs: parts.map((p,i) => ({thumb: direct(p), big: direct(p), name: 'Photo ' + (i+1)}))};
-  const url = parts[0] || '';
+function resolve(url){
   const fm = url.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/);
   if(fm) return {kind:'dfolder', id: fm[1], src:'https://drive.google.com/embeddedfolderview?id=' + fm[1] + '#grid'};
   const dm = url.match(/\/file\/d\/([^\/?#]+)/) || url.match(/[?&]id=([^&#]+)/);
-  if(url.includes('drive.google.com') && dm) return {kind:'dfile', src:'https://drive.google.com/file/d/' + dm[1] + '/preview'};
+  if(url.includes('drive.google.com') && dm) return {kind:'dfile', id: dm[1], src:'https://drive.google.com/file/d/' + dm[1] + '/preview'};
   const du = direct(url);
   if(isImg(du)) return {kind:'img', src:du};
   if(/\.(mp4|mov|m4v|webm)(\?|#|$)/i.test(du) || du.includes('dl.dropboxusercontent')) return {kind:'video', src:du};
@@ -118,6 +117,21 @@ function resolve(entry){
 }
 function fmt(s){ s = Math.floor(s); return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
 function parseT(t){ const m = (t||'').trim().match(/^(\d+):(\d{1,2})$/); if(m) return +m[1]*60 + +m[2]; return null; }
+
+function listFolder(id){
+  return fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + id + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed=false") +
+    '&key=' + gkey + '&fields=files(id,name,mimeType)&orderBy=name&pageSize=200')
+  .then(x => x.json().then(j => { if(!x.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + x.status)); return j; }))
+  .then(j => (j.files || []).map(fl => {
+    const isVid = (fl.mimeType || '').indexOf('video/') === 0;
+    return {
+      thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
+      big: isVid ? 'https://drive.google.com/file/d/' + fl.id + '/preview'
+                 : 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
+      name: fl.name.replace(/\.[a-z0-9]+$/i,''), isVid
+    };
+  }));
+}
 
 function renderTabs(){
   const el = document.getElementById('vtabs'); el.innerHTML = '';
@@ -129,67 +143,96 @@ function renderTabs(){
     el.appendChild(b);
   });
 }
+
+function composer(mode, ph, hint){
+  const refbtn = document.getElementById('refbtn');
+  const tman = document.getElementById('tman');
+  refbtn.style.display = mode === 'stamp' || mode === 'both' ? '' : 'none';
+  tman.style.display = mode === 'manual' || mode === 'both' ? '' : 'none';
+  if(ph) tman.placeholder = ph;
+  document.getElementById('chint').textContent = hint || '';
+}
+
 function renderMedia(){
   const p = document.getElementById('player');
   const th = document.getElementById('thumbs');
-  const refbtn = document.getElementById('refbtn');
-  const tman = document.getElementById('tman');
-  const hint = document.getElementById('chint');
   p.className = 'player' + (vertical ? ' vertical' : '');
   th.innerHTML = ''; vid = null; gallery = []; stamped = null;
-  refbtn.style.display = 'none'; tman.style.display = 'none';
-  const r = resolve(versions[cur] || '');
+  const entry = versions[cur] || '';
+  const parts = entry.split(',').map(s => s.trim()).filter(Boolean);
+  if(parts.length > 1) assembleParts(parts);
+  else renderSingle(parts[0] || '');
+}
+
+function renderSingle(url){
+  const p = document.getElementById('player');
+  const r = resolve(url);
   if(r.kind === 'video'){
     p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
     vid = p.querySelector('video');
-    refbtn.style.display = ''; refbtn.textContent = '⏱ 0:00';
-    hint.textContent = 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.';
-    const upd = () => { if(stamped === null) refbtn.textContent = '⏱ ' + fmt(vid.currentTime); };
+    document.getElementById('refbtn').textContent = '⏱ 0:00';
+    composer('stamp', '', 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.');
+    const upd = () => { if(stamped === null) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime); };
     vid.addEventListener('timeupdate', upd); vid.addEventListener('pause', upd);
-  } else if(r.kind === 'gallery'){
-    buildGallery(r.imgs);
   } else if(r.kind === 'img'){
     p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
-    hint.textContent = 'Type your note and Add — it attaches to this image.';
+    composer('none', '', 'Type your note and Add — it attaches to this image.');
   } else if(r.kind === 'dfolder'){
     if(gkey){
-      p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading photos…</div>';
-      fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + r.id + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed=false") +
-        '&key=' + gkey + '&fields=files(id,name,mimeType)&orderBy=name&pageSize=200')
-      .then(x => x.json().then(j => { if(!x.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + x.status)); return j; }))
-      .then(j => {
-        const files = (j.files || []);
-        if(files.length === 0) throw new Error('no images found — is the folder shared as \u201CAnyone with the link\u201D?');
-        buildGallery(files.map(fl => {
-          const isVid = (fl.mimeType || '').indexOf('video/') === 0;
-          return {
-            thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
-            big: isVid ? 'https://drive.google.com/file/d/' + fl.id + '/preview'
-                       : 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
-            name: fl.name.replace(/\.[a-z0-9]+$/i,''), isVid
-          };
-        }));
-      })
-      .catch(e => folderFallback(r, 'gallery couldn\u2019t load: ' + e.message + '. Checklist: folder shared as \u201CAnyone with link\u201D \u00B7 Drive API enabled \u00B7 key website restriction is https://cloudixc.github.io/*'));
-    } else folderFallback(r, 'this link has no gallery key. In the app, tap \uD83C\uDFAC Review room again after saving your Drive API key so a fresh link is generated.');
+      p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading…</div>';
+      listFolder(r.id).then(items => {
+        if(items.length === 0) throw new Error('no media found — is the folder shared as “Anyone with the link”?');
+        buildGallery(items);
+      }).catch(e => folderFallback(r, 'gallery couldn’t load: ' + e.message + '. Checklist: folder shared as “Anyone with link” · Drive API enabled · key website restriction is https://cloudixc.github.io/*'));
+    } else folderFallback(r, 'this link has no gallery key. In the app, tap 🎬 Review room again after saving your Drive API key so a fresh link is generated.');
   } else if(r.kind === 'dfile'){
     p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-    tman.style.display = ''; tman.placeholder = '1:24';
-    hint.textContent = 'Type the time from the player (like 1:24), your note, then Add. Pause first so the time is easy to read.';
+    composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. Pause first so the time is easy to read.');
   } else {
     p.innerHTML = '<iframe src="' + r.src.replace(/"/g,'&quot;') + '" allowfullscreen></iframe>';
-    tman.style.display = ''; tman.placeholder = 'time / photo ref (optional)';
-    hint.textContent = 'Add your notes below — include a time or photo reference so we know where to look.';
+    composer('manual', 'time / photo ref (optional)', 'Add your notes below — include a time or photo reference so we know where to look.');
   }
+}
+
+function assembleParts(parts){
+  const p = document.getElementById('player');
+  p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading…</div>';
+  (async () => {
+    let items = [];
+    for(const part of parts){
+      const r = resolve(part);
+      if(r.kind === 'dfolder'){
+        if(!gkey) throw new Error('folder needs the gallery key — regenerate the link from the app after saving your Drive API key');
+        items = items.concat(await listFolder(r.id));
+      } else if(r.kind === 'dfile'){
+        let name = 'Video';
+        if(gkey){ try{ const j = await fetch('https://www.googleapis.com/drive/v3/files/' + r.id + '?fields=name&key=' + gkey).then(x => x.json()); if(j.name) name = j.name.replace(/\.[a-z0-9]+$/i,''); }catch(e){} }
+        items.push({thumb: 'https://drive.google.com/thumbnail?id=' + r.id + '&sz=w400', big: r.src, name, isVid: true});
+      } else if(r.kind === 'img'){
+        items.push({thumb: r.src, big: r.src, name: 'Photo ' + (items.length + 1)});
+      } else if(r.kind === 'video'){
+        items.push({thumb: '', big: r.src, name: 'Video', isVid: true, dvid: true});
+      }
+    }
+    if(items.length === 0) throw new Error('nothing loadable in this version');
+    buildGallery(items);
+  })().catch(e => renderSingleWithNote(parts[0], 'combined view unavailable — ' + e.message));
+}
+function renderSingleWithNote(url, note){
+  renderSingle(url);
+  const p = document.getElementById('player');
+  const n = document.createElement('div');
+  n.style.cssText = 'background:rgba(227,34,44,.14);padding:10px 14px;font-size:12.5px;color:var(--dim)';
+  n.textContent = '⚠ ' + note;
+  p.insertBefore(n, p.firstChild);
 }
 function folderFallback(r, reason){
   const p = document.getElementById('player');
   p.innerHTML = (reason ? '<div style="background:rgba(227,34,44,.14);border-bottom:1px solid var(--line);padding:10px 14px;font-size:12.5px;color:var(--dim)">📷 Plain folder view — ' + reason + '</div>' : '') +
     '<iframe class="tall" src="' + r.src + '"></iframe>';
-  const tman = document.getElementById('tman');
-  tman.style.display = ''; tman.placeholder = 'Photo # / filename';
-  document.getElementById('chint').textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.';
+  composer('manual', 'Photo # / filename', 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.');
 }
+
 function buildGallery(items){
   const ph = items.filter(x => !x.isVid), vd = items.filter(x => x.isVid);
   gallery = [...ph, ...vd];
@@ -204,35 +247,42 @@ function buildGallery(items){
     arr.forEach((g,i) => {
       const idx = off + i;
       const w = document.createElement('div'); w.className = 'thumbwrap';
-      const im = document.createElement('img'); im.src = g.thumb; im.loading = 'lazy'; im.title = g.name;
+      if(g.thumb){ const im = document.createElement('img'); im.src = g.thumb; im.loading = 'lazy'; im.title = g.name; w.appendChild(im); }
+      else { const d = document.createElement('div'); d.className = 'thumbph'; d.textContent = '🎬'; w.appendChild(d); }
       w.onclick = () => { curImg = idx; syncGallery(); };
-      w.appendChild(im);
-      if(g.isVid){ const pb = document.createElement('span'); pb.className = 'pb'; pb.textContent = '▶'; w.appendChild(pb); }
+      if(g.isVid && g.thumb){ const pb = document.createElement('span'); pb.className = 'pb'; pb.textContent = '▶'; w.appendChild(pb); }
       th.appendChild(w);
     });
   };
   addSection('📷 Photos', ph, 0);
   addSection('🎬 Video', vd, ph.length);
-  document.getElementById('refbtn').style.display = '';
-  document.getElementById('chint').textContent = 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
-  curImg = Math.min(curImg, items.length - 1);
+  curImg = Math.min(curImg, gallery.length - 1);
   syncGallery();
 }
 function syncGallery(){
   const g = gallery[curImg];
   const bw = document.getElementById('bigwrap');
-  if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+  if(g.dvid) bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
+  else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
   else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
-  document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : gallery.some(x => x.isVid) ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
+  const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
+  document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
   const short = g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name;
   document.getElementById('refbtn').textContent = (g.isVid ? '🎥 ' : '📷 ') + short;
-  const tman = document.getElementById('tman');
-  tman.style.display = g.isVid ? '' : 'none';
-  if(g.isVid) tman.placeholder = '1:24 (optional)';
-  document.getElementById('chint').textContent = g.isVid
-    ? 'Playing right here in the room. For a time-specific note, add the time from the player (like 1:24), then your note.'
-    : 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
-  [...document.getElementById('thumbs').children].forEach((w,i) => { const im = w.querySelector('img'); if(im) im.classList.toggle('on', i === curImg); });
+  composer(g.isVid ? 'both' : 'stamp', g.isVid ? '1:24 (optional)' : '',
+    g.isVid ? 'Playing right here in the room. For a time-specific note, add the time from the player (like 1:24), then your note.'
+            : 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.');
+  [...document.getElementById('thumbs').children].forEach((w,i) => { const im = w.querySelector('img'); if(im) im.classList.toggle('on', gallery.indexOf(g) >= 0 && w.onclick && i >= 0 && false); });
+  // highlight current thumb (account for section headers)
+  let gi = 0;
+  [...document.getElementById('thumbs').children].forEach(w => {
+    if(w.className === 'tsec') return;
+    const im = w.querySelector('img'); const d = w.querySelector('.thumbph');
+    const on = gi === curImg;
+    if(im) im.classList.toggle('on', on);
+    if(d) d.style.borderColor = on ? 'var(--red)' : 'transparent';
+    gi++;
+  });
 }
 function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
 function stampNow(){
@@ -258,6 +308,27 @@ function addCmt(){
 }
 function approve(){ cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version'}); save(); renderList();
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
+function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
+function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
+function renderList(){
+  const el = document.getElementById('clist'); el.innerHTML = '';
+  const mine = cmts.filter(c => c.ver === cur);
+  mine.forEach(c => {
+    const row = document.createElement('div'); row.className = 'cmt';
+    const lbl = refLabel(c);
+    const tt = document.createElement('span'); tt.className = 'tt' + (lbl === null ? ' na' : '');
+    tt.textContent = lbl === null ? '✓' : (c.img ? '📷 ' + lbl : lbl);
+    if(c.t !== undefined && c.t !== null && vid) tt.onclick = () => { vid.currentTime = c.t; vid.pause(); window.scrollTo({top:0, behavior:'smooth'}); };
+    if(c.idx !== undefined && gallery.length){ tt.onclick = () => { curImg = Math.min(c.idx, gallery.length-1); syncGallery(); window.scrollTo({top:0, behavior:'smooth'}); }; }
+    const tx = document.createElement('span'); tx.textContent = c.txt; tx.style.flex = '1';
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => delCmt(c.id);
+    row.appendChild(tt); row.appendChild(tx); row.appendChild(x);
+    el.appendChild(row);
+  });
+  if(mine.length === 0) el.innerHTML = '<div class="small" style="text-align:center;padding:14px">No comments on V' + (cur+1) + ' yet.</div>';
+  renderDl();
+}
 function dlLink(url){
   const u = url.trim();
   const fm = u.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/);
@@ -273,33 +344,15 @@ function renderDl(){
   dp.style.display = approved ? 'block' : 'none';
   if(!approved) return;
   const box = document.getElementById('dllinks'); box.innerHTML = '';
-  (versions[cur] || '').split(',').map(s => s.trim()).filter(Boolean).forEach(u => {
+  const parts = (versions[cur] || '').split(',').map(s => s.trim()).filter(Boolean);
+  parts.forEach((u, i) => {
     const d = dlLink(u);
-    const a = document.createElement('a'); a.className = 'dlbtn'; a.href = d.href; a.target = '_blank'; a.rel = 'noreferrer'; a.textContent = d.label;
+    let label = d.label;
+    if(mboth && parts.length === 2) label = (i === 0 ? '📷 ' : '🎬 ') + label.replace('⬇ ','') , label = '⬇ ' + label;
+    const a = document.createElement('a'); a.className = 'dlbtn'; a.href = d.href; a.target = '_blank'; a.rel = 'noreferrer'; a.textContent = label;
     box.appendChild(a);
     if(d.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = d.note; box.appendChild(n); }
   });
-}
-function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
-function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
-function renderList(){
-  const el = document.getElementById('clist'); el.innerHTML = '';
-  const mine = cmts.filter(c => c.ver === cur);
-  mine.forEach(c => {
-    const row = document.createElement('div'); row.className = 'cmt';
-    const lbl = refLabel(c);
-    const tt = document.createElement('span'); tt.className = 'tt' + (lbl === null ? ' na' : '');
-    tt.textContent = lbl === null ? '✓' : (c.img && !c.img.startsWith('Photo') ? '📷 ' + lbl : (c.img ? '📷 ' + lbl.replace('Photo ','') : lbl));
-    if(c.t !== undefined && c.t !== null && vid) tt.onclick = () => { vid.currentTime = c.t; vid.pause(); window.scrollTo({top:0, behavior:'smooth'}); };
-    if(c.idx !== undefined && gallery.length){ tt.onclick = () => { curImg = Math.min(c.idx, gallery.length-1); syncGallery(); window.scrollTo({top:0, behavior:'smooth'}); }; }
-    const tx = document.createElement('span'); tx.textContent = c.txt; tx.style.flex = '1';
-    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => delCmt(c.id);
-    row.appendChild(tt); row.appendChild(tx); row.appendChild(x);
-    el.appendChild(row);
-  });
-  if(mine.length === 0) el.innerHTML = '<div class="small" style="text-align:center;padding:14px">No comments on V' + (cur+1) + ' yet.</div>';
-  renderDl();
 }
 function blob(){
   const lines = ['=== FEEDBACK: ' + project + (dname ? ' — ' + dname : '') + ' ===', who ? 'From: ' + who : ''];

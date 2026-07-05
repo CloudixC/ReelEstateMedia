@@ -469,7 +469,8 @@ function deliveryMsg(d, o, c){
   if(b.orientation) bits.push(b.orientation.toLowerCase() + ' format');
   if(b.style) bits.push(b.style.toLowerCase() + (EDIT_STYLES.includes(b.style) ? ' edit' : ''));
   const ttl = (b.topic || '').trim();
-  return `Hi ${first} — your ${d.group}${ttl ? ` (\u201C${ttl}\u201D)` : ''}${o && o.project ? ` for ${o.project}` : ''} is ready${d.link ? ': ' + d.link : '!'}` +
+  const dl2 = mediaOf(d) === 'both' && (d.linkVideo || '').trim();
+  return `Hi ${first} — your ${d.group}${ttl ? ` (\u201C${ttl}\u201D)` : ''}${o && o.project ? ` for ${o.project}` : ''} is ready${dl2 ? `!\n\uD83D\uDCF7 Photos: ${d.link}\n\uD83C\uDFAC Video: ${d.linkVideo}` : (d.link ? ': ' + d.link : '!')}` +
     (bits.length ? `\n(${bits.join(', ')})` : '') +
     `\n\nLet me know if you'd like any tweaks — happy to adjust.\n\n— Reel Estate Media`;
 }
@@ -830,12 +831,18 @@ function App(){
   const updateDeliverable = (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
     if(cur && patch.status === 'Delivered' && cur.status !== 'Delivered'){
-      const l = prompt('📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
+      const isB = mediaOf(cur) === 'both';
+      const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip.' : '📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
       if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
+      if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
+        if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
     }
     if(cur && patch.status === 'Client Review' && cur.status !== 'Client Review'){
-      const l = prompt('👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
+      const isB = mediaOf(cur) === 'both';
+      const l = prompt(isB ? '📷 Photos review link? OK to save — blank to skip.' : '👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
       if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
+      if(isB){ const lv = prompt('🎬 Video review link? OK to save — blank to skip.', cur.linkVideo || '');
+        if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
     }
     setDb(p => ({...p, deliverables: p.deliverables.map(d => {
       if(d.id !== id) return d;
@@ -2279,8 +2286,15 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
           <input placeholder="IG Reel 9:16, MLS, YouTube 4K…" value={b.delivery} onChange={e => setBrief({delivery: e.target.value})}/>
         </div>
         <div>
-          <label className="f">Delivery Link</label>
-          <input placeholder="Final file / Drive / Frame.io link" value={d.link} onChange={e => updateDeliverable(d.id, {link: e.target.value})}/>
+          {mediaOf(d) === 'both' ? <>
+            <label className="f">📷 Photos Link</label>
+            <input placeholder="Drive folder / image links" value={d.link} onChange={e => updateDeliverable(d.id, {link: e.target.value})}/>
+            <label className="f" style={{marginTop:10, display:'block'}}>🎬 Video Link</label>
+            <input placeholder="Drive file / Dropbox / MP4" value={d.linkVideo || ''} onChange={e => updateDeliverable(d.id, {linkVideo: e.target.value})}/>
+          </> : <>
+            <label className="f">Delivery Link</label>
+            <input placeholder="Final file / Drive / Frame.io link" value={d.link} onChange={e => updateDeliverable(d.id, {link: e.target.value})}/>
+          </>}
           <div className="flex" style={{gap:6, marginTop:6, flexWrap:'wrap'}}>
             <CopyBtn text={reviewMsg(d, order, client)} label="✉ Review message"/>
             <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Delivery message"/>
@@ -2306,15 +2320,17 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
               }}>⚙</button>}
             <button className="btn ghost sm" onClick={() => downloadBriefForm(d, order, client)}>📝 Form file</button>
             <button className="btn ghost sm" onClick={() => {
-              if(!(d.link || '').trim()){ alert('Put the content link in the Delivery Link field first — video (Drive / Dropbox / MP4), a Drive photo FOLDER link, or comma-separated direct image links for a tappable gallery. That becomes the latest version.'); return; }
+              const srcs = [(d.link || '').trim(), mediaOf(d) === 'both' ? (d.linkVideo || '').trim() : ''].filter(Boolean);
+              if(srcs.length === 0){ alert('Put the content link(s) in first — Drive folder / file, Dropbox, MP4, or comma-separated image links. They become the latest version.'); return; }
               let base = db.settings.reviewPageUrl;
               if(!base){
                 base = prompt('One-time setup — where is review.html hosted?', 'https://cloudixc.github.io/ReelEstateMedia/review.html');
                 if(!base) return;
                 updateSettings({reviewPageUrl: base.trim()});
               }
+              const entry = srcs.join(',');
               const vers = [...(d.reviewVersions || [])];
-              if(!vers.includes(d.link.trim())) vers.push(d.link.trim());
+              if(!vers.includes(entry)) vers.push(entry);
               if(/\/drive\/(?:u\/\d+\/)?folders\//.test(d.link) && !db.settings.driveApiKey){
                 const k = prompt('Optional, one-time: a Google Drive API key lets the review room show folder photos in a branded gallery with per-photo comments. Paste it here, or Cancel to use the plain folder view.\n\n(console.cloud.google.com → enable Drive API → Credentials → API key)');
                 if(k && k.trim()) updateSettings({driveApiKey: k.trim()});
@@ -2326,6 +2342,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pinC ? 'pin' : 'rem') +
                 (b.orientation === 'Vertical' ? '&o=v' : '') +
+                (mediaOf(d) === 'both' ? '&m=both' : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
                 (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
               updateDeliverable(d.id, {reviewUrl: u});
