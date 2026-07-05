@@ -383,6 +383,8 @@ function load(){ try{
     if(!d.settings) d.settings = {pinnacleGoal:1000};
     if(!d.settings.emailMap) d.settings.emailMap = {};
     if(!d.settings.eventMap) d.settings.eventMap = {};
+    if(d.settings.briefFormUrl === 'https://cloudixc.github.io/brief-form.html')
+      d.settings.briefFormUrl = 'https://cloudixc.github.io/ReelEstateMedia/brief-form.html';
     if(!d.pendingBookings) d.pendingBookings = [];
     if(!d.importedIds) d.importedIds = [];
     if(!d.activity) d.activity = [];
@@ -2173,6 +2175,11 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
               copyText(u);
               alert('Form link copied — text it to ' + (((client && client.name) || 'the client').split(' ')[0]) + '. Links open in the real browser, so the buttons always work.');
             }}>🔗 Copy form link</button>
+            {db.settings.briefFormUrl &&
+              <button className="btn ghost sm" title="Change hosted form URL" onClick={() => {
+                const v = prompt('Hosted form URL:', db.settings.briefFormUrl);
+                if(v && v.trim()) updateSettings({briefFormUrl: v.trim()});
+              }}>⚙</button>}
             <button className="btn ghost sm" onClick={() => downloadBriefForm(d, order, client)}>📝 Form file</button>
             <button className="btn ghost sm" onClick={() => setShowImport(s => !s)}>📥 Import answers</button>
           </div>
