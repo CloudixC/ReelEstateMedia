@@ -2537,6 +2537,14 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
   const s = svc(serviceId);
   const openOrders = db.orders.filter(o => { const p = orderProgress(o.id); return p.done < p.total; });
   const orderDls = db.deliverables.filter(d => d.orderId === orderId && d.status !== 'Delivered');
+  const cName = (db.clients.find(c => c.id === clientId) || {}).name || 'This client';
+  const waiting = db.deliverables
+    .filter(d => d.status === 'Booked' && (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
+    .sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+  useEffect(() => {
+    if(waiting.length){ setMode('attach'); setOrderId(waiting[0].orderId); setDlId(waiting[0].id); }
+    else setMode('new');
+  }, [clientId]);
 
   return (
   <div className="card">
@@ -2559,6 +2567,13 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
         <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('internal')}>+ add as Pinnacle internal (no margin)</button>
       </div>}
     </div>
+    {waiting.length > 0 &&
+    <div style={{marginTop:12, background:'rgba(76,195,138,.1)', border:'1px solid rgba(76,195,138,.4)', borderRadius:8, padding:'10px 13px'}}>
+      <span className="small" style={{color:'var(--teal)', fontWeight:700}}>
+        💳 {cName} has {waiting.length} credit{waiting.length !== 1 ? 's' : ''} waiting in “{waiting[0].group}” —
+        defaulted to attaching this date to <strong>{waiting[0].name}</strong> so nothing gets double-billed.
+      </span>
+    </div>}
     <div className="frow one" style={{marginTop:12}}>
       <div>
         <label className="f">This booking is…</label>
