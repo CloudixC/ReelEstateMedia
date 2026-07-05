@@ -67,6 +67,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--red)}
 
 <a class="send" id="sendlink" href="#" >📧 Send answers</a>
 <button class="alt" onclick="copyOut()">📋 Copy answers instead</button>
+<button class="alt" style="border:none;color:var(--dim);font-size:11px;letter-spacing:.04em" onclick="clearSaved()">✕ Clear my answers &amp; start fresh</button>
 <div id="out"><textarea rows="10" id="blob" readonly></textarea>
 <div class="note" style="margin-top:8px">Copied! If not — select all &amp; copy, then text it back.</div></div>
 
@@ -82,10 +83,36 @@ document.getElementById('proj').textContent = project + (who ? ' · for ' + who 
 document.getElementById('excl').textContent = pin ? 'Exclusively for Royal LePage Pinnacle agents.' : '';
 document.title = 'Shoot Brief — ' + (pin ? 'Content Hub' : 'Reel Estate Media');
 if(q.get('tp')) document.getElementById('f_topic').value = q.get('tp');
+const KEY = 'rem_brief_' + project;
+function saveState(){
+  try{ localStorage.setItem(KEY, JSON.stringify({
+    topic: v('f_topic'), scriptLink: v('f_scriptLink'), song: v('f_song'),
+    style: v('f_style'), stylenotes: v('f_stylenotes'),
+    location: document.getElementById('f_location').value,
+    post: v('f_post'), delivery: v('f_delivery'),
+    script: pick('f_script'), orientation: pick('f_orientation')
+  })); }catch(e){}
+}
+function restoreState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if(!s) return;
+    [['f_topic','topic'],['f_scriptLink','scriptLink'],['f_song','song'],['f_style','style'],
+     ['f_stylenotes','stylenotes'],['f_location','location'],['f_post','post'],['f_delivery','delivery']]
+      .forEach(function(p){ if(s[p[1]]) document.getElementById(p[0]).value = s[p[1]]; });
+    [['f_script','script'],['f_orientation','orientation']].forEach(function(p){
+      if(s[p[1]]){ const btn = document.querySelector('#' + p[0] + ' button[data-v="' + s[p[1]] + '"]'); if(btn) btn.classList.add('on'); }
+    });
+  }catch(e){}
+}
+function clearSaved(){ try{ localStorage.removeItem(KEY); }catch(e){} location.reload(); }
+document.addEventListener('input', saveState);
+restoreState();
 document.querySelectorAll('.opts').forEach(g => g.addEventListener('click', e => {
   if(e.target.tagName !== 'BUTTON') return;
   g.querySelectorAll('button').forEach(x => x.classList.remove('on'));
   e.target.classList.add('on');
+  saveState();
 }));
 function pick(id){ const el = document.querySelector('#' + id + ' button.on'); return el ? el.dataset.v : ''; }
 function v(id){ return document.getElementById(id).value.trim(); }

@@ -689,7 +689,7 @@ function LockScreen({onUnlock}){
   <div className="lockwrap">
     <div className="lockbox">
       <h1 className="serif" style={{fontSize:30}}>Reel Estate <em style={{color:'var(--amber)', fontStyle:'italic'}}>Media</em></h1>
-      <div className="locksub">Production Pipeline \u00B7 Pinnacle Command Centre</div>
+      <div className="locksub">Production Pipeline · Pinnacle Command Centre</div>
       {mode === 'setup' && <p className="small muted" style={{margin:'14px 0 4px'}}>First visit on this device — set a passcode to protect your data here.</p>}
       {mode === 'enter' && <input autoFocus type="password" placeholder="Passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
       {mode === 'change' && <input autoFocus type="password" placeholder="Current passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
@@ -701,7 +701,7 @@ function LockScreen({onUnlock}){
       <button className="btn" style={{width:'100%', marginTop:16}} onClick={submit}>
         {mode === 'enter' ? 'Unlock' : mode === 'setup' ? 'Set Passcode & Enter' : 'Change & Enter'}</button>
       {mode === 'enter' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('change'); setErr(''); }}>Change passcode</button>}
-      {mode === 'change' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('enter'); setErr(''); }}>\u2190 Back</button>}
+      {mode === 'change' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('enter'); setErr(''); }}>← Back</button>}
       <div className="small faint" style={{marginTop:16, lineHeight:1.5}}>Locks this browser only. Forgot it? Clearing site data resets the lock — restore your data from a backup file after.</div>
     </div>
   </div>);
@@ -1734,9 +1734,34 @@ document.querySelectorAll('.opts').forEach(g => g.addEventListener('click', e =>
   if(e.target.tagName !== 'BUTTON') return;
   g.querySelectorAll('button').forEach(x => x.classList.remove('on'));
   e.target.classList.add('on');
+  saveState();
 }));
 function pick(id){ const el = document.querySelector('#' + id + ' button.on'); return el ? el.dataset.v : ''; }
 function v(id){ return document.getElementById(id).value.trim(); }
+const KEY = 'rem_brief_' + ${JSON.stringify(o.project || d.group)};
+function saveState(){
+  try{ localStorage.setItem(KEY, JSON.stringify({
+    topic: v('f_topic'), scriptLink: v('f_scriptLink'), song: v('f_song'),
+    style: v('f_style'), stylenotes: v('f_stylenotes'),
+    location: document.getElementById('f_location').value,
+    post: v('f_post'), delivery: v('f_delivery'),
+    script: pick('f_script'), orientation: pick('f_orientation')
+  })); }catch(e){}
+}
+function restoreState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if(!s) return;
+    [['f_topic','topic'],['f_scriptLink','scriptLink'],['f_song','song'],['f_style','style'],
+     ['f_stylenotes','stylenotes'],['f_location','location'],['f_post','post'],['f_delivery','delivery']]
+      .forEach(function(p){ if(s[p[1]]) document.getElementById(p[0]).value = s[p[1]]; });
+    [['f_script','script'],['f_orientation','orientation']].forEach(function(p){
+      if(s[p[1]]){ const btn = document.querySelector('#' + p[0] + ' button[data-v="' + s[p[1]] + '"]'); if(btn) btn.classList.add('on'); }
+    });
+  }catch(e){}
+}
+document.addEventListener('input', saveState);
+restoreState();
 function blob(){
   const style = v('f_style'); const notes = v('f_stylenotes');
   return ['=== REM BRIEF ===',
@@ -2240,8 +2265,8 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 '&t=' + (pin ? 'pin' : 'rem') +
                 (getBrief(d).topic ? '&tp=' + encodeURIComponent(getBrief(d).topic) : '');
               copyText(u);
-              alert('Form link copied — text it to ' + (((client && client.name) || 'the client').split(' ')[0]) + '. Links open in the real browser, so the buttons always work.');
-            }}>🔗 Copy form link</button>
+              window.open(u, '_blank');
+            }}>🔗 Copy + open form link</button>
             {db.settings.briefFormUrl &&
               <button className="btn ghost sm" title="Change hosted form URL" onClick={() => {
                 const v = prompt('Hosted form URL:', db.settings.briefFormUrl);
