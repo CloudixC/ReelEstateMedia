@@ -141,6 +141,10 @@
   .crows a{color:var(--cream);text-decoration:none;border-bottom:1px dotted var(--line2)}
   .crows a:hover{color:var(--amber);border-color:var(--amber)}
   .cstats{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .lockwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);
+    background-image:radial-gradient(900px 480px at 70% -10%, rgba(227,34,44,.1), transparent 60%);padding:20px}
+  .lockbox{width:100%;max-width:380px;text-align:center;background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:36px 30px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .locksub{color:var(--cream-faint);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin-top:4px;font-weight:600}
   .shootmode{position:fixed;inset:0;background:var(--bg);z-index:70;overflow-y:auto;padding:18px 16px 60px}
   .sm-inner{max-width:720px;margin:0 auto}
   .sm-clock{font-size:32px;font-weight:700;margin:10px 0 4px}
@@ -644,8 +648,68 @@ function ClientPicker({db, value, onChange}){
     </div>);
 }
 
+/* ---------------- Lock screen ---------------- */
+const LOCK_KEY = 'rem_lock_v1';
+async function hashText(t){
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem\u00B7' + t));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e){
+    let h = 5381; const s = 'rem\u00B7' + t;
+    for(let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+    return 'djb2:' + h.toString(16);
+  }
+}
+function LockScreen({onUnlock}){
+  const hasLock = !!localStorage.getItem(LOCK_KEY);
+  const [mode, setMode] = useState(hasLock ? 'enter' : 'setup');
+  const [cur, setCur] = useState('');
+  const [p1, setP1] = useState('');
+  const [p2, setP2] = useState('');
+  const [err, setErr] = useState('');
+  const unlock = () => { sessionStorage.setItem('rem_unlocked', '1'); onUnlock(); };
+  const submit = async () => {
+    setErr('');
+    if(mode === 'enter'){
+      if(await hashText(cur) === localStorage.getItem(LOCK_KEY)) unlock();
+      else setErr('Wrong passcode.');
+    } else if(mode === 'setup'){
+      if(p1.length < 4){ setErr('At least 4 characters.'); return; }
+      if(p1 !== p2){ setErr('Passcodes don\u2019t match.'); return; }
+      localStorage.setItem(LOCK_KEY, await hashText(p1)); unlock();
+    } else { // change
+      if(await hashText(cur) !== localStorage.getItem(LOCK_KEY)){ setErr('Current passcode is wrong.'); return; }
+      if(p1.length < 4){ setErr('New passcode: at least 4 characters.'); return; }
+      if(p1 !== p2){ setErr('New passcodes don\u2019t match.'); return; }
+      localStorage.setItem(LOCK_KEY, await hashText(p1)); unlock();
+    }
+  };
+  const onKey = e => { if(e.key === 'Enter') submit(); };
+  return (
+  <div className="lockwrap">
+    <div className="lockbox">
+      <h1 className="serif" style={{fontSize:30}}>Reel Estate <em style={{color:'var(--amber)', fontStyle:'italic'}}>Media</em></h1>
+      <div className="locksub">Production Pipeline \u00B7 Pinnacle Command Centre</div>
+      {mode === 'setup' && <p className="small muted" style={{margin:'14px 0 4px'}}>First visit on this device — set a passcode to protect your data here.</p>}
+      {mode === 'enter' && <input autoFocus type="password" placeholder="Passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
+      {mode === 'change' && <input autoFocus type="password" placeholder="Current passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
+      {mode !== 'enter' && <>
+        <input type="password" placeholder={mode === 'change' ? 'New passcode' : 'Choose a passcode'} value={p1} onChange={e => setP1(e.target.value)} onKeyDown={onKey} style={{marginTop:10}}/>
+        <input type="password" placeholder="Confirm passcode" value={p2} onChange={e => setP2(e.target.value)} onKeyDown={onKey} style={{marginTop:10}}/>
+      </>}
+      {err && <div className="small" style={{color:'var(--red)', marginTop:8, fontWeight:700}}>{err}</div>}
+      <button className="btn" style={{width:'100%', marginTop:16}} onClick={submit}>
+        {mode === 'enter' ? 'Unlock' : mode === 'setup' ? 'Set Passcode & Enter' : 'Change & Enter'}</button>
+      {mode === 'enter' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('change'); setErr(''); }}>Change passcode</button>}
+      {mode === 'change' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('enter'); setErr(''); }}>\u2190 Back</button>}
+      <div className="small faint" style={{marginTop:16, lineHeight:1.5}}>Locks this browser only. Forgot it? Clearing site data resets the lock — restore your data from a backup file after.</div>
+    </div>
+  </div>);
+}
+
 /* ---------------- App ---------------- */
 function App(){
+  const [locked, setLocked] = useState(() => sessionStorage.getItem('rem_unlocked') !== '1');
   const [db, setDb] = useState(load);
   const [view, setView] = useState('dashboard');
   const [openOrder, setOpenOrder] = useState(null);
@@ -965,6 +1029,8 @@ function App(){
     return {active: active.length, remaining, deliveredThisMo, revThisMo, owed, marginThisMo};
   }, [db]);
 
+  if(locked) return <LockScreen onUnlock={() => setLocked(false)}/>;
+
   return (
   <div className="shell">
     <header className="top">
@@ -979,6 +1045,7 @@ function App(){
           </button>)}
       </nav>
       <div className="flex" style={{gap:8}}>
+        <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
         <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
         <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
         <button className="btn" onClick={() => setShowNewOrder(true)}>+ New Booking</button>
