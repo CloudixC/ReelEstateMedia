@@ -24,6 +24,14 @@ h1{font-family:Georgia,serif;font-size:23px}h1 em{color:var(--red);font-style:it
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px;margin-top:10px}
 .thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:2px solid transparent;cursor:pointer;background:#000}
 .thumbs img.on{border-color:var(--red)}
+.thumbwrap{position:relative;cursor:pointer}
+.thumbwrap .pb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9);pointer-events:none}
+.vprev{width:100%;aspect-ratio:16/9;border:none;display:block;max-height:72vh;background:#000}
+.tsec{grid-column:1/-1;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:800;margin-top:8px}
+.dl{display:none;background:rgba(76,195,138,.08);border:1px solid var(--teal);border-radius:10px;padding:16px;margin-top:14px}
+.dlh{font-weight:800;color:var(--teal);margin-bottom:10px;letter-spacing:.03em}
+.dlbtn{display:inline-block;background:var(--teal);color:#08130d;border:none;border-radius:4px;padding:13px 20px;font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;margin:0 8px 8px 0;cursor:pointer}
+.dlnote{font-size:12px;color:var(--dim);margin-top:2px}
 .compose{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
 .crow{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
 .tchip{background:var(--red);color:#fff;border:none;border-radius:4px;padding:11px 14px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
@@ -62,6 +70,10 @@ textarea{flex:1;min-width:200px}
 <div class="actions">
   <button class="ok" onclick="approve()">✓ Approve this version</button>
   <a class="send" id="sendlink" href="#">📧 Send feedback</a>
+</div>
+<div class="dl" id="dlpanel">
+  <div class="dlh">✓ Approved — your finals are ready to download</div>
+  <div id="dllinks"></div>
 </div>
 <div id="out"><textarea rows="8" id="blob" readonly></textarea><div class="hint">Copied to clipboard as backup — text it over if email didn't open.</div></div>
 <div class="hint" style="margin-top:14px"><a href="#" style="color:var(--dim)" onclick="if(confirm('Clear all your comments on this review?')){localStorage.removeItem(KEY);location.reload();}return false;">✕ Clear my comments</a></div>
@@ -142,17 +154,21 @@ function renderMedia(){
   } else if(r.kind === 'dfolder'){
     if(gkey){
       p.innerHTML = '<div style="padding:60px 20px;text-align:center;color:var(--dim)">Loading photos…</div>';
-      fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + r.id + "' in parents and mimeType contains 'image/' and trashed=false") +
-        '&key=' + gkey + '&fields=files(id,name)&orderBy=name&pageSize=200')
+      fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + r.id + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed=false") +
+        '&key=' + gkey + '&fields=files(id,name,mimeType)&orderBy=name&pageSize=200')
       .then(x => x.json().then(j => { if(!x.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + x.status)); return j; }))
       .then(j => {
         const files = (j.files || []);
         if(files.length === 0) throw new Error('no images found — is the folder shared as \u201CAnyone with the link\u201D?');
-        buildGallery(files.map(fl => ({
-          thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
-          big: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
-          name: fl.name.replace(/\.[a-z0-9]+$/i,'')
-        })));
+        buildGallery(files.map(fl => {
+          const isVid = (fl.mimeType || '').indexOf('video/') === 0;
+          return {
+            thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
+            big: isVid ? 'https://drive.google.com/file/d/' + fl.id + '/preview'
+                       : 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
+            name: fl.name.replace(/\.[a-z0-9]+$/i,''), isVid
+          };
+        }));
       })
       .catch(e => folderFallback(r, 'gallery couldn\u2019t load: ' + e.message + '. Checklist: folder shared as \u201CAnyone with link\u201D \u00B7 Drive API enabled \u00B7 key website restriction is https://cloudixc.github.io/*'));
     } else folderFallback(r, 'this link has no gallery key. In the app, tap \uD83C\uDFAC Review room again after saving your Drive API key so a fresh link is generated.');
@@ -175,14 +191,28 @@ function folderFallback(r, reason){
   document.getElementById('chint').textContent = 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.';
 }
 function buildGallery(items){
-  gallery = items;
+  const ph = items.filter(x => !x.isVid), vd = items.filter(x => x.isVid);
+  gallery = [...ph, ...vd];
   const p = document.getElementById('player');
   const th = document.getElementById('thumbs');
-  p.innerHTML = '<img class="bigimg" id="bigimg">' +
+  p.innerHTML = '<div id="bigwrap"></div>' +
     '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button></div>';
   th.innerHTML = '';
-  items.forEach((g,i) => { const im = document.createElement('img'); im.src = g.thumb; im.loading = 'lazy'; im.title = g.name;
-    im.onclick = () => { curImg = i; syncGallery(); }; th.appendChild(im); });
+  const addSection = (label, arr, off) => {
+    if(arr.length === 0) return;
+    if(ph.length && vd.length){ const h = document.createElement('div'); h.className = 'tsec'; h.textContent = label + ' (' + arr.length + ')'; th.appendChild(h); }
+    arr.forEach((g,i) => {
+      const idx = off + i;
+      const w = document.createElement('div'); w.className = 'thumbwrap';
+      const im = document.createElement('img'); im.src = g.thumb; im.loading = 'lazy'; im.title = g.name;
+      w.onclick = () => { curImg = idx; syncGallery(); };
+      w.appendChild(im);
+      if(g.isVid){ const pb = document.createElement('span'); pb.className = 'pb'; pb.textContent = '▶'; w.appendChild(pb); }
+      th.appendChild(w);
+    });
+  };
+  addSection('📷 Photos', ph, 0);
+  addSection('🎬 Video', vd, ph.length);
   document.getElementById('refbtn').style.display = '';
   document.getElementById('chint').textContent = 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
   curImg = Math.min(curImg, items.length - 1);
@@ -190,15 +220,25 @@ function buildGallery(items){
 }
 function syncGallery(){
   const g = gallery[curImg];
-  document.getElementById('bigimg').src = g.big;
-  document.getElementById('glbl').textContent = g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
-  document.getElementById('refbtn').textContent = '📷 ' + (g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name);
-  [...document.getElementById('thumbs').children].forEach((im,i) => im.classList.toggle('on', i === curImg));
+  const bw = document.getElementById('bigwrap');
+  if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+  else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
+  document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : gallery.some(x => x.isVid) ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
+  const short = g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name;
+  document.getElementById('refbtn').textContent = (g.isVid ? '🎥 ' : '📷 ') + short;
+  const tman = document.getElementById('tman');
+  tman.style.display = g.isVid ? '' : 'none';
+  if(g.isVid) tman.placeholder = '1:24 (optional)';
+  document.getElementById('chint').textContent = g.isVid
+    ? 'Playing right here in the room. For a time-specific note, add the time from the player (like 1:24), then your note.'
+    : 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.';
+  [...document.getElementById('thumbs').children].forEach((w,i) => { const im = w.querySelector('img'); if(im) im.classList.toggle('on', i === curImg); });
 }
 function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
 function stampNow(){
   if(vid){ vid.pause(); stamped = {t: vid.currentTime}; document.getElementById('refbtn').textContent = '⏱ ' + fmt(stamped.t) + ' ✓'; }
-  else if(gallery.length){ stamped = {img: gallery[curImg].name, idx: curImg}; }
+  else if(gallery.length){ const g = gallery[curImg]; const mt = document.getElementById('tman').value.trim();
+    stamped = {img: g.name + (g.isVid && mt ? ' @ ' + mt : ''), idx: curImg}; }
   document.getElementById('ctext').focus();
 }
 function addCmt(){
@@ -206,7 +246,8 @@ function addCmt(){
   if(!txt) return;
   let ref = {};
   if(vid) ref = stamped || {t: vid.currentTime};
-  else if(gallery.length) ref = stamped || {img: gallery[curImg].name, idx: curImg};
+  else if(gallery.length){ const g = gallery[curImg]; const mt = document.getElementById('tman').value.trim();
+    ref = stamped || {img: g.name + (g.isVid && mt ? ' @ ' + mt : ''), idx: curImg}; }
   else { const man = document.getElementById('tman').value.trim();
     if(man){ const t = parseT(man); ref = t !== null ? {t} : {img: man}; } }
   cmts.push(Object.assign({id: Date.now(), ver: cur, txt}, ref));
@@ -215,7 +256,30 @@ function addCmt(){
   if(gallery.length) syncGallery(); else if(vid) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime);
   save(); renderList();
 }
-function approve(){ cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version'}); save(); renderList(); }
+function approve(){ cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version'}); save(); renderList();
+  const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
+function dlLink(url){
+  const u = url.trim();
+  const fm = u.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/);
+  if(fm) return {href: 'https://drive.google.com/drive/folders/' + fm[1], label: '⬇ Open Drive folder', note: 'Select all inside (Ctrl/Cmd-A) → right-click → Download for everything at once.'};
+  const dm = u.match(/\/file\/d\/([^\/?#]+)/) || u.match(/[?&]id=([^&#]+)/);
+  if(u.includes('drive.google.com') && dm) return {href: 'https://drive.google.com/uc?export=download&id=' + dm[1], label: '⬇ Download file', note: ''};
+  if(u.includes('dropbox.com')) return {href: u.replace(/([?&])(dl=0|raw=1)/,'$1dl=1'), label: '⬇ Download from Dropbox', note: ''};
+  return {href: u, label: '⬇ Download', note: ''};
+}
+function renderDl(){
+  const dp = document.getElementById('dlpanel');
+  const approved = cmts.some(c => c.ver === cur && c.txt.indexOf('✓ APPROVED') === 0);
+  dp.style.display = approved ? 'block' : 'none';
+  if(!approved) return;
+  const box = document.getElementById('dllinks'); box.innerHTML = '';
+  (versions[cur] || '').split(',').map(s => s.trim()).filter(Boolean).forEach(u => {
+    const d = dlLink(u);
+    const a = document.createElement('a'); a.className = 'dlbtn'; a.href = d.href; a.target = '_blank'; a.rel = 'noreferrer'; a.textContent = d.label;
+    box.appendChild(a);
+    if(d.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = d.note; box.appendChild(n); }
+  });
+}
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
 function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
@@ -235,6 +299,7 @@ function renderList(){
     el.appendChild(row);
   });
   if(mine.length === 0) el.innerHTML = '<div class="small" style="text-align:center;padding:14px">No comments on V' + (cur+1) + ' yet.</div>';
+  renderDl();
 }
 function blob(){
   const lines = ['=== FEEDBACK: ' + project + (dname ? ' — ' + dname : '') + ' ===', who ? 'From: ' + who : ''];
