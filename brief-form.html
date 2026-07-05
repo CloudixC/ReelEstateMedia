@@ -77,6 +77,8 @@ const pin = (q.get('t') || 'pin') === 'pin';
 const project = q.get('p') || 'your shoot';
 const who = q.get('n') || '';
 const email = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
+const endpoint = q.get('e') || '';
+const ref = q.get('r') || '';
 document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
 document.getElementById('subline').textContent = pin ? 'Royal LePage Pinnacle · Agent Pre-Shoot Brief' : 'Pre-Shoot Brief';
 document.getElementById('proj').textContent = project + (who ? ' · for ' + who : '') + ' — takes about 2 minutes. Your answers shape the shoot & the edit.';
@@ -124,10 +126,25 @@ function blob(){
     'location: ' + v('f_location').replace(/\n/g, ' | '),'post: ' + v('f_post'),'delivery: ' + v('f_delivery'),
     '=== END ==='].join('\n');
 }
-document.getElementById('sendlink').addEventListener('click', function(){
+document.getElementById('sendlink').addEventListener('click', function(ev){
+  if(endpoint){
+    ev.preventDefault();
+    const a = this; a.textContent = 'Sending…';
+    fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'brief', ref, project, dname:'', who: (q.get('n')||''), body: blob()})})
+      .then(x => x.json()).then(j => {
+        if(!j.ok) throw new Error(j.error || 'failed');
+        a.textContent = '✓ Sent — thank you!'; a.style.background = '#2f9e64';
+        try{ localStorage.removeItem(KEY); }catch(e){}
+      })
+      .catch(() => { a.textContent = '📧 Send by email instead';
+        a.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Brief: ' + project) + '&body=' + encodeURIComponent(blob());
+        a.onclick = null; showOut(); });
+    return;
+  }
   this.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Brief: ' + project) + '&body=' + encodeURIComponent(blob());
   showOut();
 });
+if(endpoint) document.getElementById('sendlink').textContent = '✅ Submit brief';
 function copyOut(){ showOut(); const t = document.getElementById('blob'); t.focus(); t.select(); t.setSelectionRange(0, 99999);
   try{ document.execCommand('copy'); }catch(e){}
   if(navigator.clipboard) navigator.clipboard.writeText(t.value).catch(function(){}); }

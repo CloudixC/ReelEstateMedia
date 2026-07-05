@@ -387,8 +387,8 @@ const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal
 const rateFor = (tier, s) => tier === 'direct' ? s.retail : s.partner;
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
-  orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [],
-  settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: ''}
+  orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [],
+  settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''}
 };
 function load(){ try{
   const d = JSON.parse(localStorage.getItem(LS_KEY));
@@ -402,6 +402,7 @@ function load(){ try{
     if(!d.importedIds) d.importedIds = [];
     if(!d.activity) d.activity = [];
     if(!d.expenses) d.expenses = [];
+    if(!d.subsHandled) d.subsHandled = [];
     if(d.deliverables) d.deliverables = d.deliverables.map(x =>
       (x.status === 'Client Review' && !x.reviewDate) ? {...x, reviewDate: today()} : x);
     if(d.deliverables && d.orders){
@@ -663,6 +664,73 @@ function ClientPicker({db, value, onChange}){
     </div>);
 }
 
+/* ---------------- Client Submissions Inbox ---------------- */
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled}){
+  const [subs, setSubs] = useState([]);
+  const [err, setErr] = useState('');
+  const [u, setU] = useState(''); const [tk, setTk] = useState('');
+  const cfg = db.settings.inboxUrl && db.settings.inboxToken;
+  const load = async () => {
+    if(!cfg) return;
+    try {
+      const r = await fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken));
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error || 'fetch failed');
+      setSubs(j.rows || []); setErr('');
+    } catch(e){ setErr('Inbox unreachable: ' + (e.message || e)); }
+  };
+  useEffect(() => { if(!cfg) return; load(); const t = setInterval(load, 5 * 60 * 1000); return () => clearInterval(t); }, [cfg]);
+  if(!cfg) return (
+    <div className="card">
+      <h3 style={{fontSize:17}}>📥 Client Submissions — direct to the app</h3>
+      <p className="small muted" style={{marginBottom:10}}>Briefs and review feedback can skip email and land right here. One-time setup: I gave you <strong>inbox-script.txt</strong> — paste it into a Google Sheet's Apps Script, deploy as a web app, then enter the URL and your secret below.</p>
+      <div className="frow">
+        <div><label className="f">Web app URL (…/exec)</label><input value={u} onChange={e => setU(e.target.value)} placeholder="https://script.google.com/macros/s/…/exec"/></div>
+        <div><label className="f">Secret token</label><input type="password" value={tk} onChange={e => setTk(e.target.value)}/></div>
+      </div>
+      <div className="flex" style={{marginTop:10}}><span className="spacer"></span>
+        <button className="btn sm" disabled={!u.trim() || !tk.trim()} onClick={() => updateSettings({inboxUrl: u.trim(), inboxToken: tk.trim()})}>Connect Inbox</button>
+      </div>
+    </div>);
+  const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id)).reverse();
+  if(fresh.length === 0 && !err) return null;
+  return (
+    <div className="card today">
+      <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
+        <button className="btn ghost sm" onClick={load}>⟳</button></div>
+      {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
+      {fresh.map(s => {
+        const dl = s.ref ? db.deliverables.find(x => x.id === s.ref) : null;
+        return (
+        <div key={s.id} className="trow" style={{paddingTop:10}}>
+          <div className="flex">
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : '💬 Feedback'}</span>
+            <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
+            <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
+          </div>
+          <div className="small muted" style={{whiteSpace:'pre-wrap', margin:'7px 0 8px', maxHeight:110, overflow:'auto', background:'var(--panel2)', borderRadius:8, padding:'8px 10px'}}>{s.body}</div>
+          <div className="flex" style={{gap:8, flexWrap:'wrap'}}>
+            {s.kind === 'brief' && dl &&
+              <button className="btn sm" onClick={() => {
+                const parsed = parseBriefBlob(s.body);
+                if(Object.keys(parsed).length === 0){ alert('Nothing parseable in this one — open it and copy manually.'); return; }
+                updateDeliverable(dl.id, {brief: {...getBrief(dl), ...parsed}});
+                markHandled(s.id);
+              }}>✓ Apply to brief — {dlTitle(dl)}</button>}
+            {s.kind === 'feedback' && dl &&
+              <button className="btn sm" onClick={() => {
+                updateDeliverable(dl.id, {notes: ((dl.notes || '') + '\n\n— Client feedback ' + (s.ts || '').slice(0,10) + ' —\n' + s.body).trim()});
+                markHandled(s.id);
+              }}>✓ Save to deliverable notes</button>}
+            {dl && <button className="btn ghost sm" onClick={() => openOrderDetail(dl.orderId, dl.id)}>Open →</button>}
+            <CopyBtn text={s.body} label="📋 Copy"/>
+            <button className="btn ghost sm" onClick={() => markHandled(s.id)}>✕ Done</button>
+          </div>
+        </div>);})}
+      {fresh.length === 0 && <p className="small faint" style={{marginTop:8}}>All caught up.</p>}
+    </div>);
+}
+
 /* ---------------- Lock screen ---------------- */
 const LOCK_KEY = 'rem_lock_v1';
 async function hashText(t){
@@ -794,6 +862,8 @@ function App(){
     logActivity(`Deleted client: ${c.name}`);
     showToast(`Deleted ${c.name}`, [{label: 'Undo', fn: () => setDb(p => ({...p, clients: [c, ...p.clients]}))}]);
   };
+
+  const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
 
   const addExpense = (exp) => { setDb(p => ({...p, expenses: [{...exp, id: uid()}, ...(p.expenses || [])]})); logActivity(`Expense: ${exp.desc} ${money(+exp.amount || 0)}`); };
   const deleteExpense = (id) => setDb(p => ({...p, expenses: (p.expenses || []).filter(e => e.id !== id)}));
@@ -1106,7 +1176,7 @@ function App(){
     </header>
 
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} />}
+        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} />}
@@ -1521,7 +1591,7 @@ function NextShootCountdown({db, openOrderDetail}){
   </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode}){
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -1570,6 +1640,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
+      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
@@ -2323,6 +2394,8 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pin ? 'pin' : 'rem') +
+                '&r=' + encodeURIComponent(d.id) +
+                (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 (getBrief(d).topic ? '&tp=' + encodeURIComponent(getBrief(d).topic) : '');
               copyText(u);
               window.open(u, '_blank');
@@ -2357,6 +2430,8 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 '&t=' + (pinC ? 'pin' : 'rem') +
                 (b.orientation === 'Vertical' ? '&o=v' : '') +
                 (mediaOf(d) === 'both' ? '&m=both' : '') +
+                '&r=' + encodeURIComponent(d.id) +
+                (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
                 (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
               updateDeliverable(d.id, {reviewUrl: u});
@@ -2508,7 +2583,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
           <button className="btn ghost sm" title="Change or remove token" onClick={() => {
             const v = prompt('Calendly Personal Access Token (clear the field to disconnect):', '········');
             if(v === null) return;
-            updateSettings(v.trim() && v.trim() !== '········' ? {calendlyToken: v.trim(), calendlyUser: ''} : (v.trim() === '' ? {calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: ''} : {}));
+            updateSettings(v.trim() && v.trim() !== '········' ? {calendlyToken: v.trim(), calendlyUser: ''} : (v.trim() === '' ? {calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''} : {}));
           }}>⚙</button>
           <button className="btn ghost sm" disabled={syncing} onClick={syncCalendly}>{syncing ? 'Syncing…' : '⟳ Sync now'}</button>
         </>}

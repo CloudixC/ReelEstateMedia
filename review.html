@@ -89,6 +89,8 @@ const vertical = q.get('o') === 'v';
 const mboth = q.get('m') === 'both';
 const gkey = q.get('k') || '';
 const email = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
+const endpoint = q.get('e') || '';
+const ref = q.get('r') || '';
 const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComponent);
 const KEY = 'rem_rev_' + project + '_' + dname;
 let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
@@ -365,11 +367,27 @@ function blob(){
   lines.push('', '=== END ===');
   return lines.join('\n');
 }
-document.getElementById('sendlink').addEventListener('click', function(){
+document.getElementById('sendlink').addEventListener('click', function(ev){
+  if(endpoint){
+    ev.preventDefault();
+    const a = this; a.textContent = 'Sending…';
+    fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who, body: blob()})})
+      .then(x => x.json()).then(j => {
+        if(!j.ok) throw new Error(j.error || 'failed');
+        a.textContent = '✓ Feedback sent — thank you!'; a.style.background = '#2f9e64';
+      })
+      .catch(() => { a.textContent = '📧 Send by email instead';
+        a.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Feedback: ' + project + (dname ? ' — ' + dname : '')) + '&body=' + encodeURIComponent(blob());
+        a.onclick = null;
+        document.getElementById('out').style.display = 'block';
+        document.getElementById('blob').value = blob(); });
+    return;
+  }
   this.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Feedback: ' + project + (dname ? ' — ' + dname : '')) + '&body=' + encodeURIComponent(blob());
   document.getElementById('out').style.display = 'block';
   const b = document.getElementById('blob'); b.value = blob();
   if(navigator.clipboard) navigator.clipboard.writeText(b.value).catch(function(){});
 });
+if(endpoint) document.getElementById('sendlink').textContent = '✅ Submit feedback';
 renderTabs(); renderMedia(); renderList();
 </script></div></body></html>
