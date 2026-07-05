@@ -52,6 +52,18 @@ textarea{flex:1;min-width:200px}
 .dlnote{font-size:12px;color:var(--dim);margin-top:2px}
 #out{display:none;margin-top:12px}
 .small{font-size:12px;color:var(--dim)}
+
+.thread{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:16px}
+.thread h2{font-size:15px;margin-bottom:10px;letter-spacing:.04em}
+.bubs{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:10px}
+.bub{max-width:82%;padding:9px 12px;border-radius:12px;font-size:14px;white-space:pre-wrap;line-height:1.45}
+.bub .bwho{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.65;margin-bottom:2px;font-weight:700}
+.bub.them{align-self:flex-start;background:#1f1f24;border:1px solid var(--line)}
+.bub.me{align-self:flex-end;background:rgba(227,34,44,.16);border:1px solid rgba(227,34,44,.4)}
+.trow{display:flex;gap:8px}
+.trow textarea{flex:1}
+.tsend{background:var(--red);color:#fff;border:none;border-radius:4px;padding:0 18px;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.tempty{color:var(--dim);font-size:12.5px;text-align:center;padding:8px}
 </style></head><body><div class="wrap">
 <h1 id="brand"></h1><div class="sub" id="subline"></div>
 <div class="proj" id="proj"></div>
@@ -71,6 +83,15 @@ textarea{flex:1;min-width:200px}
 <div class="actions">
   <button class="ok" onclick="approve()">✓ Approve this version</button>
   <a class="send" id="sendlink" href="#">📧 Send feedback</a>
+</div>
+
+<div class="thread" id="thread" style="display:none">
+  <h2>💬 Messages</h2>
+  <div class="bubs" id="tmsgs"><div class="tempty">Loading…</div></div>
+  <div class="trow">
+    <textarea id="tmsg" rows="2" placeholder="Message us here — we'll reply right in this page…"></textarea>
+    <button class="tsend" onclick="sendMsg()">Send</button>
+  </div>
 </div>
 <div class="dl" id="dlpanel">
   <div class="dlh">✓ Approved — your finals are ready to download</div>
@@ -390,4 +411,35 @@ document.getElementById('sendlink').addEventListener('click', function(ev){
 });
 if(endpoint) document.getElementById('sendlink').textContent = '✅ Submit feedback';
 renderTabs(); renderMedia(); renderList();
+
+function escT(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function loadThread(){
+  if(!endpoint || !ref) return;
+  fetch(endpoint + '?thread=' + encodeURIComponent(ref))
+    .then(x => x.json()).then(j => {
+      const box = document.getElementById('tmsgs');
+      const rows = (j.rows || []);
+      if(rows.length === 0){ box.innerHTML = '<div class="tempty">No messages yet — say hi, it lands directly with us.</div>'; return; }
+      box.innerHTML = rows.map(m => {
+        const mine = m.from !== 'jag';
+        return '<div class="bub ' + (mine ? 'me' : 'them') + '"><span class="bwho">' +
+          (m.from === 'jag' ? 'Reel Estate Media' : escT(m.who || 'You')) + ' · ' + (m.ts || '').slice(5, 16).replace('T', ' ') +
+          '</span>' + escT(m.body || '') + '</div>';
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }).catch(() => {});
+}
+function sendMsg(){
+  const t = document.getElementById('tmsg');
+  const body = t.value.trim();
+  if(!body || !endpoint) return;
+  t.value = ''; 
+  fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'msg', ref, project, dname: (typeof dname !== 'undefined' ? dname : ''), who: (q.get('n') || 'Agent'), from: 'agent', body})})
+    .then(() => setTimeout(loadThread, 800));
+}
+if(endpoint && ref){
+  document.getElementById('thread').style.display = 'block';
+  loadThread();
+  setInterval(loadThread, 60000);
+}
 </script></div></body></html>

@@ -664,6 +664,45 @@ function ClientPicker({db, value, onChange}){
     </div>);
 }
 
+/* ---------------- Deliverable message thread ---------------- */
+function ThreadPanelButton({db, d, order, client}){
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState(null);
+  const [txt, setTxt] = useState('');
+  const url = db.settings.inboxUrl;
+  const load = async () => {
+    if(!url) return;
+    try { const r = await fetch(url + '?thread=' + encodeURIComponent(d.id)); const j = await r.json(); setMsgs(j.rows || []); }
+    catch(e){ setMsgs([]); }
+  };
+  useEffect(() => { if(open) load(); }, [open]);
+  if(!url) return null;
+  return (<>
+    <button className="btn ghost sm" onClick={() => setOpen(o => !o)}>💬 Messages{msgs && msgs.length ? ' (' + msgs.length + ')' : ''}</button>
+    {open && <div style={{flexBasis:'100%', background:'var(--panel2)', border:'1px solid var(--line)', borderRadius:10, padding:12, marginTop:8}}>
+      {msgs === null && <p className="small faint">Loading…</p>}
+      {msgs && msgs.length === 0 && <p className="small faint">No messages on this project yet. The agent can write to you from their brief form or review room.</p>}
+      {msgs && msgs.map(m => (
+        <div key={m.id} style={{margin:'6px 0', padding:'8px 11px', borderRadius:10, maxWidth:'85%',
+          background: m.from === 'jag' ? 'rgba(227,34,44,.13)' : 'var(--ink2)',
+          border: '1px solid ' + (m.from === 'jag' ? 'rgba(227,34,44,.4)' : 'var(--line)'),
+          marginLeft: m.from === 'jag' ? 'auto' : 0}}>
+          <div className="small faint" style={{fontSize:10.5, textTransform:'uppercase', letterSpacing:'.07em', fontWeight:700}}>{m.from === 'jag' ? 'You' : (m.who || 'Agent')} · {(m.ts || '').slice(5, 16).replace('T', ' ')}</div>
+          <div className="small" style={{whiteSpace:'pre-wrap'}}>{m.body}</div>
+        </div>))}
+      <div className="flex" style={{marginTop:8}}>
+        <input placeholder="Message the agent…" value={txt} onChange={e => setTxt(e.target.value)} style={{flex:1}}
+          onKeyDown={async e => { if(e.key === 'Enter' && txt.trim()){ 
+            const body = txt.trim(); setTxt('');
+            try { await fetch(url, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id, project: (order && order.project) || d.group, dname: dlTitle(d), who: 'Jag', from: 'jag', body})});
+              setTimeout(load, 800); } catch(err){ alert('Send failed'); }
+          }}}/>
+        <span className="small faint">↵ to send</span>
+      </div>
+    </div>}
+  </>);
+}
+
 /* ---------------- Client Submissions Inbox ---------------- */
 function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled}){
   const [subs, setSubs] = useState([]);
@@ -693,7 +732,14 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       </div>
     </div>);
   const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id)).reverse();
-  if(fresh.length === 0 && !err) return null;
+  if(fresh.length === 0 && !err) return (
+    <div className="card" style={{padding:'12px 18px'}}>
+      <div className="flex">
+        <span className="small muted">📥 Client Submissions — all caught up. New briefs &amp; feedback land here automatically (archived forever in your REM Inbox sheet).</span>
+        <span className="spacer"></span>
+        <button className="btn ghost sm" onClick={load}>⟳ Check now</button>
+      </div>
+    </div>);
   return (
     <div className="card today">
       <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
@@ -704,7 +750,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
           <div className="flex">
-            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : '💬 Feedback'}</span>
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
           </div>
@@ -717,6 +763,16 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
                 updateDeliverable(dl.id, {brief: {...getBrief(dl), ...parsed}});
                 markHandled(s.id);
               }}>✓ Apply to brief — {dlTitle(dl)}</button>}
+            {s.kind === 'msg' &&
+              <button className="btn sm" onClick={async () => {
+                const reply = prompt('Reply to ' + (s.who || 'agent') + ':');
+                if(reply === null || !reply.trim()) return;
+                try {
+                  await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: s.ref, project: s.project, dname: s.dname, who: 'Jag', from: 'jag', body: reply.trim()})});
+                  markHandled(s.id);
+                  showToast('↩ Reply sent — they\u2019ll see it on their page');
+                } catch(e){ alert('Couldn\u2019t send — check connection.'); }
+              }}>↩ Reply</button>}
             {s.kind === 'feedback' && dl &&
               <button className="btn sm" onClick={() => {
                 updateDeliverable(dl.id, {notes: ((dl.notes || '') + '\n\n— Client feedback ' + (s.ts || '').slice(0,10) + ' —\n' + s.body).trim()});
