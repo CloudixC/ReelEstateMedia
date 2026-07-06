@@ -1,0 +1,39 @@
+// REM Submissions Inbox v3 — briefs, feedback, message threads, SHORT LINKS
+// Update steps (90 seconds):
+// 1. Open the script: script.google.com → REM Inbox project (under contenthub@rlppinnacle.ca)
+// 2. Select all in the editor, paste ALL of this, Cmd+S
+// 3. Deploy → Manage deployments → ✏️ Edit → Version: "New version" → Deploy
+// (URL stays the same — nothing to update in the app)
+
+const TOKEN = '82cfb27d45baa8a2f7cf77b247a0907199d6ab095ffef93b';
+
+function clean(v){ v = String(v == null ? '' : v); return /^[=+]/.test(v) ? String.fromCharCode(39) + v : v; }
+function out(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function doPost(e){
+  try{
+    const d = JSON.parse(e.postData.contents);
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    sh.appendRow([new Date().toISOString(), clean(d.kind), clean(d.ref), clean(d.project), clean(d.dname), clean(d.who), clean(d.body), clean(d.from)]);
+    return out({ok:true});
+  }catch(err){ return out({ok:false, error:String(err)}); }
+}
+
+function doGet(e){
+  const p = e.parameter;
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const vals = sh.getDataRange().getValues();
+  const mk = function(r, i){ return {id:'r' + (i+1), ts:String(r[0]), kind:r[1], ref:r[2], project:r[3], dname:r[4], who:r[5], body:r[6], from:r[7] || ''}; };
+  if(p.link){
+    const rows = vals.map(mk).filter(function(r){ return r.kind === 'link' && String(r.ref) === String(p.link); });
+    if(rows.length === 0) return out({ok:false, error:'unknown link'});
+    return out({ok:true, qs: String(rows[rows.length - 1].body)});
+  }
+  if(p.thread){
+    const rows = vals.map(mk).filter(function(r){ return r.kind === 'msg' && String(r.ref) === String(p.thread); });
+    return out({ok:true, rows:rows});
+  }
+  if((p.token || '') !== TOKEN) return out({ok:false, error:'bad token'});
+  const rows = vals.map(mk).filter(function(r){ return r.kind; });
+  return out({ok:true, rows:rows});
+}

@@ -1,6 +1,26 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Review</title>
+<script>
+(function(){
+  var xs = new URLSearchParams(location.search);
+  var x = xs.get('x');
+  if(!x) return;
+  var RESOLVER = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  function splash(msg){
+    var f = function(){ document.body.innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#a6a49d;font-family:-apple-system,sans-serif;text-align:center;padding:20px;font-size:15px">' + msg + '</div>'; };
+    if(document.body) f(); else document.addEventListener('DOMContentLoaded', f);
+  }
+  splash('Loading your review…');
+  fetch(RESOLVER + '?link=' + encodeURIComponent(x))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(j.ok && j.qs) location.replace(location.pathname + '?' + j.qs);
+      else splash('This review link looks expired or invalid — please ask for a fresh one.');
+    })
+    .catch(function(){ splash('Couldn’t load the review — check your connection and refresh.'); });
+})();
+</script>
 <style>
 :root{--red:#e3222c;--bg:#0a0a0c;--panel:#161619;--line:#2c2c33;--txt:#f4f1ea;--dim:#a6a49d;--teal:#4cc38a}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -158,7 +178,8 @@ try{ sels = JSON.parse(localStorage.getItem(SKEY) || '{}'); }catch(e){}
 const SEENKEY = 'rem_seen_' + project + '_' + dname;
 let seen = {};
 try{ seen = JSON.parse(localStorage.getItem(SEENKEY) || '{}'); }catch(e){}
-let identity = localStorage.getItem('rem_reviewer') || who || 'Reviewer';
+const WHOKEY = 'rem_who_' + project + '_' + dname;
+let identity = localStorage.getItem(WHOKEY) || who || 'Reviewer';
 let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
 let cmts = [];
 try{ cmts = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){}
@@ -172,7 +193,7 @@ function setWhoLine(){
 }
 function changeWho(){
   const v = prompt('Who\u2019s reviewing? (your first name)', identity);
-  if(v && v.trim()){ identity = v.trim(); try{ localStorage.setItem('rem_reviewer', identity); }catch(e){} setWhoLine(); }
+  if(v && v.trim()){ identity = v.trim(); try{ localStorage.setItem(WHOKEY, identity); }catch(e){} setWhoLine(); }
 }
 setWhoLine();
 const due = q.get('due');
