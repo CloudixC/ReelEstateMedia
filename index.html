@@ -69,6 +69,8 @@
   .pill.review-2{background:rgba(232,184,74,.16);color:#ecc25e}
   .pill.changes-2{background:rgba(169,142,222,.16);color:var(--violet)}
   .pill.review-3{background:rgba(232,184,74,.16);color:#ecc25e}
+  .cal-cell.blockedday{background:repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(227,34,44,.06) 7px, rgba(227,34,44,.06) 14px)}
+  .cal-cell.blockedday .cal-d{color:var(--red);opacity:.8}
   .pill.delivered{background:rgba(76,195,138,.15);color:var(--teal)}
   .pill.unpaid{background:rgba(236,95,90,.15);color:var(--red)}
   .pill.invoiced{background:rgba(130,168,217,.15);color:var(--blue)}
@@ -387,7 +389,7 @@ const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal
 const rateFor = (tier, s) => tier === 'direct' ? s.retail : s.partner;
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
-  orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [],
+  orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
   settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''}
 };
 function load(){ try{
@@ -403,6 +405,7 @@ function load(){ try{
     if(!d.activity) d.activity = [];
     if(!d.expenses) d.expenses = [];
     if(!d.subsHandled) d.subsHandled = [];
+    if(!d.blockedDays) d.blockedDays = [];
     if(d.deliverables) d.deliverables = d.deliverables.map(x =>
       (x.status === 'Client Review' && !x.reviewDate) ? {...x, reviewDate: today()} : x);
     if(d.deliverables && d.orders){
@@ -799,49 +802,25 @@ async function hashText(t){
     return 'djb2:' + h.toString(16);
   }
 }
+const LOCK_HASH = '3d0fbc04f8f9a435aeed3161cb0da5c451bd2e3e6dced84318595db174d82ab2';
 function LockScreen({onUnlock}){
-  const hasLock = !!localStorage.getItem(LOCK_KEY);
-  const [mode, setMode] = useState(hasLock ? 'enter' : 'setup');
   const [cur, setCur] = useState('');
-  const [p1, setP1] = useState('');
-  const [p2, setP2] = useState('');
   const [err, setErr] = useState('');
-  const unlock = () => { sessionStorage.setItem('rem_unlocked', '1'); onUnlock(); };
   const submit = async () => {
     setErr('');
-    if(mode === 'enter'){
-      if(await hashText(cur) === localStorage.getItem(LOCK_KEY)) unlock();
-      else setErr('Wrong passcode.');
-    } else if(mode === 'setup'){
-      if(p1.length < 4){ setErr('At least 4 characters.'); return; }
-      if(p1 !== p2){ setErr('Passcodes don\u2019t match.'); return; }
-      localStorage.setItem(LOCK_KEY, await hashText(p1)); unlock();
-    } else { // change
-      if(await hashText(cur) !== localStorage.getItem(LOCK_KEY)){ setErr('Current passcode is wrong.'); return; }
-      if(p1.length < 4){ setErr('New passcode: at least 4 characters.'); return; }
-      if(p1 !== p2){ setErr('New passcodes don\u2019t match.'); return; }
-      localStorage.setItem(LOCK_KEY, await hashText(p1)); unlock();
-    }
+    if(await hashText(cur) === LOCK_HASH){ sessionStorage.setItem('rem_unlocked', '1'); onUnlock(); }
+    else { setErr('Wrong passcode.'); setCur(''); }
   };
-  const onKey = e => { if(e.key === 'Enter') submit(); };
   return (
   <div className="lockwrap">
     <div className="lockbox">
       <h1 className="serif" style={{fontSize:30}}>Reel Estate <em style={{color:'var(--amber)', fontStyle:'italic'}}>Media</em></h1>
       <div className="locksub">Production Pipeline · Pinnacle Command Centre</div>
-      {mode === 'setup' && <p className="small muted" style={{margin:'14px 0 4px'}}>First visit on this device — set a passcode to protect your data here.</p>}
-      {mode === 'enter' && <input autoFocus type="password" placeholder="Passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
-      {mode === 'change' && <input autoFocus type="password" placeholder="Current passcode" value={cur} onChange={e => setCur(e.target.value)} onKeyDown={onKey} style={{marginTop:18}}/>}
-      {mode !== 'enter' && <>
-        <input type="password" placeholder={mode === 'change' ? 'New passcode' : 'Choose a passcode'} value={p1} onChange={e => setP1(e.target.value)} onKeyDown={onKey} style={{marginTop:10}}/>
-        <input type="password" placeholder="Confirm passcode" value={p2} onChange={e => setP2(e.target.value)} onKeyDown={onKey} style={{marginTop:10}}/>
-      </>}
+      <input autoFocus type="password" inputMode="numeric" placeholder="Passcode" value={cur}
+        onChange={e => setCur(e.target.value)} onKeyDown={e => { if(e.key === 'Enter') submit(); }} style={{marginTop:18}}/>
       {err && <div className="small" style={{color:'var(--red)', marginTop:8, fontWeight:700}}>{err}</div>}
-      <button className="btn" style={{width:'100%', marginTop:16}} onClick={submit}>
-        {mode === 'enter' ? 'Unlock' : mode === 'setup' ? 'Set Passcode & Enter' : 'Change & Enter'}</button>
-      {mode === 'enter' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('change'); setErr(''); }}>Change passcode</button>}
-      {mode === 'change' && <button className="backlink" style={{marginTop:14}} onClick={() => { setMode('enter'); setErr(''); }}>← Back</button>}
-      <div className="small faint" style={{marginTop:16, lineHeight:1.5}}>Locks this browser only. Forgot it? Clearing site data resets the lock — restore your data from a backup file after.</div>
+      <button className="btn" style={{width:'100%', marginTop:16}} onClick={submit}>Unlock</button>
+      <div className="small faint" style={{marginTop:16, lineHeight:1.5}}>Team passcode — the same one works on every device.</div>
     </div>
   </div>);
 }
@@ -920,6 +899,8 @@ function App(){
   };
 
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
+  const toggleBlockedDay = (ds) => setDb(p => ({...p, blockedDays: (p.blockedDays || []).includes(ds)
+    ? (p.blockedDays || []).filter(x => x !== ds) : [...(p.blockedDays || []), ds]}));
 
   const addExpense = (exp) => { setDb(p => ({...p, expenses: [{...exp, id: uid()}, ...(p.expenses || [])]})); logActivity(`Expense: ${exp.desc} ${money(+exp.amount || 0)}`); };
   const deleteExpense = (id) => setDb(p => ({...p, expenses: (p.expenses || []).filter(e => e.id !== id)}));
@@ -969,6 +950,8 @@ function App(){
   };
   const updateDeliverable = (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
+    if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
+       !confirm('🚫 ' + patch.shootDate + ' is a blocked day. Schedule anyway?')) return;
     if(cur && patch.status === 'Delivered' && cur.status !== 'Delivered'){
       const isB = mediaOf(cur) === 'both';
       const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip.' : '📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
@@ -1164,7 +1147,8 @@ function App(){
       const sid = (db.settings.eventMap || {})[(b.title || '').trim()];
       const hasBacklog = cid && db.deliverables.some(d => d.status === 'Booked' &&
         (db.orders.find(o => o.id === d.orderId) || {}).clientId === cid);
-      if(cid && sid && svc(sid) && db.clients.some(c => c.id === cid) && !hasBacklog) auto.push({b, cid, sid});
+      const onBlocked = (db.blockedDays || []).includes(isoToDate(b.start));
+      if(cid && sid && svc(sid) && db.clients.some(c => c.id === cid) && !hasBacklog && !onBlocked) auto.push({b, cid, sid});
       else manual.push(b);
     });
     auto.forEach(({b, cid, sid}) => { applyBookingNew(b, cid, sid); logActivity(`⚡ Auto-booked: ${b.invitee_name} — ${b.title}`); });
@@ -1232,7 +1216,7 @@ function App(){
     </header>
 
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} />}
+        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} />}
@@ -1240,7 +1224,7 @@ function App(){
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable}
         updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} />}
     {view === 'calendar' && <>
-      <CalendarView db={db} clientName={clientName} setPrintDoc={setPrintDoc} />
+      <CalendarView db={db} clientName={clientName} setPrintDoc={setPrintDoc} updateDeliverable={updateDeliverable} toggleBlocked={toggleBlockedDay} openNewBooking={() => setShowNewOrder(true)} showToast={showToast} />
       <div style={{marginTop:16}}>
         <InboxSection db={db} updateSettings={updateSettings} syncing={syncing} syncMsg={syncMsg} syncCalendly={syncCalendly} importBookings={importBookings}
           clientTier={clientTier} applyBookingNew={applyBookingNew} applyBookingAttach={applyBookingAttach}
@@ -1647,7 +1631,149 @@ function NextShootCountdown({db, openOrderDetail}){
   </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled}){
+const dayDiff = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
+const shortDate = ds => new Date(ds + 'T12:00').toLocaleDateString('en-CA', {month:'short', day:'numeric'});
+
+function DigestStrip({db}){
+  const td = today();
+  const shoots = db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered');
+  const first = shoots.map(d => d.shootTime).filter(Boolean).sort()[0];
+  const dueToday = db.deliverables.filter(d => !promiseMet(d) && dueDatesOf(d).some(x => x.date === td));
+  const waiting = db.deliverables.filter(d => d.status === 'Booked').length;
+  const pend = db.pendingBookings.length;
+  const parts = [];
+  if(shoots.length) parts.push(`${shoots.length} shoot${shoots.length > 1 ? 's' : ''}${first ? ' (first ' + fmtTime(first) + ')' : ''}`);
+  if(dueToday.length) parts.push(`${dueToday.length} deliver${dueToday.length > 1 ? 'ies' : 'y'} due`);
+  if(pend) parts.push(`${pend} booking${pend > 1 ? 's' : ''} to review`);
+  if(waiting) parts.push(`${waiting} credit${waiting > 1 ? 's' : ''} waiting`);
+  const dow = new Date().toLocaleDateString('en-CA', {weekday:'short'});
+  const line = parts.length ? `${dow}: ` + parts.join(' · ') : `${dow}: clear runway — no shoots or deadlines today.`;
+  return (
+    <div className="card" style={{padding:'11px 16px'}}>
+      <div className="flex">
+        <span style={{fontWeight:700, fontSize:14.5}}>{line}</span>
+        <span className="spacer"></span>
+        <CopyBtn text={line} label="📋"/>
+      </div>
+    </div>);
+}
+
+const WX_GLYPH = c => c === null || c === undefined ? '' : c <= 1 ? '☀️' : c <= 3 ? '⛅' : c <= 48 ? '🌫' : c <= 67 ? '🌧' : c <= 77 ? '🌨' : c <= 82 ? '🌧' : c <= 86 ? '🌨' : '⛈';
+function WeekStrip({db, goCalendar}){
+  const td = today();
+  const [wx, setWx] = useState(null);
+  useEffect(() => {
+    if(!db.settings.useGeo || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&daily=weathercode&forecast_days=7&timezone=auto`)
+        .then(r => r.json()).then(j => { if(j.daily) setWx(j.daily); }).catch(() => {});
+    }, () => {}, {maximumAge: 600000, timeout: 8000});
+  }, []);
+  const days = Array.from({length: 7}, (_, i) => addDays(td, i));
+  return (
+    <div className="card" style={{padding:'10px 12px'}}>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:6}}>
+        {days.map((ds, i) => {
+          const shoots = db.deliverables.filter(d => d.shootDate === ds && d.status !== 'Delivered').length;
+          const dues = db.deliverables.filter(d => !promiseMet(d) && dueDatesOf(d).some(x => x.date === ds)).length;
+          const wcode = wx && wx.time ? wx.weathercode[wx.time.indexOf(ds)] : null;
+          return (
+            <button key={ds} onClick={goCalendar} style={{background: i === 0 ? 'var(--panel2)' : 'transparent',
+              border: '1px solid ' + (i === 0 ? 'var(--red)' : 'var(--line)'), borderRadius:8, padding:'7px 2px 6px',
+              color:'var(--txt)', cursor:'pointer', textAlign:'center'}}>
+              <div className="small faint" style={{fontSize:10, textTransform:'uppercase', letterSpacing:'.06em'}}>{new Date(ds + 'T12:00').toLocaleDateString('en-CA', {weekday:'narrow'})}</div>
+              <div style={{fontWeight:800, fontSize:14}}>{+ds.slice(8)}</div>
+              <div style={{fontSize:11, minHeight:15}}>{WX_GLYPH(wcode)}</div>
+              <div style={{fontSize:9, minHeight:12, letterSpacing:1}}>
+                {shoots > 0 && <span style={{color:'var(--red)'}}>{'●'.repeat(Math.min(shoots, 3))}</span>}
+                {dues > 0 && <span style={{color:'#e8b84a'}}>{'●'.repeat(Math.min(dues, 3))}</span>}
+              </div>
+            </button>);
+        })}
+      </div>
+    </div>);
+}
+
+function ActionQueue({db, openOrderDetail, goCalendar}){
+  const td = today();
+  const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
+  const clOf = d => db.clients.find(c => c.id === ordOf(d).clientId) || {};
+  const items = [];
+  db.deliverables.filter(isOverdue).forEach(d => {
+    const late = dayDiff(dueDateOf(d), td);
+    items.push({pri: 0, icon: '🔴', txt: `${dlTitle(d)} is ${late}d late`, btn: 'Open →', act: () => openOrderDetail(d.orderId, d.id)});
+  });
+  db.deliverables.filter(d => d.shootDate && d.shootDate >= td && d.shootDate <= addDays(td, 1) &&
+    ['Booked','Scheduled'].includes(d.status) && !(getBrief(d).topic || '').trim()).forEach(d => {
+    const c = clOf(d), o = ordOf(d);
+    items.push({pri: 1, icon: '📝', txt: `${dlTitle(d)} shoots ${d.shootDate === td ? 'today' : 'tomorrow'} — no brief yet`,
+      btn: db.settings.briefFormUrl ? '📋 Form link' : 'Open →',
+      act: () => {
+        if(!db.settings.briefFormUrl){ openOrderDetail(d.orderId, d.id); return; }
+        const pin = c.tier === 'partner' || c.tier === 'internal';
+        const u = db.settings.briefFormUrl + '?p=' + encodeURIComponent(o.project || d.group) +
+          '&n=' + encodeURIComponent((c.name || '').split(' ')[0]) + '&t=' + (pin ? 'pin' : 'rem') +
+          '&r=' + encodeURIComponent(d.id) +
+          (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '');
+        copyText(u); showToast('📋 Brief form link copied — text it over');
+      }});
+  });
+  db.deliverables.filter(d => isReviewStage(d.status) && d.reviewDate && dayDiff(d.reviewDate, td) >= 4).forEach(d => {
+    const c = clOf(d), n = dayDiff(d.reviewDate, td), first = (c.name || 'them').split(' ')[0];
+    items.push({pri: 2, icon: '👀', txt: `${dlTitle(d)} with ${first} for ${n}d`, btn: '📋 Nudge',
+      act: () => { copyText(`Hi ${first} — just checking in on ${dlTitle(d)}. Any notes, or good to finalize? ${d.reviewUrl || d.link || ''}`.trim());
+        showToast('📋 Nudge copied — send it over'); }});
+  });
+  if(db.pendingBookings.length)
+    items.push({pri: 3, icon: '⚡', txt: `${db.pendingBookings.length} Calendly booking${db.pendingBookings.length > 1 ? 's' : ''} waiting review`, btn: 'Review →', act: goCalendar});
+  db.orders.forEach(o => {
+    const waiting = db.deliverables.filter(d => d.orderId === o.id && d.status === 'Booked');
+    const hasUpcoming = db.deliverables.some(d => d.orderId === o.id && d.shootDate && d.shootDate >= td);
+    if(waiting.length >= 1 && !hasUpcoming){
+      const c = db.clients.find(x => x.id === o.clientId) || {};
+      items.push({pri: 4, icon: '💳', txt: `${(c.name || 'Client').split(' ')[0]}: ${waiting.length} credit${waiting.length > 1 ? 's' : ''} unscheduled`, btn: 'Open →', act: () => openOrderDetail(o.id, waiting[0].id)});
+    }
+  });
+  const top = items.sort((a, b) => a.pri - b.pri).slice(0, 6);
+  if(top.length === 0) return null;
+  return (
+    <div className="card">
+      <h3 style={{fontSize:17, marginBottom:6}}>⚡ Action Queue</h3>
+      {top.map((it, i) => (
+        <div key={i} className="flex" style={{padding:'8px 0', borderTop: i ? '1px solid var(--line)' : 'none'}}>
+          <span>{it.icon}</span>
+          <span className="small" style={{fontWeight:600}}>{it.txt}</span>
+          <span className="spacer"></span>
+          <button className="btn ghost sm" onClick={it.act}>{it.btn}</button>
+        </div>))}
+    </div>);
+}
+
+function WinBack({db}){
+  const td = today();
+  const rows = db.clients.filter(c => c.tier !== 'internal').map(c => {
+    const dls = db.deliverables.filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === c.id);
+    if(dls.length === 0) return null;
+    if(dls.some(d => d.status !== 'Delivered')) return null;
+    const last = dls.map(d => d.deliveredDate || d.reviewDate || d.shootDate || '').filter(Boolean).sort().pop();
+    if(!last || dayDiff(last, td) < 45) return null;
+    return {c, last, days: dayDiff(last, td)};
+  }).filter(Boolean).sort((a, b) => b.days - a.days).slice(0, 3);
+  if(rows.length === 0) return null;
+  return (
+    <div className="card">
+      <h3 style={{fontSize:17, marginBottom:6}}>🔄 Win-back</h3>
+      {rows.map(({c, last, days}, i) => (
+        <div key={c.id} className="flex" style={{padding:'8px 0', borderTop: i ? '1px solid var(--line)' : 'none'}}>
+          <span className="small" style={{fontWeight:600}}>{c.name}</span>
+          <span className="small faint">last {shortDate(last)} · {days}d ago</span>
+          <span className="spacer"></span>
+          <CopyBtn label="📋 Check-in" text={`Hey ${(c.name || '').split(' ')[0]}! It's been a minute — any listings or content coming up? Happy to grab you a spot this week. 🎥`}/>
+        </div>))}
+    </div>);
+}
+
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -1689,6 +1815,10 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
   const clientOf = cid => db.clients.find(c => c.id === cid) || {};
 
   return (<>
+    <DigestStrip db={db}/>
+    <WeekStrip db={db} goCalendar={goCalendar}/>
+    <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar}/>
+    <WinBack db={db}/>
     <div className="card today">
       <div className="flex" style={{marginBottom:10}}>
         <h3 style={{marginBottom:0}}>Today</h3>
@@ -2681,6 +2811,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
 }
 
 function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, dismissBooking, orderProgress, addClient}){
+  const bkBlocked = (db.blockedDays || []).includes(isoToDate(bk.start));
   const email = (bk.invitee_email || '').toLowerCase();
   const learned = db.settings.emailMap[email];
   const isPinnacleEmail = email.endsWith('rlppinnacle.ca');
@@ -2730,6 +2861,10 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
         <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('internal')}>+ add as Pinnacle internal (no margin)</button>
       </div>}
     </div>
+    {bkBlocked &&
+    <div style={{marginTop:12, background:'rgba(227,34,44,.12)', border:'1px solid rgba(227,34,44,.45)', borderRadius:8, padding:'10px 13px'}}>
+      <span className="small" style={{color:'#ff7078', fontWeight:700}}>⚠ This booking lands on {isoToDate(bk.start)} — a day you've blocked. Reschedule with the client or unblock the day in the Calendar first.</span>
+    </div>}
     {waiting.length > 0 &&
     <div style={{marginTop:12, background:'rgba(76,195,138,.1)', border:'1px solid rgba(76,195,138,.4)', borderRadius:8, padding:'10px 13px'}}>
       <span className="small" style={{color:'var(--teal)', fontWeight:700}}>
@@ -2794,9 +2929,89 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
 }
 
 /* ---------------- Calendar ---------------- */
-function CalendarView({db, clientName, setPrintDoc}){
+function SunLine({ds, enabled}){
+  const [sun, setSun] = useState(null);
+  useEffect(() => {
+    setSun(null);
+    if(!enabled || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&daily=sunrise,sunset&start_date=${ds}&end_date=${ds}&timezone=auto`)
+        .then(r => r.json()).then(j => { if(j.daily && j.daily.sunset && j.daily.sunset[0]) setSun({rise: j.daily.sunrise[0].slice(11), set: j.daily.sunset[0].slice(11)}); })
+        .catch(() => {});
+    }, () => {}, {maximumAge: 600000, timeout: 8000});
+  }, [ds]);
+  if(!sun) return null;
+  const gh = (() => { const p = sun.set.split(':').map(Number); const t = new Date(); t.setHours(p[0], p[1] - 60, 0); return String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0'); })();
+  return <p className="small faint" style={{margin:'6px 0 0'}}>🌅 {fmtTime(sun.rise)} · 🌇 sunset {fmtTime(sun.set)} · ✨ golden hour ~{fmtTime(gh)}</p>;
+}
+
+function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlocked, openNewBooking, showToast}){
   const [anchor, setAnchor] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
   const [runDate, setRunDate] = useState(today());
+  const [mode, setMode] = useState('month');
+  const [drawer, setDrawer] = useState(null);
+  const blocked = db.blockedDays || [];
+  const navUrl = loc => 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(loc);
+  const reschedule = (d) => {
+    const nd = prompt('New shoot date (YYYY-MM-DD):', d.shootDate || today());
+    if(nd === null || !nd.trim()) return;
+    const nt = prompt('Time (HH:MM, 24h):', d.shootTime || '16:00');
+    if(nt === null) return;
+    updateDeliverable(d.id, {shootDate: nd.trim(), shootTime: (nt || '').trim(), status: d.status === 'Booked' ? 'Scheduled' : d.status});
+    const o = orderOf(d); const c = db.clients.find(x => x.id === o.clientId) || {};
+    const first = (c.name || '').split(' ')[0];
+    copyText(`Hi ${first} — quick update: ${dlTitle(d)} is moving to ${nd.trim()} at ${fmtTime((nt || '16:00').trim())}. See you then! 🎥`);
+    if(showToast) showToast('🕐 Rescheduled · client message copied');
+  };
+  const icsEsc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const exportIcs = () => {
+    const evs = db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered')
+      .sort((a, b) => a.shootDate.localeCompare(b.shootDate));
+    if(evs.length === 0){ alert('No upcoming shoots to export.'); return; }
+    const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Pipeline//EN'];
+    evs.forEach(d => {
+      const o = orderOf(d); const c = db.clients.find(x => x.id === o.clientId) || {};
+      const st = d.shootDate.replace(/-/g, '') + 'T' + (d.shootTime || '12:00').replace(':', '') + '00';
+      let endT = d.shootEnd;
+      if(!endT){ const t = new Date(d.shootDate + 'T' + (d.shootTime || '12:00')); t.setHours(t.getHours() + 2);
+        endT = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'); }
+      const en = d.shootDate.replace(/-/g, '') + 'T' + endT.replace(':', '') + '00';
+      L.push('BEGIN:VEVENT', 'UID:' + d.id + '@reelestatemedia', 'DTSTART:' + st, 'DTEND:' + en,
+        'SUMMARY:' + icsEsc('🎥 ' + dlTitle(d) + (c.name ? ' — ' + c.name : '')),
+        'LOCATION:' + icsEsc(getBrief(d).location || ''),
+        'DESCRIPTION:' + icsEsc((o.project || '') + (getBrief(d).topic ? ' · ' + getBrief(d).topic : '')),
+        'BEGIN:VALARM', 'TRIGGER:-PT60M', 'ACTION:DISPLAY', 'DESCRIPTION:Shoot in 1 hour', 'END:VALARM', 'END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    const blob = new Blob([L.join('\r\n')], {type: 'text/calendar;charset=utf-8'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'REM-shoots.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    if(showToast) showToast('📆 Calendar file downloaded — open it to import your shoots with 1-hour alerts');
+  };
+  const DayRows = ({ds}) => {
+    const shoots = shootsOn(ds).filter(d => d.status !== 'Delivered');
+    const dues = duesOn(ds);
+    return (<>
+      {shoots.map(d => { const o = orderOf(d); const loc = getBrief(d).location;
+        return (
+        <div key={d.id} className="flex" style={{padding:'7px 0', borderTop:'1px solid var(--line)', flexWrap:'wrap'}}>
+          <span>🎥</span>
+          <span className="small" style={{fontWeight:700}}>{timeRange(d) || 'time TBD'}</span>
+          <span className="small">{dlTitle(d)} · {clientName(o.clientId)}</span>
+          {loc && <a className="small" style={{color:'var(--dim)'}} href={navUrl(loc)} target="_blank" rel="noreferrer">📍 Navigate ↗</a>}
+          <span className="spacer"></span>
+          <button className="btn ghost sm" title="Reschedule" onClick={() => reschedule(d)}>🕐 Move</button>
+        </div>);})}
+      {dues.map(({d, kind}) => { const o = orderOf(d); const late = ds < td;
+        return (
+        <div key={d.id + kind} className="flex" style={{padding:'7px 0', borderTop:'1px solid var(--line)'}}>
+          <span>{late ? '⚠' : kind === 'photo' ? '📷' : '🎬'}</span>
+          <span className="small" style={{color: late ? 'var(--red)' : '#e8b84a', fontWeight:600}}>
+            {kind === 'photo' ? 'Photos' : 'Video'} due · {dlTitle(d)} · {o.project || ''}</span>
+        </div>);})}
+    </>);
+  };
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const monthName = anchor.toLocaleDateString('en-CA', {month:'long', year:'numeric'});
   const move = n => setAnchor(a => new Date(a.getFullYear(), a.getMonth() + n, 1));
@@ -2821,27 +3036,67 @@ function CalendarView({db, clientName, setPrintDoc}){
         onChange={k => setAnchor(new Date(+k.slice(0,4), +k.slice(5,7) - 1, 1))}/>
       <input type="date" style={{width:'auto'}} value={runDate} onChange={e => setRunDate(e.target.value)}/>
       <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: runDate})}>🖨 Run Sheet</button>
+      <button className={'btn sm' + (mode === 'month' ? '' : ' ghost')} onClick={() => setMode('month')}>Month</button>
+      <button className={'btn sm' + (mode === 'agenda' ? '' : ' ghost')} onClick={() => setMode('agenda')}>Agenda</button>
+      <button className="btn ghost sm" onClick={exportIcs} title="Download upcoming shoots for your phone's calendar (with 1-hour alerts)">📆 .ics</button>
     </div>
     <div className="flex small" style={{marginBottom:10}}>
       <span className="chip shoot">🎥 Shoot</span>
       <span className="chip due">📷 photos due +3 days · 🎬 video due +5 days</span>
       <span className="chip late">⚠ Overdue</span>
+      <span className="chip" style={{background:'rgba(227,34,44,.07)', color:'var(--dim)'}}>🚫 Blocked (tap a day to toggle)</span>
     </div>
-    <div className="cal">
+    <div className="cal" style={{display: mode === 'month' ? '' : 'none'}}>
       {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w => <div className="cal-w" key={w}>{w}</div>)}
       {cells.map((c,i) => {
         const ds = key(c);
         const inMonth = c.getMonth() === anchor.getMonth();
         const shoots = shootsOn(ds), dues = duesOn(ds);
         return (
-        <div key={i} className={'cal-cell' + (inMonth ? '' : ' dim') + (ds === td ? ' today' : '')}>
-          <div className="cal-d">{c.getDate()}</div>
+        <div key={i} className={'cal-cell' + (inMonth ? '' : ' dim') + (ds === td ? ' today' : '') + (blocked.includes(ds) ? ' blockedday' : '')}
+          style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
+          <div className="cal-d">{c.getDate()}{blocked.includes(ds) ? ' 🚫' : ''}</div>
           {shoots.map(d => { const o = orderOf(d); return (
             <div className="chip shoot" key={'s'+d.id} title={`${d.name} · ${o.project || ''} · ${clientName(o.clientId)}`}>🎥 {dlTitle(d)}</div>);})}
           {dues.map(({d, kind}) => { const o = orderOf(d); const late = ds < td; const icon = kind === 'photo' ? '📷' : '🎬'; return (
             <div className={'chip ' + (late ? 'late' : 'due')} key={'d'+d.id+kind} title={`${kind === 'photo' ? 'Photos' : 'Video'} due: ${dlTitle(d)} · ${o.project || ''}`}>{late ? '⚠' : icon} {dlTitle(d)}</div>);})}
         </div>);})}
     </div>
+    {mode === 'agenda' &&
+    <div className="card">
+      {(() => {
+        const days = Array.from({length: 14}, (_, i) => addDays(td, i)).filter(ds =>
+          shootsOn(ds).some(d => d.status !== 'Delivered') || duesOn(ds).length > 0 || blocked.includes(ds));
+        if(days.length === 0) return <p className="small faint" style={{textAlign:'center', padding:10}}>Nothing scheduled in the next 14 days — clear runway.</p>;
+        return days.map(ds => (
+          <div key={ds} style={{marginBottom:16}}>
+            <div className="flex" style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
+              <strong style={{color: ds === td ? 'var(--red)' : 'var(--txt)'}}>
+                {new Date(ds + 'T12:00').toLocaleDateString('en-CA', {weekday:'short', month:'short', day:'numeric'})}{ds === td ? ' · today' : ''}</strong>
+              {blocked.includes(ds) && <span className="small" style={{color:'var(--red)'}}>🚫 blocked</span>}
+            </div>
+            <DayRows ds={ds}/>
+          </div>));
+      })()}
+    </div>}
+    {drawer &&
+    <div className="card" style={{border:'1px solid var(--red)'}}>
+      <div className="flex">
+        <h3 style={{marginBottom:0, fontSize:17}}>
+          {new Date(drawer + 'T12:00').toLocaleDateString('en-CA', {weekday:'long', month:'long', day:'numeric'})}</h3>
+        {blocked.includes(drawer) && <span className="pill late">🚫 blocked</span>}
+        <span className="spacer"></span>
+        <button className="btn ghost sm" onClick={() => toggleBlocked(drawer)}>{blocked.includes(drawer) ? '✓ Unblock day' : '🚫 Block day'}</button>
+        <button className="btn ghost sm" onClick={openNewBooking}>+ Booking</button>
+        <button className="x" onClick={() => setDrawer(null)}>✕</button>
+      </div>
+      <SunLine ds={drawer} enabled={!!db.settings.useGeo}/>
+      <div style={{marginTop:6}}>
+        <DayRows ds={drawer}/>
+        {shootsOn(drawer).filter(d => d.status !== 'Delivered').length === 0 && duesOn(drawer).length === 0 &&
+          <p className="small faint" style={{marginTop:8}}>Nothing scheduled — a clean day{blocked.includes(drawer) ? ', and protected' : ''}.</p>}
+      </div>
+    </div>}
   </>);
 }
 
