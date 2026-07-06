@@ -74,10 +74,30 @@ textarea{flex:1;min-width:200px}
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .chips button{background:#1f1f24;border:1px solid var(--line);color:var(--txt);border-radius:20px;padding:7px 13px;font-size:12.5px;font-weight:600;cursor:pointer}
 .chips button:active{background:rgba(227,34,44,.2);border-color:var(--red)}
+.gnav{flex-wrap:wrap}
+.due{margin:0 0 12px;padding:9px 13px;border-radius:8px;font-size:13px;font-weight:700;background:rgba(232,184,74,.13);border:1px solid rgba(232,184,74,.45);color:#ecc25e}
+.due.urgent{background:rgba(227,34,44,.13);border-color:rgba(227,34,44,.5);color:#ff7078}
+.wholine{color:var(--dim);font-size:12px;margin:-8px 0 12px}
+.wholine b{color:var(--txt)}
+.wholine a{color:var(--dim)}
+#presov{position:fixed;inset:0;background:#000;z-index:99;display:flex;align-items:center;justify-content:center}
+#presov img{max-width:100vw;max-height:100vh;object-fit:contain}
+#presov .pclose{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.12);border:none;color:#fff;font-size:18px;border-radius:50%;width:40px;height:40px;cursor:pointer;z-index:2}
+#presov .phint{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,.45);font-size:12px;pointer-events:none}
+#presov.paused .phint::after{content:' · paused'}
+.cmpwrap{display:flex;gap:2px;background:#000}
+.cmpwrap>div{flex:1;position:relative;min-width:0}
+.cmpwrap img{width:100%;max-height:70vh;object-fit:contain;display:block;background:#000}
+.cmpwrap .vtag{position:absolute;top:8px;left:10px;background:rgba(0,0,0,.7);color:#fff;padding:3px 9px;border-radius:4px;font-size:11px;font-weight:800;letter-spacing:.05em}
+.cmpwrap .missing{display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px;min-height:200px}
+.cmpbtn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:4px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+.cmpbtn.on{background:rgba(232,184,74,.16);border-color:#e8b84a;color:#ecc25e}
 </style></head><body><div class="wrap">
 <h1 id="brand"></h1><div class="sub" id="subline"></div>
 <div class="proj" id="proj"></div>
-<div class="vtabs" id="vtabs"></div>
+<div class="wholine" id="wholine"></div>
+<div id="duebanner"></div>
+<div class="vtabs" id="vtabs"><button class="cmpbtn" id="cmpbtn" style="display:none" onclick="cmpToggle()">⇄ Compare</button></div>
 <div class="player" id="player"></div>
 <div class="thumbs" id="thumbs"></div>
 <div class="compose">
@@ -85,6 +105,7 @@ textarea{flex:1;min-width:200px}
     <button class="tchip" id="refbtn" style="display:none" onclick="stampNow()"></button>
     <input class="tin" id="tman" style="display:none">
     <textarea id="ctext" rows="2" placeholder="Your note — what to change, keep, or fix…"></textarea>
+    <button class="addbtn" id="micbtn" style="display:none" onclick="dictate()" title="Dictate your note">🎤</button>
     <button class="addbtn" onclick="addCmt()">Add</button>
   </div>
   <div class="chips" id="chips" style="display:none">
@@ -134,6 +155,10 @@ const KEY = 'rem_rev_' + project + '_' + dname;
 const SKEY = 'rem_sel_' + project + '_' + dname;
 let sels = {};
 try{ sels = JSON.parse(localStorage.getItem(SKEY) || '{}'); }catch(e){}
+const SEENKEY = 'rem_seen_' + project + '_' + dname;
+let seen = {};
+try{ seen = JSON.parse(localStorage.getItem(SEENKEY) || '{}'); }catch(e){}
+let identity = localStorage.getItem('rem_reviewer') || who || 'Reviewer';
 let cur = Math.max(0, versions.length - 1), curImg = 0, stamped = null, vid = null, gallery = [];
 let cmts = [];
 try{ cmts = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){}
@@ -142,6 +167,27 @@ document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Ree
 document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Client Review';
 document.getElementById('proj').textContent = project + (dname ? ' — ' + dname : '') + (who ? ' · for ' + who : '');
 document.title = 'Review — ' + project;
+function setWhoLine(){
+  document.getElementById('wholine').innerHTML = 'Reviewing as <b>' + escT(identity) + '</b> · <a href="#" onclick="changeWho();return false;">change</a>';
+}
+function changeWho(){
+  const v = prompt('Who\u2019s reviewing? (your first name)', identity);
+  if(v && v.trim()){ identity = v.trim(); try{ localStorage.setItem('rem_reviewer', identity); }catch(e){} setWhoLine(); }
+}
+setWhoLine();
+const due = q.get('due');
+if(due){
+  const dd = new Date(due + 'T23:59:59');
+  if(!isNaN(dd)){
+    const days = Math.ceil((dd - new Date()) / 86400000);
+    const el = document.createElement('div');
+    el.className = 'due' + (days <= 1 ? ' urgent' : '');
+    el.textContent = days < 0 ? '⏳ This review is past due — your feedback today keeps the listing on track.'
+      : days === 0 ? '⏳ Approve today to stay on schedule.'
+      : '⏳ Approve by ' + dd.toLocaleDateString('en-CA', {weekday:'short', month:'short', day:'numeric'}) + ' — ' + days + ' day' + (days !== 1 ? 's' : '') + ' left to keep your listing on track.';
+    document.getElementById('duebanner').appendChild(el);
+  }
+}
 
 function direct(u){
   if(u.includes('www.dropbox.com')) u = u.replace('www.dropbox.com','dl.dropboxusercontent.com').replace(/([?&])dl=0/,'$1raw=1');
@@ -182,7 +228,7 @@ function renderTabs(){
     const b = document.createElement('button');
     b.textContent = 'V' + (i+1) + (i === versions.length-1 ? ' · Latest' : '');
     if(i === cur) b.classList.add('on');
-    b.onclick = () => { cur = i; curImg = 0; renderTabs(); renderMedia(); renderList(); };
+    b.onclick = () => { cur = i; curImg = 0; compareMode = false; const cb = document.getElementById('cmpbtn'); if(cb){ cb.classList.remove('on'); cb.textContent = '⇄ Compare'; } renderTabs(); renderMedia(); renderList(); };
     el.appendChild(b);
   });
 }
@@ -284,7 +330,7 @@ function buildGallery(items){
   const p = document.getElementById('player');
   const th = document.getElementById('thumbs');
   p.innerHTML = '<div id="bigwrap"></div>' +
-    '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button><button class="selb" id="selbtn" onclick="toggleSel()" title="Pick this one">☆</button><span class="selcount" id="selcount"></span></div>';
+    '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button><button class="selb" id="selbtn" onclick="toggleSel()" title="Pick this one">☆</button><span class="selcount" id="selcount"></span><button class="selb" id="linkbtn" onclick="copyPhotoLink()" title="Copy link to this photo" style="color:var(--txt)">🔗</button><button class="selb" id="presbtn" onclick="present()" title="Fullscreen slideshow" style="color:var(--txt)">▶</button><span class="lbl" id="seenlbl" style="color:var(--dim);font-weight:600"></span></div>';
   th.innerHTML = '';
   const addSection = (label, arr, off) => {
     if(arr.length === 0) return;
@@ -301,13 +347,38 @@ function buildGallery(items){
   };
   addSection('📷 Photos', ph, 0);
   addSection('🎬 Video', vd, ph.length);
-  curImg = Math.min(curImg, gallery.length - 1);
+  const gname = q.get('goto');
+  if(gname && !window.__gotoDone){
+    const gi2 = gallery.findIndex(x => x.name === gname);
+    if(gi2 >= 0) curImg = gi2;
+    window.__gotoDone = true;
+  }
+  curImg = Math.min(Math.max(0, curImg), gallery.length - 1);
+  const cb = document.getElementById('cmpbtn');
+  if(cb) cb.style.display = (versions.length > 1 && cur > 0) ? '' : 'none';
   syncGallery();
+}
+function copyPhotoLink(){
+  const g = gallery[curImg]; if(!g) return;
+  const u = new URL(location.href);
+  u.searchParams.set('goto', g.name);
+  const btn = document.getElementById('linkbtn');
+  const done = () => { btn.textContent = '✓'; setTimeout(() => btn.textContent = '🔗', 1200); };
+  if(navigator.clipboard) navigator.clipboard.writeText(u.toString()).then(done).catch(done); else done();
 }
 function syncGallery(){
   const g = gallery[curImg];
   const bw = document.getElementById('bigwrap');
-  if(g.dvid) bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
+  const prevIt = compareMode && prevCache[cur - 1] ? prevCache[cur - 1].find(x => x.name === g.name) : null;
+  if(compareMode && !g.isVid){
+    bw.innerHTML = '<div class="cmpwrap">' +
+      '<div>' + (prevIt && !prevIt.isVid
+        ? '<img src="' + prevIt.big.replace(/"/g,'&quot;') + '"><span class="vtag">V' + cur + '</span>'
+        : '<div class="missing">not in V' + cur + '</div>') + '</div>' +
+      '<div><img src="' + g.big.replace(/"/g,'&quot;') + '"><span class="vtag">V' + (cur + 1) + ' · current</span></div>' +
+      '</div>';
+  }
+  else if(g.dvid) bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
   else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
@@ -319,6 +390,10 @@ function syncGallery(){
             : 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.');
   [...document.getElementById('thumbs').children].forEach((w,i) => { const im = w.querySelector('img'); if(im) im.classList.toggle('on', gallery.indexOf(g) >= 0 && w.onclick && i >= 0 && false); });
   unzoom();
+  const sarr = seen[cur] = seen[cur] || [];
+  if(g.name && !sarr.includes(g.name)){ sarr.push(g.name); try{ localStorage.setItem(SEENKEY, JSON.stringify(seen)); }catch(e){} }
+  const sl = document.getElementById('seenlbl');
+  if(sl) sl.textContent = 'seen ' + sarr.length + ' / ' + gallery.length;
   const picks = sels[cur] || [];
   const sb = document.getElementById('selbtn');
   if(sb){ const on = picks.includes(g.name); sb.textContent = on ? '⭐' : '☆'; sb.classList.toggle('on', on); }
@@ -332,6 +407,7 @@ function syncGallery(){
     const im = w.querySelector('img'); const d = w.querySelector('.thumbph');
     const on = gi === curImg;
     if(im) im.classList.toggle('on', on);
+    if(im) im.style.opacity = (!on && sarr.includes(gallery[gi] && gallery[gi].name)) ? .5 : 1;
     if(d) d.style.borderColor = on ? 'var(--red)' : 'transparent';
     w.classList.toggle('sel', picks.includes(gallery[gi] && gallery[gi].name));
     gi++;
@@ -349,17 +425,95 @@ function quick(txt){
   let ref = {};
   if(vid){ ref = {t: vid.currentTime}; }
   else if(gallery.length){ const g = gallery[curImg]; ref = {img: g.name, idx: curImg}; }
-  cmts.push(Object.assign({id: Date.now(), ver: cur, txt}, ref));
+  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref));
   save(); renderList();
 }
 function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
 document.addEventListener('keydown', function(e){
+  if(document.getElementById('presov')) return;
   if(!gallery.length) return;
   const tag = (document.activeElement && document.activeElement.tagName) || '';
   if(tag === 'TEXTAREA' || tag === 'INPUT') return;
   if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); nav(1); }
   else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); nav(-1); }
 });
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recOn = false;
+if(SR) document.getElementById('micbtn').style.display = '';
+function dictate(){
+  const btn = document.getElementById('micbtn');
+  if(recOn){ try{ rec.stop(); }catch(e){} return; }
+  rec = new SR();
+  rec.lang = 'en-CA'; rec.continuous = true; rec.interimResults = false;
+  rec.onresult = ev => {
+    let t = '';
+    for(let i = ev.resultIndex; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+    const box = document.getElementById('ctext');
+    box.value = (box.value ? box.value.trimEnd() + ' ' : '') + t.trim();
+  };
+  rec.onend = () => { recOn = false; btn.textContent = '🎤'; btn.style.borderColor = ''; };
+  rec.onerror = () => { recOn = false; btn.textContent = '🎤'; btn.style.borderColor = ''; };
+  try{ rec.start(); recOn = true; btn.textContent = '⏹'; btn.style.borderColor = 'var(--red)'; }catch(e){}
+}
+// ---- presentation mode ----
+function present(){
+  const ph = gallery.filter(g => !g.isVid);
+  if(!ph.length) return;
+  let i = Math.max(0, ph.indexOf(gallery[curImg]));
+  const ov = document.createElement('div');
+  ov.id = 'presov';
+  ov.innerHTML = '<img><button class="pclose">✕</button><div class="phint">tap to pause · swipe or arrow keys to move</div>';
+  document.body.appendChild(ov);
+  const img = ov.querySelector('img');
+  let playing = true;
+  const show = () => { img.src = ph[i].big; };
+  show();
+  const t = setInterval(() => { if(playing){ i = (i + 1) % ph.length; show(); } }, 3500);
+  const kh = e => {
+    if(e.key === 'Escape') exit();
+    else if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); i = (i + 1) % ph.length; show(); }
+    else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); i = (i - 1 + ph.length) % ph.length; show(); }
+  };
+  function exit(){
+    clearInterval(t); document.removeEventListener('keydown', kh, true); ov.remove();
+    if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+  ov.querySelector('.pclose').onclick = exit;
+  ov.addEventListener('click', e => { if(e.target.tagName !== 'BUTTON'){ playing = !playing; ov.classList.toggle('paused', !playing); } });
+  let px = null;
+  ov.addEventListener('touchstart', e => { px = e.touches[0].clientX; }, {passive: true});
+  ov.addEventListener('touchend', e => {
+    if(px === null) return;
+    const dx = e.changedTouches[0].clientX - px; px = null;
+    if(Math.abs(dx) > 55){ i = (i + (dx < 0 ? 1 : -1) + ph.length) % ph.length; show(); playing = false; ov.classList.add('paused'); }
+  }, {passive: true});
+  document.addEventListener('keydown', kh, true);
+  if(ov.requestFullscreen) ov.requestFullscreen().catch(() => {});
+}
+// ---- V1/V2 compare ----
+let compareMode = false;
+const prevCache = {};
+function itemsFor(entry){
+  const parts = (entry || '').split(',').map(s => s.trim()).filter(Boolean);
+  const jobs = parts.map(part => {
+    const r = resolve(part);
+    if(r.kind === 'dfolder') return gkey ? listFolder(r.id).catch(() => []) : Promise.resolve([]);
+    if(r.kind === 'dfile') return Promise.resolve([{thumb:'', big: r.src, name: 'Video', isVid: true}]);
+    if(r.kind === 'img') return Promise.resolve([{thumb: r.src, big: r.src, name: 'Photo'}]);
+    if(r.kind === 'video') return Promise.resolve([{thumb:'', big: r.src, name: 'Video', isVid: true, dvid: true}]);
+    return Promise.resolve([]);
+  });
+  return Promise.all(jobs).then(arrs => arrs.flat());
+}
+function cmpToggle(){
+  const btn = document.getElementById('cmpbtn');
+  if(compareMode){ compareMode = false; btn.classList.remove('on'); btn.textContent = '⇄ Compare'; syncGallery(); return; }
+  const pi = cur - 1;
+  if(pi < 0) return;
+  btn.textContent = '…';
+  const ready = prevCache[pi] ? Promise.resolve(prevCache[pi]) : itemsFor(versions[pi]).then(it => (prevCache[pi] = it));
+  ready.then(() => { compareMode = true; btn.classList.add('on'); btn.textContent = '✕ Compare'; syncGallery(); });
+}
 let zoomed = false;
 function unzoom(){
   zoomed = false;
@@ -423,13 +577,24 @@ function addCmt(){
     ref = stamped || {img: g.name + (g.isVid && mt ? ' @ ' + mt : ''), idx: curImg}; }
   else { const man = document.getElementById('tman').value.trim();
     if(man){ const t = parseT(man); ref = t !== null ? {t} : {img: man}; } }
-  cmts.push(Object.assign({id: Date.now(), ver: cur, txt}, ref));
+  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref));
   stamped = null;
   document.getElementById('ctext').value = ''; document.getElementById('tman').value = '';
   if(gallery.length) syncGallery(); else if(vid) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime);
   save(); renderList();
 }
-function approve(){ cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version'}); save(); renderList();
+function approve(){
+  if(gallery.length){
+    const tot = gallery.length, sn = (seen[cur] || []).length;
+    const pend = cmts.filter(c => c.ver === cur && /^(🔁|🗑)/.test(c.txt)).length;
+    if(sn < tot || pend){
+      let m = '';
+      if(sn < tot) m += 'You\u2019ve viewed ' + sn + ' of ' + tot + ' items. ';
+      if(pend) m += pend + ' swap/cut note' + (pend > 1 ? 's' : '') + ' still pending. ';
+      if(!confirm(m + 'Approve anyway?')) return;
+    }
+  }
+  cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); save(); renderList();
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
@@ -444,7 +609,8 @@ function renderList(){
     tt.textContent = lbl === null ? '✓' : (c.img ? '📷 ' + lbl : lbl);
     if(c.t !== undefined && c.t !== null && vid) tt.onclick = () => { vid.currentTime = c.t; vid.pause(); window.scrollTo({top:0, behavior:'smooth'}); };
     if(c.idx !== undefined && gallery.length){ tt.onclick = () => { curImg = Math.min(c.idx, gallery.length-1); syncGallery(); window.scrollTo({top:0, behavior:'smooth'}); }; }
-    const tx = document.createElement('span'); tx.textContent = c.txt; tx.style.flex = '1';
+    const multi = new Set(mine.map(x => x.who).filter(Boolean)).size > 1;
+    const tx = document.createElement('span'); tx.textContent = (multi && c.who ? '(' + c.who + ') ' : '') + c.txt; tx.style.flex = '1';
     const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.onclick = () => delCmt(c.id);
     row.appendChild(tt); row.appendChild(tx); row.appendChild(x);
     el.appendChild(row);
@@ -485,7 +651,8 @@ function blob(){
     if(vs.length === 0 && sa.length === 0) return;
     lines.push('', 'Version ' + (i+1) + ':');
     if(sa.length) lines.push('⭐ SELECTS (' + sa.length + '): ' + sa.join(', '));
-    vs.forEach(c => { const l = refLabel(c); lines.push((l ? '[' + l + '] ' : '') + c.txt); });
+    const multi = new Set(vs.map(x => x.who).filter(Boolean)).size > 1;
+    vs.forEach(c => { const l = refLabel(c); lines.push((l ? '[' + l + '] ' : '') + (multi && c.who ? '(' + c.who + ') ' : '') + c.txt); });
   });
   lines.push('', '=== END ===');
   return lines.join('\n');
@@ -536,7 +703,7 @@ function sendMsg(){
   const body = t.value.trim();
   if(!body || !endpoint) return;
   t.value = ''; 
-  fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'msg', ref, project, dname: (typeof dname !== 'undefined' ? dname : ''), who: (q.get('n') || 'Agent'), from: 'agent', body})})
+  fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'msg', ref, project, dname: (typeof dname !== 'undefined' ? dname : ''), who: identity, from: 'agent', body})})
     .then(() => setTimeout(loadThread, 800));
 }
 if(endpoint && ref){

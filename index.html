@@ -2486,6 +2486,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 '&t=' + (pinC ? 'pin' : 'rem') +
                 (b.orientation === 'Vertical' ? '&o=v' : '') +
                 (mediaOf(d) === 'both' ? '&m=both' : '') +
+                (dueDateOf(d) ? '&due=' + dueDateOf(d) : '') +
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
