@@ -2627,11 +2627,14 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 const shortU = base + '?x=' + code;
                 updateDeliverable(d.id, {reviewUrl: shortU});
                 copyText(shortU);
-                window.open(u, '_blank');
+                const w = window.open('', '_blank');
+                if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
                 fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code, project: order.project || d.group, who: 'app', body: qs})})
                   .then(r => r.json()).then(j => { if(!j.ok) throw new Error(j.error || 'save failed');
-                    showToast('✅ SHORT link is on your clipboard — ?x=' + code + ' · (the tab that opened is just your full-link preview)'); })
-                  .catch(() => { updateDeliverable(d.id, {reviewUrl: u}); copyText(u);
+                    if(w) w.location = shortU;
+                    showToast('✅ Short link copied & opened: ' + shortU); })
+                  .catch(() => { if(w) w.location = u;
+                    updateDeliverable(d.id, {reviewUrl: u}); copyText(u);
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
