@@ -734,7 +734,10 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         <button className="btn sm" disabled={!u.trim() || !tk.trim()} onClick={() => updateSettings({inboxUrl: u.trim(), inboxToken: tk.trim()})}>Connect Inbox</button>
       </div>
     </div>);
-  const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id)).reverse();
+  const latestFb = {};
+  subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
+  const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id) &&
+    !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
   if(fresh.length === 0 && !err) return (
     <div className="card" style={{padding:'12px 18px'}}>
       <div className="flex">

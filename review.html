@@ -144,6 +144,7 @@ textarea{flex:1;min-width:200px}
     <button onclick="quick('🗑 Cut this')">🗑 Cut</button>
   </div>
   <div class="hint" id="chint"></div>
+  <div class="hint" style="opacity:.75">Your notes save &amp; send automatically — Approve or Submit just sends them instantly.</div>
 </div>
 <div class="clist" id="clist"></div>
 <div class="actions">
@@ -195,6 +196,18 @@ function updateSendBtn(){
   a.textContent = (endpoint ? '✅ Submit feedback' : '📧 Send feedback') + (n ? ' (' + n + ' new)' : '');
   a.classList.toggle('pulse', n > 0);
 }
+let autoT = null;
+function scheduleAutoSend(){
+  if(!endpoint) return;
+  clearTimeout(autoT);
+  autoT = setTimeout(() => { if(unsentCount() > 0) postFeedback().catch(() => {}); }, 45000);
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden' && endpoint && unsentCount() > 0){
+    try{ fetch(endpoint, {method:'POST', keepalive: true,
+      body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})}); }catch(e){}
+  }
+});
 function postFeedback(){
   if(!endpoint) return Promise.reject();
   return fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})})
@@ -652,7 +665,7 @@ function approve(){
   }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} scheduleAutoSend(); }
 function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
 function renderList(){
   const el = document.getElementById('clist'); el.innerHTML = '';
