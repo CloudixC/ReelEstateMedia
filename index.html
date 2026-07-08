@@ -1202,7 +1202,7 @@ function App(){
         <p>Production Pipeline · Pinnacle Command Centre</p>
       </div>
       <nav className="tabs">
-        {[['dashboard','Home'],['calendar','Calendar'],['pipeline','Pipeline'],['orders','Orders'],['clients','Clients'],['money','Money']].map(([k,l]) =>
+        {[['dashboard','Home'],['calendar','Calendar'],['pipeline','Pipeline'],['review','Review'],['orders','Orders'],['clients','Clients'],['money','Money']].map(([k,l]) =>
           <button key={k} className={view === k ? 'on' : ''} onClick={() => {setView(k); setOpenOrder(null);}}>
             {l}{k === 'calendar' && db.pendingBookings.length > 0 ? ` · ${db.pendingBookings.length}` : ''}
           </button>)}
@@ -1223,6 +1223,8 @@ function App(){
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable}
         updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} />}
+    {view === 'review' && <ReviewTab db={db} clientName={clientName}
+        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
       <CalendarView db={db} clientName={clientName} setPrintDoc={setPrintDoc} updateDeliverable={updateDeliverable} toggleBlocked={toggleBlockedDay} openNewBooking={() => setShowNewOrder(true)} showToast={showToast} />
       <div style={{marginTop:16}}>
@@ -1629,6 +1631,78 @@ function NextShootCountdown({db, openOrderDetail}){
       {days > 0 && <span>{days}<em>d</em> </span>}{hrs}<em>h</em> {String(min).padStart(2,'0')}<em>m</em> {String(sec).padStart(2,'0')}<em>s</em>
     </div>
   </div>);
+}
+
+function ReviewTab({db, clientName, openOrderDetail, showToast}){
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState('');
+  const cfg = db.settings.inboxUrl && db.settings.inboxToken;
+  const load = async () => {
+    if(!cfg) return;
+    try {
+      const r = await fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken));
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error || 'fetch failed');
+      setRows(j.rows || []); setErr('');
+    } catch(e){ setErr(String(e.message || e)); setRows([]); }
+  };
+  useEffect(() => { load(); }, []);
+  const reviews = db.deliverables.filter(d => d.reviewUrl || (d.reviewVersions || []).length > 0 || isReviewStage(d.status));
+  const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
+  const groups = {};
+  reviews.forEach(d => { const cid = ordOf(d).clientId || '—'; (groups[cid] = groups[cid] || []).push(d); });
+  const cids = Object.keys(groups).sort((a, b) => (clientName(a) || '').localeCompare(clientName(b) || ''));
+  const fbFor = d => (rows || []).filter(r => r.kind === 'feedback' && r.ref === d.id);
+  const msgsFor = d => (rows || []).filter(r => r.kind === 'msg' && r.ref === d.id);
+  return (<>
+    <div className="flex" style={{marginBottom:14}}>
+      <h2 className="serif" style={{fontSize:24, marginBottom:0}}>Review Rooms</h2>
+      <span className="spacer"></span>
+      <button className="btn ghost sm" onClick={load}>⟳ Refresh feedback</button>
+    </div>
+    {!cfg && <div className="card"><p className="small muted">Connect the Client Submissions inbox on Home first — agent feedback and messages appear here through it.</p></div>}
+    {err && <p className="small" style={{color:'var(--red)'}}>Couldn't load feedback: {err}</p>}
+    {reviews.length === 0 && <div className="card"><p className="small faint" style={{textAlign:'center', padding:16}}>No review rooms yet — tap 🎬 Review room on any deliverable to create one. It'll live here, organized by agent.</p></div>}
+    {cids.map(cid => {
+      const c = db.clients.find(x => x.id === cid);
+      return (
+      <div key={cid} className="card">
+        <h3 style={{fontSize:17, marginBottom:4}}>{c ? c.name : 'Unassigned'}{c && c.company ? <span className="small faint" style={{fontWeight:400}}> · {c.company}</span> : null}</h3>
+        {groups[cid].map(d => {
+          const o = ordOf(d);
+          const fb = fbFor(d);
+          const latest = fb[fb.length - 1];
+          const approved = fb.some(r => String(r.body).indexOf('✓ APPROVED') > -1);
+          const nv = (d.reviewVersions || []).length;
+          const msgN = msgsFor(d).length;
+          return (
+          <div key={d.id} style={{borderTop:'1px solid var(--line)', padding:'11px 0'}}>
+            <div className="flex" style={{flexWrap:'wrap'}}>
+              <strong>{dlTitle(d)}</strong>
+              <span className="small faint">{o.project || d.group}</span>
+              <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
+              {nv > 0 && <span className="pill scheduled">V{nv}</span>}
+              {approved && <span className="pill delivered">✓ Approved</span>}
+              {d.reviewDate && <span className="small faint">sent {d.reviewDate}</span>}
+            </div>
+            <div className="flex" style={{marginTop:8, flexWrap:'wrap', gap:8}}>
+              {d.reviewUrl && <CopyBtn text={d.reviewUrl} label="📋 Copy link"/>}
+              {d.reviewUrl && <button className="btn ghost sm" onClick={() => window.open(d.reviewUrl, '_blank')}>Open room ↗</button>}
+              <button className="btn ghost sm" onClick={() => openOrderDetail(d.orderId, d.id)}>Order →</button>
+              <ThreadPanelButton db={db} d={d} order={o} client={c}/>
+              {msgN > 0 && <span className="small faint">💬 {msgN} message{msgN > 1 ? 's' : ''}</span>}
+            </div>
+            {fb.length > 0 &&
+            <details style={{marginTop:8}} open={!approved && fb.length > 0}>
+              <summary className="small" style={{cursor:'pointer', color:'#ecc25e', fontWeight:700}}>
+                💬 Feedback ({fb.length}){latest ? ' · latest ' + String(latest.ts).slice(0, 10) + ' from ' + (latest.who || 'agent') : ''}</summary>
+              <div className="small muted" style={{whiteSpace:'pre-wrap', background:'var(--panel2)', border:'1px solid var(--line)', borderRadius:8, padding:'9px 12px', marginTop:6, maxHeight:220, overflow:'auto'}}>{latest ? latest.body : ''}</div>
+              {fb.length > 1 && <div className="small faint" style={{marginTop:4}}>{fb.length - 1} earlier round{fb.length > 2 ? 's' : ''} archived in your REM Inbox sheet.</div>}
+            </details>}
+            {fb.length === 0 && rows !== null && <p className="small faint" style={{marginTop:6}}>No feedback submitted yet.</p>}
+          </div>);})}
+      </div>);})}
+  </>);
 }
 
 const dayDiff = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
@@ -2602,6 +2676,12 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 updateSettings({reviewPageUrl: base.trim()});
               }
               const entry = srcs.join(',');
+              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry){
+                copyText(d.reviewUrl);
+                window.open(d.reviewUrl, '_blank');
+                showToast('🔗 Same versions — existing short link copied: ' + d.reviewUrl);
+                return;
+              }
               const vers = [...(d.reviewVersions || [])];
               if(!vers.includes(entry)) vers.push(entry);
               if(/\/drive\/(?:u\/\d+\/)?folders\//.test(d.link) && !db.settings.driveApiKey){
@@ -2625,7 +2705,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU});
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry});
                 copyText(shortU);
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
