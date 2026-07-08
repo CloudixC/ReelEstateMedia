@@ -70,6 +70,8 @@ textarea{flex:1;min-width:200px}
 .cmt .tt.na{background:rgba(76,195,138,.16);color:var(--teal);cursor:default}
 .cmt .x{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;margin-left:auto}
 .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.send.pulse{animation:sendpulse 1.6s ease-in-out infinite}
+@keyframes sendpulse{0%,100%{box-shadow:0 0 0 0 rgba(227,34,44,.55)}50%{box-shadow:0 0 0 7px rgba(227,34,44,0)}}
 .send{flex:1;min-width:220px;background:var(--red);color:#fff;border:none;border-radius:4px;padding:15px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer}
 .ok{flex:1;min-width:180px;background:transparent;color:var(--teal);border:1px solid var(--teal);border-radius:4px;padding:15px;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer}
 .dl{display:none;background:rgba(76,195,138,.08);border:1px solid var(--teal);border-radius:10px;padding:16px;margin-top:14px}
@@ -181,6 +183,26 @@ const KEY = 'rem_rev_' + project + '_' + dname;
 const SKEY = 'rem_sel_' + project + '_' + dname;
 let sels = {};
 try{ sels = JSON.parse(localStorage.getItem(SKEY) || '{}'); }catch(e){}
+const SENTKEY = 'rem_sent_' + project + '_' + dname;
+let sentIds = [];
+try{ sentIds = JSON.parse(localStorage.getItem(SENTKEY) || '[]'); }catch(e){}
+function unsentCount(){ return cmts.filter(c => !sentIds.includes(c.id)).length; }
+function markAllSent(){ sentIds = cmts.map(c => c.id); try{ localStorage.setItem(SENTKEY, JSON.stringify(sentIds)); }catch(e){} updateSendBtn(); }
+function updateSendBtn(){
+  const a = document.getElementById('sendlink');
+  if(!a || a.dataset.done) return;
+  const n = unsentCount();
+  a.textContent = (endpoint ? '✅ Submit feedback' : '📧 Send feedback') + (n ? ' (' + n + ' new)' : '');
+  a.classList.toggle('pulse', n > 0);
+}
+function postFeedback(){
+  if(!endpoint) return Promise.reject();
+  return fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})})
+    .then(x => x.json()).then(j => { if(!j.ok) throw new Error(j.error || 'failed'); markAllSent(); });
+}
+window.addEventListener('beforeunload', function(e){
+  if(endpoint && unsentCount() > 0){ e.preventDefault(); e.returnValue = ''; }
+});
 const SEENKEY = 'rem_seen_' + project + '_' + dname;
 let seen = {};
 try{ seen = JSON.parse(localStorage.getItem(SEENKEY) || '{}'); }catch(e){}
@@ -622,6 +644,12 @@ function approve(){
     }
   }
   cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); save(); renderList();
+  if(endpoint){
+    postFeedback().then(() => {
+      const a = document.getElementById('sendlink');
+      a.textContent = '✓ Sent — approval & notes delivered'; a.style.background = '#2f9e64'; a.dataset.done = '1'; a.classList.remove('pulse');
+    }).catch(() => {});
+  }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} }
@@ -643,6 +671,7 @@ function renderList(){
     el.appendChild(row);
   });
   if(mine.length === 0) el.innerHTML = '<div class="small" style="text-align:center;padding:14px">No comments on V' + (cur+1) + ' yet.</div>';
+  updateSendBtn();
   renderDl();
 }
 function dlLink(url){
@@ -691,7 +720,8 @@ document.getElementById('sendlink').addEventListener('click', function(ev){
     fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who, body: blob()})})
       .then(x => x.json()).then(j => {
         if(!j.ok) throw new Error(j.error || 'failed');
-        a.textContent = '✓ Feedback sent — thank you!'; a.style.background = '#2f9e64';
+        markAllSent();
+        a.textContent = '✓ Feedback sent — thank you!'; a.style.background = '#2f9e64'; a.dataset.done = '1'; a.classList.remove('pulse');
       })
       .catch(() => { a.textContent = '📧 Send by email instead';
         a.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Feedback: ' + project + (dname ? ' — ' + dname : '')) + '&body=' + encodeURIComponent(blob());
