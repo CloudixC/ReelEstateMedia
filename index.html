@@ -392,8 +392,7 @@ const seed = {
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
   settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''}
 };
-function load(){ try{
-  const d = JSON.parse(localStorage.getItem(LS_KEY));
+function migrate(d){
   if(d && d.clients){
     if(!d.settings) d.settings = {pinnacleGoal:1000};
     if(!d.settings.emailMap) d.settings.emailMap = {};
@@ -421,7 +420,10 @@ function load(){ try{
     });
     return d;
   }
-  return seed;
+  return null;
+}
+function load(){ try{
+  return migrate(JSON.parse(localStorage.getItem(LS_KEY))) || seed;
 } catch(e){ return seed; } }
 const isoToDate = iso => { try{ return new Date(iso).toLocaleDateString('en-CA'); } catch(e){ return today(); } };
 const isoToNice = iso => { try{ return new Date(iso).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); } catch(e){ return iso; } };
@@ -805,6 +807,113 @@ async function hashText(t){
     return 'djb2:' + h.toString(16);
   }
 }
+/* ---------------- Cloud sync (Supabase) ---------------- */
+const supaCfg = () => { try{ return JSON.parse(localStorage.getItem('rem_supa') || 'null'); }catch(e){ return null; } };
+const supaSess = () => { try{ return JSON.parse(localStorage.getItem('rem_supa_sess') || 'null'); }catch(e){ return null; } };
+const setSupaSess = s => { try{ s ? localStorage.setItem('rem_supa_sess', JSON.stringify(s)) : localStorage.removeItem('rem_supa_sess'); }catch(e){} };
+
+async function supaSignIn(url, key, email, pw){
+  const r = await fetch(url + '/auth/v1/token?grant_type=password', {
+    method: 'POST', headers: {apikey: key, 'Content-Type': 'application/json'},
+    body: JSON.stringify({email, password: pw})});
+  const j = await r.json();
+  if(!r.ok) throw new Error(j.error_description || j.msg || 'sign-in failed');
+  localStorage.setItem('rem_supa', JSON.stringify({url, key}));
+  setSupaSess({access: j.access_token, refresh: j.refresh_token, uid: j.user.id});
+  return j.user.id;
+}
+async function supaRefresh(){
+  const cfg = supaCfg(), sess = supaSess();
+  if(!cfg || !sess) throw new Error('no session');
+  const r = await fetch(cfg.url + '/auth/v1/token?grant_type=refresh_token', {
+    method: 'POST', headers: {apikey: cfg.key, 'Content-Type': 'application/json'},
+    body: JSON.stringify({refresh_token: sess.refresh})});
+  const j = await r.json();
+  if(!r.ok){ setSupaSess(null); throw new Error('session expired — sign in again'); }
+  setSupaSess({access: j.access_token, refresh: j.refresh_token, uid: j.user.id});
+}
+async function supaRest(path, opts, retried){
+  const cfg = supaCfg(), sess = supaSess();
+  if(!cfg || !sess) throw new Error('not connected');
+  const r = await fetch(cfg.url + path, {...(opts || {}), headers: {
+    apikey: cfg.key, Authorization: 'Bearer ' + sess.access,
+    'Content-Type': 'application/json', ...((opts || {}).headers || {})}});
+  if(r.status === 401 && !retried){ await supaRefresh(); return supaRest(path, opts, true); }
+  return r;
+}
+async function supaPull(){
+  const r = await supaRest('/rest/v1/app_state?select=data,updated_at&limit=1');
+  if(!r.ok) throw new Error('pull failed ' + r.status);
+  const rows = await r.json();
+  return rows[0] || null;
+}
+async function supaPush(data, stamp){
+  const sess = supaSess();
+  const r = await supaRest('/rest/v1/app_state?on_conflict=owner', {
+    method: 'POST',
+    headers: {Prefer: 'resolution=merge-duplicates'},
+    body: JSON.stringify([{owner: sess.uid, data, updated_at: stamp}])});
+  if(!r.ok) throw new Error('push failed ' + r.status);
+}
+
+function CloudModal({db, onClose, cloud, setCloud, adoptRemote}){
+  const cfg = supaCfg();
+  const [url, setUrl] = useState((cfg && cfg.url) || '');
+  const [key, setKey] = useState((cfg && cfg.key) || '');
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const connected = !!supaSess();
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:480}}>
+        <div className="flex"><h3>☁ Cloud Sync</h3><span className="spacer"></span><button className="x" onClick={onClose}>✕</button></div>
+        {connected ? <>
+          <p className="small muted" style={{marginTop:8}}>Connected — your data syncs to Supabase and follows you to any device that signs in.
+            {cloud.last ? ' Last sync: ' + cloud.last : ''}</p>
+          <div className="flex" style={{marginTop:14}}>
+            <button className="btn ghost sm" onClick={async () => {
+              setBusy(true); setErr('');
+              try{ const row = await supaPull(); if(row) adoptRemote(row); else setErr('No cloud copy yet — it saves automatically after your next change.'); }
+              catch(e){ setErr(String(e.message || e)); }
+              setBusy(false);
+            }}>{busy ? '…' : '⬇ Pull latest from cloud'}</button>
+            <span className="spacer"></span>
+            <button className="btn ghost sm" onClick={() => { setSupaSess(null); setCloud({status:'off', last:null}); onClose(); }}>Sign out</button>
+          </div>
+        </> : <>
+          <p className="small muted" style={{marginTop:8}}>One-time per device — see <strong>supabase-setup.txt</strong> for the 10-minute project setup, then paste here:</p>
+          <label className="f" style={{marginTop:10}}>Project URL</label>
+          <input placeholder="https://xxxx.supabase.co" value={url} onChange={e => setUrl(e.target.value)}/>
+          <label className="f" style={{marginTop:8}}>Anon public key</label>
+          <input placeholder="eyJ…" value={key} onChange={e => setKey(e.target.value)}/>
+          <div className="frow" style={{marginTop:8}}>
+            <div><label className="f">Email</label><input value={email} onChange={e => setEmail(e.target.value)}/></div>
+            <div><label className="f">Cloud password</label><input type="password" value={pw} onChange={e => setPw(e.target.value)}/></div>
+          </div>
+          <button className="btn" style={{width:'100%', marginTop:14}} disabled={busy || !url.trim() || !key.trim() || !email.trim() || !pw}
+            onClick={async () => {
+              setBusy(true); setErr('');
+              try{
+                await supaSignIn(url.trim().replace(/\/+$/, ''), key.trim(), email.trim(), pw);
+                setCloud({status:'idle', last:null});
+                const row = await supaPull();
+                if(row && row.data && (row.data.orders || []).length + (row.data.clients || []).length > 0 &&
+                   confirm('A cloud copy exists (saved ' + String(row.updated_at).slice(0, 16).replace('T', ' ') + '). Load it onto this device?\n\nOK = use cloud copy · Cancel = keep this device\u2019s data (it will overwrite the cloud on next save)')){
+                  adoptRemote(row);
+                }
+                onClose();
+              }catch(e){ setErr(String(e.message || e)); }
+              setBusy(false);
+            }}>{busy ? 'Connecting…' : 'Sign in & Sync'}</button>
+        </>}
+        {err && <p className="small" style={{color:'var(--red)', marginTop:10}}>{err}</p>}
+      </div>
+    </div>);
+}
+
+const APP_VERSION = 'v2026.07.06.1';
 const LOCK_HASH = '3d0fbc04f8f9a435aeed3161cb0da5c451bd2e3e6dced84318595db174d82ab2';
 function LockScreen({onUnlock}){
   const [cur, setCur] = useState('');
@@ -901,6 +1010,53 @@ function App(){
     showToast(`Deleted ${c.name}`, [{label: 'Undo', fn: () => setDb(p => ({...p, clients: [c, ...p.clients]}))}]);
   };
 
+  const [staleVersion, setStaleVersion] = useState(false);
+  const [cloud, setCloud] = useState({status: supaSess() ? 'idle' : 'off', last: null});
+  const [showCloud, setShowCloud] = useState(false);
+  const cloudSkip = React.useRef(false);
+  const adoptRemote = (row) => {
+    const md = migrate(row.data);
+    if(!md){ alert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
+    cloudSkip.current = true;
+    setDb(md);
+    setCloud({status:'idle', last: String(row.updated_at).slice(11, 19)});
+    showToast('⬇ Loaded cloud copy');
+  };
+  // pull-on-open: adopt cloud if it's newer than what this device last saw
+  useEffect(() => {
+    if(!supaSess()) return;
+    supaPull().then(row => {
+      if(row && String(row.updated_at) > String(db.cloudStamp || '') && (row.data.cloudStamp || '') !== (db.cloudStamp || '')){
+        adoptRemote(row);
+      }
+    }).catch(() => setCloud(c => ({...c, status:'err'})));
+  }, []);
+  // debounced push on every change
+  useEffect(() => {
+    if(!supaSess()) return;
+    if(cloudSkip.current){ cloudSkip.current = false; return; }
+    setCloud(c => ({...c, status:'saving'}));
+    const t = setTimeout(() => {
+      const stamp = new Date().toISOString();
+      const payload = {...db, cloudStamp: stamp};
+      supaPush(payload, stamp).then(() => {
+        cloudSkip.current = true;
+        setDb(p => ({...p, cloudStamp: stamp}));
+        setCloud({status:'idle', last: stamp.slice(11, 19)});
+      }).catch(() => setCloud(c => ({...c, status:'err'})));
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [db]);
+  useEffect(() => {
+    const check = () => fetch(location.pathname || 'index.html', {cache: 'no-store'})
+      .then(r => r.text()).then(t => {
+        const m = t.match(/APP_VERSION = '([^']+)'/);
+        if(m && m[1] !== APP_VERSION) setStaleVersion(true);
+      }).catch(() => {});
+    const t0 = setTimeout(check, 5000);
+    const t = setInterval(check, 30 * 60 * 1000);
+    return () => { clearTimeout(t0); clearInterval(t); };
+  }, []);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
   const toggleBlockedDay = (ds) => setDb(p => ({...p, blockedDays: (p.blockedDays || []).includes(ds)
     ? (p.blockedDays || []).filter(x => x !== ds) : [...(p.blockedDays || []), ds]}));
@@ -964,6 +1120,37 @@ function App(){
     }
     if(cur && isReviewStage(patch.status) && !isReviewStage(cur.status)){
       if(!cur.reviewDate) patch = {...patch, reviewDate: today()};
+      // auto-refresh the review room link so the copied message always points at the room
+      try {
+        const nl = (patch.link !== undefined ? patch.link : cur.link) || '';
+        const nlv = (patch.linkVideo !== undefined ? patch.linkVideo : cur.linkVideo) || '';
+        const srcs2 = [nl.trim(), mediaOf(cur) === 'both' ? nlv.trim() : ''].filter(Boolean);
+        const base2 = db.settings.reviewPageUrl;
+        if(srcs2.length && base2 && db.settings.inboxUrl){
+          const entry2 = srcs2.join(',');
+          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2)){
+            const o2 = db.orders.find(x => x.id === cur.orderId) || {};
+            const c2 = db.clients.find(x => x.id === o2.clientId) || {};
+            const vers2 = [...(cur.reviewVersions || [])];
+            if(!vers2.includes(entry2)) vers2.push(entry2);
+            const pin2 = c2.tier === 'partner' || c2.tier === 'internal';
+            const full2 = base2 + '?p=' + encodeURIComponent(o2.project || cur.group) +
+              '&d=' + encodeURIComponent(dlTitle(cur)) +
+              '&n=' + encodeURIComponent((c2.name || '').split(' ')[0]) +
+              '&t=' + (pin2 ? 'pin' : 'rem') +
+              ((getBrief(cur).orientation === 'Vertical') ? '&o=v' : '') +
+              (mediaOf(cur) === 'both' ? '&m=both' : '') +
+              (dueDateOf(cur) ? '&due=' + dueDateOf(cur) : '') +
+              '&r=' + encodeURIComponent(cur.id) +
+              '&e=' + encodeURIComponent(db.settings.inboxUrl) +
+              '&v=' + vers2.map(encodeURIComponent).join('|') +
+              (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
+            const code2 = Math.random().toString(36).slice(2, 9);
+            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2};
+            fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
+          }
+        }
+      } catch(e){}
       const isB = mediaOf(cur) === 'both';
       const l = prompt(isB ? '📷 Photos review link? OK to save — blank to skip.' : '👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
       if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
@@ -1211,6 +1398,9 @@ function App(){
           </button>)}
       </nav>
       <div className="flex" style={{gap:8}}>
+        <button className="btn ghost sm" title="Cloud sync" onClick={() => setShowCloud(true)}
+          style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
+          {supaSess() ? (cloud.status === 'saving' ? '☁ …' : cloud.status === 'err' ? '☁ ⚠' : '☁ ✓') : '☁'}</button>
         <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
         <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
         <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
@@ -1218,6 +1408,15 @@ function App(){
       </div>
     </header>
 
+    {showCloud && <CloudModal db={db} onClose={() => setShowCloud(false)} cloud={cloud} setCloud={setCloud} adoptRemote={adoptRemote}/>}
+    {staleVersion &&
+    <div className="card" style={{border:'1px solid var(--amber)', padding:'11px 16px', marginBottom:12}}>
+      <div className="flex">
+        <span className="small" style={{fontWeight:700, color:'var(--amber)'}}>⬆ A newer version of the app is live — you're running stale code.</span>
+        <span className="spacer"></span>
+        <button className="btn sm" onClick={() => location.reload(true)}>Refresh now</button>
+      </div>
+    </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
@@ -2660,6 +2859,20 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 (getBrief(d).topic ? '&tp=' + encodeURIComponent(getBrief(d).topic) : '');
+              const fqs = u.split('?').slice(1).join('?');
+              if(db.settings.inboxUrl){
+                if(d.formUrl && d.formSig === fqs){ copyText(d.formUrl); window.open(d.formUrl, '_blank'); showToast('🔗 Existing short form link copied'); return; }
+                const fcode = Math.random().toString(36).slice(2, 9);
+                const fshort = base + '?x=' + fcode;
+                updateDeliverable(d.id, {formUrl: fshort, formSig: fqs});
+                copyText(fshort);
+                const fw = window.open('', '_blank');
+                if(fw){ try{ fw.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh">Creating short link…</body>'); }catch(e){} }
+                fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: fcode, project: order.project || d.group, who: 'app', body: fqs})})
+                  .then(r => r.json()).then(j => { if(!j.ok) throw 0; if(fw) fw.location = fshort; showToast('✅ Short form link copied: ' + fshort); })
+                  .catch(() => { if(fw) fw.location = u; updateDeliverable(d.id, {formUrl: '', formSig: ''}); copyText(u); });
+                return;
+              }
               copyText(u);
               window.open(u, '_blank');
             }}>🔗 Copy + open form link</button>
