@@ -856,7 +856,7 @@ async function supaPush(data, stamp){
   if(!r.ok) throw new Error('push failed ' + r.status);
 }
 
-function CloudModal({db, onClose, cloud, setCloud, adoptRemote}){
+function CloudModal({db, onClose, cloud, setCloud, adoptRemote, seedCloud}){
   const cfg = supaCfg();
   const [url, setUrl] = useState((cfg && cfg.url) || '');
   const [key, setKey] = useState((cfg && cfg.key) || '');
@@ -885,7 +885,7 @@ function CloudModal({db, onClose, cloud, setCloud, adoptRemote}){
         </> : <>
           <p className="small muted" style={{marginTop:8}}>One-time per device — see <strong>supabase-setup.txt</strong> for the 10-minute project setup, then paste here:</p>
           <label className="f" style={{marginTop:10}}>Project URL</label>
-          <input placeholder="https://xxxx.supabase.co" value={url} onChange={e => setUrl(e.target.value)}/>
+          <input placeholder="https://xxxx.supabase.co (just the domain — any extra path is fine, I'll trim it)" value={url} onChange={e => setUrl(e.target.value)}/>
           <label className="f" style={{marginTop:8}}>Anon public key</label>
           <input placeholder="eyJ…" value={key} onChange={e => setKey(e.target.value)}/>
           <div className="frow" style={{marginTop:8}}>
@@ -896,12 +896,17 @@ function CloudModal({db, onClose, cloud, setCloud, adoptRemote}){
             onClick={async () => {
               setBusy(true); setErr('');
               try{
-                await supaSignIn(url.trim().replace(/\/+$/, ''), key.trim(), email.trim(), pw);
+                let nu = url.trim();
+                try{ nu = new URL(nu).origin; }catch(e){ nu = nu.replace(/\/.*$/, m => '').replace(/\/+$/, ''); }
+                await supaSignIn(nu, key.trim(), email.trim(), pw);
                 setCloud({status:'idle', last:null});
                 const row = await supaPull();
-                if(row && row.data && (row.data.orders || []).length + (row.data.clients || []).length > 0 &&
-                   confirm('A cloud copy exists (saved ' + String(row.updated_at).slice(0, 16).replace('T', ' ') + '). Load it onto this device?\n\nOK = use cloud copy · Cancel = keep this device\u2019s data (it will overwrite the cloud on next save)')){
-                  adoptRemote(row);
+                if(row && row.data && (row.data.orders || []).length + (row.data.clients || []).length > 0){
+                  if(confirm('A cloud copy exists (saved ' + String(row.updated_at).slice(0, 16).replace('T', ' ') + '). Load it onto this device?\n\nOK = use cloud copy · Cancel = keep this device\u2019s data (it will overwrite the cloud on next save)')){
+                    adoptRemote(row);
+                  }
+                } else {
+                  await seedCloud();
                 }
                 onClose();
               }catch(e){ setErr(String(e.message || e)); }
@@ -1014,6 +1019,13 @@ function App(){
   const [cloud, setCloud] = useState({status: supaSess() ? 'idle' : 'off', last: null});
   const [showCloud, setShowCloud] = useState(false);
   const cloudSkip = React.useRef(false);
+  const seedCloud = async () => {
+    const stamp = new Date().toISOString();
+    await supaPush({...db, cloudStamp: stamp}, stamp);
+    cloudSkip.current = true;
+    setDb(p => ({...p, cloudStamp: stamp}));
+    setCloud({status:'idle', last: stamp.slice(11, 19)});
+  };
   const adoptRemote = (row) => {
     const md = migrate(row.data);
     if(!md){ alert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
@@ -1400,7 +1412,7 @@ function App(){
       <div className="flex" style={{gap:8}}>
         <button className="btn ghost sm" title="Cloud sync" onClick={() => setShowCloud(true)}
           style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
-          {supaSess() ? (cloud.status === 'saving' ? '☁ …' : cloud.status === 'err' ? '☁ ⚠' : '☁ ✓') : '☁'}</button>
+          {supaSess() ? (cloud.status === 'saving' ? '☁ …' : cloud.status === 'err' ? '☁ ⚠' : cloud.last ? '☁ ✓' : '☁ ·') : '☁'}</button>
         <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
         <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
         <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
@@ -1408,7 +1420,7 @@ function App(){
       </div>
     </header>
 
-    {showCloud && <CloudModal db={db} onClose={() => setShowCloud(false)} cloud={cloud} setCloud={setCloud} adoptRemote={adoptRemote}/>}
+    {showCloud && <CloudModal db={db} onClose={() => setShowCloud(false)} cloud={cloud} setCloud={setCloud} adoptRemote={adoptRemote} seedCloud={seedCloud}/>}
     {staleVersion &&
     <div className="card" style={{border:'1px solid var(--amber)', padding:'11px 16px', marginBottom:12}}>
       <div className="flex">
