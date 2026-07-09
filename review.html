@@ -279,11 +279,40 @@ function listFolder(id){
       thumb: 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w400',
       big: isVid ? 'https://drive.google.com/file/d/' + fl.id + '/preview'
                  : 'https://drive.google.com/thumbnail?id=' + fl.id + '&sz=w2400',
+      fileId: fl.id,
       name: fl.name.replace(/\.[a-z0-9]+$/i,''), isVid
     };
   }));
 }
 
+function fsOnPlay(v){
+  v.addEventListener('play', function once(){
+    v.removeEventListener('play', once);
+    try{
+      if(v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+      else if(v.requestFullscreen) v.requestFullscreen().catch(function(){});
+    }catch(e){}
+  });
+}
+function attachVid(v){
+  vid = v;
+  document.getElementById('refbtn').style.display = '';
+  document.getElementById('refbtn').textContent = '⏱ 0:00';
+  composer('stamp', '', 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.');
+  const upd = () => { if(stamped === null) document.getElementById('refbtn').textContent = '⏱ ' + fmt(v.currentTime); };
+  v.addEventListener('timeupdate', upd); v.addEventListener('pause', upd);
+  fsOnPlay(v);
+}
+function driveVideoEl(id, onFail){
+  const v = document.createElement('video');
+  v.controls = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
+  v.src = 'https://drive.google.com/uc?export=download&id=' + id;
+  let ok = false;
+  v.addEventListener('loadedmetadata', function(){ ok = true; });
+  v.addEventListener('error', function(){ if(!ok) onFail(); });
+  setTimeout(function(){ if(!ok && (v.readyState || 0) < 1) onFail(); }, 7000);
+  return v;
+}
 function renderTabs(){
   const el = document.getElementById('vtabs'); el.innerHTML = '';
   versions.forEach((u,i) => {
@@ -322,11 +351,7 @@ function renderSingle(url){
   const r = resolve(url);
   if(r.kind === 'video'){
     p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
-    vid = p.querySelector('video');
-    document.getElementById('refbtn').textContent = '⏱ 0:00';
-    composer('stamp', '', 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.');
-    const upd = () => { if(stamped === null) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime); };
-    vid.addEventListener('timeupdate', upd); vid.addEventListener('pause', upd);
+    attachVid(p.querySelector('video'));
   } else if(r.kind === 'img'){
     p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
     composer('none', '', 'Type your note and Add — it attaches to this image.');
@@ -339,8 +364,15 @@ function renderSingle(url){
       }).catch(e => folderFallback(r, 'gallery couldn’t load: ' + e.message + '. Checklist: folder shared as “Anyone with link” · Drive API enabled · key website restriction is https://cloudixc.github.io/*'));
     } else folderFallback(r, 'this link has no gallery key. In the app, tap 🎬 Review room again after saving your Drive API key so a fresh link is generated.');
   } else if(r.kind === 'dfile'){
-    p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-    composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. Pause first so the time is easy to read.');
+    const fallback = () => {
+      vid = null;
+      p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+      composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. Pause first so the time is easy to read.');
+    };
+    p.innerHTML = '';
+    const v = driveVideoEl(r.id, fallback);
+    p.appendChild(v);
+    attachVid(v);
   } else {
     p.innerHTML = '<iframe src="' + r.src.replace(/"/g,'&quot;') + '" allowfullscreen></iframe>';
     composer('manual', 'time / photo ref (optional)', 'Add your notes below — include a time or photo reference so we know where to look.');
@@ -360,7 +392,7 @@ function assembleParts(parts){
       } else if(r.kind === 'dfile'){
         let name = 'Video';
         if(gkey){ try{ const j = await fetch('https://www.googleapis.com/drive/v3/files/' + r.id + '?fields=name&key=' + gkey).then(x => x.json()); if(j.name) name = j.name.replace(/\.[a-z0-9]+$/i,''); }catch(e){} }
-        items.push({thumb: 'https://drive.google.com/thumbnail?id=' + r.id + '&sz=w400', big: r.src, name, isVid: true});
+        items.push({thumb: 'https://drive.google.com/thumbnail?id=' + r.id + '&sz=w400', big: r.src, fileId: r.id, name, isVid: true});
       } else if(r.kind === 'img'){
         items.push({thumb: r.src, big: r.src, name: 'Photo ' + (items.length + 1)});
       } else if(r.kind === 'video'){
@@ -440,7 +472,16 @@ function syncGallery(){
       '<div><img src="' + g.big.replace(/"/g,'&quot;') + '"><span class="vtag">V' + (cur + 1) + ' · current</span></div>' +
       '</div>';
   }
-  else if(g.dvid) bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
+  else if(g.dvid){
+    bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
+    fsOnPlay(bw.querySelector('video'));
+  }
+  else if(g.isVid && g.fileId && !g.nfail){
+    bw.innerHTML = '';
+    const gv = driveVideoEl(g.fileId, () => { g.nfail = true; if(gallery[curImg] === g) syncGallery(); });
+    bw.appendChild(gv);
+    fsOnPlay(gv);
+  }
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
   else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
