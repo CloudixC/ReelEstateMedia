@@ -333,9 +333,13 @@ function attachVid(v){
   vid = v;
   document.getElementById('refbtn').style.display = '';
   document.getElementById('refbtn').textContent = '⏱ 0:00';
-  composer('stamp', '', 'Pause where you want to comment, tap the red time button, type, Add. Tap any timestamp below to jump there.');
+  composer('stamp', '', 'Pause where you want to comment — that moment is captured automatically. Type your note, hit Add. Tap any timestamp below to jump there.');
   const upd = () => { if(stamped === null) document.getElementById('refbtn').textContent = '⏱ ' + fmt(v.currentTime); };
-  v.addEventListener('timeupdate', upd); v.addEventListener('pause', upd);
+  v.addEventListener('timeupdate', upd);
+  v.addEventListener('pause', () => {
+    stamped = {t: v.currentTime};
+    document.getElementById('refbtn').textContent = '⏱ ' + fmt(v.currentTime) + ' ✓';
+  });
   fsOnPlay(v);
 }
 function driveVideoEl(id, onFail){
@@ -517,13 +521,16 @@ function syncGallery(){
   }
   else if(g.dvid){
     bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
-    fsOnPlay(bw.querySelector('video'));
+    const dv = bw.querySelector('video');
+    fsOnPlay(dv);
+    dv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(dv.currentTime); });
   }
   else if(g.isVid && g.fileId && !g.nfail){
     bw.innerHTML = '';
     const gv = driveVideoEl(g.fileId, () => { g.nfail = true; if(gallery[curImg] === g) syncGallery(); });
     bw.appendChild(gv);
     fsOnPlay(gv);
+    gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
   else {
