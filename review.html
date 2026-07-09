@@ -312,11 +312,19 @@ function attachVid(v){
 function driveVideoEl(id, onFail){
   const v = document.createElement('video');
   v.controls = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
-  v.src = 'https://drive.google.com/uc?export=download&id=' + id;
-  let ok = false;
-  v.addEventListener('loadedmetadata', function(){ ok = true; });
-  v.addEventListener('error', function(){ if(!ok) onFail(); });
-  setTimeout(function(){ if(!ok && (v.readyState || 0) < 1) onFail(); }, 7000);
+  const sources = [];
+  if(gkey) sources.push('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media&key=' + gkey);
+  sources.push('https://drive.google.com/uc?export=download&id=' + id);
+  let si = 0, ok = false, tm = null;
+  const tryNext = () => {
+    clearTimeout(tm);
+    if(si >= sources.length){ onFail(); return; }
+    v.src = sources[si++];
+    tm = setTimeout(() => { if(!ok && (v.readyState || 0) < 1) tryNext(); }, 9000);
+  };
+  v.addEventListener('loadedmetadata', function(){ ok = true; clearTimeout(tm); });
+  v.addEventListener('error', function(){ if(!ok) tryNext(); });
+  tryNext();
   return v;
 }
 function renderTabs(){
