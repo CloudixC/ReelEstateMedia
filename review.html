@@ -291,6 +291,35 @@ function listFolder(id){
   }).sort(function(a, b){ return a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}); }));
 }
 
+function swapImg(img, newSrc, dir){
+  if(!img.src || img.src === newSrc){ img.src = newSrc; return; }
+  const D = dir || 0;
+  img.style.transition = 'transform .16s ease, opacity .16s ease';
+  img.style.transform = 'translateX(' + (-D * 46) + 'px)';
+  img.style.opacity = '0';
+  setTimeout(() => {
+    const arrive = () => {
+      img.onload = null;
+      requestAnimationFrame(() => {
+        img.style.transition = 'transform .2s ease, opacity .2s ease';
+        img.style.transform = 'translateX(0)';
+        img.style.opacity = '1';
+      });
+    };
+    img.style.transition = 'none';
+    img.style.transform = 'translateX(' + (D * 46) + 'px)';
+    img.onload = arrive;
+    img.src = newSrc;
+    if(img.complete && img.naturalWidth) arrive();
+  }, 160);
+}
+function preloadAround(){
+  if(!gallery.length) return;
+  [curImg + 1, curImg - 1, curImg + 2].forEach(i => {
+    const g = gallery[(i + gallery.length * 2) % gallery.length];
+    if(g && !g.isVid){ const im = new Image(); im.src = g.big; }
+  });
+}
 function fsOnPlay(v){
   v.addEventListener('play', function once(){
     v.removeEventListener('play', once);
@@ -497,7 +526,13 @@ function syncGallery(){
     fsOnPlay(gv);
   }
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-  else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
+  else {
+    const old = bw.querySelector('img.bigimg');
+    if(old && !old.classList.contains('zoomed')) swapImg(old, g.big, window.__navDir || 0);
+    else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
+  }
+  window.__navDir = 0;
+  preloadAround();
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
   document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
   const short = g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name;
@@ -545,7 +580,7 @@ function quick(txt){
   cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref));
   save(); renderList();
 }
-function nav(d){ curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
+function nav(d){ window.__navDir = d; curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
 function openLightbox(){
   const g0 = gallery[curImg];
   if(!g0) return;
@@ -564,17 +599,19 @@ function openLightbox(){
     '</div>';
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
-  const draw = () => {
+  const draw = (dir) => {
     const g = gallery[curImg];
-    img.src = g.big;
+    swapImg(img, g.big, dir || 0);
     document.getElementById('lbcap').textContent = g.name + ' · ' + (curImg + 1) + ' / ' + gallery.length;
     document.getElementById('lbstar').textContent = (sels[cur] || []).includes(g.name) ? '⭐' : '☆';
+    window.__navDir = 0;
     syncGallery();
+    preloadAround();
   };
   const step = d => {
     let guard = 0;
     do { curImg = (curImg + d + gallery.length) % gallery.length; guard++; } while(gallery[curImg].isVid && guard <= gallery.length);
-    draw();
+    draw(d);
   };
   const kh = e => {
     if(e.key === 'Escape'){ e.preventDefault(); close(); }
@@ -586,7 +623,7 @@ function openLightbox(){
   ov.querySelector('#lbprev').onclick = () => step(-1);
   ov.querySelector('#lbnext').onclick = () => step(1);
   ov.querySelector('#lbx').onclick = close;
-  ov.querySelector('#lbstar').onclick = () => { toggleSel(); draw(); };
+  ov.querySelector('#lbstar').onclick = () => { toggleSel(); draw(0); };
   ov.querySelector('#lbnote').onclick = () => {
     const g = gallery[curImg];
     stamped = {img: g.name, idx: curImg};
@@ -641,13 +678,13 @@ function present(){
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
   let playing = true;
-  const show = () => { img.src = ph[i].big; };
-  show();
-  const t = setInterval(() => { if(playing){ i = (i + 1) % ph.length; show(); } }, 3500);
+  const show = (dir) => { swapImg(img, ph[i].big, dir || 1); };
+  img.src = ph[i].big;
+  const t = setInterval(() => { if(playing){ i = (i + 1) % ph.length; show(1); } }, 3500);
   const kh = e => {
     if(e.key === 'Escape') exit();
-    else if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); i = (i + 1) % ph.length; show(); }
-    else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); i = (i - 1 + ph.length) % ph.length; show(); }
+    else if(e.key === 'ArrowRight' || e.key === 'ArrowDown'){ e.preventDefault(); i = (i + 1) % ph.length; show(1); }
+    else if(e.key === 'ArrowLeft' || e.key === 'ArrowUp'){ e.preventDefault(); i = (i - 1 + ph.length) % ph.length; show(-1); }
   };
   function exit(){
     clearInterval(t); document.removeEventListener('keydown', kh, true); ov.remove();
@@ -660,7 +697,7 @@ function present(){
   ov.addEventListener('touchend', e => {
     if(px === null) return;
     const dx = e.changedTouches[0].clientX - px; px = null;
-    if(Math.abs(dx) > 55){ i = (i + (dx < 0 ? 1 : -1) + ph.length) % ph.length; show(); playing = false; ov.classList.add('paused'); }
+    if(Math.abs(dx) > 55){ const dd = dx < 0 ? 1 : -1; i = (i + dd + ph.length) % ph.length; show(dd); playing = false; ov.classList.add('paused'); }
   }, {passive: true});
   document.addEventListener('keydown', kh, true);
   if(ov.requestFullscreen) ov.requestFullscreen().catch(() => {});
