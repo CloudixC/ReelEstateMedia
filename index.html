@@ -1089,7 +1089,7 @@ function App(){
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal';
       const co = companyOf(c);
-      const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', projects});
+      const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
       const base = (db.settings.reviewPageUrl || '').replace('review.html', 'hub.html');
       return base ? base + '?a=' + hk + '&t=' + (pin ? 'pin' : 'rem') : null;

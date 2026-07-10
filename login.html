@@ -451,7 +451,8 @@
             name: man.agent || String(r.project || '').split(' ')[0],
             full: r.project || man.agent || k,
             t: man.t === 'rem' ? 'rem' : 'pin',
-            brokerage: man.brokerage || ''
+            brokerage: man.brokerage || '',
+            email: man.email || ''
           };
           var o = document.createElement('option');
           o.value = k;
@@ -476,6 +477,12 @@
       if(v && v !== '__manual__' && AGENTS[v]){
         $('adName').value = AGENTS[v].name;
         $('adType').value = AGENTS[v].t;
+        if(AGENTS[v].email){
+          $('adEmail').value = AGENTS[v].email;
+        } else {
+          $('adEmail').value = '';
+          $('adEmail').placeholder = 'No email on their profile — type it here';
+        }
       }
     });
     if($('adToken').value.trim()) loadAgents();
