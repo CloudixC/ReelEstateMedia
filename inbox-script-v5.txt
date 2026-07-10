@@ -1,0 +1,51 @@
+// REM Submissions Inbox v5 — adds AGENT HUB manifests (?hub=)
+// Update: REM Inbox script → select all → paste → Cmd+S →
+// Deploy → Manage deployments → ✏️ → Version: New version → Deploy. URL unchanged.
+
+const TOKEN = '82cfb27d45baa8a2f7cf77b247a0907199d6ab095ffef93b';
+const NOTIFY = 'contenthub@rlppinnacle.ca';
+
+function clean(v){ v = String(v == null ? '' : v); return /^[=+]/.test(v) ? String.fromCharCode(39) + v : v; }
+function out(o){ return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function doPost(e){
+  try{
+    const d = JSON.parse(e.postData.contents);
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+    sh.appendRow([new Date().toISOString(), clean(d.kind), clean(d.ref), clean(d.project), clean(d.dname), clean(d.who), clean(d.body), clean(d.from)]);
+    if(d.kind !== 'link' && d.kind !== 'hub' && !(d.kind === 'msg' && d.from === 'jag')){
+      try{
+        const label = d.kind === 'brief' ? '📝 New brief' : d.kind === 'msg' ? '💬 New message' : '💬 New feedback';
+        MailApp.sendEmail(NOTIFY,
+          label + ': ' + (d.project || '') + (d.dname ? ' — ' + d.dname : '') + (d.who ? ' · from ' + d.who : ''),
+          (d.body || '').slice(0, 1500) + '\n\n— Open your Command Centre to act on it.');
+      }catch(mailErr){}
+    }
+    return out({ok:true});
+  }catch(err){ return out({ok:false, error:String(err)}); }
+}
+
+function doGet(e){
+  const p = e.parameter;
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  const vals = sh.getDataRange().getValues();
+  const mk = function(r, i){ return {id:'r' + (i+1), ts:String(r[0]), kind:r[1], ref:r[2], project:r[3], dname:r[4], who:r[5], body:r[6], from:r[7] || ''}; };
+  if(p.hub){
+    const rows = vals.map(mk).filter(function(r){ return r.kind === 'hub' && String(r.ref) === String(p.hub); });
+    if(rows.length === 0) return out({ok:false, error:'unknown hub'});
+    try{ return out({ok:true, hub: JSON.parse(String(rows[rows.length - 1].body))}); }
+    catch(err){ return out({ok:false, error:'bad manifest'}); }
+  }
+  if(p.link){
+    const rows = vals.map(mk).filter(function(r){ return r.kind === 'link' && String(r.ref) === String(p.link); });
+    if(rows.length === 0) return out({ok:false, error:'unknown link'});
+    return out({ok:true, qs: String(rows[rows.length - 1].body)});
+  }
+  if(p.thread){
+    const rows = vals.map(mk).filter(function(r){ return r.kind === 'msg' && String(r.ref) === String(p.thread); });
+    return out({ok:true, rows:rows});
+  }
+  if((p.token || '') !== TOKEN) return out({ok:false, error:'bad token'});
+  const rows = vals.map(mk).filter(function(r){ return r.kind; });
+  return out({ok:true, rows:rows});
+}

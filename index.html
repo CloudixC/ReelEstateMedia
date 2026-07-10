@@ -1070,6 +1070,25 @@ function App(){
     return () => { clearTimeout(t0); clearInterval(t); };
   }, []);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
+  const pushHub = (clientId) => {
+    try {
+      const c = db.clients.find(x => x.id === clientId);
+      if(!c || !db.settings.inboxUrl) return null;
+      let hk = c.hubKey;
+      if(!hk){ hk = Math.random().toString(36).slice(2, 10); setDb(p => ({...p, clients: p.clients.map(x => x.id === clientId ? {...x, hubKey: hk} : x)})); }
+      const items = db.deliverables
+        .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
+        .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
+          return {ttl: dlTitle(d), proj: o.project || d.group, st: STATUS_LABEL(d.status),
+            url: (d.reviewUrl || ''), dt: (d.reviewDate || d.shootDate || '')}; })
+        .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
+      const pin = c.tier === 'partner' || c.tier === 'internal';
+      const manifest = JSON.stringify({n: (c.name || '').split(' ')[0], t: pin ? 'pin' : 'rem', items});
+      fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
+      const base = (db.settings.reviewPageUrl || '').replace('review.html', 'hub.html');
+      return base ? base + '?a=' + hk : null;
+    } catch(e){ return null; }
+  };
   const toggleBlockedDay = (ds) => setDb(p => ({...p, blockedDays: (p.blockedDays || []).includes(ds)
     ? (p.blockedDays || []).filter(x => x !== ds) : [...(p.blockedDays || []), ds]}));
 
@@ -1160,6 +1179,7 @@ function App(){
             const code2 = Math.random().toString(36).slice(2, 9);
             patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2};
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
+            if(c2 && c2.id) setTimeout(() => pushHub(c2.id), 1500);
           }
         }
       } catch(e){}
@@ -1437,7 +1457,7 @@ function App(){
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable}
         updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} />}
-    {view === 'review' && <ReviewTab db={db} clientName={clientName}
+    {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
       <CalendarView db={db} clientName={clientName} setPrintDoc={setPrintDoc} updateDeliverable={updateDeliverable} toggleBlocked={toggleBlockedDay} openNewBooking={() => setShowNewOrder(true)} showToast={showToast} />
@@ -1847,7 +1867,7 @@ function NextShootCountdown({db, openOrderDetail}){
   </div>);
 }
 
-function ReviewTab({db, clientName, openOrderDetail, showToast}){
+function ReviewTab({db, clientName, pushHub, openOrderDetail, showToast}){
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState('');
   const [co, setCo] = useState(null);
@@ -1953,6 +1973,11 @@ function ReviewTab({db, clientName, openOrderDetail, showToast}){
       .sort((a, b) => String(lastOf(b) ? lastOf(b).ts : '').localeCompare(String(lastOf(a) ? lastOf(a).ts : '')));
     return (<>
       {header((c ? c.name : 'Agent'), () => setCid(null))}
+      <div className="flex" style={{marginBottom:10}}>
+        <button className="btn ghost sm" title="Copy this agent's permanent portal link — all their projects, one URL, no login"
+          onClick={() => { const u = pushHub(cid); if(u){ copyText(u); showToast('🔗 Agent hub link copied — ' + u); } else alert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); }}>
+          🏠 Copy agent hub link</button>
+      </div>
       <div className="card">
         {mine.length === 0 && <p className="small faint" style={{padding:12, textAlign:'center'}}>No review rooms with this agent yet.</p>}
         {mine.map((d, i) => {
@@ -3047,9 +3072,11 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 copyText(shortU);
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
+                if(client) setTimeout(() => pushHub(client.id), 1200);
                 fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code, project: order.project || d.group, who: 'app', body: qs})})
                   .then(r => r.json()).then(j => { if(!j.ok) throw new Error(j.error || 'save failed');
                     if(w) w.location = shortU;
+                    if(client && client.hubId) pushHubManifest(db, client);
                     showToast('✅ Short link copied & opened: ' + shortU); })
                   .catch(() => { if(w) w.location = u;
                     updateDeliverable(d.id, {reviewUrl: u}); copyText(u);
@@ -3157,6 +3184,14 @@ function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient}){
               <div className="flex">
                 <strong style={{fontSize:16}}>{c.name}</strong>
                 <span className="spacer"></span>
+                <button className="btn ghost sm" title="Copy this agent's permanent hub link — one page with all their content, no login" onClick={() => {
+                  let hid = c.hubId;
+                  if(!hid){ hid = uid(); updateClient(c.id, {hubId: hid}); }
+                  const hubBase = (db.settings.reviewPageUrl || 'https://cloudixc.github.io/ReelEstateMedia/review.html').replace(/review\.html.*$/, 'hub.html');
+                  const link = hubBase + '?a=' + hid + '&t=' + ((c.tier === 'partner' || c.tier === 'internal') ? 'pin' : 'rem');
+                  pushHubManifest(db, {...c, hubId: hid}).then(() => showToast('🏠 Hub updated & link copied — it\u2019s permanent, tell them to bookmark it'));
+                  copyText(link);
+                }}>🏠 Hub</button>
                 <button className="btn ghost sm" onClick={() => setEditingClient(c)}>Edit</button>
               </div>
               <div style={{marginTop:5}}><span className={'pill ' + c.tier}>{TIER_LABEL[c.tier] || c.tier}</span></div>

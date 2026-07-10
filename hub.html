@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Content</title>
+<style>
+:root{--red:#e3222c;--bg:#0a0a0c;--panel:#161619;--line:#2c2c33;--txt:#f4f1ea;--dim:#a6a49d;--teal:#4cc38a;--amber:#e8b84a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',sans-serif;padding:22px 16px 60px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto}
+h1{font-family:Georgia,serif;font-size:26px}h1 em{color:var(--red);font-style:italic}
+.sub{color:var(--dim);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;margin:2px 0 18px;font-weight:600}
+.hey{font-size:19px;font-weight:700;margin-bottom:4px}
+.heysub{color:var(--dim);font-size:13.5px;margin-bottom:20px}
+.sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:800;margin:20px 0 8px}
+.row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:9px}
+.row .tt{flex:1;min-width:0}
+.row .name{font-weight:700;font-size:15px}
+.row .proj{color:var(--dim);font-size:12.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:11px;font-weight:800;letter-spacing:.04em;border-radius:20px;padding:4px 11px;white-space:nowrap}
+.pill.rev{background:rgba(232,184,74,.15);color:var(--amber)}
+.pill.done{background:rgba(76,195,138,.15);color:var(--teal)}
+.pill.work{background:#1f1f24;color:var(--dim)}
+.go{background:var(--red);color:#fff;border:none;border-radius:6px;padding:11px 16px;font-weight:800;font-size:12px;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.go.soft{background:transparent;border:1px solid var(--teal);color:var(--teal)}
+.note{color:var(--dim);font-size:12.5px;text-align:center;margin-top:26px}
+.center{min-height:50vh;display:flex;align-items:center;justify-content:center;color:var(--dim);text-align:center;padding:20px}
+</style></head><body><div class="wrap">
+<h1 id="brand"></h1><div class="sub" id="subline"></div>
+<div id="body"><div class="center">Loading your content…</div></div>
+<div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically.</div>
+<script>
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+const q = new URLSearchParams(location.search);
+const a = q.get('a') || '';
+const pin = (q.get('t') || 'pin') === 'pin';
+document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
+document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Your Content';
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function render(h){
+  const items = (h.projects || []);
+  document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
+  let html = '<div class="hey">Hey ' + esc(h.agent || 'there') + ' 👋</div>' +
+    '<div class="heysub">Everything we\u2019ve made together' + (h.brokerage ? ' · ' + esc(h.brokerage) : '') + '</div>';
+  const rev = items.filter(x => x.rs && x.url);
+  const work = items.filter(x => !x.rs && !x.dv);
+  const done = items.filter(x => x.dv);
+  const row = (x, cls, pillTxt, btnTxt, soft) =>
+    '<div class="row"><div class="tt"><div class="name">' + esc(x.t) + '</div><div class="proj">' + esc(x.p) + '</div></div>' +
+    '<span class="pill ' + cls + '">' + pillTxt + '</span>' +
+    (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + '</a>' : '') + '</div>';
+  if(rev.length){ html += '<div class="sec">👀 Waiting on your review</div>'; rev.forEach(x => html += row(x, 'rev', 'In review', 'Review →')); }
+  if(work.length){ html += '<div class="sec">🎬 In the works</div>'; work.forEach(x => html += row(x, 'work', esc(x.st || 'In production'), 'Open →', true)); }
+  if(done.length){ html += '<div class="sec">✅ Delivered</div>'; done.forEach(x => html += row(x, 'done', 'Delivered', 'View →', true)); }
+  if(items.length === 0) html += '<div class="center">Fresh start — your first project will appear here as soon as we kick it off. 🎥</div>';
+  document.getElementById('body').innerHTML = html;
+  document.getElementById('foot').style.display = '';
+}
+if(!a){ document.getElementById('body').innerHTML = '<div class="center">This link is missing its key — ask us for a fresh one.</div>'; }
+else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
+  .then(r => r.json())
+  .then(j => { if(j.ok && j.hub) render(j.hub); else document.getElementById('body').innerHTML = '<div class="center">We couldn\u2019t find your page — ask us for a fresh link.</div>'; })
+  .catch(() => { document.getElementById('body').innerHTML = '<div class="center">Couldn\u2019t load — check your connection and refresh.</div>'; });
+</script></div></body></html>
