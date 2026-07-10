@@ -1,48 +1,122 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Content</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340..640;1,9..144,340..640&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
 <style>
-:root{--red:#e3222c;--bg:#0a0a0c;--panel:#161619;--line:#2c2c33;--txt:#f4f1ea;--dim:#a6a49d;--teal:#4cc38a;--amber:#e8b84a}
+:root{
+  --red:#e3222c; --red-soft:rgba(227,34,44,.14);
+  --bg:#070708; --panel:#121215; --panel2:#17171b;
+  --line:#232329; --line2:#2e2e36;
+  --txt:#f5f2e9; --dim:#9c9990; --faint:#6d6a63;
+  --amber:#e8b84a; --teal:#4cc38a;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',sans-serif;padding:22px 16px 60px;line-height:1.5}
-.wrap{max-width:640px;margin:0 auto}
-h1{font-family:Georgia,serif;font-size:26px}h1 em{color:var(--red);font-style:italic}
-.sub{color:var(--dim);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;margin:2px 0 18px;font-weight:600}
-.hey{font-size:19px;font-weight:700;margin-bottom:4px}
-.heysub{color:var(--dim);font-size:13.5px;margin-bottom:20px}
-.sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:800;margin:20px 0 8px}
-.row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:9px;flex-wrap:wrap}
-.row .tt{flex:1;min-width:180px}
-.row .name{font-weight:700;font-size:15px}
-.row .proj{color:var(--dim);font-size:12.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pill{font-size:11px;font-weight:800;letter-spacing:.04em;border-radius:20px;padding:4px 11px;white-space:nowrap}
-.pill.rev{background:rgba(232,184,74,.15);color:var(--amber)}
-.pill.done{background:rgba(76,195,138,.15);color:var(--teal)}
-.pill.work{background:#1f1f24;color:var(--dim)}
-.go{background:var(--red);color:#fff;border:none;border-radius:6px;padding:11px 16px;font-weight:800;font-size:12px;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
-.go.soft{background:transparent;border:1px solid var(--teal);color:var(--teal)}
-.note{color:var(--dim);font-size:12.5px;text-align:center;margin-top:26px}
-.center{min-height:50vh;display:flex;align-items:center;justify-content:center;color:var(--dim);text-align:center;padding:20px}
-.track{display:flex;gap:4px;margin-top:8px;width:100%}
-.track .seg{flex:1;height:4px;border-radius:3px;background:#26262c}
-.track .seg.on{background:var(--teal)}
-.track .seg.cur{background:var(--amber);box-shadow:0 0 6px rgba(232,184,74,.5)}
-.track.rev .seg.cur{background:var(--amber)}
-.stagelbl{font-size:11px;color:var(--dim);margin-top:5px;width:100%}
-.stagelbl b{color:var(--txt);font-weight:700}
-.stagelbl.rev b{color:var(--amber)}
-.stagelbl.done b{color:var(--teal)}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:0 18px 70px;overflow-x:hidden}
+/* ---- atmosphere ---- */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(58% 34% at 50% -6%, rgba(227,34,44,.16), transparent 70%),
+    radial-gradient(40% 26% at 88% 4%, rgba(232,184,74,.05), transparent 70%);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.5;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");}
+.wrap{max-width:660px;margin:0 auto;position:relative;z-index:2}
+/* ---- header ---- */
+header{display:flex;align-items:center;justify-content:space-between;padding:22px 0 0}
+.mark{font-family:var(--serif);font-size:17px;letter-spacing:.01em}
+.mark em{color:var(--red);font-style:italic}
+.mark .dot{color:var(--red)}
+.badge{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);font-weight:600;border:1px solid var(--line);border-radius:20px;padding:5px 11px;white-space:nowrap}
+/* ---- hero ---- */
+.hero{padding:52px 0 8px}
+.overline{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.overline::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,var(--line2),transparent)}
+h1{font-family:var(--serif);font-weight:420;font-size:clamp(40px,11vw,58px);line-height:1.04;letter-spacing:-.01em}
+h1 em{font-style:italic;font-weight:480}
+h1 .p{color:var(--red)}
+.heysub{color:var(--dim);font-size:14.5px;margin-top:12px;max-width:42ch}
+/* ---- stats ---- */
+.stats{display:flex;margin:30px 0 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{flex:1;padding:14px 6px 15px;text-align:center;position:relative}
+.stat+.stat::before{content:'';position:absolute;left:0;top:14px;bottom:14px;width:1px;background:var(--line)}
+.stat b{font-family:var(--serif);font-weight:480;font-size:26px;display:block;line-height:1.1}
+.stat span{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.stat.rev b{color:var(--amber)} .stat.done b{color:var(--teal)}
+/* ---- sections ---- */
+.sec{display:flex;align-items:baseline;gap:12px;margin:38px 0 14px}
+.sec .no{font-family:var(--serif);font-style:italic;color:var(--red);font-size:15px}
+.sec .lbl{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.sec::after{content:'';height:1px;flex:1;background:var(--line);transform:translateY(-3px)}
+.sec .cnt{font-size:11px;color:var(--faint);font-weight:600}
+/* ---- cards ---- */
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:16px;padding:18px 18px 16px;margin-bottom:12px;position:relative;overflow:hidden;
+  animation:rise .6s cubic-bezier(.22,.9,.3,1) both}
+.card::before{content:'';position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(245,242,233,.09),transparent)}
+.card.rev{border-color:rgba(232,184,74,.34);box-shadow:0 10px 34px -18px rgba(232,184,74,.25)}
+.card.done{opacity:.92}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.chead{display:flex;gap:12px;align-items:flex-start}
+.tt{flex:1;min-width:0}
+.name{font-family:var(--serif);font-weight:480;font-size:19px;line-height:1.2;letter-spacing:.005em}
+.proj{color:var(--dim);font-size:12.5px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border-radius:20px;padding:5px 11px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.pill.rev{background:rgba(232,184,74,.12);color:var(--amber);border:1px solid rgba(232,184,74,.3)}
+.pill.rev i{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(232,184,74,.5)}50%{opacity:.45;box-shadow:0 0 0 4px rgba(232,184,74,0)}}
+.pill.work{background:rgba(245,242,233,.05);color:var(--dim);border:1px solid var(--line2)}
+.pill.done{background:rgba(76,195,138,.1);color:var(--teal);border:1px solid rgba(76,195,138,.28)}
+/* ---- pipeline tracker ---- */
+.track{display:flex;gap:5px;margin-top:16px}
+.seg{flex:1;height:3px;border-radius:2px;background:#232327;position:relative}
+.seg.on{background:linear-gradient(90deg,#8e1a20,var(--red))}
+.card.done .seg.on{background:linear-gradient(90deg,#2b7a55,var(--teal))}
+.seg.cur{background:#3a3a41;overflow:hidden}
+.seg.cur::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(245,242,233,.55),transparent);animation:sweep 1.9s ease-in-out infinite}
+.card.rev .seg.cur{background:rgba(232,184,74,.35)}
+@keyframes sweep{from{transform:translateX(-110%)}to{transform:translateX(110%)}}
+.stageline{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:9px}
+.stagelbl{font-size:12px;color:var(--dim)}
+.stagelbl b{color:var(--txt);font-weight:600}
+.card.rev .stagelbl b{color:var(--amber)}
+.card.done .stagelbl b{color:var(--teal)}
+.stepno{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600;white-space:nowrap}
+/* ---- actions ---- */
+.act{margin-top:15px}
+.go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease;box-shadow:0 8px 24px -10px rgba(227,34,44,.55)}
+.go:active{transform:scale(.985)}
+.go.soft{background:transparent;border:1px solid var(--line2);color:var(--dim);box-shadow:none}
+.go.soft:hover{border-color:var(--teal);color:var(--teal)}
+.go .ar{font-family:var(--serif);font-style:italic;font-size:14px}
+/* ---- footer / states ---- */
+.note{color:var(--faint);font-size:12.5px;text-align:center;margin-top:44px;line-height:1.7}
+.sign{margin-top:26px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
+.sign em{color:var(--red)}
+.center{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:10px}
+.center .big{font-family:var(--serif);font-weight:440;font-size:24px;max-width:22ch;line-height:1.3}
+.center .sm{color:var(--dim);font-size:13.5px;max-width:38ch}
+@media(min-width:560px){
+  .act{display:flex;justify-content:flex-end}
+  .go{width:auto;padding:12px 22px}
+}
 </style></head><body><div class="wrap">
-<h1 id="brand"></h1><div class="sub" id="subline"></div>
-<div id="body"><div class="center">Loading your content…</div></div>
-<div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically.</div>
+<header>
+  <div class="mark" id="brandmark"></div>
+  <div class="badge" id="brandbadge"></div>
+</header>
+<div id="body"><div class="center"><div class="sm">Loading your content…</div></div></div>
+<div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
+<div class="sign" id="sign" style="display:none"></div>
 <script>
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
 const q = new URLSearchParams(location.search);
 const a = q.get('a') || '';
 const pin = (q.get('t') || 'pin') === 'pin';
-document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
-document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Your Content';
+document.getElementById('brandmark').innerHTML = pin ? 'Content <em>Hub</em><span class="dot">.</span>' : 'Reel Estate <em>Media</em><span class="dot">.</span>';
+document.getElementById('brandbadge').textContent = pin ? 'Royal LePage Pinnacle' : 'Client Portal';
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 // Client-friendly pipeline: Booked → Shoot scheduled → Filmed → Editing → Review & polish → Delivered
 const PHASES = ['Booked','Shoot scheduled','Filmed','In editing','Review & polish','Delivered'];
@@ -63,7 +137,7 @@ function phaseOf(x){
   return 0;                          // Booked / To Schedule / unknown
 }
 function normalize(h){
-  // Accepts both the current manifest {agent, brokerage, projects:[{t,p,st,si,rs,dv,url,dt}]}
+  // Accepts the current manifest {agent, brokerage, projects:[{t,p,st,si,rs,dv,url,dt}]}
   // and the legacy one {n, t, items:[{ttl,proj,st,url,dt}]}
   const raw = h.projects || h.items || [];
   const items = raw.map(x => ({
@@ -81,36 +155,66 @@ function tracker(x){
   let segs = '';
   for(let i = 0; i < PHASES.length; i++)
     segs += '<span class="seg' + (i < ph ? ' on' : i === ph ? (ph === 5 ? ' on' : ' cur') : '') + '"></span>';
-  const cls = x.dv ? 'done' : (x.rs ? 'rev' : '');
-  const lbl = x.dv ? 'Delivered 🎉'
+  const lbl = x.dv ? 'Delivered — enjoy 🎉'
     : (x.rs ? 'Waiting on you — take a look' : PHASES[ph]);
-  return '<div class="track' + (x.rs ? ' rev' : '') + '">' + segs + '</div>' +
-    '<div class="stagelbl ' + cls + '">Step ' + (ph + 1) + ' of 6 · <b>' + esc(lbl) + '</b></div>';
+  return '<div class="track">' + segs + '</div>' +
+    '<div class="stageline"><span class="stagelbl"><b>' + esc(lbl) + '</b></span>' +
+    '<span class="stepno">Step ' + (ph + 1) + ' / 6</span></div>';
+}
+function card(x, i, cls, pillHtml, btnTxt, soft){
+  return '<div class="card ' + cls + '" style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
+    '<div class="chead"><div class="tt"><div class="name">' + esc(x.t) + '</div>' +
+    '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
+    tracker(x) +
+    (x.url ? '<div class="act"><a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a></div>' : '') +
+    '</div>';
 }
 function render(raw){
   const h = normalize(raw);
   const items = h.items;
   document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
-  let html = '<div class="hey">Hey ' + esc(h.agent || 'there') + ' 👋</div>' +
-    '<div class="heysub">Everything we’ve made together' + (h.brokerage ? ' · ' + esc(h.brokerage) : '') + '</div>';
   const done = items.filter(x => x.dv);
   const rev = items.filter(x => !x.dv && x.rs && x.url);
   const work = items.filter(x => !x.dv && !(x.rs && x.url));
-  const row = (x, cls, pillTxt, btnTxt, soft) =>
-    '<div class="row"><div class="tt"><div class="name">' + esc(x.t) + '</div><div class="proj">' + esc(x.p) + '</div></div>' +
-    '<span class="pill ' + cls + '">' + pillTxt + '</span>' +
-    (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + '</a>' : '') +
-    tracker(x) + '</div>';
-  if(rev.length){ html += '<div class="sec">👀 Waiting on your review</div>'; rev.forEach(x => html += row(x, 'rev', 'In review', 'Review →')); }
-  if(work.length){ html += '<div class="sec">🎬 In the works</div>'; work.forEach(x => html += row(x, 'work', esc(x.st || 'In production'), 'Open →', true)); }
-  if(done.length){ html += '<div class="sec">✅ Delivered</div>'; done.forEach(x => html += row(x, 'done', 'Delivered', 'View →', true)); }
-  if(items.length === 0) html += '<div class="center">Fresh start — your first project will appear here as soon as we kick it off. 🎥</div>';
+  let html = '<div class="hero">' +
+    '<div class="overline">Your content · live pipeline</div>' +
+    '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1>' +
+    '<div class="heysub">Everything we’ve made together, and exactly where each piece is on its way to you.</div></div>';
+  if(items.length){
+    html += '<div class="stats">' +
+      '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
+      '<div class="stat"><b>' + work.length + '</b><span>In production</span></div>' +
+      '<div class="stat done"><b>' + done.length + '</b><span>Delivered</span></div></div>';
+  }
+  let n = 0, i = 0;
+  const secNo = () => String(++n).padStart(2, '0');
+  if(rev.length){
+    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Waiting on your review</span><span class="cnt">' + rev.length + '</span></div>';
+    rev.forEach(x => html += card(x, i++, 'rev', '<span class="pill rev"><i></i>In review</span>', 'Review now'));
+  }
+  if(work.length){
+    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span></div>';
+    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true));
+  }
+  if(done.length){
+    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Delivered</span><span class="cnt">' + done.length + '</span></div>';
+    done.forEach(x => html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true));
+  }
+  if(items.length === 0)
+    html += '<div class="center"><div class="big">A fresh start<span style="color:var(--red)">.</span></div>' +
+      '<div class="sm">Your first project will appear here the moment we kick it off — and you’ll watch it move through the pipeline, step by step. 🎥</div></div>';
   document.getElementById('body').innerHTML = html;
   document.getElementById('foot').style.display = '';
+  const sg = document.getElementById('sign');
+  sg.style.display = '';
+  sg.innerHTML = 'Crafted for ' + esc(h.agent || 'you') + ' by <em>Reel Estate Media</em>';
 }
-if(!a){ document.getElementById('body').innerHTML = '<div class="center">This link is missing its key — ask us for a fresh one.</div>'; }
+function fail(big, sm){
+  document.getElementById('body').innerHTML = '<div class="center"><div class="big">' + big + '</div><div class="sm">' + sm + '</div></div>';
+}
+if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
 else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   .then(r => r.json())
-  .then(j => { if(j.ok && j.hub) render(j.hub); else document.getElementById('body').innerHTML = '<div class="center">We couldn’t find your page — ask us for a fresh link.</div>'; })
-  .catch(() => { document.getElementById('body').innerHTML = '<div class="center">Couldn’t load — check your connection and refresh.</div>'; });
+  .then(j => { if(j.ok && j.hub) render(j.hub); else fail('We couldn’t find your page.', 'Ask us for a fresh link — it takes ten seconds.'); })
+  .catch(() => fail('Couldn’t load your content.', 'Check your connection and pull to refresh.'));
 </script></div></body></html>
