@@ -422,7 +422,14 @@
     var token = $('adToken').value.trim();
     var name = $('adName').value.trim();
     var email = $('adEmail').value.trim().toLowerCase();
-    var key = $('adKey').value.trim();
+    // Forgiving hub-key parsing: accept the bare key, a key with &t=… stuck on,
+    // or the agent's entire hub link pasted straight in.
+    var rawKey = $('adKey').value.trim();
+    var am = rawKey.match(/[?&]a=([^&\s]+)/);
+    var key = am ? decodeURIComponent(am[1]) : rawKey.split('&')[0].split('?')[0].trim();
+    var tm = rawKey.match(/[?&]t=(pin|rem)/);
+    if(tm) $('adType').value = tm[1];
+    $('adKey').value = key;
     var pin = $('adPin').value.trim().toUpperCase();
     var t = $('adType').value;
     if(!token){ adNote('Paste your admin token first (it\'s the token from your inbox script).', false); return; }
