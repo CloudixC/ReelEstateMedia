@@ -71,6 +71,13 @@
   .pill.review-3{background:rgba(232,184,74,.16);color:#ecc25e}
   .cal-cell.blockedday{background:repeating-linear-gradient(45deg, transparent, transparent 7px, rgba(227,34,44,.06) 7px, rgba(227,34,44,.06) 14px)}
   .cal-cell.blockedday .cal-d{color:var(--red);opacity:.8}
+  .cbs{max-height:52vh;min-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px 2px;margin-top:8px}
+  .cb{max-width:82%;padding:9px 12px;border-radius:13px;font-size:14px;white-space:pre-wrap;line-height:1.45}
+  .cb.them{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
+  .cb.me{align-self:flex-end;background:rgba(227,34,44,.14);border:1px solid rgba(227,34,44,.4)}
+  .cb.fb{border-color:rgba(232,184,74,.5);background:rgba(232,184,74,.06);max-width:94%;align-self:flex-start}
+  .cb .cwho{font-size:10.5px;opacity:.6;font-weight:800;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:3px}
+  .crow2{display:flex;gap:8px;margin-top:6px}
   .pill.delivered{background:rgba(76,195,138,.15);color:var(--teal)}
   .pill.unpaid{background:rgba(236,95,90,.15);color:var(--red)}
   .pill.invoiced{background:rgba(130,168,217,.15);color:var(--blue)}
@@ -740,14 +747,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
   const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
-  if(fresh.length === 0 && !err) return (
-    <div className="card" style={{padding:'12px 18px'}}>
-      <div className="flex">
-        <span className="small muted">📥 Client Submissions — all caught up. New briefs &amp; feedback land here automatically (archived forever in your REM Inbox sheet).</span>
-        <span className="spacer"></span>
-        <button className="btn ghost sm" onClick={load}>⟳ Check now</button>
-      </div>
-    </div>);
+  if(fresh.length === 0 && !err) return null;
   return (
     <div className="card today">
       <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
@@ -1850,6 +1850,10 @@ function NextShootCountdown({db, openOrderDetail}){
 function ReviewTab({db, clientName, openOrderDetail, showToast}){
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState('');
+  const [co, setCo] = useState(null);
+  const [cid, setCid] = useState(null);
+  const [dlId, setDlId] = useState(null);
+  const [msg, setMsg] = useState('');
   const cfg = db.settings.inboxUrl && db.settings.inboxToken;
   const load = async () => {
     if(!cfg) return;
@@ -1858,64 +1862,156 @@ function ReviewTab({db, clientName, openOrderDetail, showToast}){
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || 'fetch failed');
       setRows(j.rows || []); setErr('');
-    } catch(e){ setErr(String(e.message || e)); setRows([]); }
+    } catch(e){ setErr(String(e.message || e)); if(rows === null) setRows([]); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if(!dlId) return;
+    const t = setInterval(load, 45000);
+    return () => clearInterval(t);
+  }, [dlId]);
+  useEffect(() => {
+    const box = document.getElementById('cbscroll');
+    if(box) box.scrollTop = box.scrollHeight;
+  }, [rows, dlId]);
+
   const reviews = db.deliverables.filter(d => d.reviewUrl || (d.reviewVersions || []).length > 0 || isReviewStage(d.status));
   const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
-  const groups = {};
-  reviews.forEach(d => { const cid = ordOf(d).clientId || '—'; (groups[cid] = groups[cid] || []).push(d); });
-  const cids = Object.keys(groups).sort((a, b) => (clientName(a) || '').localeCompare(clientName(b) || ''));
-  const fbFor = d => (rows || []).filter(r => r.kind === 'feedback' && r.ref === d.id);
-  const msgsFor = d => (rows || []).filter(r => r.kind === 'msg' && r.ref === d.id);
-  return (<>
+  const clOf = d => db.clients.find(c => c.id === ordOf(d).clientId);
+  const coOf = c => ((c && c.company) || '').trim() || 'Independent';
+  const convFor = d => (rows || []).filter(r => r.ref === d.id && (r.kind === 'msg' || r.kind === 'feedback'));
+  const lastOf = d => { const rr = convFor(d); return rr.length ? rr[rr.length - 1] : null; };
+  const approvedOf = d => (rows || []).some(r => r.kind === 'feedback' && r.ref === d.id && String(r.body).indexOf('\u2713 APPROVED') > -1);
+
+  const header = (title, back) => (
     <div className="flex" style={{marginBottom:14}}>
-      <h2 className="serif" style={{fontSize:24, marginBottom:0}}>Review Rooms</h2>
+      {back && <button className="btn ghost sm" onClick={back}>‹ Back</button>}
+      <h2 className="serif" style={{fontSize:22, marginBottom:0}}>{title}</h2>
       <span className="spacer"></span>
-      <button className="btn ghost sm" onClick={load}>⟳ Refresh feedback</button>
-    </div>
-    {!cfg && <div className="card"><p className="small muted">Connect the Client Submissions inbox on Home first — agent feedback and messages appear here through it.</p></div>}
-    {err && <p className="small" style={{color:'var(--red)'}}>Couldn't load feedback: {err}</p>}
-    {reviews.length === 0 && <div className="card"><p className="small faint" style={{textAlign:'center', padding:16}}>No review rooms yet — tap 🎬 Review room on any deliverable to create one. It'll live here, organized by agent.</p></div>}
-    {cids.map(cid => {
-      const c = db.clients.find(x => x.id === cid);
-      return (
-      <div key={cid} className="card">
-        <h3 style={{fontSize:17, marginBottom:4}}>{c ? c.name : 'Unassigned'}{c && c.company ? <span className="small faint" style={{fontWeight:400}}> · {c.company}</span> : null}</h3>
-        {groups[cid].map(d => {
-          const o = ordOf(d);
-          const fb = fbFor(d);
-          const latest = fb[fb.length - 1];
-          const approved = fb.some(r => String(r.body).indexOf('✓ APPROVED') > -1);
-          const nv = (d.reviewVersions || []).length;
-          const msgN = msgsFor(d).length;
+      <button className="btn ghost sm" onClick={load}>⟳</button>
+    </div>);
+
+  if(!cfg) return (<>
+    {header('Review Rooms')}
+    <div className="card"><p className="small muted">Connect the Client Submissions inbox on Home first — conversations and feedback flow through it.</p></div>
+  </>);
+
+  // ---------- L4: conversation ----------
+  if(dlId){
+    const d = db.deliverables.find(x => x.id === dlId);
+    if(!d){ setDlId(null); return null; }
+    const o = ordOf(d), c = clOf(d);
+    const conv = convFor(d);
+    const send = async () => {
+      const body = msg.trim();
+      if(!body) return;
+      setMsg('');
+      setRows(r => [...(r || []), {id: 'tmp' + Date.now(), ts: new Date().toISOString(), kind: 'msg', ref: d.id, who: 'Jag', from: 'jag', body}]);
+      try {
+        await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id, project: o.project || d.group, dname: dlTitle(d), who: 'Jag', from: 'jag', body})});
+        setTimeout(load, 900);
+      } catch(e){ alert('Send failed — check connection.'); }
+    };
+    return (<>
+      {header(dlTitle(d), () => setDlId(null))}
+      <div className="card">
+        <div className="flex" style={{flexWrap:'wrap'}}>
+          <span className="small faint">{o.project || d.group} · {(c && c.name) || ''}</span>
+          <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
+          {approvedOf(d) && <span className="pill delivered">✓ Approved</span>}
+          <span className="spacer"></span>
+          {d.reviewUrl && <CopyBtn text={d.reviewUrl} label="📋 Link"/>}
+          {d.reviewUrl && <button className="btn ghost sm" onClick={() => window.open(d.reviewUrl, '_blank')}>Room ↗</button>}
+          <button className="btn ghost sm" onClick={() => openOrderDetail(d.orderId, d.id)}>Order →</button>
+        </div>
+        <div className="cbs" id="cbscroll">
+          {conv.length === 0 && <p className="small faint" style={{textAlign:'center', padding:20}}>No conversation yet — say hi below, it appears right inside their review page.</p>}
+          {conv.map(r => {
+            const mine = r.from === 'jag';
+            const isFb = r.kind === 'feedback';
+            return (
+            <div key={r.id} className={'cb' + (mine ? ' me' : ' them') + (isFb ? ' fb' : '')}>
+              <span className="cwho">{isFb ? '💬 Feedback · ' : ''}{mine ? 'You' : (r.who || 'Agent')} · {String(r.ts).slice(5, 16).replace('T', ' ')}</span>
+              {r.body}
+            </div>);
+          })}
+        </div>
+        <div className="crow2">
+          <input placeholder={'Message ' + (((c && c.name) || 'them').split(' ')[0]) + '…'} value={msg}
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => { if(e.key === 'Enter') send(); }} style={{flex:1}}/>
+          <button className="btn sm" disabled={!msg.trim()} onClick={send}>Send</button>
+        </div>
+      </div>
+    </>);
+  }
+
+  // ---------- L3: agent's content ----------
+  if(cid){
+    const c = db.clients.find(x => x.id === cid);
+    const mine = reviews.filter(d => (clOf(d) || {}).id === cid)
+      .sort((a, b) => String(lastOf(b) ? lastOf(b).ts : '').localeCompare(String(lastOf(a) ? lastOf(a).ts : '')));
+    return (<>
+      {header((c ? c.name : 'Agent'), () => setCid(null))}
+      <div className="card">
+        {mine.length === 0 && <p className="small faint" style={{padding:12, textAlign:'center'}}>No review rooms with this agent yet.</p>}
+        {mine.map((d, i) => {
+          const o = ordOf(d), last = lastOf(d);
           return (
-          <div key={d.id} style={{borderTop:'1px solid var(--line)', padding:'11px 0'}}>
-            <div className="flex" style={{flexWrap:'wrap'}}>
-              <strong>{dlTitle(d)}</strong>
-              <span className="small faint">{o.project || d.group}</span>
-              <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
-              {nv > 0 && <span className="pill scheduled">V{nv}</span>}
-              {approved && <span className="pill delivered">✓ Approved</span>}
-              {d.reviewDate && <span className="small faint">sent {d.reviewDate}</span>}
+          <div key={d.id} className="flex" style={{padding:'12px 0', borderTop: i ? '1px solid var(--line)' : 'none', cursor:'pointer', flexWrap:'wrap'}}
+            onClick={() => setDlId(d.id)}>
+            <div style={{flex:1, minWidth:200}}>
+              <div className="flex"><strong>{dlTitle(d)}</strong>
+                <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
+                {approvedOf(d) && <span className="pill delivered">✓</span>}</div>
+              <div className="small faint" style={{marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'60vw'}}>
+                {last ? ((last.from === 'jag' ? 'You: ' : '') + String(last.body).split('\n')[0]) : (o.project || d.group)}</div>
             </div>
-            <div className="flex" style={{marginTop:8, flexWrap:'wrap', gap:8}}>
-              {d.reviewUrl && <CopyBtn text={d.reviewUrl} label="📋 Copy link"/>}
-              {d.reviewUrl && <button className="btn ghost sm" onClick={() => window.open(d.reviewUrl, '_blank')}>Open room ↗</button>}
-              <button className="btn ghost sm" onClick={() => openOrderDetail(d.orderId, d.id)}>Order →</button>
-              <ThreadPanelButton db={db} d={d} order={o} client={c}/>
-              {msgN > 0 && <span className="small faint">💬 {msgN} message{msgN > 1 ? 's' : ''}</span>}
-            </div>
-            {fb.length > 0 &&
-            <details style={{marginTop:8}} open={!approved && fb.length > 0}>
-              <summary className="small" style={{cursor:'pointer', color:'#ecc25e', fontWeight:700}}>
-                💬 Feedback ({fb.length}){latest ? ' · latest ' + String(latest.ts).slice(0, 10) + ' from ' + (latest.who || 'agent') : ''}</summary>
-              <div className="small muted" style={{whiteSpace:'pre-wrap', background:'var(--panel2)', border:'1px solid var(--line)', borderRadius:8, padding:'9px 12px', marginTop:6, maxHeight:220, overflow:'auto'}}>{latest ? latest.body : ''}</div>
-              {fb.length > 1 && <div className="small faint" style={{marginTop:4}}>{fb.length - 1} earlier round{fb.length > 2 ? 's' : ''} archived in your REM Inbox sheet.</div>}
-            </details>}
-            {fb.length === 0 && rows !== null && <p className="small faint" style={{marginTop:6}}>No feedback submitted yet.</p>}
+            <span className="small faint">{last ? String(last.ts).slice(5, 10) : ''}</span>
+            <span className="faint">›</span>
           </div>);})}
-      </div>);})}
+      </div>
+    </>);
+  }
+
+  // ---------- L2: agents in brokerage ----------
+  if(co){
+    const agents = {};
+    reviews.forEach(d => { const c = clOf(d); if(c && coOf(c) === co) agents[c.id] = c; });
+    const list = Object.values(agents).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return (<>
+      {header(co, () => setCo(null))}
+      <div className="card">
+        {list.map((c, i) => {
+          const n = reviews.filter(d => (clOf(d) || {}).id === c.id).length;
+          return (
+          <div key={c.id} className="flex" style={{padding:'12px 0', borderTop: i ? '1px solid var(--line)' : 'none', cursor:'pointer'}}
+            onClick={() => setCid(c.id)}>
+            <strong>{c.name}</strong>
+            <span className="small faint">{n} project{n !== 1 ? 's' : ''}</span>
+            <span className="spacer"></span><span className="faint">›</span>
+          </div>);})}
+      </div>
+    </>);
+  }
+
+  // ---------- L1: brokerages ----------
+  const bset = {};
+  reviews.forEach(d => { const c = clOf(d); const k = coOf(c); bset[k] = bset[k] || {agents: new Set(), n: 0}; if(c) bset[k].agents.add(c.id); bset[k].n++; });
+  const bros = Object.keys(bset).sort();
+  return (<>
+    {header('Review Rooms')}
+    {err && <p className="small" style={{color:'var(--red)'}}>Feedback couldn\u2019t load: {err}</p>}
+    {bros.length === 0 && <div className="card"><p className="small faint" style={{textAlign:'center', padding:16}}>No review rooms yet — tap 🎬 Review room on any deliverable and it appears here, filed under its brokerage and agent.</p></div>}
+    <div className="card">
+      {bros.map((k, i) => (
+        <div key={k} className="flex" style={{padding:'13px 0', borderTop: i ? '1px solid var(--line)' : 'none', cursor:'pointer'}}
+          onClick={() => setCo(k)}>
+          <strong style={{fontSize:15.5}}>{k}</strong>
+          <span className="small faint">{bset[k].agents.size} agent{bset[k].agents.size !== 1 ? 's' : ''} · {bset[k].n} project{bset[k].n !== 1 ? 's' : ''}</span>
+          <span className="spacer"></span><span className="faint">›</span>
+        </div>))}
+    </div>
   </>);
 }
 
@@ -1937,13 +2033,11 @@ function DigestStrip({db}){
   const dow = new Date().toLocaleDateString('en-CA', {weekday:'short'});
   const line = parts.length ? `${dow}: ` + parts.join(' · ') : `${dow}: clear runway — no shoots or deadlines today.`;
   return (
-    <div className="card" style={{padding:'11px 16px'}}>
       <div className="flex">
         <span style={{fontWeight:700, fontSize:14.5}}>{line}</span>
         <span className="spacer"></span>
         <CopyBtn text={line} label="📋"/>
-      </div>
-    </div>);
+      </div>);
 }
 
 const WX_GLYPH = c => c === null || c === undefined ? '' : c <= 1 ? '☀️' : c <= 3 ? '⛅' : c <= 48 ? '🌫' : c <= 67 ? '🌧' : c <= 77 ? '🌨' : c <= 82 ? '🌧' : c <= 86 ? '🌨' : '⛈';
@@ -1959,7 +2053,7 @@ function WeekStrip({db, goCalendar}){
   }, []);
   const days = Array.from({length: 7}, (_, i) => addDays(td, i));
   return (
-    <div className="card" style={{padding:'10px 12px'}}>
+    <div style={{marginTop:11}}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:6}}>
         {days.map((ds, i) => {
           const shoots = db.deliverables.filter(d => d.shootDate === ds && d.status !== 'Delivered').length;
@@ -1983,6 +2077,7 @@ function WeekStrip({db, goCalendar}){
 }
 
 function ActionQueue({db, openOrderDetail, goCalendar}){
+  const [showAll, setShowAll] = useState(false);
   const td = today();
   const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const clOf = d => db.clients.find(c => c.id === ordOf(d).clientId) || {};
@@ -2022,8 +2117,9 @@ function ActionQueue({db, openOrderDetail, goCalendar}){
       items.push({pri: 4, icon: '💳', txt: `${(c.name || 'Client').split(' ')[0]}: ${waiting.length} credit${waiting.length > 1 ? 's' : ''} unscheduled`, btn: 'Open →', act: () => openOrderDetail(o.id, waiting[0].id)});
     }
   });
-  const top = items.sort((a, b) => a.pri - b.pri).slice(0, 6);
-  if(top.length === 0) return null;
+  const ranked = items.sort((a, b) => a.pri - b.pri);
+  if(ranked.length === 0) return null;
+  const top = showAll ? ranked.slice(0, 14) : ranked.slice(0, 5);
   return (
     <div className="card">
       <h3 style={{fontSize:17, marginBottom:6}}>⚡ Action Queue</h3>
@@ -2034,10 +2130,14 @@ function ActionQueue({db, openOrderDetail, goCalendar}){
           <span className="spacer"></span>
           <button className="btn ghost sm" onClick={it.act}>{it.btn}</button>
         </div>))}
+      {ranked.length > 5 &&
+        <button className="btn ghost sm" style={{marginTop:8}} onClick={() => setShowAll(s => !s)}>
+          {showAll ? '− Show less' : '+ ' + (ranked.length - 5) + ' more'}</button>}
     </div>);
 }
 
 function WinBack({db}){
+  const [open, setOpen] = useState(false);
   const td = today();
   const rows = db.clients.filter(c => c.tier !== 'internal').map(c => {
     const dls = db.deliverables.filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === c.id);
@@ -2048,9 +2148,17 @@ function WinBack({db}){
     return {c, last, days: dayDiff(last, td)};
   }).filter(Boolean).sort((a, b) => b.days - a.days).slice(0, 3);
   if(rows.length === 0) return null;
+  if(!open) return (
+    <div className="card" style={{padding:'10px 16px'}}>
+      <div className="flex">
+        <span className="small" style={{fontWeight:700}}>🔄 {rows.length} client{rows.length > 1 ? 's' : ''} gone quiet 45+ days</span>
+        <span className="spacer"></span>
+        <button className="btn ghost sm" onClick={() => setOpen(true)}>View</button>
+      </div>
+    </div>);
   return (
     <div className="card">
-      <h3 style={{fontSize:17, marginBottom:6}}>🔄 Win-back</h3>
+      <div className="flex"><h3 style={{fontSize:17, marginBottom:6}}>🔄 Win-back</h3><span className="spacer"></span><button className="btn ghost sm" onClick={() => setOpen(false)}>− Collapse</button></div>
       {rows.map(({c, last, days}, i) => (
         <div key={c.id} className="flex" style={{padding:'8px 0', borderTop: i ? '1px solid var(--line)' : 'none'}}>
           <span className="small" style={{fontWeight:600}}>{c.name}</span>
@@ -2103,8 +2211,10 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
   const clientOf = cid => db.clients.find(c => c.id === cid) || {};
 
   return (<>
-    <DigestStrip db={db}/>
-    <WeekStrip db={db} goCalendar={goCalendar}/>
+    <div className="card" style={{padding:'12px 16px'}}>
+      <DigestStrip db={db}/>
+      <WeekStrip db={db} goCalendar={goCalendar}/>
+    </div>
     <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar}/>
     <WinBack db={db}/>
     <div className="card today">
