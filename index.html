@@ -527,14 +527,14 @@ function MonthPicker({value, onChange, compact}){
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return (
     <span className={'mp' + (compact ? ' compact' : '')} onClick={e => e.stopPropagation()}>
-      <button className="arrow" onClick={() => shift(-1)}>‹</button>
+      <button className="arrow" onClick={() => shift(-1)} title="Previous month">‹</button>
       <select value={m} onChange={e => set(y, +e.target.value)}>
         {MONTHS.map((mo,i) => <option key={mo} value={i+1}>{mo}</option>)}
       </select>
       <select value={y} onChange={e => set(+e.target.value, m)}>
         {years.sort((a,b) => b - a).map(yy => <option key={yy} value={yy}>{yy}</option>)}
       </select>
-      <button className="arrow" onClick={() => shift(1)}>›</button>
+      <button className="arrow" onClick={() => shift(1)} title="Next month">›</button>
     </span>);
 }
 
@@ -585,7 +585,7 @@ function Stars({value, onChange}){
 
 function CopyBtn({text, label}){
   const [ok, setOk] = useState(false);
-  return <button className="btn ghost sm" onClick={e => { e.stopPropagation(); copyText(text); setOk(true); setTimeout(() => setOk(false), 1600); }}>{ok ? '✓ Copied' : label}</button>;
+  return <button title="Copy to clipboard" className="btn ghost sm" onClick={e => { e.stopPropagation(); copyText(text); setOk(true); setTimeout(() => setOk(false), 1600); }}>{ok ? '✓ Copied' : label}</button>;
 }
 
 /* Pinnacle margin = retail (what Pinnacle charges the client) − partner (what they pay REM), per item.
@@ -751,7 +751,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   return (
     <div className="card today">
       <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
-        <button className="btn ghost sm" onClick={load}>⟳</button></div>
+        <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button></div>
       {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
       {fresh.map(s => {
         const dl = s.ref ? db.deliverables.find(x => x.id === s.ref) : null;
@@ -868,7 +868,7 @@ function CloudModal({db, onClose, cloud, setCloud, adoptRemote, seedCloud}){
   return (
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:480}}>
-        <div className="flex"><h3>☁ Cloud Sync</h3><span className="spacer"></span><button className="x" onClick={onClose}>✕</button></div>
+        <div className="flex"><h3>☁ Cloud Sync</h3><span className="spacer"></span><button title="Close" className="x" onClick={onClose}>✕</button></div>
         {connected ? <>
           <p className="small muted" style={{marginTop:8}}>Connected — your data syncs to Supabase and follows you to any device that signs in.
             {cloud.last ? ' Last sync: ' + cloud.last : ''}</p>
@@ -1464,7 +1464,7 @@ function App(){
       <div className="toast">
         <span className="small" style={{fontWeight:600}}>{toast.text}</span>
         {toast.actions.map((a,i) => <button key={i} className="btn sm" onClick={() => { a.fn(); setToast(null); }}>{a.label}</button>)}
-        <button className="x" onClick={() => setToast(null)}>✕</button>
+        <button title="Close" className="x" onClick={() => setToast(null)}>✕</button>
       </div>}
   </div>);
 }
@@ -1888,7 +1888,7 @@ function ReviewTab({db, clientName, openOrderDetail, showToast}){
       {back && <button className="btn ghost sm" onClick={back}>‹ Back</button>}
       <h2 className="serif" style={{fontSize:22, marginBottom:0}}>{title}</h2>
       <span className="spacer"></span>
-      <button className="btn ghost sm" onClick={load}>⟳</button>
+      <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button>
     </div>);
 
   if(!cfg) return (<>
@@ -2060,7 +2060,7 @@ function WeekStrip({db, goCalendar}){
           const dues = db.deliverables.filter(d => !promiseMet(d) && dueDatesOf(d).some(x => x.date === ds)).length;
           const wcode = wx && wx.time ? wx.weathercode[wx.time.indexOf(ds)] : null;
           return (
-            <button key={ds} onClick={goCalendar} style={{background: i === 0 ? 'var(--panel2)' : 'transparent',
+            <button key={ds} title="Open the calendar" onClick={goCalendar} style={{background: i === 0 ? 'var(--panel2)' : 'transparent',
               border: '1px solid ' + (i === 0 ? 'var(--red)' : 'var(--line)'), borderRadius:8, padding:'7px 2px 6px',
               color:'var(--txt)', cursor:'pointer', textAlign:'center'}}>
               <div className="small faint" style={{fontSize:10, textTransform:'uppercase', letterSpacing:'.06em'}}>{new Date(ds + 'T12:00').toLocaleDateString('en-CA', {weekday:'narrow'})}</div>
@@ -2535,7 +2535,7 @@ function ActivityArchive({activity, onClose}){
     <div className="modal" style={{maxWidth:680}}>
       <div className="flex" style={{justifyContent:'space-between'}}>
         <h2 style={{marginBottom:0}}>Activity Archive</h2>
-        <button className="x" onClick={onClose}>✕</button>
+        <button title="Close" className="x" onClick={onClose}>✕</button>
       </div>
       <p className="small muted" style={{margin:'6px 0 12px'}}>Every logged action — bookings, status moves, deliveries, payments, ratings, edits. {activity.length} entries kept.</p>
       <input placeholder="🔎 Search — client name, project, 'delivered', 'paid'…" value={q} onChange={e => setQ(e.target.value)} style={{marginBottom:14}}/>
@@ -2617,10 +2617,10 @@ function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOr
             {b.script !== 'N/A' && <span className={'pill ' + (b.script === 'Approved' ? 'delivered' : b.script === 'Drafted' ? 'editing' : 'unpaid')}>{b.script}</span>}
           </div>}
         <div className="row">
-          <button className="arrow" disabled={i === 0} onClick={e => { e.stopPropagation(); moveStatus(d,-1); }}>←</button>
+          <button className="arrow" disabled={i === 0} onClick={e => { e.stopPropagation(); moveStatus(d,-1); }} title="Move back a stage">←</button>
           {mediaOf(d) === 'both' && d.status !== 'Delivered' &&
             <button className="arrow" style={{fontSize:12}} title="Split into separate Photos + Video deliverables"
-              onClick={e => { e.stopPropagation(); splitDeliverable(d.id); }}>⑂</button>}
+              onClick={e => { e.stopPropagation(); splitDeliverable(d.id); }} title="Split into separate Photos + Video deliverables">⑂</button>}
           {i < STATUSES.length - 1
             ? <button className="btn sm" onClick={e => { e.stopPropagation(); moveStatus(d,1); }}>→ {STATUS_LABEL(STATUSES[i+1])}</button>
             : <span className="pill delivered">✓ Done</span>}
@@ -2790,7 +2790,7 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
             <span className="small">{i.name}</span>
             <input type="number" min="1" value={i.qty} onChange={e => updateOrderItem(id, ix, {qty: Math.max(1, +e.target.value || 1)})}/>
             <input type="number" min="0" step="5" value={i.price} onChange={e => updateOrderItem(id, ix, {price: +e.target.value || 0})}/>
-            <button className="x" onClick={() => removeOrderItem(id, ix)}>✕</button>
+            <button title="Close" className="x" onClick={() => removeOrderItem(id, ix)}>✕</button>
           </div>))}
         <select value={picker} onChange={e => { if(e.target.value){ addOrderItem(id, e.target.value); setPicker(''); } }} style={{marginTop:4}}>
           <option value="">＋ Add a service…</option>
@@ -2894,7 +2894,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
             <option value="both">📷+🎬 Photo & Video — photos due +3d, video +5d</option>
           </select>
           {mediaOf(d) === 'both' && d.status !== 'Delivered' &&
-            <button className="btn ghost sm" style={{marginTop:6}} onClick={() => splitDeliverable(d.id)}>⑂ Split into Photos + Video (separate status & clocks)</button>}
+            <button className="btn ghost sm" style={{marginTop:6}} onClick={() => splitDeliverable(d.id)} title="Split into separate Photos + Video deliverables">⑂ Split into Photos + Video (separate status & clocks)</button>}
         </div>
         <div>
           <label className="f">Topic / Title</label>
@@ -3489,7 +3489,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
         const shoots = shootsOn(ds), dues = duesOn(ds);
         return (
         <div key={i} className={'cal-cell' + (inMonth ? '' : ' dim') + (ds === td ? ' today' : '') + (blocked.includes(ds) ? ' blockedday' : '')}
-          style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
+          title="Tap for this day\u2019s details" style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
           <div className="cal-d">{c.getDate()}{blocked.includes(ds) ? ' 🚫' : ''}</div>
           {shoots.map(d => { const o = orderOf(d); return (
             <div className="chip shoot" key={'s'+d.id} title={`${d.name} · ${o.project || ''} · ${clientName(o.clientId)}`}>🎥 {dlTitle(d)}</div>);})}
@@ -3505,7 +3505,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
         if(days.length === 0) return <p className="small faint" style={{textAlign:'center', padding:10}}>Nothing scheduled in the next 14 days — clear runway.</p>;
         return days.map(ds => (
           <div key={ds} style={{marginBottom:16}}>
-            <div className="flex" style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
+            <div className="flex" title="Tap for this day\u2019s details" style={{cursor:'pointer'}} onClick={() => setDrawer(ds)}>
               <strong style={{color: ds === td ? 'var(--red)' : 'var(--txt)'}}>
                 {new Date(ds + 'T12:00').toLocaleDateString('en-CA', {weekday:'short', month:'short', day:'numeric'})}{ds === td ? ' · today' : ''}</strong>
               {blocked.includes(ds) && <span className="small" style={{color:'var(--red)'}}>🚫 blocked</span>}
@@ -3523,7 +3523,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
         <span className="spacer"></span>
         <button className="btn ghost sm" onClick={() => toggleBlocked(drawer)}>{blocked.includes(drawer) ? '✓ Unblock day' : '🚫 Block day'}</button>
         <button className="btn ghost sm" onClick={openNewBooking}>+ Booking</button>
-        <button className="x" onClick={() => setDrawer(null)}>✕</button>
+        <button title="Close" className="x" onClick={() => setDrawer(null)}>✕</button>
       </div>
       <SunLine ds={drawer} enabled={!!db.settings.useGeo}/>
       <div style={{marginTop:6}}>
@@ -3695,7 +3695,7 @@ function Money({db, clientName, updateOrder, updateSettings, stats, setPrintDoc,
           <span>{e.desc}</span>
           <span className="spacer"></span>
           <span className="num">{money(+e.amount)}</span>
-          <button className="x" onClick={() => deleteExpense(e.id)}>✕</button>
+          <button title="Close" className="x" onClick={() => deleteExpense(e.id)}>✕</button>
         </div>))}
     </div>
 
@@ -3836,7 +3836,7 @@ function NewOrderModal({db, onClose, onSave, addClient}){
     <div className="modal">
       <div className="flex" style={{justifyContent:'space-between', marginBottom:6}}>
         <h2 style={{marginBottom:0}}>New Booking</h2>
-        <button className="x" onClick={onClose}>✕</button>
+        <button title="Close" className="x" onClick={onClose}>✕</button>
       </div>
       <ClientPicker db={db} value={clientId} onChange={setClientId} />
       <button className="backlink" style={{marginTop:6}} onClick={() => setShowQuick(!showQuick)}>{showQuick ? '× cancel new client' : '+ new client / agent'}</button>
@@ -3891,7 +3891,7 @@ function NewOrderModal({db, onClose, onSave, addClient}){
           <span className="small">{i.name}</span>
           <input type="number" min="1" value={i.qty} onChange={e => setItems(p => p.map((x,j) => j === ix ? {...x, qty: Math.max(1, +e.target.value || 1)} : x))}/>
           <input type="number" min="0" step="5" value={i.price} onChange={e => setItems(p => p.map((x,j) => j === ix ? {...x, price: +e.target.value || 0} : x))}/>
-          <button className="x" onClick={() => setItems(p => p.filter((_,j) => j !== ix))}>✕</button>
+          <button title="Close" className="x" onClick={() => setItems(p => p.filter((_,j) => j !== ix))}>✕</button>
         </div>))}
 
       <div className="flex" style={{marginTop:10}}>
@@ -3933,7 +3933,7 @@ function NewClientModal({onClose, onSave}){
     <div className="modal" style={{maxWidth:480}}>
       <div className="flex" style={{justifyContent:'space-between'}}>
         <h2 style={{marginBottom:0}}>New Client / Agent</h2>
-        <button className="x" onClick={onClose}>✕</button>
+        <button title="Close" className="x" onClick={onClose}>✕</button>
       </div>
       <div className="frow one" style={{marginTop:16}}>
         <div><label className="f">Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Agent, brokerage, or business name"/></div>
@@ -3979,7 +3979,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
     <div className="modal" style={{maxWidth:540}}>
       <div className="flex" style={{justifyContent:'space-between'}}>
         <h2 style={{marginBottom:0}}>Edit {client.name}</h2>
-        <button className="x" onClick={onClose}>✕</button>
+        <button title="Close" className="x" onClick={onClose}>✕</button>
       </div>
       <div className="frow" style={{marginTop:16}}>
         <div><label className="f">Name</label><input value={name} onChange={e => setName(e.target.value)}/></div>

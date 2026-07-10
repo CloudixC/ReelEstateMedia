@@ -151,21 +151,21 @@ textarea{flex:1;min-width:200px}
     <textarea id="ctext" rows="2" placeholder="Your note — what to change, keep, or fix…"></textarea>
     <button class="addbtn" id="vlinkbtn" style="display:none" onclick="copyMomentLink()" title="Copy a link to this exact moment">🔗</button>
     <button class="addbtn" id="micbtn" style="display:none" onclick="dictate()" title="Dictate your note">🎤</button>
-    <button class="addbtn" onclick="addCmt()">Add</button>
+    <button class="addbtn" onclick="addCmt()" title="Save this note — it sends automatically">Add</button>
   </div>
   <div class="chips" id="chips" style="display:none">
-    <button onclick="quick('❤ Love it')">❤ Love it</button>
-    <button onclick="quick('✨ Brighten')">✨ Brighten</button>
-    <button onclick="quick('🎨 Warmer tones')">🎨 Warmer</button>
-    <button onclick="quick('🔁 Swap this one')">🔁 Swap</button>
-    <button onclick="quick('🗑 Cut this')">🗑 Cut</button>
+    <button title="One-tap note on the current photo or moment" onclick="quick('❤ Love it')">❤ Love it</button>
+    <button title="One-tap note on the current photo or moment" onclick="quick('✨ Brighten')">✨ Brighten</button>
+    <button title="One-tap note on the current photo or moment" onclick="quick('🎨 Warmer tones')">🎨 Warmer</button>
+    <button title="One-tap note on the current photo or moment" onclick="quick('🔁 Swap this one')">🔁 Swap</button>
+    <button title="One-tap note on the current photo or moment" onclick="quick('🗑 Cut this')">🗑 Cut</button>
   </div>
   <div class="hint" id="chint"></div>
   <div class="hint" style="opacity:.75">Your notes save &amp; send automatically — Approve or Submit just sends them instantly.</div>
 </div>
 <div class="clist" id="clist"></div>
 <div class="actions">
-  <button class="ok" onclick="approve()">✓ Approve this version</button>
+  <button class="ok" onclick="approve()" title="Approve — sends all your notes and unlocks downloads">✓ Approve this version</button>
   <a class="send" id="sendlink" href="#">📧 Send feedback</a>
 </div>
 
@@ -174,7 +174,7 @@ textarea{flex:1;min-width:200px}
   <div class="bubs" id="tmsgs"><div class="tempty">Loading…</div></div>
   <div class="trow">
     <textarea id="tmsg" rows="2" placeholder="Message us here — we'll reply right in this page…"></textarea>
-    <button class="tsend" onclick="sendMsg()">Send</button>
+    <button class="tsend" onclick="sendMsg()" title="Message goes straight to Reel Estate Media">Send</button>
   </div>
 </div>
 <div class="dl" id="dlpanel">
@@ -346,6 +346,7 @@ function attachVid(v){
   vid = v;
   document.getElementById('refbtn').style.display = '';
   document.getElementById('refbtn').textContent = '⏱ 0:00';
+  document.getElementById('refbtn').title = 'The captured moment for your next note — pausing the video sets it automatically';
   composer('stamp', '', 'Pause where you want to comment — that moment is captured automatically. Type your note, hit Add. Tap any timestamp below to jump there.');
   const upd = () => { if(stamped === null) document.getElementById('refbtn').textContent = '⏱ ' + fmt(v.currentTime); };
   v.addEventListener('timeupdate', upd);
@@ -409,6 +410,7 @@ function renderTabs(){
   versions.forEach((u,i) => {
     const b = document.createElement('button');
     b.textContent = 'V' + (i+1) + (i === versions.length-1 ? ' · Latest' : '');
+    b.title = 'Switch to version ' + (i+1);
     if(i === cur) b.classList.add('on');
     b.onclick = () => { cur = i; curImg = 0; compareMode = false; const cb = document.getElementById('cmpbtn'); if(cb){ cb.classList.remove('on'); cb.textContent = '⇄ Compare'; } renderTabs(); renderMedia(); renderList(); };
     el.appendChild(b);
@@ -517,7 +519,7 @@ function buildGallery(items){
   const p = document.getElementById('player');
   const th = document.getElementById('thumbs');
   p.innerHTML = '<div id="bigwrap"></div>' +
-    '<div class="gnav"><button onclick="nav(-1)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)">Next ›</button><button class="selb" id="selbtn" onclick="toggleSel()" title="Pick this one">☆</button><span class="selcount" id="selcount"></span><button class="selb" id="linkbtn" onclick="copyPhotoLink()" title="Copy link to this photo" style="color:var(--txt)">🔗</button><button class="selb" id="presbtn" onclick="present()" title="Fullscreen slideshow" style="color:var(--txt)">▶</button><span class="lbl" id="seenlbl" style="color:var(--dim);font-weight:600"></span></div>';
+    '<div class="gnav"><button onclick="nav(-1)" title="Previous item (or press ←)">‹ Prev</button><span class="lbl" id="glbl"></span><button onclick="nav(1)" title="Next item (or press →)">Next ›</button><button class="selb" id="selbtn" onclick="toggleSel()" title="Pick this one">☆</button><span class="selcount" id="selcount"></span><button class="selb" id="linkbtn" onclick="copyPhotoLink()" title="Copy link to this photo" style="color:var(--txt)">🔗</button><button class="selb" id="presbtn" onclick="present()" title="Fullscreen slideshow" style="color:var(--txt)">▶</button><span class="lbl" id="seenlbl" style="color:var(--dim);font-weight:600"></span></div>';
   th.innerHTML = '';
   const addSection = (label, arr, off) => {
     if(arr.length === 0) return;
@@ -590,6 +592,7 @@ function syncGallery(){
   document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
   const short = g.name.length > 18 ? g.name.slice(0,16) + '…' : g.name;
   document.getElementById('refbtn').textContent = (g.isVid ? '🎥 ' : '📷 ') + short;
+  document.getElementById('refbtn').title = 'Your next note pins to this ' + (g.isVid ? 'video' : 'photo');
   composer(g.isVid ? 'both' : 'stamp', g.isVid ? '1:24 (optional)' : '',
     g.isVid ? 'Playing right here in the room. For a time-specific note, add the time from the player (like 1:24), then your note.'
             : 'Browse to a photo, tap the red photo button, type, Add. Tap any 📷 chip below to jump to that photo.');
@@ -643,12 +646,12 @@ function openLightbox(){
   ov.id = 'lbov';
   ov.innerHTML = '<img>' +
     '<div class="lbbar">' +
-    '<button class="lbb" id="lbprev">‹</button>' +
+    '<button class="lbb" id="lbprev" title="Previous photo">‹</button>' +
     '<span class="lbcap" id="lbcap"></span>' +
-    '<button class="lbb" id="lbnext">›</button>' +
-    '<button class="lbb gold" id="lbstar">☆</button>' +
+    '<button class="lbb" id="lbnext" title="Next photo">›</button>' +
+    '<button class="lbb gold" id="lbstar" title="Pick / unpick this photo">☆</button>' +
     '<button class="lbb" id="lbnote" title="Add a note on this photo">💬</button>' +
-    '<button class="lbb" id="lbx">✕</button>' +
+    '<button class="lbb" id="lbx" title="Close (Esc)">✕</button>' +
     '</div>';
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
@@ -897,9 +900,11 @@ function renderResolve(){
     const tx = document.createElement('span'); tx.textContent = c.txt; tx.style.flex = '1'; row.appendChild(tx);
     const bf = document.createElement('button'); bf.className = 'resbtn' + (c.res === 'fixed' ? ' fixed' : '');
     bf.textContent = c.res === 'fixed' ? '✓ Fixed' : '✓ Fixed?';
+    bf.title = 'Mark this note as fixed in the new version';
     bf.onclick = () => setRes(c.id, 'fixed');
     const bo = document.createElement('button'); bo.className = 'resbtn' + (c.res === 'open' ? ' open' : '');
     bo.textContent = c.res === 'open' ? '⚠ Still open' : 'Still open?';
+    bo.title = 'Flag that this still needs work';
     bo.onclick = () => setRes(c.id, 'open');
     row.appendChild(bf); row.appendChild(bo);
     el.appendChild(row);
