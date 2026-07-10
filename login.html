@@ -210,8 +210,27 @@
         <form id="adminForm" class="space-y-4" novalidate>
           <div>
             <label class="label block mb-2">Your admin token</label>
-            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+            <div class="input-wrap flex items-center gap-2 rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
               <input id="adToken" type="password" placeholder="Paste your inbox token"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+              <button type="button" id="adReload" title="Load agents" class="ghost-btn shrink-0 text-xs font-semibold rounded-lg border px-2.5 py-1.5 text-neutral-300" style="border-color:var(--line);">↻ Load</button>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="label">Agent</label>
+              <span id="adAgentStatus" class="text-xs text-neutral-600"></span>
+            </div>
+            <div class="input-wrap flex items-center rounded-xl border px-2 h-11" style="border-color:var(--line); background:#111;">
+              <select id="adAgent" class="w-full bg-transparent outline-none text-sm text-neutral-100" style="background:#111;">
+                <option value="">— Paste your token, agents load here —</option>
+              </select>
+            </div>
+          </div>
+          <div id="adKeyWrap" class="hidden">
+            <label class="label block mb-2">Hub key <span class="normal-case tracking-normal text-neutral-600">— or paste their whole hub link</span></label>
+            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+              <input id="adKey" type="text" placeholder="e.g. k7x2m9"
                 class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
             </div>
           </div>
@@ -237,13 +256,6 @@
             <label class="label block mb-2">Agent email</label>
             <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
               <input id="adEmail" type="email" placeholder="agent@royallepage.ca"
-                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
-            </div>
-          </div>
-          <div>
-            <label class="label block mb-2">Hub key <span class="normal-case tracking-normal text-neutral-600">— the part after ?a= in their hub link</span></label>
-            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
-              <input id="adKey" type="text" placeholder="e.g. k7x2m9"
                 class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
             </div>
           </div>
@@ -414,6 +426,61 @@
   $('adGen').addEventListener('click', function(){ $('adPin').value = genCode(); });
   $('adBack').addEventListener('click', function(e){ e.preventDefault(); location.href = loginUrl(); });
 
+  /* Load the agent list from the backend using the admin token.
+     Every hub your Command Centre has pushed shows up in the dropdown;
+     picking one auto-fills the key, first name and hub type. */
+  var AGENTS = {};
+  function loadAgents(){
+    var token = $('adToken').value.trim();
+    var status = $('adAgentStatus');
+    if(!token){ status.textContent = ''; return; }
+    status.textContent = 'Loading agents…';
+    fetch(ENDPOINT + '?token=' + encodeURIComponent(token))
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok){ status.textContent = j.error === 'bad token' ? 'Token not accepted' : 'Couldn\'t load agents'; return; }
+        var latest = {};
+        (j.rows || []).forEach(function(r){ if(r.kind === 'hub') latest[r.ref] = r; });
+        AGENTS = {};
+        var sel = $('adAgent');
+        sel.innerHTML = '<option value="">— Pick an agent —</option>';
+        Object.keys(latest).forEach(function(k){
+          var r = latest[k], man = {};
+          try{ man = JSON.parse(String(r.body || '{}')); }catch(e2){}
+          AGENTS[k] = {
+            name: man.agent || String(r.project || '').split(' ')[0],
+            full: r.project || man.agent || k,
+            t: man.t === 'rem' ? 'rem' : 'pin',
+            brokerage: man.brokerage || ''
+          };
+          var o = document.createElement('option');
+          o.value = k;
+          o.textContent = AGENTS[k].full + (AGENTS[k].brokerage ? ' · ' + AGENTS[k].brokerage : '');
+          sel.appendChild(o);
+        });
+        var m = document.createElement('option');
+        m.value = '__manual__'; m.textContent = 'Enter a hub key manually…';
+        sel.appendChild(m);
+        var n = Object.keys(AGENTS).length;
+        status.textContent = n + ' agent' + (n === 1 ? '' : 's') + ' loaded';
+        try{ localStorage.setItem(TOKEN_KEY, token); }catch(e3){}
+      })
+      .catch(function(){ status.textContent = 'Couldn\'t reach the server'; });
+  }
+  if(isAdmin){
+    $('adReload').addEventListener('click', loadAgents);
+    $('adToken').addEventListener('change', loadAgents);
+    $('adAgent').addEventListener('change', function(){
+      var v = this.value;
+      $('adKeyWrap').classList.toggle('hidden', v !== '__manual__');
+      if(v && v !== '__manual__' && AGENTS[v]){
+        $('adName').value = AGENTS[v].name;
+        $('adType').value = AGENTS[v].t;
+      }
+    });
+    if($('adToken').value.trim()) loadAgents();
+  }
+
   var lastSaved = null;
   $('adminForm').addEventListener('submit', function(e){
     e.preventDefault();
@@ -422,19 +489,25 @@
     var token = $('adToken').value.trim();
     var name = $('adName').value.trim();
     var email = $('adEmail').value.trim().toLowerCase();
-    // Forgiving hub-key parsing: accept the bare key, a key with &t=… stuck on,
-    // or the agent's entire hub link pasted straight in.
-    var rawKey = $('adKey').value.trim();
-    var am = rawKey.match(/[?&]a=([^&\s]+)/);
-    var key = am ? decodeURIComponent(am[1]) : rawKey.split('&')[0].split('?')[0].trim();
-    var tm = rawKey.match(/[?&]t=(pin|rem)/);
-    if(tm) $('adType').value = tm[1];
-    $('adKey').value = key;
+    var key;
+    var selv = $('adAgent').value;
+    if(selv && selv !== '__manual__'){
+      key = selv;
+    } else {
+      // Forgiving hub-key parsing: accept the bare key, a key with &t=… stuck on,
+      // or the agent's entire hub link pasted straight in.
+      var rawKey = $('adKey').value.trim();
+      var am = rawKey.match(/[?&]a=([^&\s]+)/);
+      key = am ? decodeURIComponent(am[1]) : rawKey.split('&')[0].split('?')[0].trim();
+      var tm = rawKey.match(/[?&]t=(pin|rem)/);
+      if(tm) $('adType').value = tm[1];
+      $('adKey').value = key;
+    }
     var pin = $('adPin').value.trim().toUpperCase();
     var t = $('adType').value;
     if(!token){ adNote('Paste your admin token first (it\'s the token from your inbox script).', false); return; }
     if(!email || email.indexOf('@') === -1){ adNote('That email doesn\'t look right.', false); return; }
-    if(!key && pin){ adNote('Add the hub key — it\'s the bit after ?a= in their hub link.', false); return; }
+    if(!key && pin){ adNote('Pick the agent from the dropdown (or choose manual entry and paste their hub link).', false); return; }
     $('adBtnLabel').textContent = 'Saving…'; $('adSave').disabled = true;
     var body = JSON.stringify({pin: pin, qs: 'a=' + encodeURIComponent(key) + '&t=' + t, name: name});
     fetch(ENDPOINT, {method:'POST', body: JSON.stringify({kind:'agent', ref: email, project: name, who: 'admin', body: body, token: token})})
