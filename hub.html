@@ -11,8 +11,8 @@ h1{font-family:Georgia,serif;font-size:26px}h1 em{color:var(--red);font-style:it
 .hey{font-size:19px;font-weight:700;margin-bottom:4px}
 .heysub{color:var(--dim);font-size:13.5px;margin-bottom:20px}
 .sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:800;margin:20px 0 8px}
-.row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:9px}
-.row .tt{flex:1;min-width:0}
+.row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:9px;flex-wrap:wrap}
+.row .tt{flex:1;min-width:180px}
 .row .name{font-weight:700;font-size:15px}
 .row .proj{color:var(--dim);font-size:12.5px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pill{font-size:11px;font-weight:800;letter-spacing:.04em;border-radius:20px;padding:4px 11px;white-space:nowrap}
@@ -23,6 +23,15 @@ h1{font-family:Georgia,serif;font-size:26px}h1 em{color:var(--red);font-style:it
 .go.soft{background:transparent;border:1px solid var(--teal);color:var(--teal)}
 .note{color:var(--dim);font-size:12.5px;text-align:center;margin-top:26px}
 .center{min-height:50vh;display:flex;align-items:center;justify-content:center;color:var(--dim);text-align:center;padding:20px}
+.track{display:flex;gap:4px;margin-top:8px;width:100%}
+.track .seg{flex:1;height:4px;border-radius:3px;background:#26262c}
+.track .seg.on{background:var(--teal)}
+.track .seg.cur{background:var(--amber);box-shadow:0 0 6px rgba(232,184,74,.5)}
+.track.rev .seg.cur{background:var(--amber)}
+.stagelbl{font-size:11px;color:var(--dim);margin-top:5px;width:100%}
+.stagelbl b{color:var(--txt);font-weight:700}
+.stagelbl.rev b{color:var(--amber)}
+.stagelbl.done b{color:var(--teal)}
 </style></head><body><div class="wrap">
 <h1 id="brand"></h1><div class="sub" id="subline"></div>
 <div id="body"><div class="center">Loading your content…</div></div>
@@ -35,18 +44,63 @@ const pin = (q.get('t') || 'pin') === 'pin';
 document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
 document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Your Content';
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
-function render(h){
-  const items = (h.projects || []);
+// Client-friendly pipeline: Booked → Shoot scheduled → Filmed → Editing → Review & polish → Delivered
+const PHASES = ['Booked','Shoot scheduled','Filmed','In editing','Review & polish','Delivered'];
+const REVIEWISH = ['client review','changes','review 2','changes 2','review 3','in review'];
+function phaseOf(x){
+  if(x.dv) return 5;
+  if(typeof x.si === 'number' && x.si >= 0){
+    if(x.si <= 3) return x.si;      // Booked, Scheduled, Shot, Editing
+    if(x.si >= 9) return 5;         // Delivered
+    return 4;                        // any review / changes round
+  }
+  const st = String(x.st || '').toLowerCase();
+  if(st === 'delivered') return 5;
+  if(REVIEWISH.some(r => st.indexOf(r) > -1) || x.rs) return 4;
+  if(st.indexOf('edit') > -1) return 3;
+  if(st === 'shot' || st.indexOf('film') > -1) return 2;
+  if(st === 'scheduled') return 1;
+  return 0;                          // Booked / To Schedule / unknown
+}
+function normalize(h){
+  // Accepts both the current manifest {agent, brokerage, projects:[{t,p,st,si,rs,dv,url,dt}]}
+  // and the legacy one {n, t, items:[{ttl,proj,st,url,dt}]}
+  const raw = h.projects || h.items || [];
+  const items = raw.map(x => ({
+    t: x.t != null ? x.t : (x.ttl || ''),
+    p: x.p != null ? x.p : (x.proj || ''),
+    st: x.st || '', si: (typeof x.si === 'number' ? x.si : -1),
+    rs: x.rs != null ? !!x.rs : ['client review','review 2','review 3','in review'].some(r => String(x.st || '').toLowerCase() === r),
+    dv: x.dv != null ? !!x.dv : String(x.st || '').toLowerCase() === 'delivered',
+    url: x.url || '', dt: x.dt || ''
+  }));
+  return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items};
+}
+function tracker(x){
+  const ph = phaseOf(x);
+  let segs = '';
+  for(let i = 0; i < PHASES.length; i++)
+    segs += '<span class="seg' + (i < ph ? ' on' : i === ph ? (ph === 5 ? ' on' : ' cur') : '') + '"></span>';
+  const cls = x.dv ? 'done' : (x.rs ? 'rev' : '');
+  const lbl = x.dv ? 'Delivered 🎉'
+    : (x.rs ? 'Waiting on you — take a look' : PHASES[ph]);
+  return '<div class="track' + (x.rs ? ' rev' : '') + '">' + segs + '</div>' +
+    '<div class="stagelbl ' + cls + '">Step ' + (ph + 1) + ' of 6 · <b>' + esc(lbl) + '</b></div>';
+}
+function render(raw){
+  const h = normalize(raw);
+  const items = h.items;
   document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
   let html = '<div class="hey">Hey ' + esc(h.agent || 'there') + ' 👋</div>' +
-    '<div class="heysub">Everything we\u2019ve made together' + (h.brokerage ? ' · ' + esc(h.brokerage) : '') + '</div>';
-  const rev = items.filter(x => x.rs && x.url);
-  const work = items.filter(x => !x.rs && !x.dv);
+    '<div class="heysub">Everything we’ve made together' + (h.brokerage ? ' · ' + esc(h.brokerage) : '') + '</div>';
   const done = items.filter(x => x.dv);
+  const rev = items.filter(x => !x.dv && x.rs && x.url);
+  const work = items.filter(x => !x.dv && !(x.rs && x.url));
   const row = (x, cls, pillTxt, btnTxt, soft) =>
     '<div class="row"><div class="tt"><div class="name">' + esc(x.t) + '</div><div class="proj">' + esc(x.p) + '</div></div>' +
     '<span class="pill ' + cls + '">' + pillTxt + '</span>' +
-    (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + '</a>' : '') + '</div>';
+    (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + '</a>' : '') +
+    tracker(x) + '</div>';
   if(rev.length){ html += '<div class="sec">👀 Waiting on your review</div>'; rev.forEach(x => html += row(x, 'rev', 'In review', 'Review →')); }
   if(work.length){ html += '<div class="sec">🎬 In the works</div>'; work.forEach(x => html += row(x, 'work', esc(x.st || 'In production'), 'Open →', true)); }
   if(done.length){ html += '<div class="sec">✅ Delivered</div>'; done.forEach(x => html += row(x, 'done', 'Delivered', 'View →', true)); }
@@ -57,6 +111,6 @@ function render(h){
 if(!a){ document.getElementById('body').innerHTML = '<div class="center">This link is missing its key — ask us for a fresh one.</div>'; }
 else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   .then(r => r.json())
-  .then(j => { if(j.ok && j.hub) render(j.hub); else document.getElementById('body').innerHTML = '<div class="center">We couldn\u2019t find your page — ask us for a fresh link.</div>'; })
-  .catch(() => { document.getElementById('body').innerHTML = '<div class="center">Couldn\u2019t load — check your connection and refresh.</div>'; });
+  .then(j => { if(j.ok && j.hub) render(j.hub); else document.getElementById('body').innerHTML = '<div class="center">We couldn’t find your page — ask us for a fresh link.</div>'; })
+  .catch(() => { document.getElementById('body').innerHTML = '<div class="center">Couldn’t load — check your connection and refresh.</div>'; });
 </script></div></body></html>

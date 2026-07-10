@@ -918,7 +918,7 @@ function CloudModal({db, onClose, cloud, setCloud, adoptRemote, seedCloud}){
     </div>);
 }
 
-const APP_VERSION = 'v2026.07.06.1';
+const APP_VERSION = 'v2026.07.10.1';
 const LOCK_HASH = '3d0fbc04f8f9a435aeed3161cb0da5c451bd2e3e6dced84318595db174d82ab2';
 function LockScreen({onUnlock}){
   const [cur, setCur] = useState('');
@@ -1070,23 +1070,29 @@ function App(){
     return () => { clearTimeout(t0); clearInterval(t); };
   }, []);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
+  const dbRef = React.useRef(db); dbRef.current = db;
   const pushHub = (clientId) => {
     try {
+      const db = dbRef.current;
       const c = db.clients.find(x => x.id === clientId);
       if(!c || !db.settings.inboxUrl) return null;
-      let hk = c.hubKey;
-      if(!hk){ hk = Math.random().toString(36).slice(2, 10); setDb(p => ({...p, clients: p.clients.map(x => x.id === clientId ? {...x, hubKey: hk} : x)})); }
-      const items = db.deliverables
+      let hk = c.hubKey || c.hubId;
+      if(!hk){ hk = Math.random().toString(36).slice(2, 10); }
+      if(c.hubKey !== hk) setDb(p => ({...p, clients: p.clients.map(x => x.id === clientId ? {...x, hubKey: hk} : x)}));
+      const projects = db.deliverables
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
-          return {ttl: dlTitle(d), proj: o.project || d.group, st: STATUS_LABEL(d.status),
-            url: (d.reviewUrl || ''), dt: (d.reviewDate || d.shootDate || '')}; })
+          return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
+            si: STATUSES.indexOf(d.status), sn: STATUSES.length,
+            rs: isReviewStage(d.status), dv: d.status === 'Delivered',
+            url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || '')}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal';
-      const manifest = JSON.stringify({n: (c.name || '').split(' ')[0], t: pin ? 'pin' : 'rem', items});
+      const co = companyOf(c);
+      const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', projects});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
       const base = (db.settings.reviewPageUrl || '').replace('review.html', 'hub.html');
-      return base ? base + '?a=' + hk : null;
+      return base ? base + '?a=' + hk + '&t=' + (pin ? 'pin' : 'rem') : null;
     } catch(e){ return null; }
   };
   const toggleBlockedDay = (ds) => setDb(p => ({...p, blockedDays: (p.blockedDays || []).includes(ds)
@@ -1216,6 +1222,8 @@ function App(){
       } else {
         showToast(`${dlTitle(cur)} → ${STATUS_LABEL(patch.status)}`, actions);
       }
+      // keep the agent's hub in sync so they can watch their project move through the pipeline
+      if(c && c.id && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
     }
   };
   const updateOrder = (id, patch) => {
@@ -1453,7 +1461,7 @@ function App(){
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
-    {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} />}
+    {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable}
         updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} />}
@@ -3076,7 +3084,6 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
                 fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code, project: order.project || d.group, who: 'app', body: qs})})
                   .then(r => r.json()).then(j => { if(!j.ok) throw new Error(j.error || 'save failed');
                     if(w) w.location = shortU;
-                    if(client && client.hubId) pushHubManifest(db, client);
                     showToast('✅ Short link copied & opened: ' + shortU); })
                   .catch(() => { if(w) w.location = u;
                     updateDeliverable(d.id, {reviewUrl: u}); copyText(u);
@@ -3123,7 +3130,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
 }
 
 /* ---------------- Clients (contacts page) ---------------- */
-function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient}){
+function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient, pushHub, showToast}){
   const companies = [...new Set(db.clients.map(companyOf))]
     .sort((a,b) => a === 'Pinnacle' ? -1 : b === 'Pinnacle' ? 1 : a.localeCompare(b));
   const bdays = db.clients.map(c => ({c, nb: nextBirthday(c.birthday)}))
@@ -3185,12 +3192,10 @@ function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient}){
                 <strong style={{fontSize:16}}>{c.name}</strong>
                 <span className="spacer"></span>
                 <button className="btn ghost sm" title="Copy this agent's permanent hub link — one page with all their content, no login" onClick={() => {
-                  let hid = c.hubId;
-                  if(!hid){ hid = uid(); updateClient(c.id, {hubId: hid}); }
-                  const hubBase = (db.settings.reviewPageUrl || 'https://cloudixc.github.io/ReelEstateMedia/review.html').replace(/review\.html.*$/, 'hub.html');
-                  const link = hubBase + '?a=' + hid + '&t=' + ((c.tier === 'partner' || c.tier === 'internal') ? 'pin' : 'rem');
-                  pushHubManifest(db, {...c, hubId: hid}).then(() => showToast('🏠 Hub updated & link copied — it\u2019s permanent, tell them to bookmark it'));
+                  const link = pushHub(c.id);
+                  if(!link){ alert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); return; }
                   copyText(link);
+                  showToast('🏠 Hub updated & link copied — it\u2019s permanent, tell them to bookmark it');
                 }}>🏠 Hub</button>
                 <button className="btn ghost sm" onClick={() => setEditingClient(c)}>Edit</button>
               </div>
