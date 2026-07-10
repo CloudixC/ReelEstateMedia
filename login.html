@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reel Estate Media — Sign in</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class' }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #e11d2a;
+    --red-hi: #ff2d3d;
+    --bg: #0a0a0a;
+    --card: #141414;
+    --line: #262626;
+  }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(1100px 560px at 12% -12%, rgba(225,29,42,0.16), transparent 60%),
+      radial-gradient(820px 460px at 112% 8%, rgba(225,29,42,0.08), transparent 60%),
+      linear-gradient(180deg, #0b0b0b, #050505);
+    min-height: 100vh;
+  }
+  .serif { font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+  .card {
+    background: rgba(20,20,20,0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.07);
+    box-shadow:
+      0 1px 2px rgba(0,0,0,0.5),
+      0 8px 24px rgba(0,0,0,0.45),
+      0 30px 70px -22px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(225,29,42,0.04);
+  }
+  .label { text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; font-weight: 600; color: #8a8a8a; }
+  .input-wrap { transition: box-shadow .15s ease, border-color .15s ease; }
+  .input-wrap:focus-within {
+    border-color: var(--red);
+    box-shadow: 0 0 0 4px rgba(225,29,42,0.18);
+  }
+  .primary-btn {
+    background: linear-gradient(180deg, var(--red-hi), var(--red));
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.18) inset,
+      0 8px 22px -6px rgba(225,29,42,0.6),
+      0 1px 2px rgba(0,0,0,0.4);
+    transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .primary-btn:hover {
+    filter: brightness(1.07);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.22) inset,
+      0 12px 30px -8px rgba(225,29,42,0.7),
+      0 2px 4px rgba(0,0,0,0.5);
+  }
+  .primary-btn:active { transform: translateY(1px); }
+  .primary-btn:disabled { filter: grayscale(.4) brightness(.8); cursor: not-allowed; }
+  .ghost-btn { transition: background .15s ease, border-color .15s ease, transform .12s ease; }
+  .ghost-btn:hover { border-color: rgba(225,29,42,0.55); background: rgba(255,255,255,0.06); }
+  .ghost-btn:active { transform: translateY(1px); }
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px; background-position: 0 100%; background-repeat: no-repeat;
+    transition: background-size .25s ease;
+  }
+  .link-underline:hover { background-size: 100% 1px; }
+  .fade-in { animation: fadeUp .6s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .check-shake { animation: shake .4s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  .err-box {
+    background: rgba(225,29,42,0.09);
+    border: 1px solid rgba(225,29,42,0.35);
+    color: #ff8f97;
+  }
+  .ok-box {
+    background: rgba(76,195,138,0.09);
+    border: 1px solid rgba(76,195,138,0.35);
+    color: #7ddcae;
+  }
+</style>
+</head>
+<body class="antialiased text-neutral-100">
+
+  <main class="min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="card fade-in w-full max-w-md rounded-2xl p-8 sm:p-10">
+
+      <!-- Brand mark -->
+      <div class="flex flex-col items-center text-center mb-8">
+        <div class="serif text-[26px] leading-none tracking-tight">
+          <span class="text-white">Content</span> <span class="italic" style="color:var(--red)">Hub</span>
+        </div>
+        <div class="label mt-2" id="brandTag">Your Social Media Command Centre</div>
+      </div>
+
+      <!-- ============ WELCOME BACK (returning agent) ============ -->
+      <section id="welcomeBack" class="hidden text-center">
+        <h1 class="serif text-3xl sm:text-[32px] tracking-tight text-white">
+          Welcome back<span class="italic" style="color:var(--red)">,</span> <span id="wbName" class="italic" style="color:var(--red)"></span>
+        </h1>
+        <p class="mt-2 text-sm text-neutral-400" id="wbEmail"></p>
+        <button id="wbGo"
+          class="primary-btn w-full h-11 rounded-xl text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-2 mt-7">
+          Continue to my content
+        </button>
+        <button id="wbSwitch" class="mt-5 text-sm text-neutral-400 link-underline">Not you? Sign in with a different account</button>
+      </section>
+
+      <!-- ============ SIGN IN ============ -->
+      <section id="signIn">
+        <!-- Heading -->
+        <header class="mb-7 text-center">
+          <h1 class="serif text-3xl sm:text-[32px] tracking-tight text-white">
+            Welcome <span class="italic" style="color:var(--red)">back</span>
+          </h1>
+          <p class="mt-2 text-sm text-neutral-400">
+            Sign in to continue to your production pipeline.
+          </p>
+        </header>
+
+        <!-- Error message -->
+        <div id="errMsg" class="hidden err-box rounded-xl px-4 py-3 text-sm mb-4"></div>
+
+        <!-- Form -->
+        <form id="loginForm" class="space-y-4" novalidate>
+          <!-- Email -->
+          <div>
+            <label for="email" class="label block mb-2">Email address</label>
+            <div class="input-wrap flex items-center gap-2.5 rounded-xl border px-3.5 h-11"
+                 style="border-color:var(--line); background:#111;">
+              <svg class="h-4 w-4 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <input id="email" type="email" autocomplete="email" required placeholder="your@email.com"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+            </div>
+          </div>
+
+          <!-- Access code -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label for="password" class="label">Access code</label>
+              <a href="mailto:hello@reelestatemedia.com?subject=Forgot%20my%20access%20code&body=Hi%20—%20I%20forgot%20the%20access%20code%20for%20my%20content%20hub.%20My%20email%20is%3A%20"
+                 class="text-xs font-medium link-underline" style="color:var(--red)">Forgot your code?</a>
+            </div>
+            <div class="input-wrap flex items-center gap-2.5 rounded-xl border px-3.5 h-11"
+                 style="border-color:var(--line); background:#111;">
+              <svg class="h-4 w-4 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input id="password" type="password" autocomplete="current-password" required placeholder="Enter your access code"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" style="text-transform:uppercase" />
+              <button type="button" id="togglePw" aria-label="Show access code" class="text-neutral-500 hover:text-neutral-200 transition-colors">
+                <svg id="eyeIcon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Remember -->
+          <div class="flex items-center gap-2 pt-1">
+            <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="remember" class="peer sr-only" checked />
+              <span class="h-4 w-4 rounded-[5px] border grid place-items-center transition-colors peer-checked:border-transparent"
+                    style="border-color:var(--line); background:#e11d2a;" id="cbBox">
+                <svg class="h-3 w-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </span>
+              <span class="text-xs text-neutral-400">Keep me signed in on this device</span>
+            </label>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" id="submitBtn"
+            class="primary-btn w-full h-11 rounded-xl text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-2 mt-2">
+            <span id="btnLabel">Sign in</span>
+            <svg id="btnSpinner" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/>
+            </svg>
+          </button>
+        </form>
+
+        <!-- Footer link -->
+        <p class="mt-8 text-center text-sm text-neutral-400">
+          Don't have an account?
+          <a href="mailto:hello@reelestatemedia.com?subject=Access%20request%20—%20Content%20Hub&body=Hi%20—%20I'd%20like%20access%20to%20my%20content%20hub.%20My%20name%20is%3A%20"
+             class="font-semibold text-white link-underline">Request access</a>
+        </p>
+      </section>
+
+      <!-- ============ ADMIN (hidden — open with ?admin) ============ -->
+      <section id="adminPanel" class="hidden">
+        <header class="mb-6 text-center">
+          <h1 class="serif text-2xl tracking-tight text-white">Agent <span class="italic" style="color:var(--red)">logins</span></h1>
+          <p class="mt-2 text-xs text-neutral-500">Create or update a login. Saving the same email again replaces the old code.<br>Leave the code blank to disable an account.</p>
+        </header>
+
+        <div id="adMsg" class="hidden rounded-xl px-4 py-3 text-sm mb-4"></div>
+
+        <form id="adminForm" class="space-y-4" novalidate>
+          <div>
+            <label class="label block mb-2">Your admin token</label>
+            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+              <input id="adToken" type="password" placeholder="Paste your inbox token"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label block mb-2">First name</label>
+              <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+                <input id="adName" type="text" placeholder="Sarah"
+                  class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+              </div>
+            </div>
+            <div>
+              <label class="label block mb-2">Hub type</label>
+              <div class="input-wrap flex items-center rounded-xl border px-2 h-11" style="border-color:var(--line); background:#111;">
+                <select id="adType" class="w-full bg-transparent outline-none text-sm text-neutral-100" style="background:#111;">
+                  <option value="pin">Royal LePage Pinnacle</option>
+                  <option value="rem">Reel Estate client</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="label block mb-2">Agent email</label>
+            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+              <input id="adEmail" type="email" placeholder="agent@royallepage.ca"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+            </div>
+          </div>
+          <div>
+            <label class="label block mb-2">Hub key <span class="normal-case tracking-normal text-neutral-600">— the part after ?a= in their hub link</span></label>
+            <div class="input-wrap flex items-center rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+              <input id="adKey" type="text" placeholder="e.g. k7x2m9"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+            </div>
+          </div>
+          <div>
+            <label class="label block mb-2">Access code</label>
+            <div class="input-wrap flex items-center gap-2 rounded-xl border px-3.5 h-11" style="border-color:var(--line); background:#111;">
+              <input id="adPin" type="text" placeholder="Blank = disable account" style="text-transform:uppercase"
+                class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" />
+              <button type="button" id="adGen" class="ghost-btn shrink-0 text-xs font-semibold rounded-lg border px-2.5 py-1.5 text-neutral-300" style="border-color:var(--line);">⚡ Generate</button>
+            </div>
+          </div>
+          <button type="submit" id="adSave"
+            class="primary-btn w-full h-11 rounded-xl text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-2 mt-2">
+            <span id="adBtnLabel">Save login</span>
+          </button>
+        </form>
+
+        <div id="adResult" class="hidden mt-5">
+          <button id="adCopy" class="ghost-btn w-full h-11 rounded-xl border text-sm font-semibold text-neutral-200" style="border-color:var(--line); background:rgba(255,255,255,0.03);">
+            📋 Copy welcome message for the agent
+          </button>
+        </div>
+
+        <p class="mt-8 text-center text-sm text-neutral-400">
+          <a href="#" id="adBack" class="font-semibold text-white link-underline">← Back to sign in</a>
+        </p>
+      </section>
+
+      <!-- Powered by -->
+      <p class="mt-8 text-center text-xs text-neutral-600">
+        Powered by <span class="serif italic text-neutral-400">Reel Estate <span style="color:var(--red)">Media</span></span>
+      </p>
+
+    </div>
+  </main>
+
+<script>
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  var REMEMBER_KEY = 'rem_agent_v1';
+  var TOKEN_KEY = 'rem_admin_token_v1';
+
+  var $ = function(id){ return document.getElementById(id); };
+  function shake(el){ el.classList.add('check-shake'); setTimeout(function(){ el.classList.remove('check-shake'); }, 400); }
+  function hubUrl(qs){ return /^https?:\/\//i.test(qs) ? qs : 'hub.html?' + qs; }
+  function loginUrl(){ return location.origin + location.pathname; }
+  function readRemembered(){
+    try{ return JSON.parse(localStorage.getItem(REMEMBER_KEY)); }catch(e){ return null; }
+  }
+
+  /* ---------- mode switching ---------- */
+  var isAdmin = new URLSearchParams(location.search).has('admin');
+  var remembered = readRemembered();
+
+  if(isAdmin){
+    $('signIn').classList.add('hidden');
+    $('adminPanel').classList.remove('hidden');
+    $('brandTag').textContent = 'Admin · Agent Access';
+    try{ $('adToken').value = localStorage.getItem(TOKEN_KEY) || ''; }catch(e){}
+  } else if(remembered && remembered.qs){
+    $('signIn').classList.add('hidden');
+    $('welcomeBack').classList.remove('hidden');
+    $('wbName').textContent = remembered.name || 'friend';
+    $('wbEmail').textContent = remembered.email || '';
+    $('wbGo').addEventListener('click', function(){ location.href = hubUrl(remembered.qs); });
+    $('wbSwitch').addEventListener('click', function(){
+      try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
+      $('welcomeBack').classList.add('hidden');
+      $('signIn').classList.remove('hidden');
+      $('email').focus();
+    });
+  }
+
+  /* ---------- checkbox red fill ---------- */
+  var cb = $('remember');
+  var cbBox = $('cbBox');
+  function paintCb(){ cbBox.style.background = cb.checked ? '#e11d2a' : '#111'; }
+  cb.addEventListener('change', paintCb);
+  paintCb();
+
+  /* ---------- show/hide access code ---------- */
+  var pw = $('password');
+  var eye = $('eyeIcon');
+  var togglePw = $('togglePw');
+  togglePw.addEventListener('click', function(){
+    var show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    eye.innerHTML = show
+      ? '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6 0 10 7.5 10 7.5a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12.5S6 20 12 20a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>'
+      : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>';
+    eye.setAttribute('stroke', 'currentColor'); eye.setAttribute('stroke-width', '2');
+    eye.setAttribute('fill', 'none'); eye.setAttribute('stroke-linecap', 'round'); eye.setAttribute('stroke-linejoin', 'round');
+    togglePw.setAttribute('aria-label', show ? 'Hide access code' : 'Show access code');
+  });
+
+  /* ---------- sign in ---------- */
+  var form = $('loginForm');
+  var btnLabel = $('btnLabel');
+  var spinner = $('btnSpinner');
+  var submitBtn = $('submitBtn');
+  var errMsg = $('errMsg');
+
+  function showErr(txt){
+    errMsg.textContent = txt;
+    errMsg.classList.remove('hidden');
+  }
+  function busy(on){
+    btnLabel.textContent = on ? 'Signing in…' : 'Sign in';
+    spinner.classList.toggle('hidden', !on);
+    submitBtn.disabled = on;
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    errMsg.classList.add('hidden');
+    var email = $('email');
+    if(!email.value || email.value.indexOf('@') === -1){
+      shake(email.closest('.input-wrap')); email.focus(); return;
+    }
+    if(!pw.value.trim()){
+      shake(pw.closest('.input-wrap')); pw.focus(); return;
+    }
+    busy(true);
+    fetch(ENDPOINT + '?login=' + encodeURIComponent(email.value.trim()) + '&pin=' + encodeURIComponent(pw.value.trim()))
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(j.ok && j.qs){
+          btnLabel.textContent = 'Welcome, ' + (j.name || 'you') + '!';
+          if(cb.checked){
+            try{ localStorage.setItem(REMEMBER_KEY, JSON.stringify({email: email.value.trim(), name: j.name || '', qs: j.qs})); }catch(err){}
+          }
+          setTimeout(function(){ location.href = hubUrl(j.qs); }, 350);
+        } else {
+          busy(false);
+          var er = String(j.error || '');
+          if(er === 'unknown agent'){
+            showErr("We can't find that email. Double-check it, or tap “Request access” below and we'll set you up.");
+            shake(email.closest('.input-wrap'));
+          } else if(er === 'bad pin'){
+            showErr("That access code doesn't match. Check for typos — or tap “Forgot your code?” and we'll send a fresh one.");
+            shake(pw.closest('.input-wrap'));
+          } else if(er === 'disabled'){
+            showErr('This account is paused. Get in touch and we\'ll switch it back on.');
+          } else {
+            showErr("Something went sideways on our end. Give it another try in a moment.");
+          }
+        }
+      })
+      .catch(function(){
+        busy(false);
+        showErr("Couldn't reach the server — check your connection and try again.");
+      });
+  });
+
+  /* ---------- admin panel ---------- */
+  var adMsg = $('adMsg');
+  function adNote(txt, ok){
+    adMsg.textContent = txt;
+    adMsg.className = (ok ? 'ok-box' : 'err-box') + ' rounded-xl px-4 py-3 text-sm mb-4';
+  }
+  var CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function genCode(){
+    var out = '';
+    var buf = new Uint32Array(6);
+    (window.crypto || {getRandomValues:function(a){for(var i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*4294967296);}}).getRandomValues(buf);
+    for(var i = 0; i < 6; i++) out += CODE_CHARS[buf[i] % CODE_CHARS.length];
+    return out;
+  }
+  $('adGen').addEventListener('click', function(){ $('adPin').value = genCode(); });
+  $('adBack').addEventListener('click', function(e){ e.preventDefault(); location.href = loginUrl(); });
+
+  var lastSaved = null;
+  $('adminForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    adMsg.classList.add('hidden');
+    $('adResult').classList.add('hidden');
+    var token = $('adToken').value.trim();
+    var name = $('adName').value.trim();
+    var email = $('adEmail').value.trim().toLowerCase();
+    var key = $('adKey').value.trim();
+    var pin = $('adPin').value.trim().toUpperCase();
+    var t = $('adType').value;
+    if(!token){ adNote('Paste your admin token first (it\'s the token from your inbox script).', false); return; }
+    if(!email || email.indexOf('@') === -1){ adNote('That email doesn\'t look right.', false); return; }
+    if(!key && pin){ adNote('Add the hub key — it\'s the bit after ?a= in their hub link.', false); return; }
+    $('adBtnLabel').textContent = 'Saving…'; $('adSave').disabled = true;
+    var body = JSON.stringify({pin: pin, qs: 'a=' + encodeURIComponent(key) + '&t=' + t, name: name});
+    fetch(ENDPOINT, {method:'POST', body: JSON.stringify({kind:'agent', ref: email, project: name, who: 'admin', body: body, token: token})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        $('adBtnLabel').textContent = 'Save login'; $('adSave').disabled = false;
+        if(j.ok){
+          try{ localStorage.setItem(TOKEN_KEY, token); }catch(err){}
+          if(pin){
+            adNote('✓ Saved. ' + (name || email) + ' can now sign in with the code ' + pin + '.', true);
+            lastSaved = {name: name, email: email, pin: pin};
+            $('adResult').classList.remove('hidden');
+          } else {
+            adNote('✓ Account for ' + email + ' is now disabled.', true);
+            lastSaved = null;
+          }
+        } else {
+          adNote(j.error === 'bad token' ? 'That token isn\'t right — copy it from the top of your inbox script.' : 'Save failed: ' + (j.error || 'unknown error'), false);
+        }
+      })
+      .catch(function(){ $('adBtnLabel').textContent = 'Save login'; $('adSave').disabled = false; adNote('Couldn\'t reach the server — try again.', false); });
+  });
+
+  $('adCopy').addEventListener('click', function(){
+    if(!lastSaved) return;
+    var msg = 'Hey ' + (lastSaved.name || 'there') + ' — your content hub is live! 🎬\n\n' +
+      'Sign in here: ' + loginUrl() + '\n' +
+      'Email: ' + lastSaved.email + '\n' +
+      'Access code: ' + lastSaved.pin + '\n\n' +
+      'Bookmark it — every project we make together shows up there automatically, and you can watch each one move through the pipeline.';
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(msg) : Promise.reject()).then(function(){
+      $('adCopy').textContent = '✓ Copied — paste it into a text or email';
+      setTimeout(function(){ $('adCopy').textContent = '📋 Copy welcome message for the agent'; }, 2500);
+    }).catch(function(){ prompt('Copy this message:', msg); });
+  });
+</script>
+</body>
+</html>
