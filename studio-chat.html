@@ -64,6 +64,9 @@
         <h2 class="font-serif-display text-xl text-white">Mess<span class="text-[#e11d2a] italic">ages</span></h2>
         <div class="flex items-center gap-2">
           <span id="total-badge" class="unread-badge text-[11px] font-semibold rounded-full px-2 py-0.5" style="display:none">0</span>
+          <button id="bcast-btn" class="w-8 h-8 grid place-items-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" title="Broadcast a message to your agents" aria-label="Broadcast">
+            <svg class="w-4.5 h-4.5 w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-6v14L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          </button>
           <button id="close-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white" aria-label="Close">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -1003,6 +1006,131 @@
   });
   window.addEventListener('resize', closeReactUI);
   thread.addEventListener('scroll', closeReactUI);
+
+  // ---------- broadcast (mass message) ----------
+  const bcast = document.createElement('div');
+  bcast.id = 'bcast';
+  bcast.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  bcast.innerHTML = `
+    <div class="w-full max-w-md bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col max-h-[88vh]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">Broad<span class="text-[#e11d2a] italic">cast</span></h3>
+        <button id="bcast-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="px-5 pt-4 pb-1 flex items-center justify-between">
+        <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a]">Send to</p>
+        <button id="bcast-all" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white"></button>
+      </div>
+      <div id="bcast-chips" class="px-5 pb-2 flex flex-wrap gap-1.5"></div>
+      <div id="bcast-list" class="px-3 pb-2 overflow-y-auto scrollbar-thin" style="max-height:220px"></div>
+      <div class="px-5 py-4 border-t border-[#262626]">
+        <textarea id="bcast-text" rows="3" placeholder="Write one message — it lands in every selected agent's direct chat…"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all resize-none"></textarea>
+        <button id="bcast-send" class="mt-3 w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">Send broadcast</button>
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">Sends as Reel Estate Media, one direct message per agent.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(bcast);
+
+  const bcastSel = new Set();
+  const bcastTargets = () => agents.filter(ag => ag.hubIdx >= 0 && !ag.stale);
+  function renderBcastList(){
+    const list = bcast.querySelector('#bcast-list');
+    const targets = bcastTargets();
+
+    // per-brokerage quick-select chips (only worth showing with 2+ brokerages)
+    const chipsEl = bcast.querySelector('#bcast-chips');
+    const groups = {};
+    targets.forEach(ag => { const b = brokerageName(ag); (groups[b] = groups[b] || []).push(ag); });
+    const bNames = Object.keys(groups).sort();
+    chipsEl.innerHTML = bNames.length > 1 ? bNames.map(b => {
+      const allOn = groups[b].every(ag => bcastSel.has(ag.key));
+      return `<button data-brokerage="${esc(b)}" class="text-[11px] font-semibold rounded-full px-3 py-1.5 border transition-colors ${allOn
+        ? 'bg-[#e11d2a]/15 border-[#e11d2a]/60 text-white'
+        : 'bg-[#1a1a1a] border-[#2a2a2a] text-[#8a8a8a] hover:border-[#3a3a3a] hover:text-white'}">${esc(b)} · ${groups[b].length}</button>`;
+    }).join('') : '';
+    list.innerHTML = targets.map(ag => `
+      <label class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1a1a1a] cursor-pointer">
+        <input type="checkbox" data-key="${esc(ag.key)}" ${bcastSel.has(ag.key) ? 'checked' : ''} class="accent-[#e11d2a] w-4 h-4 shrink-0">
+        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[10px] font-serif-display text-[#9a9a9a] shrink-0">${esc(ag.initials)}</span>
+        <span class="min-w-0">
+          <span class="block text-[13px] text-[#d4d4d4] truncate">${esc(ag.name)}</span>
+          <span class="block text-[11px] text-[#6a6a6a] truncate">${esc(ag.brokerage || 'Independent')}</span>
+        </span>
+      </label>`).join('') || '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No agents yet.</p>';
+    const allOn = targets.length && targets.every(ag => bcastSel.has(ag.key));
+    bcast.querySelector('#bcast-all').textContent = allOn ? 'Deselect all' : 'Select all';
+    const n = [...bcastSel].filter(k => targets.some(ag => ag.key === k)).length;
+    bcast.querySelector('#bcast-send').textContent = n ? `Send to ${n} agent${n === 1 ? '' : 's'}` : 'Send broadcast';
+    bcast.querySelector('#bcast-send').disabled = !n;
+  }
+  function openBroadcast(){
+    bcastSel.clear();
+    bcastTargets().forEach(ag => bcastSel.add(ag.key));   // everyone by default
+    renderBcastList();
+    bcast.querySelector('#bcast-text').value = '';
+    bcast.classList.remove('hidden');
+    bcast.classList.add('flex');
+    bcast.querySelector('#bcast-text').focus();
+  }
+  function closeBroadcast(){ bcast.classList.add('hidden'); bcast.classList.remove('flex'); }
+  $('#bcast-btn').addEventListener('click', openBroadcast);
+  bcast.querySelector('#bcast-close').addEventListener('click', closeBroadcast);
+  bcast.addEventListener('click', e => { if (e.target === bcast) closeBroadcast(); });
+  bcast.querySelector('#bcast-all').addEventListener('click', () => {
+    const targets = bcastTargets();
+    const allOn = targets.length && targets.every(ag => bcastSel.has(ag.key));
+    bcastSel.clear();
+    if (!allOn) targets.forEach(ag => bcastSel.add(ag.key));
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-chips').addEventListener('click', e => {
+    const chip = e.target.closest('[data-brokerage]');
+    if (!chip) return;
+    const members = bcastTargets().filter(ag => brokerageName(ag) === chip.dataset.brokerage);
+    const allOn = members.every(ag => bcastSel.has(ag.key));
+    members.forEach(ag => allOn ? bcastSel.delete(ag.key) : bcastSel.add(ag.key));
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-list').addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"]');
+    if (!cb) return;
+    cb.checked ? bcastSel.add(cb.dataset.key) : bcastSel.delete(cb.dataset.key);
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-send').addEventListener('click', async () => {
+    const text = bcast.querySelector('#bcast-text').value.trim();
+    const targets = bcastTargets().filter(ag => bcastSel.has(ag.key));
+    if (!text || !targets.length) return;
+    const btn = bcast.querySelector('#bcast-send');
+    btn.disabled = true;
+    let sent = 0, failed = 0;
+    for (const ag of targets){
+      btn.textContent = 'Sending ' + (sent + failed + 1) + ' / ' + targets.length + '…';
+      const c = ag.convos.find(x => x.kind === 'direct') || ag.convos[0];
+      try {
+        const res = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+          kind:'msg', ref: ag.key, project: (c && c.label) || generalLabel(ag), dname:'',
+          who: 'Reel Estate Media', from:'jag', body: text
+        })}).then(r => r.json());
+        if (!res.ok) throw new Error(res.error || 'failed');
+        if (c){
+          const now = new Date().toISOString();
+          c.messages.push({ id:'', ts: now, side:'out', who:'You', text, atts: [] });
+          c.lastTs = now;
+          markRead(c.id);
+        }
+        sent++;
+      } catch(e){ failed++; }
+    }
+    btn.disabled = false;
+    closeBroadcast();
+    renderSidebar(); renderThread();
+    showToast(failed ? `Sent to ${sent} agent${sent === 1 ? '' : 's'} — ${failed} failed, try them again` : `📣 Sent to ${sent} agent${sent === 1 ? '' : 's'}`);
+    setTimeout(() => loadAll().catch(()=>{}), 1500);
+  });
 
   // ---------- data loading ----------
   function loadAll(){
