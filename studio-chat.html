@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Estate Media — Studio Chat</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { background: #0a0a0a; font-family: 'Inter', sans-serif; }
+  .font-serif-display { font-family: 'Playfair Display', serif; }
+
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #262626; border-radius: 10px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #333333; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(225,29,42,0.6); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(225,29,42,0); }
+  }
+  .status-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+  @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-enter { animation: fade-up 0.35s ease-out both; }
+
+  .send-glow { box-shadow: 0 0 0 1px rgba(225,29,42,0.4), 0 8px 24px -6px rgba(225,29,42,0.55); }
+  .send-glow:hover { box-shadow: 0 0 0 1px rgba(225,29,42,0.6), 0 10px 30px -4px rgba(225,29,42,0.75); }
+
+  .film-grain { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0); background-size: 22px 22px; }
+
+  .unread-badge { background: #e11d2a; color: #fff; box-shadow: 0 0 0 1px rgba(225,29,42,0.35), 0 4px 12px -3px rgba(225,29,42,0.6); }
+  .date-chip { background: #161616; border: 1px solid #262626; color: #7a7a7a; }
+
+  #sidebar { transition: transform .28s cubic-bezier(.2,.7,.2,1); }
+  #backdrop { transition: opacity .28s ease; }
+</style>
+</head>
+<body class="min-h-screen w-full film-grain flex items-center justify-center p-0 sm:p-6">
+
+  <!-- ============ TOKEN GATE ============ -->
+  <div id="gate" class="w-full max-w-sm bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] p-8 mx-4">
+    <div class="text-center mb-6">
+      <h1 class="font-serif-display text-2xl text-white">Studio <span class="text-[#e11d2a] italic">Chat</span></h1>
+      <p class="text-[12px] text-[#8a8a8a] mt-2">Every agent conversation in one place.<br>Paste your admin token to unlock.</p>
+    </div>
+    <p id="gate-err" class="hidden bg-[#e11d2a]/10 border border-[#e11d2a]/40 text-[#ff8f97] text-[12.5px] rounded-xl px-3.5 py-2.5 mb-4"></p>
+    <input id="gate-token" type="password" placeholder="Your inbox token"
+      class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all mb-3" />
+    <button id="gate-go" class="w-full bg-[#e11d2a] hover:bg-[#c81824] text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.98]">Open chat</button>
+    <p class="text-[11px] text-[#5c5c5c] text-center mt-4">It's the same token as your Command Centre inbox.<br>Saved on this device so next time you're straight in.</p>
+  </div>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="hidden relative w-full max-w-5xl h-screen sm:h-[720px] sm:max-h-[92vh] bg-[#141414] sm:border border-[#262626] sm:rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex overflow-hidden">
+
+    <!-- Backdrop (mobile only) -->
+    <div id="backdrop" class="absolute inset-0 z-20 bg-black/60 opacity-0 pointer-events-none sm:hidden"></div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside id="sidebar" class="absolute sm:static inset-y-0 left-0 z-30 flex flex-col w-80 shrink-0 border-r border-[#262626] bg-[#0f0f0f] -translate-x-full sm:translate-x-0">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h2 class="font-serif-display text-xl text-white">Ag<span class="text-[#e11d2a] italic">ents</span></h2>
+        <div class="flex items-center gap-2">
+          <span id="total-badge" class="unread-badge text-[11px] font-semibold rounded-full px-2 py-0.5" style="display:none">0</span>
+          <button id="close-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white" aria-label="Close">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="px-4 py-3 border-b border-[#262626]">
+        <div class="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3 py-2">
+          <svg class="w-4 h-4 text-[#5c5c5c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="search" type="text" placeholder="Search agents & projects" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
+        </div>
+      </div>
+
+      <div id="convo-list" class="flex-1 overflow-y-auto scrollbar-thin"></div>
+
+      <div class="px-5 py-3 border-t border-[#262626] text-[11px] text-[#5c5c5c] flex items-center justify-between">
+        <span id="agent-count"></span>
+        <button id="lock-btn" class="hover:text-white transition-colors" title="Forget token on this device">🔒 Lock</button>
+      </div>
+    </aside>
+
+    <!-- ============ CHAT PANE ============ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#262626] bg-[#111111]">
+        <div class="flex items-center gap-3 min-w-0">
+          <button id="open-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white shrink-0" aria-label="Open conversations">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div id="hdr-avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] flex items-center justify-center text-[#e11d2a] font-serif-display font-semibold text-sm shrink-0"></div>
+          <div class="min-w-0">
+            <h1 id="hdr-name" class="font-serif-display text-lg sm:text-xl text-white leading-tight tracking-wide truncate"></h1>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a] status-dot"></span>
+              <p id="hdr-role" class="text-[10px] uppercase tracking-[0.18em] text-[#7a7a7a] truncate"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="thread" class="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-6 space-y-5"></div>
+
+      <div class="border-t border-[#262626] bg-[#111111] px-4 sm:px-5 py-4">
+        <p id="input-label" class="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-2 ml-1"></p>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="flex-1">
+            <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
+          </div>
+          <button id="send-btn" class="shrink-0 w-11 h-11 rounded-full bg-[#e11d2a] hover:bg-[#c81824] text-white flex items-center justify-center send-glow transition-all active:scale-95" aria-label="Send message">
+            <svg class="w-5 h-5 translate-x-[1px]" viewBox="0 0 24 24" fill="currentColor"><path d="M2.94 2.94a1.5 1.5 0 0 1 1.62-.33l17 7a1.5 1.5 0 0 1 0 2.78l-17 7a1.5 1.5 0 0 1-2.06-1.85L4.9 12 2.5 5.46a1.5 1.5 0 0 1 .44-2.52z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============================================================
+  // Studio chat — YOUR side of the agent messages.
+  // Unlocks with your admin token (same one as the Command Centre).
+  // One ?token= fetch returns everything: hub manifests build the
+  // agent list, msg rows are grouped per agent (by hub key) and
+  // per project (by the message's `project` label). Replies post
+  // as from:'jag', so they show up as Reel Estate Media on the
+  // agent's side — and never email you back.
+  // ============================================================
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  const TOKEN_KEY = 'rem_admin_token_v1';   // shared with login.html?admin
+  const READ_KEY = 'rem_studio_read_v1';
+  const POLL_MS = 30000;
+
+  const $ = (s) => document.querySelector(s);
+  const convoList = $('#convo-list');
+  const thread = $('#thread');
+  const sidebar = $('#sidebar');
+  const backdrop = $('#backdrop');
+
+  const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const initialsOf = name => String(name).split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
+
+  // ---------- state ----------
+  let TOKEN = '';
+  let agents = [];        // {key, name, brokerage, initials, convos:[...]}
+  let activeId = '';      // convo id = key + '|' + ('general' | 'p-...')
+  let searchTerm = '';
+  let expanded = new Set();
+  let pollTimer = null;
+
+  const allConvos = () => agents.flatMap(ag => ag.convos);
+  const convoById = id => allConvos().find(c => c.id === id);
+  const agentOf = c => agents.find(ag => ag.key === c.key);
+
+  // ---------- read state (this device only) ----------
+  function readState(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
+  function markRead(id){
+    const c = convoById(id); if (!c) return;
+    const st = readState();
+    st[id] = c.lastTs || new Date().toISOString();
+    try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+  }
+  const unreadOf = c => {
+    const since = readState()[c.id] || '';
+    return c.messages.filter(m => m.side === 'in' && m.ts > since).length;
+  };
+  const agentUnread = ag => ag.convos.reduce((s,c) => s + unreadOf(c), 0);
+
+  // ---------- build model from the inbox rows ----------
+  function generalLabel(ag){ return (ag.name || 'Agent') + ' — Content Hub'; }
+  function projectLabel(ag, title){ return (ag.name || 'Agent') + ' — ' + title; }
+
+  function buildFromRows(rows){
+    // latest hub manifest per key
+    const hubs = {};
+    rows.forEach(r => { if (r.kind === 'hub') hubs[String(r.ref)] = r; });
+
+    const byKey = {};
+    Object.keys(hubs).forEach(key => {
+      let man = {};
+      try { man = JSON.parse(String(hubs[key].body || '{}')); } catch(e){}
+      const name = man.agent || man.n || String(hubs[key].project || key);
+      const ag = { key, name, brokerage: man.brokerage || '', initials: initialsOf(name), convos: [] };
+      ag.convos.push({ id: key + '|general', key, name: ag.name, sub: 'Direct chat', initials: ag.initials, kind: 'direct', label: generalLabel(ag), messages: [], lastTs: '' });
+      (man.projects || man.items || []).forEach(x => {
+        const title = x.t != null ? x.t : (x.ttl || '');
+        if (!title) return;
+        ag.convos.push({ id: key + '|p-' + slug(title), key, name: title, sub: x.p != null ? x.p : (x.proj || ''), initials: initialsOf(title), kind: 'project', label: projectLabel(ag, title), messages: [], lastTs: '' });
+      });
+      byKey[key] = ag;
+    });
+
+    // distribute messages; unknown refs get a placeholder agent
+    rows.forEach(r => {
+      if (r.kind !== 'msg') return;
+      const key = String(r.ref);
+      if (!byKey[key]){
+        const name = String(r.who || key);
+        byKey[key] = { key, name, brokerage: '', initials: initialsOf(name), convos: [
+          { id: key + '|general', key, name, sub: 'Direct chat', initials: initialsOf(name), kind: 'direct', label: '', messages: [], lastTs: '' }
+        ]};
+      }
+      const ag = byKey[key];
+      const c = ag.convos.find(x => x.label === String(r.project || '')) || ag.convos[0];
+      c.messages.push({
+        ts: String(r.ts || ''),
+        side: r.from === 'jag' ? 'out' : 'in',
+        who: r.from === 'jag' ? 'You' : (r.who || ag.name),
+        text: String(r.body || '')
+      });
+    });
+
+    Object.values(byKey).forEach(ag => ag.convos.forEach(c => {
+      c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
+      if (c.messages.length) c.lastTs = c.messages[c.messages.length - 1].ts;
+    }));
+
+    const lastOf = ag => ag.convos.reduce((m,c) => c.lastTs > m ? c.lastTs : m, '');
+    agents = Object.values(byKey).sort((x,y) => lastOf(y) < lastOf(x) ? -1 : 1);
+
+    if (!convoById(activeId)){
+      const first = agents[0] && agents[0].convos[0];
+      activeId = first ? first.id : '';
+      if (first) expanded.add(first.key);
+    }
+  }
+
+  // ---------- time ----------
+  function dayOf(ts){
+    const d = new Date(ts); if (isNaN(d)) return '';
+    const now = new Date();
+    const mid = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((mid(now) - mid(d)) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + (d.getFullYear() !== now.getFullYear() ? ', ' + d.getFullYear() : '');
+  }
+  function timeOf(ts){
+    const d = new Date(ts); if (isNaN(d)) return '';
+    let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
+    const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return h + ':' + m + ' ' + ap;
+  }
+  const sideTime = ts => { const day = dayOf(ts); return day === 'Today' ? timeOf(ts) : day; };
+
+  // ---------- linkify ----------
+  function linkify(text) {
+    if (!text) return '';
+    const urlRe = /((?:https?:\/\/|www\.)[^\s<]+|(?<![@\w.])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|net|org|io|co|media|dev|app|me|tv|xyz|info|biz|us|uk|ca|au|edu|gov|ai|so|to|link|site|online|studio|agency|film|films|video)(?:\/[^\s<]*)?)/gi;
+    let out = '', last = 0, m;
+    while ((m = urlRe.exec(text))) {
+      out += esc(text.slice(last, m.index));
+      let url = m[0], trail = '';
+      const tm = url.match(/[.,!?)\]'"]+$/);
+      if (tm) { trail = tm[0]; url = url.slice(0, url.length - trail.length); }
+      const href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+      out += `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 break-all font-medium">${esc(url)}</a>` + esc(trail);
+      last = m.index + m[0].length;
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  // ---------- sidebar ----------
+  const badge = n => n > 0 ? `<span class="unread-badge text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] grid place-items-center px-1 shrink-0">${n}</span>` : '';
+  const chevron = open => `<svg class="w-3.5 h-3.5 shrink-0 transition-transform ${open?'rotate-90':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+  function convoRow(c, indent){
+    const un = unreadOf(c);
+    const active = c.id === activeId;
+    const last = c.messages[c.messages.length - 1];
+    const preview = last ? ((last.side === 'out' ? 'You: ' : '') + last.text) : 'No messages yet';
+    return `<button data-convo="${esc(c.id)}" class="w-full text-left ${indent ? 'pl-12' : 'pl-4'} pr-3 py-2.5 flex items-center gap-2.5 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
+      <span class="w-7 h-7 rounded-${c.kind === 'direct' ? 'full' : 'lg'} bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[10px] font-serif-display ${un?'text-[#e11d2a]':'text-[#8a8a8a]'} shrink-0">${esc(c.initials)}</span>
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5">
+          <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.kind === 'direct' && indent ? 'Direct chat' : c.name)}</span>
+          <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(c.lastTs ? sideTime(c.lastTs) : '')}</span>
+        </span>
+        <span class="flex items-center justify-between gap-2 mt-0.5">
+          <span class="text-[12px] text-[#8a8a8a] truncate">${esc(indent ? preview : (agentOf(c) ? agentOf(c).name + (agentOf(c).brokerage ? ' · ' + agentOf(c).brokerage : '') : preview))}</span>${badge(un)}
+        </span>
+      </span>
+    </button>`;
+  }
+
+  function renderSidebar(){
+    const total = agents.reduce((s,ag) => s + agentUnread(ag), 0);
+    $('#total-badge').textContent = total;
+    $('#total-badge').style.display = total ? '' : 'none';
+    $('#agent-count').textContent = agents.length + ' agent' + (agents.length === 1 ? '' : 's');
+
+    const term = searchTerm.trim().toLowerCase();
+    if (term){
+      const hits = allConvos().filter(c => {
+        const ag = agentOf(c) || {};
+        return c.name.toLowerCase().includes(term) || (c.sub||'').toLowerCase().includes(term)
+          || (ag.name||'').toLowerCase().includes(term) || (ag.brokerage||'').toLowerCase().includes(term);
+      });
+      convoList.innerHTML = hits.length
+        ? hits.map(c => convoRow(c, false)).join('')
+        : `<div class="px-5 py-10 text-center text-[12px] text-[#6a6a6a] leading-relaxed">No results for<br><span class="text-[#8a8a8a]">"${esc(searchTerm)}"</span></div>`;
+      return;
+    }
+
+    if (!agents.length){
+      convoList.innerHTML = `<div class="px-6 py-12 text-center text-[12.5px] text-[#6a6a6a] leading-relaxed">No agent hubs yet.<br>Push a hub from your Command Centre and it appears here automatically.</div>`;
+      return;
+    }
+
+    convoList.innerHTML = agents.map(ag => {
+      const open = expanded.has(ag.key);
+      const un = agentUnread(ag);
+      const activeHere = activeId.indexOf(ag.key + '|') === 0;
+      let html = `<div class="flex items-stretch ${activeHere && !open ? 'bg-[#161616]' : ''}">
+        <button data-toggle="${esc(ag.key)}" class="pl-3 pr-1 flex items-center text-[#7a7a7a] hover:text-white transition-colors" aria-label="Toggle">${chevron(open)}</button>
+        <button data-agent="${esc(ag.key)}" class="flex-1 min-w-0 text-left pr-3 py-3 flex items-center gap-2.5 hover:bg-[#161616] transition-colors">
+          <span class="w-9 h-9 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[11px] font-serif-display ${un?'text-[#e11d2a]':'text-[#9a9a9a]'} shrink-0">${esc(ag.initials)}</span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-1.5">
+              <span class="text-[13.5px] ${un?'text-white font-semibold':'text-[#d4d4d4]'} truncate">${esc(ag.name)}</span>
+            </span>
+            <span class="block text-[11px] text-[#6a6a6a] truncate mt-0.5">${esc(ag.brokerage || (ag.convos.length - 1) + ' project' + (ag.convos.length === 2 ? '' : 's'))}</span>
+          </span>
+          ${badge(un)}
+        </button>
+      </div>`;
+      if (open) html += ag.convos.map(c => convoRow(c, true)).join('');
+      return html;
+    }).join('');
+  }
+
+  convoList.addEventListener('click', e => {
+    const t1 = e.target.closest('[data-toggle]');
+    if (t1){ const k = t1.dataset.toggle; expanded.has(k) ? expanded.delete(k) : expanded.add(k); renderSidebar(); return; }
+    const t2 = e.target.closest('[data-agent]');
+    if (t2){ expanded.add(t2.dataset.agent); selectConversation(t2.dataset.agent + '|general'); return; }
+    const t3 = e.target.closest('[data-convo]');
+    if (t3) selectConversation(t3.dataset.convo);
+  });
+
+  // ---------- thread ----------
+  function buildMessage(m){
+    const inSide = m.side === 'in';
+    const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
+    const bubbleCls = inSide
+      ? 'bg-[#1c1c1c] border border-[#262626] text-[#b3b3b3] rounded-2xl rounded-tl-md shadow-sm'
+      : 'bg-[#e11d2a] text-white rounded-2xl rounded-tr-md shadow-[0_6px_20px_-6px_rgba(225,29,42,0.5)]';
+    const timeAlign = inSide ? 'ml-1' : 'mr-1';
+    return `<div class="flex flex-col ${colAlign} max-w-[80%] msg-enter">
+      <div class="${bubbleCls} px-4 py-3 text-[14px] leading-relaxed">${linkify(m.text)}</div>
+      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc((inSide && m.who ? m.who + ' · ' : '') + timeOf(m.ts))}</span>
+    </div>`;
+  }
+
+  function renderThread(){
+    const c = convoById(activeId);
+    if (!c){ thread.innerHTML = ''; return; }
+    const ag = agentOf(c) || {};
+    const parts = c.name.split(' ');
+    $('#hdr-name').innerHTML = esc(parts[0]) + (parts.length > 1 ? ' <span class="text-[#e11d2a] italic">' + esc(parts.slice(1).join(' ')) + '</span>' : '');
+    $('#hdr-role').textContent = c.kind === 'direct'
+      ? ((ag.brokerage ? ag.brokerage + ' · ' : '') + 'Direct chat')
+      : (ag.name + (c.sub ? ' · ' + c.sub : ''));
+    $('#hdr-avatar').textContent = c.initials;
+    $('#input-label').textContent = 'Replying as Reel Estate Media · ' + (c.kind === 'direct' ? ag.name : ag.name + ' — ' + c.name);
+    $('#chat-input').placeholder = 'Message ' + (c.kind === 'direct' ? ag.name : ag.name + ' about ' + c.name) + '…';
+
+    const since = readState()[c.id] || '';
+    const unreadCount = c.messages.filter(m => m.side === 'in' && m.ts > since).length;
+    let html = '', curDay = null, unreadShown = false;
+
+    if (!c.messages.length){
+      html = `<div class="h-full flex flex-col items-center justify-center text-center gap-2 py-16">
+        <div class="w-12 h-12 rounded-full bg-[#1a1a1a] border border-[#262626] grid place-items-center text-[#e11d2a] font-serif-display text-lg">${esc(c.initials)}</div>
+        <p class="text-[13px] text-[#8a8a8a] max-w-[34ch]">No messages yet — anything you send lands on ${esc(ag.name || 'the agent')}'s hub as Reel Estate Media.</p>
+      </div>`;
+    } else {
+      c.messages.forEach(m => {
+        const d = dayOf(m.ts);
+        if (d !== curDay){
+          curDay = d;
+          html += `<div class="flex items-center gap-3"><div class="flex-1 h-px bg-[#262626]"></div><span class="text-[10px] uppercase tracking-[0.18em] date-chip rounded-full px-3 py-1">${esc(d)}</span><div class="flex-1 h-px bg-[#262626]"></div></div>`;
+        }
+        if (!unreadShown && unreadCount && m.side === 'in' && m.ts > since){
+          unreadShown = true;
+          html += `<div class="flex items-center gap-3"><div class="flex-1 h-px" style="background:linear-gradient(90deg,transparent,rgba(225,29,42,0.5))"></div><span class="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#e11d2a] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a]"></span>${unreadCount} unread message${unreadCount>1?'s':''}</span><div class="flex-1 h-px" style="background:linear-gradient(90deg,rgba(225,29,42,0.5),transparent)"></div></div>`;
+        }
+        html += buildMessage(m);
+      });
+    }
+    thread.innerHTML = html;
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function selectConversation(id){
+    if (activeId && convoById(activeId)) markRead(activeId);
+    activeId = id;
+    renderThread();
+    markRead(id);
+    renderSidebar();
+    closeDrawer();
+    $('#chat-input').focus();
+  }
+
+  // ---------- mobile drawer ----------
+  function openDrawer(){ sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('opacity-0','pointer-events-none'); }
+  function closeDrawer(){
+    if (window.innerWidth >= 640) return;
+    sidebar.classList.add('-translate-x-full'); backdrop.classList.add('opacity-0','pointer-events-none');
+  }
+  $('#open-sidebar').addEventListener('click', openDrawer);
+  $('#close-sidebar').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+
+  // ---------- send ----------
+  function sendMessage(){
+    const input = $('#chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const c = convoById(activeId); if (!c) return;
+    input.value = '';
+    const now = new Date().toISOString();
+    c.messages.push({ ts: now, side:'out', who:'You', text });
+    c.lastTs = now;
+    markRead(activeId);
+    renderThread();
+    renderSidebar();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'msg', ref: c.key, project: c.label || generalLabel(agentOf(c) || {name:''}), dname:'',
+      who: 'Reel Estate Media', from:'jag', body: text
+    })}).then(() => setTimeout(loadAll, 1500)).catch(() => {});
+  }
+  $('#send-btn').addEventListener('click', sendMessage);
+  $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+  // ---------- data loading ----------
+  function loadAll(){
+    return fetch(ENDPOINT + '?token=' + encodeURIComponent(TOKEN))
+      .then(r => r.json())
+      .then(j => {
+        if (!j.ok) throw new Error(j.error || 'load failed');
+        buildFromRows(j.rows || []);
+        renderSidebar();
+        renderThread();
+      });
+  }
+
+  // ---------- gate ----------
+  function unlock(){
+    const tok = $('#gate-token').value.trim();
+    if (!tok){ gateErr('Paste your token first — it\'s the one from your inbox script.'); return; }
+    $('#gate-go').textContent = 'Opening…';
+    TOKEN = tok;
+    loadAll()
+      .then(() => {
+        try { localStorage.setItem(TOKEN_KEY, TOKEN); } catch(e){}
+        $('#gate').classList.add('hidden');
+        $('#app').classList.remove('hidden');
+        if (activeId) markRead(activeId);
+        renderSidebar();
+        if (!pollTimer) pollTimer = setInterval(() => loadAll().catch(()=>{}), POLL_MS);
+      })
+      .catch(err => {
+        $('#gate-go').textContent = 'Open chat';
+        gateErr(String(err.message || err) === 'bad token'
+          ? "That token isn't right — copy it from the top of your inbox script."
+          : "Couldn't reach the server — check your connection and try again.");
+      });
+  }
+  function gateErr(t){ const e = $('#gate-err'); e.textContent = t; e.classList.remove('hidden'); }
+  $('#gate-go').addEventListener('click', unlock);
+  $('#gate-token').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+
+  $('#lock-btn').addEventListener('click', () => {
+    try { localStorage.removeItem(TOKEN_KEY); } catch(e){}
+    location.reload();
+  });
+
+  $('#search').addEventListener('input', e => { searchTerm = e.target.value; renderSidebar(); });
+
+  // Auto-unlock if the token is already on this device (saved here or via login.html?admin)
+  try {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved){ $('#gate-token').value = saved; unlock(); }
+  } catch(e){}
+</script>
+</body>
+</html>
