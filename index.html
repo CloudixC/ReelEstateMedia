@@ -1438,6 +1438,13 @@ function App(){
           </button>)}
       </nav>
       <div className="flex" style={{gap:8}}>
+        <button className="btn ghost sm" title="Chat with your agents — opens in a new tab, already unlocked"
+          style={{borderColor:'var(--amber)', color:'var(--amber)'}}
+          onClick={() => {
+            // Hand the chat page your inbox token so it opens straight into the conversations.
+            try{ if(db.settings.inboxToken) localStorage.setItem('rem_admin_token_v1', db.settings.inboxToken); }catch(e){}
+            window.open('studio-chat.html', '_blank');
+          }}>💬 Chat</button>
         <button className="btn ghost sm" title="Cloud sync" onClick={() => setShowCloud(true)}
           style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
           {supaSess() ? (cloud.status === 'saving' ? '☁ …' : cloud.status === 'err' ? '☁ ⚠' : cloud.last ? '☁ ✓' : '☁ ·') : '☁'}</button>
