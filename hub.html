@@ -251,7 +251,7 @@ function startMessages(h){
   var idOf = {};
   idOf[(h.agent || 'Agent') + ' — Content Hub'] = 'general';
   h.items.forEach(function(x){ if(x.t) idOf[(h.agent || 'Agent') + ' — ' + x.t] = 'p-' + slug(x.t); });
-  fetch(ENDPOINT + '?thread=' + encodeURIComponent(a))
+  fetch(ENDPOINT + '?thread=' + encodeURIComponent(a) + '&full=1')
     .then(function(r){ return r.json(); })
     .then(function(j){
       var rows = j.rows || [];

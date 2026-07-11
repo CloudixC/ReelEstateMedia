@@ -769,7 +769,7 @@
 
   // ---------- data loading ----------
   function loadThread(){
-    return fetch(ENDPOINT + '?thread=' + encodeURIComponent(a))
+    return fetch(ENDPOINT + '?thread=' + encodeURIComponent(a) + '&full=1')
       .then(r => r.json())
       .then(j => {
         applyRows(j.rows || []);

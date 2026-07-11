@@ -255,6 +255,52 @@
     });
 
     serverRead = {}; agentRead = {}; reactMap = {};
+
+    // Threads whose ref isn't a hub key (e.g. review-page chats) get matched
+    // to the right agent by name and nested under them as a conversation, so
+    // replies land back on the page the agent is actually looking at.
+    const extMap = {};
+    const findByName = who => {
+      const k = String(who || '').trim().toLowerCase();
+      if (!k) return null;
+      let best = null;
+      Object.values(byKey).forEach(ag => {
+        if (ag.hubIdx >= 0 && ag.name.trim().toLowerCase() === k && (!best || ag.hubIdx > best.hubIdx)) best = ag;
+      });
+      return best;
+    };
+    const extName = (label, agName) => {
+      let s = String(label || '').trim();
+      const pre = agName + ' — ';
+      if (s.indexOf(pre) === 0) s = s.slice(pre.length);
+      return s || 'Review chat';
+    };
+    const resolveConvo = r => {
+      const key = String(r.ref);
+      const label = String(r.project || '');
+      if (byKey[key]){
+        const ag = byKey[key];
+        return ag.convos.find(x => x.label === label && x.key === key) || ag.convos[0];
+      }
+      let host = extMap[key];
+      if (!host && r.from !== 'jag') host = findByName(r.who);
+      if (host){
+        extMap[key] = host;
+        let c = host.convos.find(x => x.key === key && x.label === label);
+        if (!c){
+          const nm = extName(label, host.name);
+          c = { id: key + '|x-' + slug(label || 'chat'), key, name: nm, sub: 'From their review page', initials: initialsOf(nm), kind: 'project', label, messages: [], lastTs: '' };
+          host.convos.push(c);
+        }
+        return c;
+      }
+      const name = String(r.who || key);
+      byKey[key] = { key, name, brokerage: '', initials: initialsOf(name), hubIdx: -1, convos: [
+        { id: key + '|general', key, name, sub: 'Direct chat', initials: initialsOf(name), kind: 'direct', label: '', messages: [], lastTs: '' }
+      ]};
+      return byKey[key].convos[0];
+    };
+
     rows.forEach(r => {
       if (r.kind !== 'msg' && r.kind !== 'read' && r.kind !== 'react') return;
       const side = r.from === 'jag' ? 'j' : 'a';
@@ -268,15 +314,7 @@
         } catch(e){}
         return;
       }
-      const key = String(r.ref);
-      if (!byKey[key]){
-        const name = String(r.who || key);
-        byKey[key] = { key, name, brokerage: '', initials: initialsOf(name), hubIdx: -1, convos: [
-          { id: key + '|general', key, name, sub: 'Direct chat', initials: initialsOf(name), kind: 'direct', label: '', messages: [], lastTs: '' }
-        ]};
-      }
-      const ag = byKey[key];
-      const c = ag.convos.find(x => x.label === String(r.project || '')) || ag.convos[0];
+      const c = resolveConvo(r);
       if (r.kind === 'read'){
         const tgt = side === 'j' ? serverRead : agentRead;
         const ts = String(r.body || '');
@@ -288,7 +326,7 @@
         id: String(r.id || ''),
         ts: String(r.ts || ''),
         side: side === 'j' ? 'out' : 'in',
-        who: side === 'j' ? 'You' : (r.who || ag.name),
+        who: side === 'j' ? 'You' : (r.who || c.name),
         text: b.text, atts: b.atts
       });
     });
@@ -693,7 +731,7 @@
   // ---------- send ----------
   function postMsg(c, body){
     return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref: c.key, project: c.label || generalLabel(agentOf(c) || {name:''}), dname:'',
+      kind:'msg', ref: c.key, project: c.label || '', dname:'',
       who: 'Reel Estate Media', from:'jag', body
     })});
   }
