@@ -88,6 +88,11 @@
             </div>
           </div>
         </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button id="pin-btn" class="text-[#7a7a7a] hover:text-white transition-colors" aria-label="Pin conversation" title="Pin to top">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
+          </button>
+        </div>
       </div>
 
       <div id="thread" class="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-6 space-y-5"></div>
@@ -95,6 +100,10 @@
       <div class="border-t border-[#262626] bg-[#111111] px-4 sm:px-5 py-4">
         <p id="input-label" class="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-2 ml-1"></p>
         <div class="flex items-center gap-2 sm:gap-3">
+          <input id="file-input" type="file" multiple accept="image/*" class="hidden" />
+          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach photo" title="Attach a photo">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
+          </button>
           <div class="flex-1">
             <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
           </div>
@@ -109,15 +118,20 @@
 <script>
   // ============================================================
   // Agent-facing messages — wired to the REM inbox (Apps Script).
-  // One general thread + one thread per project, all stored under
-  // this agent's hub key. Grouping is done by the message's
-  // `project` label, so the backend needs no changes.
+  // One general thread + one thread per project under this agent's
+  // hub key, grouped by each message's `project` label.
+  //   msg   rows — the messages themselves (photos ride inside the
+  //                body as compressed data-URLs)
+  //   read  rows — synced read markers (unread badges + Seen tag)
+  //   react rows — synced emoji reactions
+  // Pinning is a personal preference, so it stays on this device.
   // ============================================================
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
   const q = new URLSearchParams(location.search);
   const a = q.get('a') || '';
   const t = q.get('t') || 'pin';
   const POLL_MS = 45000;
+  const MY_SIDE = 'a';          // reactions ledger: 'a' = agent, 'j' = studio
 
   const $ = (s) => document.querySelector(s);
   const convoList = $('#convo-list');
@@ -129,18 +143,22 @@
   const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   // ---------- state ----------
-  let AGENT = '';           // agent first name from the hub manifest
+  let AGENT = '';
   let BROKERAGE = '';
-  let conversations = [];   // {id, name, sub, initials, label, messages:[], lastTs}
+  let conversations = [];       // {id, name, sub, initials, label, messages:[], lastTs}
   let activeId = 'general';
   let searchTerm = '';
+  let reactMap = {};            // msgId -> emoji -> {a:0|1, j:0|1}
   let pollTimer = null;
 
-  // Read-state syncs through the backend as 'read' rows, with a local
-  // overlay so badges clear instantly between refreshes.
+  const convoById = id => conversations.find(c => c.id === id);
+  const initialsOf = name => name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
+  const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+
+  // ---------- read state (synced via 'read' rows + local overlay) ----------
   const READ_KEY = 'rem_chat_read_v1:' + a;
-  let serverRead = {};   // my last-read ts per conversation (synced)
-  let theirRead = {};    // Reel Estate Media's last-read ts (powers the Seen tag)
+  let serverRead = {};
+  let theirRead = {};
   function localRead(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
   function readTs(id){ const l = localRead()[id] || '', s = serverRead[id] || ''; return l > s ? l : s; }
   function markRead(id){
@@ -164,9 +182,26 @@
     return c.messages.filter(m => m.side === 'in' && m.ts > since).length;
   }
 
-  const convoById = id => conversations.find(c => c.id === id);
-  const initialsOf = name => name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
-  const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  // ---------- pins (personal preference — this device) ----------
+  const PIN_KEY = 'rem_chat_pins_v1:' + a;
+  function pins(){ try { return JSON.parse(localStorage.getItem(PIN_KEY)) || []; } catch(e){ return []; } }
+  const isPinned = id => pins().indexOf(id) > -1;
+  function togglePin(id){
+    let p = pins();
+    p = p.indexOf(id) > -1 ? p.filter(x => x !== id) : p.concat([id]);
+    try { localStorage.setItem(PIN_KEY, JSON.stringify(p)); } catch(e){}
+    renderSidebar();
+    if (id === activeId) paintPinBtn();
+  }
+  function paintPinBtn(){
+    const btn = $('#pin-btn');
+    const on = isPinned(activeId);
+    btn.classList.toggle('text-[#e11d2a]', on);
+    btn.classList.toggle('text-[#7a7a7a]', !on);
+    btn.querySelector('svg').setAttribute('fill', on ? 'currentColor' : 'none');
+    btn.title = on ? 'Unpin from top' : 'Pin to top';
+  }
+  $('#pin-btn').addEventListener('click', () => togglePin(activeId));
 
   // ---------- conversations from the hub manifest ----------
   function generalLabel(){ return (AGENT || 'Agent') + ' — Content Hub'; }
@@ -190,26 +225,48 @@
     });
   }
 
-  // ---------- distribute thread rows into conversations ----------
+  // ---------- body encoding (photos ride inside msg bodies) ----------
+  function parseBody(body){
+    const s = String(body || '');
+    if (s.charAt(0) === '{'){
+      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [] }; } catch(e){}
+    }
+    return { text: s, atts: [] };
+  }
+
+  // ---------- distribute thread rows ----------
   function applyRows(rows){
     conversations.forEach(c => { c.messages = []; c.lastTs = ''; });
-    serverRead = {}; theirRead = {};
+    serverRead = {}; theirRead = {}; reactMap = {};
     const byLabel = {};
     conversations.forEach(c => byLabel[c.label] = c);
     rows.forEach(r => {
       const c = byLabel[String(r.project || '')] || convoById('general');
+      const side = r.from === 'jag' ? 'j' : 'a';
       if (r.kind === 'read'){
-        const tgt = r.from === 'jag' ? theirRead : serverRead;
+        const tgt = side === 'j' ? theirRead : serverRead;
         const ts = String(r.body || '');
         if (ts > (tgt[c.id] || '')) tgt[c.id] = ts;
         return;
       }
+      if (r.kind === 'react'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (!o.m || !o.e) return;
+          const ent = (reactMap[o.m] = reactMap[o.m] || {});
+          const st = (ent[o.e] = ent[o.e] || {a:0, j:0});
+          st[side] = o.op === '-' ? 0 : 1;      // ledger: last op per side wins
+        } catch(e){}
+        return;
+      }
       if (r.kind && r.kind !== 'msg') return;
+      const b = parseBody(r.body);
       c.messages.push({
+        id: String(r.id || ''),
         ts: String(r.ts || ''),
-        side: r.from === 'jag' ? 'in' : 'out',
-        who: r.from === 'jag' ? 'Reel Estate Media' : (r.who || AGENT || 'You'),
-        text: String(r.body || '')
+        side: side === 'j' ? 'in' : 'out',
+        who: side === 'j' ? 'Reel Estate Media' : (r.who || AGENT || 'You'),
+        text: b.text, atts: b.atts
       });
     });
     conversations.forEach(c => {
@@ -218,12 +275,12 @@
     });
   }
 
-  // ---------- time formatting ----------
+  // ---------- time ----------
   function dayOf(ts){
     const d = new Date(ts); if (isNaN(d)) return '';
     const now = new Date();
-    const midnight = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-    const diff = Math.round((midnight(now) - midnight(d)) / 86400000);
+    const mid = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((mid(now) - mid(d)) / 86400000);
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Yesterday';
     return d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + (d.getFullYear() !== now.getFullYear() ? ', ' + d.getFullYear() : '');
@@ -255,7 +312,15 @@
   }
 
   // ---------- sidebar ----------
-  const badge = (n) => n > 0 ? `<span class="unread-badge text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] grid place-items-center px-1 shrink-0">${n}</span>` : '';
+  const badge = n => n > 0 ? `<span class="unread-badge text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] grid place-items-center px-1 shrink-0">${n}</span>` : '';
+  const pinIcon = `<svg class="w-3 h-3 text-[#e11d2a] shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/></svg>`;
+
+  function previewOf(c){
+    const last = c.messages[c.messages.length - 1];
+    if (!last) return 'No messages yet — say hi 👋';
+    const txt = last.text || (last.atts && last.atts.length ? '📷 Photo' : '');
+    return (last.side === 'out' ? 'You: ' : '') + txt;
+  }
 
   function renderSidebar(){
     const total = conversations.reduce((s,c) => s + unreadOf(c), 0);
@@ -265,7 +330,9 @@
     const term = searchTerm.trim().toLowerCase();
     const list = conversations
       .filter(c => !term || c.name.toLowerCase().includes(term) || (c.sub||'').toLowerCase().includes(term))
-      .slice().sort((x,y) => (x.id==='general' ? -1 : y.id==='general' ? 1 : (y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
+      .slice().sort((x,y) =>
+        ((isPinned(y.id)?1:0) - (isPinned(x.id)?1:0)) ||
+        (x.id==='general' ? -1 : y.id==='general' ? 1 : ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1)));
 
     if (!list.length){
       convoList.innerHTML = `<div class="px-5 py-10 text-center text-[12px] text-[#6a6a6a] leading-relaxed">No results for<br><span class="text-[#8a8a8a]">"${esc(searchTerm)}"</span></div>`;
@@ -274,38 +341,143 @@
     convoList.innerHTML = list.map(c => {
       const un = unreadOf(c);
       const active = c.id === activeId;
-      const last = c.messages[c.messages.length - 1];
-      const preview = last ? ((last.side === 'out' ? 'You: ' : '') + last.text) : 'No messages yet — say hi 👋';
       return `<button data-convo="${c.id}" class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
         <span class="w-9 h-9 rounded-${c.id==='general'?'full':'lg'} bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[11px] font-serif-display ${un?'text-[#e11d2a]':'text-[#8a8a8a]'} shrink-0">${esc(c.initials)}</span>
         <span class="min-w-0 flex-1">
           <span class="flex items-center gap-1.5">
             <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.name)}</span>
+            ${isPinned(c.id) ? pinIcon : ''}
             <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(c.lastTs ? sideTime(c.lastTs) : '')}</span>
           </span>
           <span class="flex items-center justify-between gap-2 mt-0.5">
-            <span class="text-[12px] text-[#8a8a8a] truncate">${esc(preview)}</span>${badge(un)}
+            <span class="text-[12px] text-[#8a8a8a] truncate">${esc(previewOf(c))}</span>${badge(un)}
           </span>
         </span>
       </button>`;
     }).join('');
   }
 
+  let suppressClick = false;
   convoList.addEventListener('click', e => {
+    if (suppressClick) { suppressClick = false; return; }
     const b = e.target.closest('[data-convo]');
     if (b) selectConversation(b.dataset.convo);
   });
 
-  // ---------- thread ----------
+  // Right-click / long-press / swipe-right to pin from the sidebar.
+  const ctxMenu = document.createElement('div');
+  ctxMenu.id = 'ctx-menu';
+  ctxMenu.className = 'fixed z-[70] hidden min-w-[168px] bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] py-1';
+  document.body.appendChild(ctxMenu);
+  let ctxTargetId = null;
+  function openContextMenu(id, x, y){
+    ctxTargetId = id;
+    const on = isPinned(id);
+    ctxMenu.innerHTML = `<button class="ctx-pin w-full text-left px-3 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2.5">
+      <svg class="w-4 h-4 ${on?'text-[#e11d2a]':'text-[#8a8a8a]'}" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
+      ${on ? 'Unpin from top' : 'Pin to top'}
+    </button>`;
+    ctxMenu.classList.remove('hidden');
+    ctxMenu.style.left = Math.min(x, window.innerWidth - ctxMenu.offsetWidth - 8) + 'px';
+    ctxMenu.style.top = Math.min(y, window.innerHeight - ctxMenu.offsetHeight - 8) + 'px';
+  }
+  function closeContextMenu(){ ctxMenu.classList.add('hidden'); ctxTargetId = null; }
+  ctxMenu.addEventListener('click', e => { if (e.target.closest('.ctx-pin')) { togglePin(ctxTargetId); closeContextMenu(); } });
+  document.addEventListener('click', e => { if (!ctxMenu.classList.contains('hidden') && !e.target.closest('#ctx-menu')) closeContextMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
+  window.addEventListener('resize', closeContextMenu);
+  convoList.addEventListener('scroll', closeContextMenu);
+  convoList.addEventListener('contextmenu', e => {
+    const row = e.target.closest('[data-convo]');
+    if (!row) return;
+    e.preventDefault();
+    openContextMenu(row.dataset.convo, e.clientX, e.clientY);
+  });
+  let touchStart = null, lpTimer = null;
+  convoList.addEventListener('touchstart', e => {
+    const row = e.target.closest('[data-convo]');
+    if (!row) return;
+    const tt = e.touches[0];
+    touchStart = { x: tt.clientX, y: tt.clientY, id: row.dataset.convo };
+    lpTimer = setTimeout(() => { suppressClick = true; openContextMenu(row.dataset.convo, tt.clientX, tt.clientY); lpTimer = null; }, 500);
+  }, { passive: true });
+  convoList.addEventListener('touchmove', e => {
+    if (!touchStart) return;
+    const tt = e.touches[0];
+    if (Math.abs(tt.clientX - touchStart.x) > 10 || Math.abs(tt.clientY - touchStart.y) > 10) { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+  }, { passive: true });
+  convoList.addEventListener('touchend', e => {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    if (!touchStart) return;
+    const ch = e.changedTouches[0];
+    const dx = ch.clientX - touchStart.x, dy = ch.clientY - touchStart.y;
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { suppressClick = true; togglePin(touchStart.id); }
+    touchStart = null;
+  });
+
+  // ---------- reactions ----------
+  function chipData(msgId){
+    const ent = reactMap[msgId] || {};
+    const out = [];
+    Object.keys(ent).forEach(e => {
+      const n = (ent[e].a ? 1 : 0) + (ent[e].j ? 1 : 0);
+      if (n > 0) out.push({ e, n, mine: !!ent[e][MY_SIDE] });
+    });
+    return out;
+  }
+  function reactionChips(m){
+    if (!m.id) return '';
+    const chips = chipData(m.id);
+    if (!chips.length) return '';
+    const align = m.side === 'in' ? '' : 'justify-end';
+    return `<div class="flex flex-wrap gap-1 mt-1.5 ${align}">` + chips.map(c =>
+      `<button class="reaction-chip flex items-center gap-1 rounded-full px-2 py-[3px] text-[12px] border transition-colors ${c.mine ? 'border-[#e11d2a] bg-[#e11d2a]/20 text-white' : 'border-[#2a2a2a] bg-[#1a1a1a] text-[#c4c4c4] hover:border-[#3a3a3a]'}" data-mid="${esc(m.id)}" data-emoji="${c.e}"><span>${c.e}</span>${c.n > 1 ? `<span class="text-[11px] text-[#8a8a8a]">${c.n}</span>` : ''}</button>`
+    ).join('') + `</div>`;
+  }
+  function applyReaction(msgId, emoji){
+    const c = convoById(activeId); if (!c || !msgId) return;
+    const ent = (reactMap[msgId] = reactMap[msgId] || {});
+    const st = (ent[emoji] = ent[emoji] || {a:0, j:0});
+    const nowOn = !st[MY_SIDE];
+    st[MY_SIDE] = nowOn ? 1 : 0;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'react', ref: a, project: c.label, dname:'',
+      who: AGENT || 'Agent', from:'agent',
+      body: JSON.stringify({ m: msgId, e: emoji, op: nowOn ? '+' : '-' })
+    })}).catch(() => {});
+  }
+
+  // ---------- messages ----------
+  function attachmentsHTML(atts, inSide){
+    return (atts || []).map(at => {
+      if (at.k === 'image' && at.d){
+        return `<button type="button" class="attach-image block w-full" data-url="${esc(at.d)}"><img src="${esc(at.d)}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
+      }
+      return '';
+    }).join('');
+  }
+
   function buildMessage(m, seen){
     const inSide = m.side === 'in';
     const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
+    const rowDir = inSide ? '' : 'flex-row-reverse';
     const bubbleCls = inSide
       ? 'bg-[#1c1c1c] border border-[#262626] text-[#b3b3b3] rounded-2xl rounded-tl-md shadow-sm'
       : 'bg-[#e11d2a] text-white rounded-2xl rounded-tr-md shadow-[0_6px_20px_-6px_rgba(225,29,42,0.5)]';
     const timeAlign = inSide ? 'ml-1' : 'mr-1';
-    return `<div class="flex flex-col ${colAlign} max-w-[80%] msg-enter">
-      <div class="${bubbleCls} px-4 py-3 text-[14px] leading-relaxed">${linkify(m.text)}</div>
+    const hasAtt = m.atts && m.atts.length;
+    const inner = hasAtt
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
+      : linkify(m.text);
+    const pad = hasAtt ? 'p-1.5' : 'px-4 py-3';
+    const trigger = m.id
+      ? `<button class="react-trigger opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(m.id)}" aria-label="Add reaction"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>`
+      : '';
+    const bubble = `<div class="react-bubble ${bubbleCls} ${pad} text-[14px] leading-relaxed ${m.id ? 'cursor-pointer' : ''} select-none" data-mid="${esc(m.id || '')}">${inner}</div>`;
+    return `<div class="group flex flex-col ${colAlign} max-w-[80%] msg-enter">
+      <div class="flex items-center gap-2 ${rowDir}">${bubble}${trigger}</div>
+      ${reactionChips(m)}
       <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
     </div>`;
   }
@@ -320,6 +492,7 @@
     $('#hdr-avatar').textContent = c.initials;
     $('#input-label').textContent = 'Message · ' + c.name;
     $('#chat-input').placeholder = c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…';
+    paintPinBtn();
 
     const since = readTs(c.id);
     const unreadCount = c.messages.filter(m => m.side === 'in' && m.ts > since).length;
@@ -352,10 +525,10 @@
   }
 
   function selectConversation(id){
-    markRead(activeId);          // leaving clears the old one
+    markRead(activeId);
     activeId = id;
-    renderThread();              // opened one keeps its unread divider…
-    markRead(id);                // …but is marked read from here on
+    renderThread();
+    markRead(id);
     renderSidebar();
     closeDrawer();
   }
@@ -370,7 +543,25 @@
   $('#close-sidebar').addEventListener('click', closeDrawer);
   backdrop.addEventListener('click', closeDrawer);
 
+  // ---------- toast ----------
+  const toast = document.createElement('div');
+  toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] hidden bg-[#1a1a1a] border border-[#2a2a2a] text-white text-[13px] rounded-full px-4 py-2 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.85)]';
+  document.body.appendChild(toast);
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.add('hidden'), 2600);
+  }
+
   // ---------- send ----------
+  function postMsg(c, body){
+    return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'msg', ref: a, project: c.label, dname:'',
+      who: AGENT || 'Agent', from:'agent', body
+    })});
+  }
   function sendMessage(){
     const input = $('#chat-input');
     const text = input.value.trim();
@@ -378,18 +569,203 @@
     const c = convoById(activeId); if (!c) return;
     input.value = '';
     const now = new Date().toISOString();
-    c.messages.push({ ts: now, side:'out', who: AGENT || 'You', text });
+    c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text, atts: [] });
     c.lastTs = now;
     markRead(activeId);
     renderThread();
     renderSidebar();
-    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref: a, project: c.label, dname:'',
-      who: AGENT || 'Agent', from:'agent', body: text
-    })}).then(() => setTimeout(loadThread, 1200)).catch(() => {});
+    postMsg(c, text).then(() => setTimeout(loadThread, 1200)).catch(() => {});
   }
   $('#send-btn').addEventListener('click', sendMessage);
   $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+  // ---------- attachments (photos, compressed to fit the backend) ----------
+  function compressImage(file){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const steps = [[900, 0.72], [640, 0.6], [440, 0.5], [320, 0.42]];
+        for (let i = 0; i < steps.length; i++){
+          const maxW = steps[i][0], qual = steps[i][1];
+          const scale = Math.min(1, maxW / Math.max(img.width, img.height));
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(img.width * scale));
+          cv.height = Math.max(1, Math.round(img.height * scale));
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          const d = cv.toDataURL('image/jpeg', qual);
+          if (d.length < 42000) return resolve(d);
+        }
+        reject(new Error('too big'));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+      img.src = url;
+    });
+  }
+  const fileInput = $('#file-input');
+  $('#attach-btn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    if (!fileInput.files.length) return;
+    const c = convoById(activeId); if (!c) return;
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    const caption = $('#chat-input').value.trim();
+    $('#chat-input').value = '';
+    let first = true;
+    for (const f of files){
+      if (!f.type.startsWith('image/')){ showToast('Only photos can be sent here for now.'); continue; }
+      try {
+        const d = await compressImage(f);
+        const body = JSON.stringify({ __rc:1, t: first ? caption : '', att: [{ k:'image', n: f.name, d }] });
+        const now = new Date().toISOString();
+        c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: first ? caption : '', atts: [{ k:'image', n: f.name, d }] });
+        c.lastTs = now;
+        first = false;
+        renderThread(); renderSidebar();
+        await postMsg(c, body);
+      } catch(e){
+        showToast("Couldn't send " + f.name + ' — try a smaller photo.');
+      }
+    }
+    markRead(activeId);
+    setTimeout(loadThread, 1200);
+  });
+
+  // ---------- lightbox ----------
+  const lightbox = document.createElement('div');
+  lightbox.id = 'lightbox';
+  lightbox.className = 'fixed inset-0 z-[60] hidden items-center justify-center bg-black/90 p-6';
+  lightbox.innerHTML = `
+    <button id="lightbox-close" class="absolute top-4 right-4 w-10 h-10 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors" aria-label="Close">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <img id="lightbox-img" class="max-w-full max-h-full rounded-lg object-contain" alt="" />`;
+  document.body.appendChild(lightbox);
+  function openLightbox(url){
+    lightbox.querySelector('#lightbox-img').src = url;
+    lightbox.classList.remove('hidden');
+    lightbox.classList.add('flex');
+  }
+  function closeLightbox(){
+    lightbox.classList.add('hidden');
+    lightbox.classList.remove('flex');
+    lightbox.querySelector('#lightbox-img').src = '';
+  }
+  lightbox.addEventListener('click', e => { if (e.target === lightbox || e.target.closest('#lightbox-close')) closeLightbox(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  // ---------- emoji picker + panel ----------
+  const REACT_EMOJIS = ['👍','❤️','😂','🔥','🎬','✅'];
+  const EMOJI_CATEGORIES = [
+    { name:'Smileys', items:[
+      ['😀','grin happy smile'],['😃','happy smile joy'],['😄','happy laugh smile'],['😁','grin beam'],['😆','laugh haha'],['😅','sweat laugh nervous'],['🤣','rofl laughing'],['😂','joy tears laugh cry'],['🙂','slight smile'],['🙃','upside down silly'],['😉','wink'],['😊','blush smile happy'],['😇','angel innocent'],['🥰','love hearts adore'],['😍','heart eyes love'],['🤩','star struck wow'],['😘','kiss blow'],['😗','kiss'],['😚','kiss closed'],['😋','yum tasty'],['😛','tongue'],['😜','wink tongue silly'],['🤪','zany crazy'],['😝','tongue squint'],['🤗','hug hands'],['🤭','giggle oops'],['🤫','shh quiet'],['🤔','thinking hmm'],['😐','neutral meh'],['😑','expressionless'],['😶','no mouth speechless'],['😏','smirk'],['😒','unamused'],['🙄','eye roll'],['😬','grimace awkward'],['😌','relieved calm'],['😔','sad pensive'],['😪','sleepy tired'],['🤤','drool'],['😴','sleep zzz'],['😷','mask sick'],['🤒','sick thermometer'],['🤕','hurt bandage'],['🥳','party celebrate'],['🥺','pleading puppy'],['😢','cry sad tear'],['😭','sob crying'],['😤','huff steam'],['😠','angry'],['😡','rage mad red'],['🤬','swearing curse'],['😳','flushed shock'],['🥵','hot heat'],['🥶','cold freeze'],['😨','fear scared'],['😰','anxious sweat'],['😱','scream shock'],['🤯','mind blown'],['😎','cool sunglasses'],['🤓','nerd geek'],['🧐','monocle inspect'],
+    ]},
+    { name:'Gestures', items:[
+      ['👍','thumbs up like yes good approve'],['👎','thumbs down dislike no'],['👌','ok okay perfect'],['🤌','pinch chef italian'],['🤏','pinch small tiny'],['✌️','peace victory'],['🤞','fingers crossed luck'],['🤟','love you'],['🤘','rock horns metal'],['🤙','call me shaka'],['👈','left point'],['👉','right point'],['👆','up point'],['👇','down point'],['☝️','up index'],['✋','hand stop high five'],['🤚','back hand'],['🖐️','hand fingers'],['🖖','vulcan spock'],['👋','wave hello bye hi'],['🤝','handshake deal agree'],['🙏','pray thanks please'],['✍️','write hand'],['💪','muscle strong flex'],['👏','clap applause bravo'],['🙌','raise hands praise'],['👐','open hands'],['🤲','palms up'],['🫶','heart hands love'],
+    ]},
+    { name:'Hearts', items:[
+      ['❤️','red heart love'],['🧡','orange heart'],['💛','yellow heart'],['💚','green heart'],['💙','blue heart'],['💜','purple heart'],['🖤','black heart'],['🤍','white heart'],['🤎','brown heart'],['💔','broken heart'],['❣️','heart exclamation'],['💕','two hearts'],['💞','revolving hearts'],['💓','beating heart'],['💗','growing heart'],['💖','sparkling heart'],['💘','heart arrow cupid'],['💝','heart gift'],['💟','heart decoration'],['❤️‍🔥','heart fire burning love'],
+    ]},
+    { name:'Production', items:[
+      ['🎬','clapper film shoot action movie'],['🎥','movie camera film'],['📽️','projector film'],['🎞️','film strip reel'],['📸','camera flash photo'],['📷','camera photo'],['🎦','cinema'],['📹','video camera'],['🎙️','mic studio record'],['🎧','headphones audio'],['💻','laptop computer'],['🖥️','desktop monitor'],['📱','phone mobile'],['📝','memo note edit'],['✏️','pencil write'],['📌','pin'],['📎','paperclip attach'],['📁','folder'],['📅','calendar date'],['⏰','alarm clock time'],['⏱️','stopwatch timer'],['🔔','bell notify'],['🚀','rocket launch ship fast'],['✅','check done complete yes tick'],['☑️','checkbox ticked'],['✔️','check mark tick'],['❌','cross no wrong x'],['⭐','star'],['🌟','glowing star sparkle'],['💥','boom collision'],['⚡','lightning fast bolt'],['🔥','fire lit hot flame'],['💯','hundred perfect'],['🎉','party tada celebrate'],['🎊','confetti'],['🏆','trophy win award'],['🥇','gold medal first'],
+    ]},
+    { name:'Symbols', items:[
+      ['👀','eyes look watch'],['🙈','see no evil monkey'],['💡','idea bulb light'],['💬','speech bubble chat'],['💭','thought bubble'],['❓','question'],['❗','exclamation'],['‼️','double exclamation'],['⁉️','interrobang'],['💤','zzz sleep'],['🆗','ok button'],['🆒','cool button'],['🆕','new button'],['🔴','red circle'],['🟠','orange circle'],['🟡','yellow circle'],['🟢','green circle'],['🔵','blue circle'],['🟣','purple circle'],['⚫','black circle'],['⚪','white circle'],
+    ]},
+  ];
+
+  const picker = document.createElement('div');
+  picker.id = 'reaction-picker';
+  picker.className = 'fixed z-50 hidden items-center gap-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-2 py-1.5 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.85)]';
+  picker.innerHTML = REACT_EMOJIS.map(e => `<button class="picker-emoji w-8 h-8 grid place-items-center rounded-full hover:bg-[#262626] transition-colors text-[18px] leading-none" data-emoji="${e}" aria-label="React ${e}">${e}</button>`).join('')
+    + `<span class="w-px h-5 bg-[#2a2a2a] mx-0.5"></span>`
+    + `<button class="picker-more w-8 h-8 grid place-items-center rounded-full hover:bg-[#262626] text-[#8a8a8a] hover:text-white transition-colors" aria-label="More emojis"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`;
+  document.body.appendChild(picker);
+
+  const emojiPanel = document.createElement('div');
+  emojiPanel.id = 'emoji-panel';
+  emojiPanel.className = 'fixed z-50 hidden flex-col w-[320px] max-w-[92vw] h-[300px] bg-[#141414] border border-[#2a2a2a] rounded-2xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden';
+  emojiPanel.innerHTML = `
+    <div class="p-2 border-b border-[#262626] shrink-0">
+      <div class="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3 py-1.5">
+        <svg class="w-4 h-4 text-[#5c5c5c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="emoji-search" type="text" placeholder="Search emoji" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
+      </div>
+    </div>
+    <div id="emoji-grid" class="flex-1 overflow-y-auto scrollbar-thin p-2"></div>`;
+  document.body.appendChild(emojiPanel);
+
+  const emojiBtn = e => `<button class="panel-emoji h-8 grid place-items-center rounded-lg hover:bg-[#262626] transition-colors text-[18px] leading-none" data-emoji="${e}" aria-label="React ${e}">${e}</button>`;
+  function renderEmojiGrid(qq){
+    const grid = emojiPanel.querySelector('#emoji-grid');
+    const query = (qq || '').trim().toLowerCase();
+    if (query){
+      const matches = [];
+      EMOJI_CATEGORIES.forEach(cat => cat.items.forEach(([e, k]) => { if (k.includes(query) || e === qq) matches.push(e); }));
+      grid.innerHTML = matches.length
+        ? `<div class="grid grid-cols-8 gap-0.5">${matches.map(emojiBtn).join('')}</div>`
+        : `<div class="py-12 text-center text-[12px] text-[#6a6a6a]">No emoji found</div>`;
+    } else {
+      grid.innerHTML = EMOJI_CATEGORIES.map(cat =>
+        `<div class="px-1 pt-2 pb-1 text-[10px] uppercase tracking-[0.15em] text-[#6a6a6a]">${cat.name}</div><div class="grid grid-cols-8 gap-0.5">${cat.items.map(([e]) => emojiBtn(e)).join('')}</div>`
+      ).join('');
+    }
+  }
+  emojiPanel.querySelector('#emoji-search').addEventListener('input', e => renderEmojiGrid(e.target.value));
+
+  let targetMid = null;
+  function place(el, anchorEl){
+    const r = anchorEl.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - el.offsetWidth - 8);
+    let top = r.top - el.offsetHeight - 8;
+    if (top < 8) top = Math.min(r.bottom + 8, window.innerHeight - el.offsetHeight - 8);
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+  }
+  function openPicker(mid, anchorEl){ targetMid = mid; emojiPanel.classList.add('hidden'); emojiPanel.classList.remove('flex'); picker.classList.remove('hidden'); picker.classList.add('flex'); place(picker, anchorEl); }
+  function openPanel(anchorEl){
+    picker.classList.add('hidden'); picker.classList.remove('flex');
+    const search = emojiPanel.querySelector('#emoji-search');
+    search.value = ''; renderEmojiGrid('');
+    emojiPanel.classList.remove('hidden'); emojiPanel.classList.add('flex');
+    place(emojiPanel, anchorEl);
+    search.focus();
+  }
+  function closeReactUI(){ picker.classList.add('hidden'); picker.classList.remove('flex'); emojiPanel.classList.add('hidden'); emojiPanel.classList.remove('flex'); targetMid = null; }
+
+  picker.addEventListener('click', e => {
+    if (e.target.closest('.picker-more')) { openPanel(e.target.closest('.picker-more')); return; }
+    const b = e.target.closest('.picker-emoji');
+    if (!b) return;
+    if (targetMid) applyReaction(targetMid, b.dataset.emoji);
+    closeReactUI();
+  });
+  emojiPanel.addEventListener('click', e => {
+    const b = e.target.closest('.panel-emoji');
+    if (!b) return;
+    if (targetMid) applyReaction(targetMid, b.dataset.emoji);
+    closeReactUI();
+  });
+
+  thread.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
+    const img = e.target.closest('.attach-image');
+    if (img) { openLightbox(img.dataset.url); return; }
+    const trig = e.target.closest('.react-trigger');
+    if (trig) { openPicker(trig.dataset.mid, trig); return; }
+    const chip = e.target.closest('.reaction-chip');
+    if (chip) { applyReaction(chip.dataset.mid, chip.dataset.emoji); return; }
+    const bub = e.target.closest('.react-bubble');
+    if (bub && bub.dataset.mid) { openPicker(bub.dataset.mid, bub); return; }
+  });
+  document.addEventListener('click', e => {
+    if (picker.classList.contains('hidden') && emojiPanel.classList.contains('hidden')) return;
+    if (e.target.closest('#reaction-picker') || e.target.closest('#emoji-panel') || e.target.closest('.react-trigger') || e.target.closest('.react-bubble')) return;
+    closeReactUI();
+  });
+  window.addEventListener('resize', closeReactUI);
+  thread.addEventListener('scroll', closeReactUI);
 
   // ---------- data loading ----------
   function loadThread(){
