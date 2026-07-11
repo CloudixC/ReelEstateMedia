@@ -241,8 +241,10 @@ function fail(big, sm){
 function startMessages(h){
   document.getElementById('msgwrap').style.display = '';
   document.getElementById('msglink').href = 'chat.html?a=' + encodeURIComponent(a) + '&t=' + (pin ? 'pin' : 'rem');
-  // Unread = messages from us newer than what the chat page marked read on this device.
-  // Same conversation ids as chat.html: 'general' + 'p-<slugged project title>'.
+  // Unread = messages from us newer than the agent's last-read marker.
+  // Markers sync through the backend ('read' rows) and merge with this
+  // device's local overlay. Same conversation ids as chat.html:
+  // 'general' + 'p-<slugged project title>'.
   var readMap = {};
   try{ readMap = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {}; }catch(e){}
   var slug = function(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); };
@@ -252,10 +254,21 @@ function startMessages(h){
   fetch(ENDPOINT + '?thread=' + encodeURIComponent(a))
     .then(function(r){ return r.json(); })
     .then(function(j){
-      var count = (j.rows || []).filter(function(m){
-        if(m.from !== 'jag') return false;
+      var rows = j.rows || [];
+      var srvRead = {};
+      rows.forEach(function(m){
+        if(m.kind === 'read' && m.from !== 'jag'){
+          var id = idOf[String(m.project || '')] || 'general';
+          var ts = String(m.body || '');
+          if(ts > (srvRead[id] || '')) srvRead[id] = ts;
+        }
+      });
+      var count = rows.filter(function(m){
+        if(m.kind !== 'msg' || m.from !== 'jag') return false;
         var id = idOf[String(m.project || '')] || 'general';
-        return String(m.ts) > (readMap[id] || '');
+        var seen = readMap[id] || '';
+        if((srvRead[id] || '') > seen) seen = srvRead[id];
+        return String(m.ts) > seen;
       }).length;
       var b = document.getElementById('msgbadge');
       if(count){ b.textContent = count > 9 ? '9+' : count; b.style.display = ''; }

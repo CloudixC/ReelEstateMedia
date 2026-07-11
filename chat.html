@@ -136,17 +136,31 @@
   let searchTerm = '';
   let pollTimer = null;
 
-  // Read-state lives on this device only (the backend has no read receipts).
+  // Read-state syncs through the backend as 'read' rows, with a local
+  // overlay so badges clear instantly between refreshes.
   const READ_KEY = 'rem_chat_read_v1:' + a;
-  function readState(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
+  let serverRead = {};   // my last-read ts per conversation (synced)
+  let theirRead = {};    // Reel Estate Media's last-read ts (powers the Seen tag)
+  function localRead(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
+  function readTs(id){ const l = localRead()[id] || '', s = serverRead[id] || ''; return l > s ? l : s; }
   function markRead(id){
-    const c = convoById(id); if (!c) return;
-    const st = readState();
-    st[id] = c.lastTs || new Date().toISOString();
-    try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+    const c = convoById(id); if (!c || !c.lastTs) return;
+    const hadUnread = unreadOf(c) > 0;
+    const st = localRead();
+    if (c.lastTs > (st[id] || '')){
+      st[id] = c.lastTs;
+      try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+    }
+    if (hadUnread){
+      serverRead[id] = c.lastTs;
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'read', ref: a, project: c.label, dname:'',
+        who: AGENT || 'Agent', from:'agent', body: c.lastTs
+      })}).catch(() => {});
+    }
   }
   function unreadOf(c){
-    const since = readState()[c.id] || '';
+    const since = readTs(c.id);
     return c.messages.filter(m => m.side === 'in' && m.ts > since).length;
   }
 
@@ -179,10 +193,18 @@
   // ---------- distribute thread rows into conversations ----------
   function applyRows(rows){
     conversations.forEach(c => { c.messages = []; c.lastTs = ''; });
+    serverRead = {}; theirRead = {};
     const byLabel = {};
     conversations.forEach(c => byLabel[c.label] = c);
     rows.forEach(r => {
       const c = byLabel[String(r.project || '')] || convoById('general');
+      if (r.kind === 'read'){
+        const tgt = r.from === 'jag' ? theirRead : serverRead;
+        const ts = String(r.body || '');
+        if (ts > (tgt[c.id] || '')) tgt[c.id] = ts;
+        return;
+      }
+      if (r.kind && r.kind !== 'msg') return;
       c.messages.push({
         ts: String(r.ts || ''),
         side: r.from === 'jag' ? 'in' : 'out',
@@ -275,7 +297,7 @@
   });
 
   // ---------- thread ----------
-  function buildMessage(m){
+  function buildMessage(m, seen){
     const inSide = m.side === 'in';
     const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
     const bubbleCls = inSide
@@ -284,7 +306,7 @@
     const timeAlign = inSide ? 'ml-1' : 'mr-1';
     return `<div class="flex flex-col ${colAlign} max-w-[80%] msg-enter">
       <div class="${bubbleCls} px-4 py-3 text-[14px] leading-relaxed">${linkify(m.text)}</div>
-      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}</span>
+      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
     </div>`;
   }
 
@@ -299,7 +321,7 @@
     $('#input-label').textContent = 'Message · ' + c.name;
     $('#chat-input').placeholder = c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…';
 
-    const since = readState()[c.id] || '';
+    const since = readTs(c.id);
     const unreadCount = c.messages.filter(m => m.side === 'in' && m.ts > since).length;
     let html = '', curDay = null, unreadShown = false;
 
@@ -309,7 +331,10 @@
         <p class="text-[13px] text-[#8a8a8a] max-w-[32ch]">No messages here yet — anything you send lands directly with Reel Estate Media. 👋</p>
       </div>`;
     } else {
-      c.messages.forEach(m => {
+      const theirTs = theirRead[c.id] || '';
+      let lastOut = -1;
+      c.messages.forEach((m,i) => { if (m.side === 'out') lastOut = i; });
+      c.messages.forEach((m, i) => {
         const d = dayOf(m.ts);
         if (d !== curDay){
           curDay = d;
@@ -319,7 +344,7 @@
           unreadShown = true;
           html += `<div class="flex items-center gap-3"><div class="flex-1 h-px" style="background:linear-gradient(90deg,transparent,rgba(225,29,42,0.5))"></div><span class="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#e11d2a] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a]"></span>${unreadCount} unread message${unreadCount>1?'s':''}</span><div class="flex-1 h-px" style="background:linear-gradient(90deg,rgba(225,29,42,0.5),transparent)"></div></div>`;
         }
-        html += buildMessage(m);
+        html += buildMessage(m, i === lastOut && !!theirTs && theirTs >= m.ts);
       });
     }
     thread.innerHTML = html;
