@@ -88,7 +88,11 @@
             </div>
           </div>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="proj-link" href="#" target="_blank" rel="noopener" class="hidden items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-3 py-1.5 transition-colors" title="Open this project">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span class="hidden sm:inline">Project</span>
+          </a>
           <button id="pin-btn" class="text-[#7a7a7a] hover:text-white transition-colors" aria-label="Pin conversation" title="Pin to top">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
           </button>
@@ -161,7 +165,9 @@
   let theirRead = {};
   function localRead(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
   function readTs(id){ const l = localRead()[id] || '', s = serverRead[id] || ''; return l > s ? l : s; }
+  const manualUnread = new Set();   // conversations flagged "unread" on purpose
   function markRead(id){
+    if (manualUnread.has(id)) return;   // don't auto-clear a deliberate flag
     const c = convoById(id); if (!c || !c.lastTs) return;
     const hadUnread = unreadOf(c) > 0;
     const st = localRead();
@@ -180,6 +186,22 @@
   function unreadOf(c){
     const since = readTs(c.id);
     return c.messages.filter(m => m.side === 'in' && m.ts > since).length;
+  }
+  function markUnread(id){
+    const c = convoById(id); if (!c) return;
+    const lastIn = c.messages.slice().reverse().find(m => m.side === 'in');
+    if (!lastIn) return;
+    const d = new Date(lastIn.ts);
+    const ts = isNaN(d) ? '' : new Date(d.getTime() - 1).toISOString();
+    const st = localRead(); st[id] = ts;
+    try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+    serverRead[id] = ts;
+    manualUnread.add(id);
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'read', ref: a, project: c.label, dname:'',
+      who: AGENT || 'Agent', from:'agent', body: ts
+    })}).catch(() => {});
+    renderSidebar();
   }
 
   // ---------- pins (personal preference — this device) ----------
@@ -220,7 +242,7 @@
       if (!title) return;
       conversations.push({
         id: 'p-' + slug(title), name: title, sub: x.p != null ? x.p : (x.proj || ''),
-        initials: initialsOf(title), label: projectLabel(title), messages: [], lastTs: ''
+        initials: initialsOf(title), label: projectLabel(title), url: x.url || '', messages: [], lastTs: ''
       });
     });
   }
@@ -238,15 +260,18 @@
   function applyRows(rows){
     conversations.forEach(c => { c.messages = []; c.lastTs = ''; });
     serverRead = {}; theirRead = {}; reactMap = {};
+    const deleted = new Set();
     const byLabel = {};
     conversations.forEach(c => byLabel[c.label] = c);
     rows.forEach(r => {
+      if (r.kind === 'del'){ deleted.add(String(r.body || '')); return; }
       const c = byLabel[String(r.project || '')] || convoById('general');
       const side = r.from === 'jag' ? 'j' : 'a';
       if (r.kind === 'read'){
+        // rows are chronological — the LAST marker wins, so "mark as unread"
+        // (a marker set slightly back in time) sticks
         const tgt = side === 'j' ? theirRead : serverRead;
-        const ts = String(r.body || '');
-        if (ts > (tgt[c.id] || '')) tgt[c.id] = ts;
+        tgt[c.id] = String(r.body || '');
         return;
       }
       if (r.kind === 'react'){
@@ -270,6 +295,7 @@
       });
     });
     conversations.forEach(c => {
+      c.messages = c.messages.filter(m => !deleted.has(m.id));
       c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
       if (c.messages.length) c.lastTs = c.messages[c.messages.length - 1].ts;
     });
@@ -373,16 +399,24 @@
   function openContextMenu(id, x, y){
     ctxTargetId = id;
     const on = isPinned(id);
+    const c = convoById(id);
+    const canUnread = c && c.messages.some(m => m.side === 'in') && unreadOf(c) === 0;
     ctxMenu.innerHTML = `<button class="ctx-pin w-full text-left px-3 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2.5">
       <svg class="w-4 h-4 ${on?'text-[#e11d2a]':'text-[#8a8a8a]'}" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
       ${on ? 'Unpin from top' : 'Pin to top'}
-    </button>`;
+    </button>` + (canUnread ? `<button class="ctx-unread w-full text-left px-3 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2.5">
+      <svg class="w-4 h-4 text-[#8a8a8a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.17L4 17.17V4z"/><circle cx="18" cy="6" r="3" fill="#e11d2a" stroke="none"/></svg>
+      Mark as unread
+    </button>` : '');
     ctxMenu.classList.remove('hidden');
     ctxMenu.style.left = Math.min(x, window.innerWidth - ctxMenu.offsetWidth - 8) + 'px';
     ctxMenu.style.top = Math.min(y, window.innerHeight - ctxMenu.offsetHeight - 8) + 'px';
   }
   function closeContextMenu(){ ctxMenu.classList.add('hidden'); ctxTargetId = null; }
-  ctxMenu.addEventListener('click', e => { if (e.target.closest('.ctx-pin')) { togglePin(ctxTargetId); closeContextMenu(); } });
+  ctxMenu.addEventListener('click', e => {
+    if (e.target.closest('.ctx-pin')) { togglePin(ctxTargetId); closeContextMenu(); return; }
+    if (e.target.closest('.ctx-unread')) { markUnread(ctxTargetId); closeContextMenu(); return; }
+  });
   document.addEventListener('click', e => { if (!ctxMenu.classList.contains('hidden') && !e.target.closest('#ctx-menu')) closeContextMenu(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
   window.addEventListener('resize', closeContextMenu);
@@ -474,9 +508,12 @@
     const trigger = m.id
       ? `<button class="react-trigger opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(m.id)}" aria-label="Add reaction"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>`
       : '';
+    const delBtn = (m.id && m.side === 'out')
+      ? `<button class="del-trigger opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-[#e11d2a]" data-mid="${esc(m.id)}" title="Delete this message" aria-label="Delete message"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`
+      : '';
     const bubble = `<div class="react-bubble ${bubbleCls} ${pad} text-[14px] leading-relaxed ${m.id ? 'cursor-pointer' : ''} select-none" data-mid="${esc(m.id || '')}">${inner}</div>`;
     return `<div class="group flex flex-col ${colAlign} max-w-[80%] msg-enter">
-      <div class="flex items-center gap-2 ${rowDir}">${bubble}${trigger}</div>
+      <div class="flex items-center gap-2 ${rowDir}">${bubble}${trigger}${delBtn}</div>
       ${reactionChips(m)}
       <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
     </div>`;
@@ -492,6 +529,9 @@
     $('#hdr-avatar').textContent = c.initials;
     $('#input-label').textContent = 'Message · ' + c.name;
     $('#chat-input').placeholder = c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…';
+    const pl = $('#proj-link');
+    if (c.url){ pl.href = c.url; pl.classList.remove('hidden'); pl.classList.add('flex'); }
+    else { pl.classList.add('hidden'); pl.classList.remove('flex'); }
     paintPinBtn();
 
     const since = readTs(c.id);
@@ -524,9 +564,22 @@
     thread.scrollTop = thread.scrollHeight;
   }
 
+  function deleteMessage(msgId){
+    const c = convoById(activeId); if (!c || !msgId) return;
+    c.messages = c.messages.filter(m => m.id !== msgId);
+    c.lastTs = c.messages.length ? c.messages[c.messages.length - 1].ts : '';
+    renderThread();
+    renderSidebar();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'del', ref: a, project: c.label, dname:'',
+      who: AGENT || 'Agent', from:'agent', body: msgId
+    })}).catch(() => {});
+  }
+
   function selectConversation(id){
     markRead(activeId);
     activeId = id;
+    manualUnread.delete(id);   // opening it on purpose clears the unread flag
     renderThread();
     markRead(id);
     renderSidebar();
@@ -752,6 +805,17 @@
     if (e.target.closest('a')) return;
     const img = e.target.closest('.attach-image');
     if (img) { openLightbox(img.dataset.url); return; }
+    const del = e.target.closest('.del-trigger');
+    if (del) {
+      if (del.dataset.armed){ deleteMessage(del.dataset.mid); }
+      else {
+        del.dataset.armed = '1';
+        del.classList.add('text-[#e11d2a]','border-[#e11d2a]','opacity-100');
+        del.title = 'Tap again to delete';
+        setTimeout(() => { delete del.dataset.armed; del.classList.remove('text-[#e11d2a]','border-[#e11d2a]','opacity-100'); del.title = 'Delete this message'; }, 2600);
+      }
+      return;
+    }
     const trig = e.target.closest('.react-trigger');
     if (trig) { openPicker(trig.dataset.mid, trig); return; }
     const chip = e.target.closest('.reaction-chip');

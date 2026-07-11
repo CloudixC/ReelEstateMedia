@@ -255,16 +255,16 @@ function startMessages(h){
     .then(function(r){ return r.json(); })
     .then(function(j){
       var rows = j.rows || [];
-      var srvRead = {};
+      var srvRead = {}, dead = {};
       rows.forEach(function(m){
+        if(m.kind === 'del'){ dead[String(m.body || '')] = 1; return; }
         if(m.kind === 'read' && m.from !== 'jag'){
           var id = idOf[String(m.project || '')] || 'general';
-          var ts = String(m.body || '');
-          if(ts > (srvRead[id] || '')) srvRead[id] = ts;
+          srvRead[id] = String(m.body || '');   // chronological — last marker wins
         }
       });
       var count = rows.filter(function(m){
-        if(m.kind !== 'msg' || m.from !== 'jag') return false;
+        if(m.kind !== 'msg' || m.from !== 'jag' || dead[String(m.id)]) return false;
         var id = idOf[String(m.project || '')] || 'general';
         var seen = readMap[id] || '';
         if((srvRead[id] || '') > seen) seen = srvRead[id];
