@@ -91,6 +91,16 @@ h1 .p{color:var(--red)}
 .go.soft{background:transparent;border:1px solid var(--line2);color:var(--dim);box-shadow:none}
 .go.soft:hover{border-color:var(--teal);color:var(--teal)}
 .go .ar{font-family:var(--serif);font-style:italic;font-size:14px}
+/* ---- messages ---- */
+.msglink{display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:16px;padding:16px 18px;text-decoration:none;color:var(--txt);transition:border-color .15s ease,transform .12s ease}
+.msglink:hover{border-color:rgba(227,34,44,.5)}
+.msglink:active{transform:scale(.99)}
+.msglink .mic{width:42px;height:42px;border-radius:50%;background:rgba(227,34,44,.12);border:1px solid rgba(227,34,44,.35);display:grid;place-items:center;font-size:18px;flex-shrink:0}
+.msglink .mtt{flex:1;min-width:0}
+.msglink .mh{display:block;font-family:var(--serif);font-size:17px;font-weight:480}
+.msglink .ms{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
+.msglink .mar{font-family:var(--serif);font-style:italic;color:var(--red);font-size:18px}
+.msgbadge{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 7px;box-shadow:0 4px 14px -4px rgba(227,34,44,.7)}
 /* ---- footer / states ---- */
 .note{color:var(--faint);font-size:12.5px;text-align:center;margin-top:44px;line-height:1.7}
 .sign{margin-top:26px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
@@ -108,6 +118,18 @@ h1 .p{color:var(--red)}
   <div class="badge" id="brandbadge"></div>
 </header>
 <div id="body"><div class="center"><div class="sm">Loading your content…</div></div></div>
+<div id="msgwrap" style="display:none">
+  <div class="sec"><span class="no">✉</span><span class="lbl">Messages</span></div>
+  <a class="msglink" id="msglink" href="#">
+    <span class="mic">💬</span>
+    <span class="mtt">
+      <span class="mh">Open your messages</span>
+      <span class="ms">Questions, updates, quick replies — one thread per project, straight to us.</span>
+    </span>
+    <span class="msgbadge" id="msgbadge" style="display:none">0</span>
+    <span class="mar">→</span>
+  </a>
+</div>
 <div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
 <div class="sign" id="sign" style="display:none"></div>
 <script>
@@ -169,9 +191,11 @@ function card(x, i, cls, pillHtml, btnTxt, soft){
     (x.url ? '<div class="act"><a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a></div>' : '') +
     '</div>';
 }
+let AGENTNAME = '';
 function render(raw){
   const h = normalize(raw);
   const items = h.items;
+  AGENTNAME = h.agent || '';
   document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
   const done = items.filter(x => x.dv);
   const rev = items.filter(x => !x.dv && x.rs && x.url);
@@ -208,9 +232,34 @@ function render(raw){
   const sg = document.getElementById('sign');
   sg.style.display = '';
   sg.innerHTML = 'Crafted for ' + esc(h.agent || 'you') + ' by <em>Reel Estate Media</em>';
+  startMessages(h);
 }
 function fail(big, sm){
   document.getElementById('body').innerHTML = '<div class="center"><div class="big">' + big + '</div><div class="sm">' + sm + '</div></div>';
+}
+/* ---- messages: the full chat lives on chat.html — this is the door in ---- */
+function startMessages(h){
+  document.getElementById('msgwrap').style.display = '';
+  document.getElementById('msglink').href = 'chat.html?a=' + encodeURIComponent(a) + '&t=' + (pin ? 'pin' : 'rem');
+  // Unread = messages from us newer than what the chat page marked read on this device.
+  // Same conversation ids as chat.html: 'general' + 'p-<slugged project title>'.
+  var readMap = {};
+  try{ readMap = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {}; }catch(e){}
+  var slug = function(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); };
+  var idOf = {};
+  idOf[(h.agent || 'Agent') + ' — Content Hub'] = 'general';
+  h.items.forEach(function(x){ if(x.t) idOf[(h.agent || 'Agent') + ' — ' + x.t] = 'p-' + slug(x.t); });
+  fetch(ENDPOINT + '?thread=' + encodeURIComponent(a))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var count = (j.rows || []).filter(function(m){
+        if(m.from !== 'jag') return false;
+        var id = idOf[String(m.project || '')] || 'general';
+        return String(m.ts) > (readMap[id] || '');
+      }).length;
+      var b = document.getElementById('msgbadge');
+      if(count){ b.textContent = count > 9 ? '9+' : count; b.style.display = ''; }
+    }).catch(function(){});
 }
 if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
 else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
