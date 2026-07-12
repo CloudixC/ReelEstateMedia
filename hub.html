@@ -85,7 +85,7 @@ h1 .p{color:var(--red)}
 .card.done .stagelbl b{color:var(--teal)}
 .stepno{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600;white-space:nowrap}
 /* ---- actions ---- */
-.act{margin-top:15px}
+.act{margin-top:15px;display:flex;flex-direction:column;gap:9px}
 .go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease;box-shadow:0 8px 24px -10px rgba(227,34,44,.55)}
 .go:active{transform:scale(.985)}
 .go.soft{background:transparent;border:1px solid var(--line2);color:var(--dim);box-shadow:none}
@@ -98,9 +98,36 @@ h1 .p{color:var(--red)}
 .msglink .mic{width:42px;height:42px;border-radius:50%;background:rgba(227,34,44,.12);border:1px solid rgba(227,34,44,.35);display:grid;place-items:center;font-size:18px;flex-shrink:0}
 .msglink .mtt{flex:1;min-width:0}
 .msglink .mh{display:block;font-family:var(--serif);font-size:17px;font-weight:480}
-.msglink .ms{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
+.msglink .ms{display:block;color:var(--dim);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msglink .ms b{color:var(--txt);font-weight:600}
 .msglink .mar{font-family:var(--serif);font-style:italic;color:var(--red);font-size:18px}
 .msgbadge{background:var(--red);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 7px;box-shadow:0 4px 14px -4px rgba(227,34,44,.7)}
+/* ---- recap: since your last visit ---- */
+.recap{background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid rgba(227,34,44,.32);border-radius:16px;padding:16px 18px 14px;margin:22px 0 2px;animation:rise .6s cubic-bezier(.22,.9,.3,1) both;box-shadow:0 10px 34px -18px rgba(227,34,44,.3)}
+.recap .rh{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.recap .rh::after{content:'';height:1px;flex:1;background:var(--line)}
+.recap ul{list-style:none}
+.recap li{font-size:13.5px;color:var(--dim);padding:3.5px 0;line-height:1.45}
+.recap li b{color:var(--txt);font-weight:600}
+.confetti{position:fixed;top:-14px;width:8px;height:13px;z-index:99;pointer-events:none;animation:cfall linear forwards}
+@keyframes cfall{to{transform:translateY(106vh) rotate(720deg);opacity:.1}}
+/* ---- hero book button ---- */
+.heroact{margin-top:24px}
+.heroact .go{display:inline-flex;width:auto;padding:12px 20px}
+/* ---- shoot countdown ---- */
+.shootline{margin-top:12px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(232,184,74,.08);border:1px solid rgba(232,184,74,.24);border-radius:9px;padding:7px 12px;display:inline-block}
+/* ---- testimonial ---- */
+.tbtn{background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:10px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.tbtn:hover{border-color:var(--amber);color:var(--amber)}
+.tform{margin-top:14px;border-top:1px solid var(--line);padding-top:14px}
+.tform textarea{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:10px;color:var(--txt);font-family:var(--sans);font-size:14px;line-height:1.5;padding:11px 12px;min-height:84px;resize:vertical;outline:none}
+.tform textarea:focus{border-color:rgba(232,184,74,.5)}
+.trow{display:flex;gap:10px;justify-content:flex-end;align-items:center;margin-top:10px}
+.terr{color:var(--red);font-size:12px;margin-right:auto}
+.tsend{background:var(--amber);color:#1a1405;border:none;border-radius:10px;padding:11px 18px;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-family:var(--sans)}
+.tsend:disabled{opacity:.6;cursor:default}
+.tcancel{background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:10px;padding:11px 14px;font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;font-family:var(--sans)}
+.tthanks{margin-top:13px;color:var(--amber);font-size:13.5px;font-family:var(--serif);font-style:italic}
 /* ---- footer / states ---- */
 .note{color:var(--faint);font-size:12.5px;text-align:center;margin-top:44px;line-height:1.7}
 .sign{margin-top:26px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
@@ -109,7 +136,7 @@ h1 .p{color:var(--red)}
 .center .big{font-family:var(--serif);font-weight:440;font-size:24px;max-width:22ch;line-height:1.3}
 .center .sm{color:var(--dim);font-size:13.5px;max-width:38ch}
 @media(min-width:560px){
-  .act{display:flex;justify-content:flex-end}
+  .act{flex-direction:row;justify-content:flex-end}
   .go{width:auto;padding:12px 22px}
 }
 </style></head><body><div class="wrap">
@@ -140,6 +167,43 @@ const pin = (q.get('t') || 'pin') === 'pin';
 document.getElementById('brandmark').innerHTML = pin ? 'Content <em>Hub</em><span class="dot">.</span>' : 'Reel Estate <em>Media</em><span class="dot">.</span>';
 document.getElementById('brandbadge').textContent = pin ? 'Royal LePage Pinnacle' : 'Client Portal';
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function ago(ts){
+  var ms = Date.now() - new Date(ts).getTime();
+  if(isNaN(ms) || ms < 0) return '';
+  var m = Math.floor(ms / 60000);
+  if(m < 1) return 'just now';
+  if(m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if(h < 24) return h + 'h ago';
+  var d = Math.floor(h / 24);
+  return d + (d === 1 ? ' day ago' : ' days ago');
+}
+// Photo/attachment messages are JSON envelopes — reduce to tidy preview text.
+function flatPrev(s){
+  s = String(s == null ? '' : s);
+  if(s.charAt(0) === '{'){
+    try{
+      var o = JSON.parse(s);
+      if(o && o.__rc) return (o.t || '') + (o.att && o.att.length ? (o.t ? ' ' : '') + '📎 attachment' : '');
+    }catch(e){}
+  }
+  return s;
+}
+// 🎉 a moment for freshly delivered work
+function confetti(){
+  var colors = ['#e3222c','#e8b84a','#4cc38a','#f5f2e9','#6ea8dc'];
+  for(var i = 0; i < 70; i++){
+    var s = document.createElement('span');
+    s.className = 'confetti';
+    s.style.left = (Math.random() * 100) + 'vw';
+    s.style.background = colors[i % colors.length];
+    s.style.animationDuration = (2.2 + Math.random() * 1.7) + 's';
+    s.style.animationDelay = (Math.random() * 0.9) + 's';
+    s.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(s);
+    (function(el){ setTimeout(function(){ el.remove(); }, 5500); })(s);
+  }
+}
 // Client-friendly pipeline: Booked → Shoot scheduled → Filmed → Editing → Review & polish → Delivered
 const PHASES = ['Booked','Shoot scheduled','Filmed','In editing','Review & polish','Delivered'];
 const REVIEWISH = ['client review','changes','review 2','changes 2','review 3','in review'];
@@ -183,12 +247,90 @@ function tracker(x){
     '<div class="stageline"><span class="stagelbl"><b>' + esc(lbl) + '</b></span>' +
     '<span class="stepno">Step ' + (ph + 1) + ' / 6</span></div>';
 }
-function card(x, i, cls, pillHtml, btnTxt, soft){
+// Shoot-day countdown — only meaningful before the camera rolls (dt = shootDate then).
+function shootLine(x){
+  if(phaseOf(x) > 1 || !x.dt) return '';
+  var d = new Date(String(x.dt) + 'T12:00:00');
+  if(isNaN(d.getTime())) return '';
+  var today = new Date(); today.setHours(12, 0, 0, 0);
+  var days = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if(days < 0) return '';
+  var when = days === 0 ? 'is today! 🎥'
+    : days === 1 ? 'is tomorrow'
+    : days <= 6 ? 'is ' + d.toLocaleDateString('en-US', {weekday:'long'}) + ' · ' + days + ' days away'
+    : 'is ' + d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' · ' + days + ' days away';
+  return '<div class="shootline">🎬 Shoot day ' + esc(when) + '</div>';
+}
+/* ---- testimonials: kept internal — they land in your chat + inbox email ---- */
+var TESTI = {};
+function testiDoneMap(){ try{ return JSON.parse(localStorage.getItem('rem_hub_testi_v1:' + a)) || {}; }catch(e){ return {}; } }
+function testiBits(x, tid){
+  if(testiDoneMap()[x.t]) return {line: '<div class="tthanks">★ Thanks for the kind words — they mean a lot to us!</div>', btn: ''};
+  TESTI[tid] = x.t;
+  return {line: '<div data-tslot="' + tid + '"></div>',
+          btn: '<button class="tbtn" data-testi="' + tid + '">★ Loved it? Tell us</button>'};
+}
+function openTesti(tid, btn){
+  var slot = document.querySelector('[data-tslot="' + tid + '"]');
+  if(!slot) return;
+  btn.style.display = 'none';
+  slot.innerHTML = '<div class="tform">' +
+    '<textarea id="tt-' + tid + '" placeholder="What did you think of the finals? A line or two goes a long way 🙏"></textarea>' +
+    '<div class="trow"><span class="terr" id="te-' + tid + '"></span>' +
+    '<button class="tcancel" data-tid="' + tid + '">Cancel</button>' +
+    '<button class="tsend" data-tid="' + tid + '">Send ★</button></div></div>';
+  var ta = document.getElementById('tt-' + tid);
+  if(ta) ta.focus();
+}
+function closeTesti(tid){
+  var slot = document.querySelector('[data-tslot="' + tid + '"]');
+  if(slot) slot.innerHTML = '';
+  var btn = document.querySelector('[data-testi="' + tid + '"]');
+  if(btn) btn.style.display = '';
+}
+function sendTesti(tid){
+  var ta = document.getElementById('tt-' + tid);
+  var text = ta ? ta.value.trim() : '';
+  var err = document.getElementById('te-' + tid);
+  if(!text){ if(err) err.textContent = 'Write a line first 🙂'; return; }
+  var btn = document.querySelector('.tsend[data-tid="' + tid + '"]');
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+  if(err) err.textContent = '';
+  var title = TESTI[tid] || '';
+  // Two rows: a permanent 'testimonial' record (emails Jag instantly) and a
+  // regular chat message so it shows up in the project's thread.
+  var p1 = fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+    kind:'testimonial', ref:a, project:'⭐ ' + title, dname:'', who:AGENTNAME, body:text, from:'' }) });
+  var p2 = fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+    kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — ' + title, dname:'',
+    who:AGENTNAME, body:'⭐ Testimonial — ' + text, from:'' }) });
+  Promise.all([p1, p2]).then(function(){
+    var m = testiDoneMap(); m[title] = 1;
+    try{ localStorage.setItem('rem_hub_testi_v1:' + a, JSON.stringify(m)); }catch(e){}
+    var slot = document.querySelector('[data-tslot="' + tid + '"]');
+    if(slot) slot.innerHTML = '<div class="tthanks">★ Thank you! That just made our day.</div>';
+    confetti();
+  }).catch(function(){
+    if(btn){ btn.disabled = false; btn.textContent = 'Send ★'; }
+    if(err) err.textContent = 'Couldn’t send — try again in a moment.';
+  });
+}
+document.getElementById('body').addEventListener('click', function(ev){
+  var t = ev.target;
+  var b = t.closest ? t.closest('[data-testi]') : null;
+  if(b){ openTesti(b.getAttribute('data-testi'), b); return; }
+  if(t.classList && t.classList.contains('tcancel')){ closeTesti(t.getAttribute('data-tid')); return; }
+  if(t.classList && t.classList.contains('tsend')){ sendTesti(t.getAttribute('data-tid')); return; }
+});
+function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct){
   return '<div class="card ' + cls + '" style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
     '<div class="chead"><div class="tt"><div class="name">' + esc(x.t) + '</div>' +
     '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
     tracker(x) +
-    (x.url ? '<div class="act"><a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a></div>' : '') +
+    (extraLine || '') +
+    ((x.url || extraAct) ? '<div class="act">' + (extraAct || '') +
+      (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a>' : '') +
+      '</div>' : '') +
     '</div>';
 }
 let AGENTNAME = '';
@@ -196,14 +338,46 @@ function render(raw){
   const h = normalize(raw);
   const items = h.items;
   AGENTNAME = h.agent || '';
+  TESTI = {};
   document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
   const done = items.filter(x => x.dv);
   const rev = items.filter(x => !x.dv && x.rs && x.url);
   const work = items.filter(x => !x.dv && !(x.rs && x.url));
+  // ---- since your last visit: diff today's pipeline against the last snapshot ----
+  const SEEN_KEY = 'rem_hub_seen_v1:' + a;
+  let prev = null;
+  try{ prev = JSON.parse(localStorage.getItem(SEEN_KEY)); }catch(e){}
+  const recap = [];
+  let justDelivered = false;
+  if(prev && prev.items){
+    items.forEach(function(x){
+      if(!x.t) return;
+      const p = prev.items[x.t];
+      const ph = phaseOf(x);
+      if(!p){ recap.push('<li>🚀 <b>' + esc(x.t) + '</b> — new project kicked off</li>'); return; }
+      if(x.dv && !p.dv){ recap.push('<li>🎉 <b>' + esc(x.t) + '</b> was delivered — your finals are in!</li>'); justDelivered = true; return; }
+      if(ph === 4 && p.ph < 4){ recap.push('<li>🎬 <b>' + esc(x.t) + '</b> is ready for your review</li>'); return; }
+      if(ph > p.ph) recap.push('<li>📍 <b>' + esc(x.t) + '</b> moved to ' + esc(PHASES[ph]) + '</li>');
+    });
+  }
+  try{
+    const snap = {at: new Date().toISOString(), items: {}};
+    items.forEach(function(x){ if(x.t) snap.items[x.t] = {ph: phaseOf(x), dv: !!x.dv}; });
+    localStorage.setItem(SEEN_KEY, JSON.stringify(snap));
+  }catch(e){}
+  const bookHref = 'brief-form.html?e=' + encodeURIComponent(ENDPOINT) + '&r=' + encodeURIComponent(a) +
+    '&t=' + (pin ? 'pin' : 'rem') + '&n=' + encodeURIComponent(h.agent || '') +
+    '&p=' + encodeURIComponent('New Shoot — ' + (h.agent || 'Agent'));
   let html = '<div class="hero">' +
     '<div class="overline">Your content · live pipeline</div>' +
     '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1>' +
-    '<div class="heysub">Everything we’ve made together, and exactly where each piece is on its way to you.</div></div>';
+    '<div class="heysub">Everything we’ve made together, and exactly where each piece is on its way to you.</div>' +
+    '<div class="heroact"><a class="go" href="' + esc(bookHref) + '">📅 Book a shoot <span class="ar">→</span></a></div></div>';
+  if(recap.length){
+    html += '<div class="recap"><div class="rh">Since your last visit' +
+      (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
+      recap.join('') + '<li id="recapmsgs" style="display:none"></li></ul></div>';
+  }
   if(items.length){
     html += '<div class="stats">' +
       '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
@@ -218,11 +392,14 @@ function render(raw){
   }
   if(work.length){
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span></div>';
-    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true));
+    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x)));
   }
   if(done.length){
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Delivered</span><span class="cnt">' + done.length + '</span></div>';
-    done.forEach(x => html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true));
+    done.forEach((x, di) => {
+      const tb = testiBits(x, 'td' + di);
+      html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true, tb.line, tb.btn);
+    });
   }
   if(items.length === 0)
     html += '<div class="center"><div class="big">A fresh start<span style="color:var(--red)">.</span></div>' +
@@ -232,6 +409,7 @@ function render(raw){
   const sg = document.getElementById('sign');
   sg.style.display = '';
   sg.innerHTML = 'Crafted for ' + esc(h.agent || 'you') + ' by <em>Reel Estate Media</em>';
+  if(justDelivered) setTimeout(confetti, 450);
   startMessages(h);
 }
 function fail(big, sm){
@@ -255,23 +433,44 @@ function startMessages(h){
     .then(function(r){ return r.json(); })
     .then(function(j){
       var rows = j.rows || [];
-      var srvRead = {}, dead = {};
+      var srvRead = {}, dead = {}, edits = {};
       rows.forEach(function(m){
         if(m.kind === 'del'){ dead[String(m.body || '')] = 1; return; }
+        if(m.kind === 'edit'){
+          try{ var o = JSON.parse(String(m.body || '{}')); if(o.m) edits[String(o.m)] = String(o.b || ''); }catch(e2){}
+          return;
+        }
         if(m.kind === 'read' && m.from !== 'jag'){
           var id = idOf[String(m.project || '')] || 'general';
           srvRead[id] = String(m.body || '');   // chronological — last marker wins
         }
       });
-      var count = rows.filter(function(m){
-        if(m.kind !== 'msg' || m.from !== 'jag' || dead[String(m.id)]) return false;
+      var count = 0, last = null;
+      rows.forEach(function(m){
+        if(m.kind !== 'msg' || dead[String(m.id)]) return;
+        last = m;                                // chronological — ends on the newest
+        if(m.from !== 'jag') return;
         var id = idOf[String(m.project || '')] || 'general';
         var seen = readMap[id] || '';
         if((srvRead[id] || '') > seen) seen = srvRead[id];
-        return String(m.ts) > seen;
-      }).length;
+        if(String(m.ts) > seen) count++;
+      });
+      // live preview of the latest message on the door card
+      if(last){
+        var txt = edits[String(last.id)] !== undefined ? edits[String(last.id)] : flatPrev(last.body);
+        var sender = last.from === 'jag' ? 'Reel Estate Media' : (last.who || 'You');
+        var ms = document.querySelector('#msglink .ms');
+        if(ms) ms.innerHTML = '<b>' + esc(sender) + ':</b> ' + esc(String(txt).slice(0, 90)) +
+          (ago(last.ts) ? ' <span style="color:var(--faint)">· ' + esc(ago(last.ts)) + '</span>' : '');
+      }
       var b = document.getElementById('msgbadge');
       if(count){ b.textContent = count > 9 ? '9+' : count; b.style.display = ''; }
+      // fold unread messages into the recap banner, if it's showing
+      var rm = document.getElementById('recapmsgs');
+      if(rm && count){
+        rm.innerHTML = '💬 <b>' + count + (count === 1 ? ' new message' : ' new messages') + '</b> waiting for you';
+        rm.style.display = '';
+      }
     }).catch(function(){});
 }
 if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
