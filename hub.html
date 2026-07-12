@@ -243,6 +243,15 @@ h1 .p{color:var(--red)}
 .bsave{background:linear-gradient(135deg,#ff3d46,#c4141e 70%);color:#fff;border:none;border-radius:11px;padding:11px 20px;font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;font-family:var(--sans);box-shadow:0 8px 22px -10px rgba(227,34,44,.5)}
 .bsave:disabled{opacity:.6;cursor:default}
 .bstat{font-size:12px;color:var(--dim);margin-left:10px}
+/* ---- what's included ---- */
+.feat{display:none;margin-top:6px}
+.pcard.open .feat{display:block}
+.fsec{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--red2);font-weight:700;margin:14px 0 4px}
+.frow2{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:13px;color:var(--dim);line-height:1.5}
+.frow2 .fi{flex-shrink:0;width:20px;text-align:center}
+.frow2 b{color:var(--txt);font-weight:600}
+.ftoggle{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:10px;padding:9px 16px;font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.ftoggle:hover{border-color:var(--red);color:var(--txt)}
 /* ---- footer / states ---- */
 .note{color:var(--faint);font-size:12.5px;text-align:center;margin-top:46px;line-height:1.7}
 .sign{margin-top:26px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
@@ -290,6 +299,32 @@ h1 .p{color:var(--red)}
   <div class="brow"><label>Notes</label><input type="text" id="bk-notes" placeholder="Fonts, tagline, anything we should know…"></div>
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bk-save">Save brand kit</button><span class="bstat" id="bk-stat"></span></div>
   <input type="file" id="bk-file" accept="image/*" style="display:none">
+</div>
+<div class="pcard" id="featwrap" style="display:none">
+  <h3>✨ Everything in your hub</h3>
+  <div class="psub">One link, on any device — here’s what it does for you.</div>
+  <button class="ftoggle" id="feattoggle">See all the benefits ↓</button>
+  <div class="feat">
+    <div class="fsec">📅 Booking</div>
+    <div class="frow2"><span class="fi">📅</span><span><b>Book a shoot in two minutes</b> — the calendar opens right here, your details pre-filled, confirmation lands in your chat instantly.</span></div>
+    <div class="frow2"><span class="fi">🎬</span><span><b>Prep reminders</b> — the day before every shoot, a 60-second checklist arrives so shoot day runs smooth. Upcoming shoots show up top with add-to-calendar.</span></div>
+    <div class="fsec">📍 Live pipeline</div>
+    <div class="frow2"><span class="fi">📍</span><span><b>Watch every project move</b> across 6 stages in real time — automatic updates in your chat when things enter editing, hit review, or get delivered.</span></div>
+    <div class="frow2"><span class="fi">👀</span><span><b>“Since your last visit” recap</b> — open your hub after a few days and it catches you up instantly. Confetti when finals land. 🎉</span></div>
+    <div class="fsec">💬 Direct chat</div>
+    <div class="frow2"><span class="fi">💬</span><span><b>A straight line to the studio</b> — one thread per project. Reply, react, edit, full-quality photo &amp; video attachments up to 24 MB.</span></div>
+    <div class="frow2"><span class="fi">🎙</span><span><b>Voice notes</b> — between showings? Tap the mic, talk, done. Faster than typing.</span></div>
+    <div class="fsec">🎬 Review room</div>
+    <div class="frow2"><span class="fi">⏱</span><span><b>Pin notes to the exact second</b> of any reel, one-tap feedback chips, star your selects, compare versions side-by-side — then approve and your downloads unlock.</span></div>
+    <div class="fsec">📚 Your library</div>
+    <div class="frow2"><span class="fi">📚</span><span><b>Everything you’ve ever received</b>, searchable forever — with a one-tap <b>Share</b> button and ready-to-post caption on every delivered piece.</span></div>
+    <div class="frow2"><span class="fi">📊</span><span><b>Performance pulse</b> — tell us how each piece performed in one tap; we use it to make your next one stronger.</span></div>
+    <div class="fsec">🎨 Yours, made easy</div>
+    <div class="frow2"><span class="fi">🎨</span><span><b>Brand kit</b> — upload your logo, headshot and colours once; they’re baked into every edit.</span></div>
+    <div class="frow2"><span class="fi">🎁</span><span><b>Referral credit</b> — share your personal link; when a colleague books, you get the credit (and a 🎉 in your chat).</span></div>
+    <div class="frow2"><span class="fi">⭐</span><span><b>Get featured</b> — love the finals? One tap, and with your OK your words appear on our public testimonial wall with your name and brokerage.</span></div>
+    <div class="frow2"><span class="fi">📈</span><span><b>Monthly recap</b> — the first of each month: what you delivered, what’s in production, and a one-tap way to line up next month.</span></div>
+  </div>
 </div>
 <div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
 <div class="sign" id="sign" style="display:none"></div>
@@ -727,6 +762,7 @@ function render(raw){
   startMessages(h);
   document.getElementById('refwrap').style.display = '';
   document.getElementById('brandwrap').style.display = '';
+  document.getElementById('featwrap').style.display = '';
   updateWelcome();
   loadBookings();
   loadBrand();
@@ -882,6 +918,12 @@ document.getElementById('bk-save').addEventListener('click', function(){
       btn.disabled = false; btn.textContent = 'Save brand kit';
       document.getElementById('bk-stat').textContent = 'Couldn’t save — try again in a moment.';
     });
+});
+/* ---- what's included toggle ---- */
+document.getElementById('feattoggle').addEventListener('click', function(){
+  var card = document.getElementById('featwrap');
+  var open = card.classList.toggle('open');
+  this.textContent = open ? 'Hide the list ↑' : 'See all the benefits ↓';
 });
 /* ---- library search ---- */
 document.getElementById('body').addEventListener('input', function(ev){
