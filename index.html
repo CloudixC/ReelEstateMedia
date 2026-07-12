@@ -746,7 +746,21 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     </div>);
   const latestFb = {};
   subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
-  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1};
+  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1, brand: 1, perf: 1};
+  const prettyBody = s => {
+    if(s.kind === 'perf'){
+      try{ const o = JSON.parse(s.body); return (o.mood === 'up' ? '📈 Crushing it' : o.mood === 'mid' ? '😐 Doing okay' : '📉 Quiet so far') + (o.t ? ' — ' + o.t : ''); }catch(e){ return s.body; }
+    }
+    if(s.kind === 'brand'){
+      try{ const o = JSON.parse(s.body);
+        return [o.logo ? 'Logo: https://drive.google.com/file/d/' + o.logo + '/view' : '',
+                o.head ? 'Headshot: https://drive.google.com/file/d/' + o.head + '/view' : '',
+                o.colors && o.colors.length ? 'Colours: ' + o.colors.join(' · ') : '',
+                o.ig ? 'Instagram: ' + o.ig : '', o.notes ? 'Notes: ' + o.notes : ''].filter(Boolean).join('\n') || s.body;
+      }catch(e){ return s.body; }
+    }
+    return s.body;
+  };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
   const testis = subs.filter(s => s.kind === 'testimonial').reverse();
@@ -776,11 +790,11 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
           <div className="flex">
-            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : '💬 Feedback'}</span>
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
           </div>
-          <div className="small muted" style={{whiteSpace:'pre-wrap', margin:'7px 0 8px', maxHeight:110, overflow:'auto', background:'var(--panel2)', borderRadius:8, padding:'8px 10px'}}>{s.body}</div>
+          <div className="small muted" style={{whiteSpace:'pre-wrap', margin:'7px 0 8px', maxHeight:110, overflow:'auto', background:'var(--panel2)', borderRadius:8, padding:'8px 10px'}}>{prettyBody(s)}</div>
           <div className="flex" style={{gap:8, flexWrap:'wrap'}}>
             {s.kind === 'brief' && dl &&
               <button className="btn sm" onClick={() => {

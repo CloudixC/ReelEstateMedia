@@ -186,6 +186,50 @@ h1 .p{color:var(--red)}
 .msglink .mar{font-family:var(--serif);font-style:italic;color:var(--red);font-size:18px;transition:transform .18s ease}
 .msglink:hover .mar{transform:translateX(4px)}
 .msgbadge{background:linear-gradient(135deg,#ff3d46,#c4141e);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 7px;box-shadow:0 4px 14px -4px rgba(227,34,44,.7)}
+/* ---- upcoming shoots strip ---- */
+.shoots{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 2px}
+.shootchip{display:inline-flex;align-items:center;gap:9px;background:rgba(232,184,74,.07);border:1px solid rgba(232,184,74,.26);border-radius:12px;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--amber);box-shadow:0 0 22px -10px rgba(232,184,74,.35)}
+.shootchip .when{color:var(--txt);font-weight:600}
+.shootchip a{color:var(--txt);opacity:.7;text-decoration:underline;text-underline-offset:3px;font-weight:600}
+.shootchip a:hover{opacity:1}
+/* ---- finals library ---- */
+.libsearch{margin:2px 0 12px}
+.libsearch input{width:100%;background:rgba(5,5,6,.6);border:1px solid var(--line2);border-radius:12px;color:var(--txt);font-family:var(--sans);font-size:14px;padding:11px 14px;outline:none;transition:border-color .18s ease}
+.libsearch input:focus{border-color:rgba(227,34,44,.5)}
+.libsearch input::placeholder{color:var(--faint)}
+.librow{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;transition:border-color .18s ease}
+.librow:hover{border-color:rgba(245,242,233,.16)}
+.librow .no{font-family:var(--serif);font-style:italic;color:var(--faint);font-size:12px;min-width:22px}
+.librow .lt{flex:1;min-width:0}
+.librow .lt b{display:block;font-family:var(--serif);font-weight:480;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.librow .lt span{font-size:11px;color:var(--faint)}
+.mini{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:9px;padding:8px 12px;font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
+.mini:hover{border-color:var(--teal);color:var(--teal)}
+.mini.share:hover{border-color:var(--red2);color:var(--txt)}
+/* ---- performance pulse ---- */
+.perfrow{margin-top:13px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative;z-index:1}
+.perfrow .plbl{font-size:12px;color:var(--dim);font-weight:600}
+.perfbtn{background:rgba(245,242,233,.03);border:1px solid var(--line2);border-radius:20px;padding:7px 13px;font-size:13px;cursor:pointer;transition:border-color .15s ease,transform .12s ease;color:var(--txt);font-family:var(--sans)}
+.perfbtn:hover{border-color:var(--amber);transform:translateY(-1px)}
+.perflogged{font-size:12px;color:var(--teal);font-weight:600}
+.perflogged a{color:var(--faint);font-weight:600;margin-left:6px}
+/* ---- referral + brand cards ---- */
+.pcard{background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:12px;position:relative;overflow:hidden;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.pcard h3{font-family:var(--serif);font-weight:480;font-size:17px;margin-bottom:4px}
+.pcard .psub{color:var(--dim);font-size:12.5px;margin-bottom:12px}
+.pcard .psub b{color:var(--amber)}
+.brow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.brow label{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);font-weight:700;min-width:74px}
+.brow input[type=text]{flex:1;min-width:150px;background:rgba(5,5,6,.6);border:1px solid var(--line2);border-radius:10px;color:var(--txt);font-family:var(--sans);font-size:14px;padding:9px 12px;outline:none}
+.brow input[type=text]:focus{border-color:rgba(227,34,44,.5)}
+.brow input[type=color]{width:40px;height:34px;border:1px solid var(--line2);border-radius:8px;background:transparent;padding:2px;cursor:pointer}
+.upbtn{background:rgba(245,242,233,.03);border:1px dashed var(--line2);color:var(--dim);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);transition:border-color .15s ease,color .15s ease}
+.upbtn:hover{border-color:var(--red);color:var(--txt)}
+.upbtn.done{border-style:solid;border-color:rgba(76,195,138,.4);color:var(--teal)}
+.bthumb{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--line2);background:#000}
+.bsave{background:linear-gradient(135deg,#ff3d46,#c4141e 70%);color:#fff;border:none;border-radius:11px;padding:11px 20px;font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;font-family:var(--sans);box-shadow:0 8px 22px -10px rgba(227,34,44,.5)}
+.bsave:disabled{opacity:.6;cursor:default}
+.bstat{font-size:12px;color:var(--dim);margin-left:10px}
 /* ---- footer / states ---- */
 .note{color:var(--faint);font-size:12.5px;text-align:center;margin-top:46px;line-height:1.7}
 .sign{margin-top:26px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
@@ -217,6 +261,22 @@ h1 .p{color:var(--red)}
     <span class="msgbadge" id="msgbadge" style="display:none">0</span>
     <span class="mar">→</span>
   </a>
+</div>
+<div class="pcard" id="refwrap" style="display:none">
+  <h3>🎁 Know an agent who needs content?</h3>
+  <div class="psub" id="refsub">Send them your personal link — when they book, you get the credit (and our eternal gratitude).</div>
+  <button class="go" id="refshare" style="width:auto;display:inline-flex;padding:12px 20px">↗ Share your link</button>
+</div>
+<div class="pcard" id="brandwrap" style="display:none">
+  <h3>🎨 Your brand kit</h3>
+  <div class="psub">Drop your logo, headshot and colours here once — we bake them into every edit without chasing you.</div>
+  <div class="brow"><label>Logo</label><img class="bthumb" id="bk-logo-img" style="display:none"><button class="upbtn" id="bk-logo">＋ Upload logo</button></div>
+  <div class="brow"><label>Headshot</label><img class="bthumb" id="bk-head-img" style="display:none"><button class="upbtn" id="bk-head">＋ Upload headshot</button></div>
+  <div class="brow"><label>Colours</label><input type="color" id="bk-c1" value="#e3222c"><input type="color" id="bk-c2" value="#f5f2e9"></div>
+  <div class="brow"><label>Instagram</label><input type="text" id="bk-ig" placeholder="@yourhandle"></div>
+  <div class="brow"><label>Notes</label><input type="text" id="bk-notes" placeholder="Fonts, tagline, anything we should know…"></div>
+  <div class="brow" style="margin-bottom:0"><button class="bsave" id="bk-save">Save brand kit</button><span class="bstat" id="bk-stat"></span></div>
+  <input type="file" id="bk-file" accept="image/*" style="display:none">
 </div>
 <div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
 <div class="sign" id="sign" style="display:none"></div>
@@ -326,26 +386,99 @@ function shootLine(x){
 function icsEsc(s){ return String(s == null ? '' : s).replace(/([,;\\])/g, '\\$1'); }
 function downloadIcs(spec){
   var o = {}; try{ o = JSON.parse(spec); }catch(e){ return; }
-  var d = String(o.d || '').replace(/-/g, '');
-  if(d.length !== 8) return;
-  var nd = new Date(String(o.d) + 'T12:00:00'); nd.setDate(nd.getDate() + 1);
-  var d2 = nd.toISOString().slice(0, 10).replace(/-/g, '');
-  var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Hub//EN', 'BEGIN:VEVENT',
-    'UID:shoot-' + d + '-' + Math.floor(new Date(o.d).getTime() / 1000) + '@reelestatemedia',
-    'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
-    'DTSTART;VALUE=DATE:' + d,
-    'DTEND;VALUE=DATE:' + d2,
-    'SUMMARY:🎬 Shoot — ' + icsEsc(o.t || 'Reel Estate Media'),
+  var lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Hub//EN', 'BEGIN:VEVENT'];
+  var stamp = 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  var fname;
+  if(o.s){
+    // timed event (a real Calendly booking)
+    var zi = function(iso){ var dd = new Date(iso); return isNaN(dd.getTime()) ? null : dd.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z'; };
+    var s1 = zi(o.s); if(!s1) return;
+    var s2 = zi(o.e) || s1;
+    lines.push('UID:shoot-' + s1 + '@reelestatemedia', stamp, 'DTSTART:' + s1, 'DTEND:' + s2);
+    fname = 'shoot-' + String(o.s).slice(0, 10);
+  } else {
+    var d = String(o.d || '').replace(/-/g, '');
+    if(d.length !== 8) return;
+    var nd = new Date(String(o.d) + 'T12:00:00'); nd.setDate(nd.getDate() + 1);
+    var d2 = nd.toISOString().slice(0, 10).replace(/-/g, '');
+    lines.push('UID:shoot-' + d + '-' + Math.floor(new Date(o.d).getTime() / 1000) + '@reelestatemedia',
+      stamp, 'DTSTART;VALUE=DATE:' + d, 'DTEND;VALUE=DATE:' + d2);
+    fname = 'shoot-' + String(o.d);
+  }
+  lines.push('SUMMARY:🎬 Shoot — ' + icsEsc(o.t || 'Reel Estate Media'),
     'DESCRIPTION:Content shoot with Reel Estate Media. Prep: declutter what the camera sees\\, every light on\\, outfits ready.',
-    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    'END:VEVENT', 'END:VCALENDAR');
+  var ics = lines.join('\r\n');
   var blob = new Blob([ics], {type: 'text/calendar;charset=utf-8'});
   var a2 = document.createElement('a');
   a2.href = URL.createObjectURL(blob);
-  a2.download = 'shoot-' + String(o.d) + '.ics';
+  a2.download = fname + '.ics';
   document.body.appendChild(a2);
   a2.click();
   a2.remove();
   setTimeout(function(){ URL.revokeObjectURL(a2.href); }, 4000);
+}
+/* ---- share kit + performance pulse + library ---- */
+var SHARE = {}, PERFT = {};
+function shareItem(sid, btn){
+  var o = SHARE[sid] || {};
+  var caption = '🎬 “' + (o.t || 'New content') + '” — fresh listing content is live! Shot by Reel Estate Media 🎥';
+  var url = o.url || '';
+  if(navigator.share){
+    navigator.share(url ? {title: o.t || 'Reel Estate Media', text: caption, url: url} : {title: o.t || 'Reel Estate Media', text: caption}).catch(function(){});
+    return;
+  }
+  var txt = caption + (url ? '\n' + url : '');
+  var old = btn.textContent;
+  var done = function(){ btn.textContent = '✓ Copied'; setTimeout(function(){ btn.textContent = old; }, 1500); };
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(done); else done();
+}
+function libDate(d){
+  if(!d) return 'Delivered';
+  var dd = new Date(String(d) + 'T12:00:00');
+  return isNaN(dd.getTime()) ? 'Delivered' : 'Delivered ' + dd.toLocaleDateString('en-CA', {month:'short', day:'numeric', year:'numeric'});
+}
+function librow(x, di, sid){
+  return '<div class="librow" data-lib="' + esc(String(x.t + ' ' + (x.p || '')).toLowerCase()) + '">' +
+    '<span class="no">' + String(di + 1).padStart(2, '0') + '</span>' +
+    '<span class="lt"><b>' + esc(x.t) + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
+    (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
+    '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></div>';
+}
+function perfMap(){ try{ return JSON.parse(localStorage.getItem('rem_hub_perf_v1:' + a)) || {}; }catch(e){ return {}; } }
+function perfRow(x, pid){
+  var logged = perfMap()[x.t];
+  if(logged){
+    var icon = logged.mood === 'up' ? '📈' : logged.mood === 'mid' ? '😐' : '📉';
+    return '<div class="perfrow"><span class="perflogged">' + icon + ' performance logged — thanks!<a href="#" data-perfreset="' + pid + '">update</a></span></div>';
+  }
+  return '<div class="perfrow"><span class="plbl">How’s it performing?</span>' +
+    '<button class="perfbtn" data-perf="' + pid + '|up">📈 Crushing it</button>' +
+    '<button class="perfbtn" data-perf="' + pid + '|mid">😐 Okay</button>' +
+    '<button class="perfbtn" data-perf="' + pid + '|down">📉 Quiet</button></div>';
+}
+function sendPerf(pid, mood, el){
+  var title = PERFT[pid] || '';
+  fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+    kind:'perf', ref:a, project:title, dname:'', who:AGENTNAME || 'Agent',
+    body: JSON.stringify({mood: mood, t: title}), from:'' }) }).catch(function(){});
+  var m = perfMap(); m[title] = {mood: mood, at: new Date().toISOString()};
+  try{ localStorage.setItem('rem_hub_perf_v1:' + a, JSON.stringify(m)); }catch(e){}
+  var wrap = el.closest('.perfrow');
+  var icon = mood === 'up' ? '📈' : mood === 'mid' ? '😐' : '📉';
+  if(wrap) wrap.innerHTML = '<span class="perflogged">' + icon + ' logged — thank you!</span>';
+  if(mood === 'up'){
+    var cardEl = wrap ? wrap.closest('.card') : null;
+    var tb = cardEl ? cardEl.querySelector('[data-testi]') : null;
+    if(tb && tb.style.display !== 'none') openTesti(tb.getAttribute('data-testi'), tb);
+  }
+}
+function resetPerf(pid, link){
+  var title = PERFT[pid] || '';
+  var m = perfMap(); delete m[title];
+  try{ localStorage.setItem('rem_hub_perf_v1:' + a, JSON.stringify(m)); }catch(e){}
+  var wrap = link.closest('.perfrow');
+  if(wrap) wrap.outerHTML = perfRow({t: title}, pid);
 }
 /* ---- testimonials: kept internal — they land in your chat + inbox email ---- */
 var TESTI = {};
@@ -407,13 +540,19 @@ document.getElementById('body').addEventListener('click', function(ev){
   if(bk){ ev.preventDefault(); openCalendly(); return; }
   var ic = t.closest ? t.closest('a.ics') : null;
   if(ic){ ev.preventDefault(); downloadIcs(ic.getAttribute('data-ics')); return; }
+  var sb = t.closest ? t.closest('.sharebtn') : null;
+  if(sb){ shareItem(sb.getAttribute('data-sh'), sb); return; }
+  var pf = t.closest ? t.closest('[data-perf]') : null;
+  if(pf){ var pp = pf.getAttribute('data-perf').split('|'); sendPerf(pp[0], pp[1], pf); return; }
+  var pr = t.closest ? t.closest('[data-perfreset]') : null;
+  if(pr){ ev.preventDefault(); resetPerf(pr.getAttribute('data-perfreset'), pr); return; }
   var b = t.closest ? t.closest('[data-testi]') : null;
   if(b){ openTesti(b.getAttribute('data-testi'), b); return; }
   if(t.classList && t.classList.contains('tcancel')){ closeTesti(t.getAttribute('data-tid')); return; }
   if(t.classList && t.classList.contains('tsend')){ sendTesti(t.getAttribute('data-tid')); return; }
 });
-function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct){
-  return '<div class="card ' + cls + '" style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
+function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
+  return '<div class="card ' + cls + '"' + (lib ? ' data-lib="' + esc(lib) + '"' : '') + ' style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
     (cls === 'rev' ? '<span class="beam"></span>' : '') +
     '<div class="chead"><div class="tt"><div class="name">' + esc(x.t) + '</div>' +
     '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
@@ -510,6 +649,7 @@ function render(raw){
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
       recap.join('') + '<li id="recapmsgs" style="display:none"></li></ul></div>';
   }
+  html += '<div id="shootsslot"></div>';
   if(items.length){
     html += '<div class="stats">' +
       '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
@@ -527,10 +667,23 @@ function render(raw){
     work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x)));
   }
   if(done.length){
-    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Delivered</span><span class="cnt">' + done.length + '</span></div>';
-    done.forEach((x, di) => {
-      const tb = testiBits(x, 'td' + di);
-      html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true, tb.line, tb.btn);
+    const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
+    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">' + (done.length > 4 ? 'Your library' : 'Delivered') + '</span><span class="cnt">' + done.length + '</span></div>';
+    if(done.length > 5) html += '<div class="libsearch"><input id="libsearch" type="search" placeholder="🔎 Search your library…"></div>';
+    SHARE = {}; PERFT = {};
+    dsorted.forEach((x, di) => {
+      const sid = 'sh' + di;
+      SHARE[sid] = {t: x.t, url: x.url || ''};
+      const shareBtn = '<button class="tbtn sharebtn" data-sh="' + sid + '">↗ Share</button>';
+      if(di < 4){
+        const tb = testiBits(x, 'td' + di);
+        PERFT['pf' + di] = x.t;
+        html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true,
+          tb.line + perfRow(x, 'pf' + di), shareBtn + tb.btn,
+          String(x.t + ' ' + (x.p || '')).toLowerCase());
+      } else {
+        html += librow(x, di, sid);
+      }
     });
   }
   if(items.length === 0)
@@ -544,7 +697,128 @@ function render(raw){
   tickStats();
   if(justDelivered) setTimeout(confetti, 450);
   startMessages(h);
+  document.getElementById('refwrap').style.display = '';
+  document.getElementById('brandwrap').style.display = '';
+  loadBookings();
+  loadBrand();
 }
+/* ---- upcoming shoots + referral count (from the hourly Calendly sync) ---- */
+function loadBookings(){
+  fetch(ENDPOINT + '?bookings=' + encodeURIComponent(a))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j.ok) return;
+      var slot = document.getElementById('shootsslot');
+      if(slot && j.items && j.items.length){
+        slot.innerHTML = '<div class="shoots">' + j.items.map(function(it){
+          var d = new Date(it.s);
+          var when = isNaN(d.getTime()) ? '' :
+            d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) + ' · ' +
+            d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+          return '<span class="shootchip">🎬 ' + esc(it.n) + (when ? ' <span class="when">' + esc(when) + '</span>' : '') +
+            ' <a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a></span>';
+        }).join('') + '</div>';
+      }
+      var rs = document.getElementById('refsub');
+      if(rs && j.refs) rs.innerHTML = '<b>🎉 ' + j.refs + ' referral' + (j.refs === 1 ? '' : 's') + ' booked through your link so far.</b> Send it to another colleague — when they book, you get the credit.';
+    }).catch(function(){});
+}
+/* ---- referral link ---- */
+document.getElementById('refshare').addEventListener('click', function(){
+  var link = CAL_BASE + '?utm_source=ref&utm_content=' + encodeURIComponent(a);
+  var txt = 'These are the folks who shoot my listing content — worth a look. Book an intro here: ' + link;
+  if(navigator.share){ navigator.share({title: 'Reel Estate Media', text: txt, url: link}).catch(function(){}); return; }
+  var btn = this;
+  var done = function(){ btn.innerHTML = '✓ Link copied'; setTimeout(function(){ btn.innerHTML = '↗ Share your link'; }, 1600); };
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done).catch(done); else done();
+});
+/* ---- brand kit ---- */
+var BK = {logo: '', head: ''};
+var bkTarget = '';
+function bkThumb(which, id){
+  var img = document.getElementById('bk-' + which + '-img');
+  img.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w120';
+  img.style.display = '';
+  var btn = document.getElementById('bk-' + which);
+  btn.textContent = '↻ Replace';
+  btn.classList.add('done');
+}
+function loadBrand(){
+  fetch(ENDPOINT + '?brand=' + encodeURIComponent(a))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j.ok || !j.kit) return;
+      var k = j.kit;
+      BK.logo = String(k.logo || ''); BK.head = String(k.head || '');
+      if(BK.logo) bkThumb('logo', BK.logo);
+      if(BK.head) bkThumb('head', BK.head);
+      if(k.colors && k.colors[0]) document.getElementById('bk-c1').value = k.colors[0];
+      if(k.colors && k.colors[1]) document.getElementById('bk-c2').value = k.colors[1];
+      document.getElementById('bk-ig').value = String(k.ig || '');
+      document.getElementById('bk-notes').value = String(k.notes || '');
+      document.getElementById('bk-stat').textContent = 'Saved ✓';
+    }).catch(function(){});
+}
+document.getElementById('bk-logo').addEventListener('click', function(){ bkTarget = 'logo'; document.getElementById('bk-file').click(); });
+document.getElementById('bk-head').addEventListener('click', function(){ bkTarget = 'head'; document.getElementById('bk-file').click(); });
+document.getElementById('bk-file').addEventListener('change', function(){
+  var f = this.files && this.files[0];
+  this.value = '';
+  if(!f || !bkTarget) return;
+  if(f.size > 8 * 1024 * 1024){ document.getElementById('bk-stat').textContent = 'That file is over 8MB — try a smaller version.'; return; }
+  var which = bkTarget;
+  var btn = document.getElementById('bk-' + which);
+  btn.textContent = 'Uploading…';
+  var rd = new FileReader();
+  rd.onload = function(){
+    var b64 = String(rd.result).split(',')[1] || '';
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'file', name: which + '-' + (AGENTNAME || 'agent') + '-' + f.name, mime: f.type || 'image/png', data: b64 }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.ok || !j.id) throw new Error('upload failed');
+        BK[which] = j.id;
+        bkThumb(which, j.id);
+        document.getElementById('bk-stat').textContent = 'Uploaded — hit Save to lock it in.';
+      })
+      .catch(function(){
+        btn.textContent = '＋ Upload ' + (which === 'logo' ? 'logo' : 'headshot');
+        document.getElementById('bk-stat').textContent = 'Upload didn’t go through — try again.';
+      });
+  };
+  rd.readAsDataURL(f);
+});
+document.getElementById('bk-save').addEventListener('click', function(){
+  var btn = this;
+  btn.disabled = true; btn.textContent = 'Saving…';
+  var body = JSON.stringify({
+    logo: BK.logo, head: BK.head,
+    colors: [document.getElementById('bk-c1').value, document.getElementById('bk-c2').value],
+    ig: document.getElementById('bk-ig').value.trim(),
+    notes: document.getElementById('bk-notes').value.trim()
+  });
+  fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+    kind:'brand', ref:a, project:'Brand kit', dname:'', who:AGENTNAME || 'Agent', body: body, from:'' }) })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!j.ok) throw new Error('save failed');
+      btn.disabled = false; btn.textContent = 'Save brand kit';
+      document.getElementById('bk-stat').textContent = 'Saved ✓ — thank you!';
+    })
+    .catch(function(){
+      btn.disabled = false; btn.textContent = 'Save brand kit';
+      document.getElementById('bk-stat').textContent = 'Couldn’t save — try again in a moment.';
+    });
+});
+/* ---- library search ---- */
+document.getElementById('body').addEventListener('input', function(ev){
+  if(ev.target && ev.target.id === 'libsearch'){
+    var qq = ev.target.value.trim().toLowerCase();
+    document.querySelectorAll('[data-lib]').forEach(function(el){
+      el.style.display = !qq || el.getAttribute('data-lib').indexOf(qq) > -1 ? '' : 'none';
+    });
+  }
+});
 // count-up on the stat numbers
 function tickStats(){
   document.querySelectorAll('.stat b').forEach(function(b){
