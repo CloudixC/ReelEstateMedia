@@ -122,6 +122,19 @@ h1 .p{color:var(--red)}
 @keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(232,184,74,.5)}50%{opacity:.45;box-shadow:0 0 0 4px rgba(232,184,74,0)}}
 .pill.work{background:rgba(245,242,233,.05);color:var(--dim);border:1px solid var(--line2)}
 .pill.done{background:rgba(76,195,138,.1);color:var(--teal);border:1px solid rgba(76,195,138,.28)}
+.pill.due2{background:rgba(232,184,74,.12);color:var(--amber);border:1px solid rgba(232,184,74,.32);cursor:help}
+/* ---- welcome checklist ---- */
+.wcard{background:linear-gradient(180deg,rgba(30,20,21,.55),rgba(20,16,17,.5) 60%);border:1px solid rgba(227,34,44,.3);border-radius:18px;padding:17px 19px 13px;margin:22px 0 2px;position:relative;overflow:hidden;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:rise .6s cubic-bezier(.22,.9,.3,1) both}
+.wcard .wh{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-weight:480;font-size:17px;margin-bottom:4px}
+.wcard .wh .cnt2{font-size:10.5px;letter-spacing:.14em;color:var(--faint);font-weight:700;font-family:var(--sans)}
+.wcard .wh .wx{margin-left:auto;background:none;border:none;color:var(--faint);font-size:15px;cursor:pointer;padding:4px 8px}
+.wcard .wh .wx:hover{color:var(--txt)}
+.wrow{display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid var(--line);font-size:13.5px}
+.wrow .wi{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line2);display:grid;place-items:center;font-size:11px;flex-shrink:0;color:transparent}
+.wrow.done .wi{background:rgba(76,195,138,.16);border-color:var(--teal);color:var(--teal)}
+.wrow.done span.wt{color:var(--faint);text-decoration:line-through}
+.wrow .wt{flex:1}
+.wrow a,.wrow button.wgo{background:none;border:none;padding:0;color:var(--red2);font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;font-family:var(--sans);white-space:nowrap}
 /* ---- pipeline tracker ---- */
 .track{display:flex;gap:5px;margin-top:17px;position:relative;z-index:1}
 .seg{flex:1;height:4px;border-radius:3px;background:#222227;position:relative}
@@ -353,7 +366,7 @@ function normalize(h){
     st: x.st || '', si: (typeof x.si === 'number' ? x.si : -1),
     rs: x.rs != null ? !!x.rs : ['client review','review 2','review 3','in review'].some(r => String(x.st || '').toLowerCase() === r),
     dv: x.dv != null ? !!x.dv : String(x.st || '').toLowerCase() === 'delivered',
-    url: x.url || '', dt: x.dt || ''
+    url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items};
 }
@@ -441,7 +454,7 @@ function libDate(d){
 function librow(x, di, sid){
   return '<div class="librow" data-lib="' + esc(String(x.t + ' ' + (x.p || '')).toLowerCase()) + '">' +
     '<span class="no">' + String(di + 1).padStart(2, '0') + '</span>' +
-    '<span class="lt"><b>' + esc(x.t) + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
+    '<span class="lt"><b>' + esc(x.t) + (x.du ? ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>' : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
     (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
     '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></div>';
 }
@@ -538,6 +551,17 @@ document.getElementById('body').addEventListener('click', function(ev){
   var t = ev.target;
   var bk = t.closest ? t.closest('.heroact .go') : null;
   if(bk){ ev.preventDefault(); openCalendly(); return; }
+  var wa = t.closest ? t.closest('[data-wact]') : null;
+  if(wa){
+    var act = wa.getAttribute('data-wact');
+    if(act === 'wdismiss') wSet({dismissed: true});
+    else if(act === 'wsave') wSet({save: true});
+    else if(act === 'wbrand'){ var bw = document.getElementById('brandwrap'); if(bw) bw.scrollIntoView({behavior: 'smooth', block: 'center'}); return; }
+    else if(act === 'wchat'){ var ml = document.getElementById('msglink'); if(ml) location.href = ml.href; return; }
+    else if(act === 'wbook'){ openCalendly(); return; }
+    updateWelcome();
+    return;
+  }
   var ic = t.closest ? t.closest('a.ics') : null;
   if(ic){ ev.preventDefault(); downloadIcs(ic.getAttribute('data-ics')); return; }
   var sb = t.closest ? t.closest('.sharebtn') : null;
@@ -595,6 +619,9 @@ function openCalendly(){
 }
 // When Calendly confirms a booking inside the popup, tell the chat thread.
 function onCalendlyBooked(){
+  wSet({booked: true});
+  WELCOME.book = true;
+  updateWelcome();
   try{
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
       kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'',
@@ -649,7 +676,7 @@ function render(raw){
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
       recap.join('') + '<li id="recapmsgs" style="display:none"></li></ul></div>';
   }
-  html += '<div id="shootsslot"></div>';
+  html += '<div id="welcomeslot"></div><div id="shootsslot"></div>';
   if(items.length){
     html += '<div class="stats">' +
       '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
@@ -678,7 +705,8 @@ function render(raw){
       if(di < 4){
         const tb = testiBits(x, 'td' + di);
         PERFT['pf' + di] = x.t;
-        html += card(x, i++, 'done', '<span class="pill done">✓ Delivered</span>', 'View finals', true,
+        const duPill = x.du ? '<span class="pill due2" title="A balance is owing on this one — e-transfer to hello@reelestatemedia.com, or message us for the invoice.">💰 Balance due</span> ' : '';
+        html += card(x, i++, 'done', duPill + '<span class="pill done">✓ Delivered</span>', 'View finals', true,
           tb.line + perfRow(x, 'pf' + di), shareBtn + tb.btn,
           String(x.t + ' ' + (x.p || '')).toLowerCase());
       } else {
@@ -699,8 +727,39 @@ function render(raw){
   startMessages(h);
   document.getElementById('refwrap').style.display = '';
   document.getElementById('brandwrap').style.display = '';
+  updateWelcome();
   loadBookings();
   loadBrand();
+}
+/* ---- 👋 welcome checklist (first visits, checks itself off) ---- */
+var WELCOME = {brand: false, chat: false, book: false};
+function wState(){ try{ return JSON.parse(localStorage.getItem('rem_hub_welcome_v1:' + a)) || {}; }catch(e){ return {}; } }
+function wSet(patch){
+  var s = wState();
+  for(var k in patch) s[k] = patch[k];
+  try{ localStorage.setItem('rem_hub_welcome_v1:' + a, JSON.stringify(s)); }catch(e){}
+}
+function updateWelcome(){
+  var slot = document.getElementById('welcomeslot');
+  if(!slot) return;
+  var st = wState();
+  if(st.dismissed){ slot.innerHTML = ''; return; }
+  var items = [
+    {t: '📌 Bookmark this page — it’s your home base', done: !!st.save, act: 'wsave', lbl: 'Done ✓'},
+    {t: '🎨 Set up your brand kit (logo, colours)', done: WELCOME.brand, act: 'wbrand', lbl: 'Set up →'},
+    {t: '💬 Say hi in your chat — we’re on the other end', done: WELCOME.chat, act: 'wchat', lbl: 'Open chat →'},
+    {t: '📅 Book your first shoot', done: WELCOME.book || !!st.booked, act: 'wbook', lbl: 'Book →'}
+  ];
+  var doneN = items.filter(function(i2){ return i2.done; }).length;
+  if(doneN === items.length){ wSet({dismissed: true}); slot.innerHTML = ''; return; }
+  slot.innerHTML = '<div class="wcard">' +
+    '<div class="wh">👋 Welcome — let’s get you set up <span class="cnt2">' + doneN + ' / ' + items.length + '</span>' +
+    '<button class="wx" data-wact="wdismiss" title="Hide this">✕</button></div>' +
+    items.map(function(i2){
+      return '<div class="wrow' + (i2.done ? ' done' : '') + '"><span class="wi">✓</span>' +
+        '<span class="wt">' + i2.t + '</span>' +
+        (i2.done ? '' : '<button class="wgo" data-wact="' + i2.act + '">' + i2.lbl + '</button>') + '</div>';
+    }).join('') + '</div>';
 }
 /* ---- upcoming shoots + referral count (from the hourly Calendly sync) ---- */
 function loadBookings(){
@@ -709,6 +768,7 @@ function loadBookings(){
     .then(function(j){
       if(!j.ok) return;
       var slot = document.getElementById('shootsslot');
+      if(j.items && j.items.length){ WELCOME.book = true; updateWelcome(); }
       if(slot && j.items && j.items.length){
         slot.innerHTML = '<div class="shoots">' + j.items.map(function(it){
           var d = new Date(it.s);
@@ -748,6 +808,8 @@ function loadBrand(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if(!j.ok || !j.kit) return;
+      WELCOME.brand = true;
+      updateWelcome();
       var k = j.kit;
       BK.logo = String(k.logo || ''); BK.head = String(k.head || '');
       if(BK.logo) bkThumb('logo', BK.logo);
@@ -804,6 +866,17 @@ document.getElementById('bk-save').addEventListener('click', function(){
       if(!j.ok) throw new Error('save failed');
       btn.disabled = false; btn.textContent = 'Save brand kit';
       document.getElementById('bk-stat').textContent = 'Saved ✓ — thank you!';
+      WELCOME.brand = true;
+      updateWelcome();
+      // drop a note in the chat thread so it shows up in Studio Chat too
+      var bits = [];
+      if(BK.logo) bits.push('logo');
+      if(BK.head) bits.push('headshot');
+      bits.push('colours');
+      if(document.getElementById('bk-ig').value.trim()) bits.push('Instagram');
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'',
+        who:AGENTNAME || 'Agent', body:'🎨 Just updated my brand kit — ' + bits.join(', ') + ' are in.', from:'' }) }).catch(function(){});
     })
     .catch(function(){
       btn.disabled = false; btn.textContent = 'Save brand kit';
@@ -879,6 +952,7 @@ function startMessages(h){
       var count = 0, last = null;
       rows.forEach(function(m){
         if(m.kind !== 'msg' || dead[String(m.id)]) return;
+        if(m.from !== 'jag' && !WELCOME.chat){ WELCOME.chat = true; updateWelcome(); }
         last = m;                                // chronological — ends on the newest
         if(m.from !== 'jag') return;
         var id = idOf[String(m.project || '')] || 'general';

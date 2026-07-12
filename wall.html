@@ -1,0 +1,103 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents on Reel Estate Media</title>
+<meta name="description" content="What real-estate agents say about working with Reel Estate Media.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340..640;1,9..144,340..640&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#e3222c; --red2:#ff4a52;
+  --bg:#050506; --panel:rgba(20,20,24,.55); --panel2:rgba(26,26,31,.5);
+  --line:#232329; --line2:#32323a;
+  --txt:#f5f4f5; --dim:#a3a097; --faint:#6f6c74; --amber:#e8b84a;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:0 18px 80px;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:-20% -10%;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(46% 30% at 30% 0%, rgba(227,34,44,.22), transparent 70%),
+    radial-gradient(38% 26% at 82% 8%, rgba(232,184,74,.09), transparent 70%),
+    radial-gradient(50% 34% at 65% 100%, rgba(227,34,44,.07), transparent 70%);
+  animation:aurora 26s ease-in-out infinite alternate}
+@keyframes aurora{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(2%,2%,0) scale(1.06)}}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.45;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E")}
+.wrap{max-width:840px;margin:0 auto;position:relative;z-index:2}
+header{display:flex;align-items:center;justify-content:space-between;padding:22px 0 0;gap:14px;flex-wrap:wrap}
+.mark{font-family:var(--serif);font-size:17px}
+.mark em{color:var(--red);font-style:italic}
+.badge{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);font-weight:600;border:1px solid var(--line);border-radius:20px;padding:5px 11px;white-space:nowrap}
+.hero{padding:54px 0 10px;text-align:center}
+.overline{font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px}
+h1{font-family:var(--serif);font-weight:420;font-size:clamp(34px,8vw,52px);line-height:1.08;letter-spacing:-.01em}
+h1 em{font-style:italic;font-weight:480;
+  background:linear-gradient(100deg,var(--txt) 20%,#ffd9a0 38%,var(--red2) 52%,var(--txt) 70%);
+  background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:shine 5.5s ease-in-out infinite}
+@keyframes shine{0%,100%{background-position:110% 0}45%,55%{background-position:-15% 0}}
+.sub{color:var(--dim);font-size:15px;margin-top:12px}
+.grid{columns:2 300px;column-gap:14px;margin-top:38px}
+.quote{break-inside:avoid;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:18px;padding:22px;margin-bottom:14px;position:relative;overflow:hidden;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:rise .6s cubic-bezier(.22,.9,.3,1) both}
+.quote::before{content:'“';position:absolute;top:2px;left:14px;font-family:var(--serif);font-size:64px;color:rgba(227,34,44,.35);line-height:1}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.quote p{font-family:var(--serif);font-weight:420;font-size:17.5px;line-height:1.5;padding-top:16px}
+.quote .who{margin-top:14px;font-size:12px;color:var(--dim);font-weight:600;letter-spacing:.04em}
+.quote .who b{color:var(--txt)}
+.quote .stars{color:var(--amber);letter-spacing:2px;font-size:12px;margin-top:3px}
+.cta{text-align:center;margin-top:46px}
+.cta .lead{font-family:var(--serif);font-size:20px;margin-bottom:16px}
+.go{display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#ff3d46,#c4141e 70%);color:#fff;border:none;border-radius:12px;padding:15px 28px;
+  font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;
+  box-shadow:0 10px 30px -10px rgba(227,34,44,.55);transition:transform .18s ease}
+.go::after{content:'';position:absolute;top:-40%;bottom:-40%;width:36%;left:-50%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.32),transparent);
+  transform:skewX(-18deg);animation:shimmer 3.4s ease-in-out infinite}
+@keyframes shimmer{0%{left:-55%}55%,100%{left:135%}}
+.go:hover{transform:translateY(-2px)}
+.center{min-height:40vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;color:var(--dim)}
+.sign{margin-top:46px;text-align:center;font-family:var(--serif);font-style:italic;color:var(--faint);font-size:13px}
+.sign em{color:var(--red)}
+</style></head><body><div class="wrap">
+<header>
+  <div class="mark">Reel Estate <em>Media</em><span style="color:var(--red)">.</span></div>
+  <div class="badge">Agent Reviews</div>
+</header>
+<div class="hero">
+  <div class="overline">In their words</div>
+  <h1>Agents on working <em>with us</em><span style="color:var(--red)">.</span></h1>
+  <div class="sub">Real notes from real agents — straight from their content hubs.</div>
+</div>
+<div class="grid" id="grid"><div class="center">Loading…</div></div>
+<div class="cta">
+  <div class="lead">Want content like theirs?</div>
+  <a class="go" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot →</a>
+</div>
+<div class="sign">Crafted with care by <em>Reel Estate Media</em></div>
+<script>
+var ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+fetch(ENDPOINT + '?wall=1')
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    var g = document.getElementById('grid');
+    var items = (j.ok && j.items) ? j.items : [];
+    if(!items.length){
+      g.innerHTML = '<div class="center">Fresh reviews are on their way — check back soon. 🎥</div>';
+      return;
+    }
+    g.innerHTML = items.map(function(t, i){
+      return '<div class="quote" style="animation-delay:' + Math.min(i * 90, 700) + 'ms">' +
+        '<p>' + esc(t.q) + '</p>' +
+        '<div class="who"><b>' + esc(t.w) + '</b>' + (t.b ? ' · ' + esc(t.b) : '') + '</div>' +
+        '<div class="stars">★★★★★</div></div>';
+    }).join('');
+  })
+  .catch(function(){
+    document.getElementById('grid').innerHTML = '<div class="center">Couldn’t load reviews — refresh to try again.</div>';
+  });
+</script></div></body></html>

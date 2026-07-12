@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  #mic-btn.recording{background:#e11d2a !important;color:#fff !important;animation:recpulse 1.4s ease-in-out infinite}
+  @keyframes recpulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,42,.5)}50%{box-shadow:0 0 0 8px rgba(225,29,42,0)}}
+
   html, body { background: #0a0a0a; font-family: 'Inter', sans-serif; }
   .font-serif-display { font-family: 'Playfair Display', serif; }
 
@@ -123,6 +126,9 @@
           <input id="file-input" type="file" multiple class="hidden" />
           <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach a file" title="Attach photos, videos or files (up to 24 MB)">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
+          </button>
+          <button id="mic-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Record a voice note" title="Record a voice note — tap again to send">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </button>
           <div class="flex-1">
             <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
@@ -369,7 +375,7 @@
     const last = c.messages[c.messages.length - 1];
     if (!last) return 'No messages yet — say hi 👋';
     const at = last.atts && last.atts[0];
-    const txt = last.text || (at ? (at.k === 'image' ? '📷 Photo' : '📎 ' + (at.n || 'File')) : '');
+    const txt = last.text || (at ? (at.k === 'image' ? '📷 Photo' : at.k === 'audio' ? '🎙 Voice note' : '📎 ' + (at.n || 'File')) : '');
     return (last.side === 'out' ? 'You: ' : '') + txt;
   }
 
@@ -519,6 +525,10 @@
 
   function attachmentsHTML(atts, inSide){
     return (atts || []).map(at => {
+      if (at.k === 'audio' && at.id){
+        const cap = inSide ? 'text-[#8a8a8a]' : 'text-white/75';
+        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' \u00b7 ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
+      }
       if (at.k === 'image' && (at.d || at.id)){
         return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"${at.id ? ` data-view="https://drive.google.com/file/d/${esc(at.id)}/view"` : ''}><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
       }
@@ -763,6 +773,58 @@
     if (!j.ok || !j.id) throw new Error(j.error || 'upload failed');
     return j.id;
   }
+
+  // ---------- \u{1F399} voice notes ----------
+  let vRec = null, vChunks = [], vT0 = 0, vTimer = null;
+  const micBtn = $('#mic-btn');
+  if (!navigator.mediaDevices || !window.MediaRecorder) micBtn.style.display = 'none';
+  micBtn.addEventListener('click', async () => {
+    if (vRec && vRec.state === 'recording'){ vRec.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+                 : MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      vRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      vChunks = [];
+      vRec.ondataavailable = e => { if (e.data && e.data.size) vChunks.push(e.data); };
+      vRec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(vTimer);
+        micBtn.classList.remove('recording');
+        micBtn.title = 'Record a voice note \u2014 tap again to send';
+        const secs = Math.round((Date.now() - vT0) / 1000);
+        const blob = new Blob(vChunks, { type: (vRec && vRec.mimeType) || 'audio/webm' });
+        vRec = null;
+        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short \u2014 hold the thought and try again.'); return; }
+        await sendVoiceNote(blob, secs);
+      };
+      vRec.start();
+      vT0 = Date.now();
+      micBtn.classList.add('recording');
+      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's \u2014 tap to send'; }, 500);
+      showToast('\u{1F399} Recording\u2026 tap the mic again to send.');
+    } catch(e){ showToast('Microphone unavailable \u2014 check your browser permissions.'); }
+  });
+  async function sendVoiceNote(blob, secs){
+    const c = convoById(activeId); if (!c) return;
+    const ext = (blob.type || '').indexOf('mp4') > -1 ? 'm4a' : 'webm';
+    const f = new File([blob], 'voice-note-' + secs + 's.' + ext, { type: blob.type || 'audio/webm' });
+    let att;
+    try {
+      showToast('Sending voice note\u2026');
+      const id = await uploadToDrive(f);
+      att = { k: 'audio', id, n: f.name, s: f.size, m: f.type || 'audio/webm', sec: secs };
+    } catch(e){ showToast("Couldn't send the voice note \u2014 try again in a moment."); return; }
+    const body = JSON.stringify({ __rc: 1, t: '', att: [att] });
+    const now = new Date().toISOString();
+    c.messages.push({ id: '', ts: now, side: 'out', who: AGENT || 'You', text: '', atts: [att], q: null });
+    c.lastTs = now;
+    renderThread(); renderSidebar();
+    await postMsg(c, body);
+    markRead(activeId);
+    setTimeout(loadThread, 1200);
+  }
+
   const MAX_UPLOAD = 24 * 1024 * 1024;
   const fileInput = $('#file-input');
   $('#attach-btn').addEventListener('click', () => fileInput.click());

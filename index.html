@@ -764,6 +764,16 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
   const testis = subs.filter(s => s.kind === 'testimonial').reverse();
+  const wallState = {};
+  subs.forEach(s => { if(s.kind === 'wall'){ try{ wallState[s.ref] = !!JSON.parse(s.body).on; }catch(e){} } });
+  const toggleWall = async (s) => {
+    const cur = !!wallState[s.id];
+    try {
+      await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'wall', ref: s.id, project: 'Testimonial wall', dname: '', who: 'Jag',
+        body: JSON.stringify({on: !cur, q: s.body, w: s.who || 'Agent', b: 'Royal LePage Pinnacle'}), from: 'jag'})});
+      load();
+    } catch(e){ alert('Couldn’t update the wall — check connection.'); }
+  };
   const vault = testis.length > 0 && (
     <div className="card">
       <div className="flex"><h3 style={{fontSize:17, marginBottom:0}}>⭐ Testimonial vault <span className="faint small" style={{fontWeight:400}}>({testis.length})</span></h3><span className="spacer"></span>
@@ -774,6 +784,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
             <span style={{fontWeight:700}}>{s.who || 'Agent'}</span>
             <span className="faint small">{String(s.project || '').replace(/^⭐ /, '')}{s.ts ? ' · ' + new Date(s.ts).toLocaleDateString('en-CA', {month:'short', day:'numeric', year:'numeric'}) : ''}</span>
             <span className="spacer"></span>
+            <button className={'btn sm' + (wallState[s.id] ? '' : ' ghost')} title="Show or hide this on your public testimonial wall (wall.html)" onClick={() => toggleWall(s)}>{wallState[s.id] ? '🌟 On the wall · remove' : '🌟 Approve for wall'}</button>
             <CopyBtn text={'“' + s.body + '” — ' + (s.who || 'Agent') + ', Royal LePage Pinnacle'} label="📋 Copy"/>
           </div>
           <div className="small muted" style={{whiteSpace:'pre-wrap', marginTop:6, background:'var(--panel2)', borderRadius:8, padding:'8px 10px'}}>{s.body}</div>
@@ -1119,6 +1130,7 @@ function App(){
           return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
+            du: (d.status === 'Delivered' && o.payment && o.payment !== 'paid') ? 1 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || '')}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal';
