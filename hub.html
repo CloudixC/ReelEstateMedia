@@ -376,6 +376,8 @@ function sendTesti(tid){
 }
 document.getElementById('body').addEventListener('click', function(ev){
   var t = ev.target;
+  var bk = t.closest ? t.closest('.heroact .go') : null;
+  if(bk){ ev.preventDefault(); openCalendly(); return; }
   var b = t.closest ? t.closest('[data-testi]') : null;
   if(b){ openTesti(b.getAttribute('data-testi'), b); return; }
   if(t.classList && t.classList.contains('tcancel')){ closeTesti(t.getAttribute('data-tid')); return; }
@@ -393,7 +395,49 @@ function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct){
       '</div>' : '') +
     '</div>';
 }
-let AGENTNAME = '';
+let AGENTNAME = '', AGENTEMAIL = '';
+/* ---- Calendly: booking happens in a popup right on this page ---- */
+const CAL_BASE = 'https://calendly.com/hello-reelestatemedia';
+function calUrl(){
+  return CAL_BASE + '?hide_gdpr_banner=1&background_color=121215&text_color=f5f2e9&primary_color=e3222c' +
+    '&name=' + encodeURIComponent(AGENTNAME || '') +
+    (AGENTEMAIL ? '&email=' + encodeURIComponent(AGENTEMAIL) : '');
+}
+var calReady = null;
+function loadCalendly(){
+  if(calReady) return calReady;
+  calReady = new Promise(function(res, rej){
+    var l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = 'https://assets.calendly.com/assets/external/widget.css';
+    document.head.appendChild(l);
+    var s = document.createElement('script');
+    s.src = 'https://assets.calendly.com/assets/external/widget.js';
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return calReady;
+}
+function openCalendly(){
+  loadCalendly().then(function(){
+    Calendly.initPopupWidget({url: calUrl()});
+  }).catch(function(){
+    calReady = null;
+    window.open(calUrl(), '_blank');   // widget blocked? plain Calendly still works
+  });
+}
+// When Calendly confirms a booking inside the popup, tell the chat thread.
+function onCalendlyBooked(){
+  try{
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'',
+      who:AGENTNAME || 'Agent', body:'📅 Just booked a shoot on your calendar — locked in! ✅', from:'' }) });
+  }catch(e){}
+  confetti();
+}
+window.addEventListener('message', function(e){
+  if(e.origin !== 'https://calendly.com') return;
+  if(e.data && e.data.event === 'calendly.event_scheduled') onCalendlyBooked();
+});
 function render(raw){
   const h = normalize(raw);
   const items = h.items;
@@ -425,14 +469,13 @@ function render(raw){
     items.forEach(function(x){ if(x.t) snap.items[x.t] = {ph: phaseOf(x), dv: !!x.dv}; });
     localStorage.setItem(SEEN_KEY, JSON.stringify(snap));
   }catch(e){}
-  const bookHref = 'brief-form.html?e=' + encodeURIComponent(ENDPOINT) + '&r=' + encodeURIComponent(a) +
-    '&t=' + (pin ? 'pin' : 'rem') + '&n=' + encodeURIComponent(h.agent || '') +
-    '&p=' + encodeURIComponent('New Shoot — ' + (h.agent || 'Agent'));
+  AGENTEMAIL = String(raw.email || '');
+  const bookHref = CAL_BASE + '?name=' + encodeURIComponent(h.agent || '');
   let html = '<div class="hero">' +
     '<div class="overline"><i></i>Your content · live pipeline</div>' +
     '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1>' +
     '<div class="heysub">Everything we’ve made together, and exactly where each piece is on its way to you.</div>' +
-    '<div class="heroact"><a class="go" href="' + esc(bookHref) + '">📅 Book a shoot <span class="ar">→</span></a></div></div>';
+    '<div class="heroact"><a class="go" href="' + esc(bookHref) + '" target="_blank" rel="noopener">📅 Book a shoot <span class="ar">→</span></a></div></div>';
   if(recap.length){
     html += '<div class="recap"><span class="beam"></span><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +

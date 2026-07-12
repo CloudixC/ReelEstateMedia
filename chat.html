@@ -979,6 +979,52 @@
 
   $('#search').addEventListener('input', e => { searchTerm = e.target.value; renderSidebar(); });
 
+  /* ---- Calendly: booking happens in a popup right here in the chat ---- */
+  const CAL_BASE = 'https://calendly.com/hello-reelestatemedia';
+  let CAL_EMAIL = '';
+  function calUrl(){
+    return CAL_BASE + '?hide_gdpr_banner=1&background_color=121215&text_color=f5f2e9&primary_color=e3222c' +
+      '&name=' + encodeURIComponent(AGENT || '') +
+      (CAL_EMAIL ? '&email=' + encodeURIComponent(CAL_EMAIL) : '');
+  }
+  let calReady = null;
+  function loadCalendly(){
+    if (calReady) return calReady;
+    calReady = new Promise((res, rej) => {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = 'https://assets.calendly.com/assets/external/widget.css';
+      document.head.appendChild(l);
+      const s = document.createElement('script');
+      s.src = 'https://assets.calendly.com/assets/external/widget.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    return calReady;
+  }
+  function openCalendly(){
+    loadCalendly().then(() => {
+      Calendly.initPopupWidget({ url: calUrl() });
+    }).catch(() => {
+      calReady = null;
+      window.open(calUrl(), '_blank');   // widget blocked? plain Calendly still works
+    });
+  }
+  // Calendly confirms the booking inside the popup → drop a note in the thread.
+  function onCalendlyBooked(){
+    const g = convoById('general');
+    if (!g) return;
+    const now = new Date().toISOString();
+    const txt = '📅 Just booked a shoot on your calendar — locked in! ✅';
+    g.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: txt, atts: [], q: null });
+    g.lastTs = now;
+    renderThread(); renderSidebar();
+    postMsg(g, txt).catch(() => {});
+  }
+  window.addEventListener('message', (e) => {
+    if (e.origin !== 'https://calendly.com') return;
+    if (e.data && e.data.event === 'calendly.event_scheduled') onCalendlyBooked();
+  });
+
   if (!a){
     fail('This link is missing its key.', 'Head back to your content hub and open Messages from there.');
   } else {
@@ -988,21 +1034,14 @@
         if (!(j.ok && j.hub)) { fail("We couldn't find your page.", 'Ask us for a fresh link — it takes ten seconds.'); return; }
         buildConversations(j.hub);
         document.title = (AGENT ? AGENT + ' — ' : '') + 'Messages';
-        // 📅 Book a shoot → opens the pre-shoot brief, pre-filled for this agent,
-        // and drops a note in the direct chat so the request is tracked here.
+        // 📅 Book a shoot → Calendly popup right here in the chat; when the
+        // booking is confirmed, a note goes into the direct thread automatically.
+        CAL_EMAIL = String(j.hub.email || '');
         const bk = $('#book-btn');
-        bk.href = 'brief-form.html?e=' + encodeURIComponent(ENDPOINT) + '&r=' + encodeURIComponent(a) +
-                  '&t=' + encodeURIComponent(t) + '&n=' + encodeURIComponent(AGENT) +
-                  '&p=' + encodeURIComponent('New Shoot — ' + (AGENT || 'Agent'));
-        bk.addEventListener('click', () => {
-          const g = convoById('general');
-          if (!g) return;
-          const now = new Date().toISOString();
-          const txt = '📅 I’d like to book a shoot — filling out the brief now.';
-          g.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: txt, atts: [], q: null });
-          g.lastTs = now;
-          renderThread(); renderSidebar();
-          postMsg(g, txt).catch(() => {});
+        bk.href = CAL_BASE + '?name=' + encodeURIComponent(AGENT || '');
+        bk.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          openCalendly();
         });
         renderSidebar();
         renderThread();
