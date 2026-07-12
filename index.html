@@ -720,6 +720,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
+  const [vaultOpen, setVaultOpen] = useState(false);
   const cfg = db.settings.inboxUrl && db.settings.inboxToken;
   const load = async () => {
     if(!cfg) return;
@@ -745,11 +746,28 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     </div>);
   const latestFb = {};
   subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
-  const fresh = subs.filter(s => !(db.subsHandled || []).includes(s.id) &&
+  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1};
+  const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
-  if(fresh.length === 0 && !err) return null;
-  return (
-    <div className="card today">
+  const testis = subs.filter(s => s.kind === 'testimonial').reverse();
+  const vault = testis.length > 0 && (
+    <div className="card">
+      <div className="flex"><h3 style={{fontSize:17, marginBottom:0}}>⭐ Testimonial vault <span className="faint small" style={{fontWeight:400}}>({testis.length})</span></h3><span className="spacer"></span>
+        <button className="btn ghost sm" onClick={() => setVaultOpen(o => !o)}>{vaultOpen ? 'Hide' : 'Show'}</button></div>
+      {vaultOpen && testis.map(s => (
+        <div key={s.id} className="trow" style={{paddingTop:10}}>
+          <div className="flex">
+            <span style={{fontWeight:700}}>{s.who || 'Agent'}</span>
+            <span className="faint small">{String(s.project || '').replace(/^⭐ /, '')}{s.ts ? ' · ' + new Date(s.ts).toLocaleDateString('en-CA', {month:'short', day:'numeric', year:'numeric'}) : ''}</span>
+            <span className="spacer"></span>
+            <CopyBtn text={'“' + s.body + '” — ' + (s.who || 'Agent') + ', Royal LePage Pinnacle'} label="📋 Copy"/>
+          </div>
+          <div className="small muted" style={{whiteSpace:'pre-wrap', marginTop:6, background:'var(--panel2)', borderRadius:8, padding:'8px 10px'}}>{s.body}</div>
+        </div>))}
+    </div>);
+  if(fresh.length === 0 && !err && !vault) return null;
+  return (<>
+    {(fresh.length > 0 || err) && <div className="card today">
       <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
         <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button></div>
       {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
@@ -758,7 +776,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
           <div className="flex">
-            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : '💬 Feedback'}</span>
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
           </div>
@@ -792,7 +810,9 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
           </div>
         </div>);})}
       {fresh.length === 0 && <p className="small faint" style={{marginTop:8}}>All caught up.</p>}
-    </div>);
+    </div>}
+    {vault}
+  </>);
 }
 
 /* ---------------- Lock screen ---------------- */

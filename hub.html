@@ -154,6 +154,8 @@ h1 .p{color:var(--red)}
 @keyframes cfall{to{transform:translateY(106vh) rotate(720deg);opacity:.1}}
 /* ---- shoot countdown ---- */
 .shootline{margin-top:12px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(232,184,74,.08);border:1px solid rgba(232,184,74,.24);border-radius:10px;padding:7px 12px;display:inline-block;position:relative;z-index:1;box-shadow:0 0 22px -8px rgba(232,184,74,.35)}
+.shootline .ics{margin-left:9px;color:var(--txt);opacity:.7;font-weight:600;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s ease}
+.shootline .ics:hover{opacity:1}
 /* ---- testimonial ---- */
 .tbtn{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:12px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:border-color .18s ease,color .18s ease,box-shadow .18s ease}
 .tbtn:hover{border-color:var(--amber);color:var(--amber);box-shadow:0 10px 26px -14px rgba(232,184,74,.4)}
@@ -318,7 +320,32 @@ function shootLine(x){
     : days === 1 ? 'is tomorrow'
     : days <= 6 ? 'is ' + d.toLocaleDateString('en-US', {weekday:'long'}) + ' · ' + days + ' days away'
     : 'is ' + d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' · ' + days + ' days away';
-  return '<div class="shootline">🎬 Shoot day ' + esc(when) + '</div>';
+  return '<div class="shootline">🎬 Shoot day ' + esc(when) +
+    ' <a class="ics" href="#" data-ics="' + esc(JSON.stringify({t: x.t, d: x.dt})).replace(/"/g, '&quot;') + '">📆 Add to calendar</a></div>';
+}
+function icsEsc(s){ return String(s == null ? '' : s).replace(/([,;\\])/g, '\\$1'); }
+function downloadIcs(spec){
+  var o = {}; try{ o = JSON.parse(spec); }catch(e){ return; }
+  var d = String(o.d || '').replace(/-/g, '');
+  if(d.length !== 8) return;
+  var nd = new Date(String(o.d) + 'T12:00:00'); nd.setDate(nd.getDate() + 1);
+  var d2 = nd.toISOString().slice(0, 10).replace(/-/g, '');
+  var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Hub//EN', 'BEGIN:VEVENT',
+    'UID:shoot-' + d + '-' + Math.floor(new Date(o.d).getTime() / 1000) + '@reelestatemedia',
+    'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
+    'DTSTART;VALUE=DATE:' + d,
+    'DTEND;VALUE=DATE:' + d2,
+    'SUMMARY:🎬 Shoot — ' + icsEsc(o.t || 'Reel Estate Media'),
+    'DESCRIPTION:Content shoot with Reel Estate Media. Prep: declutter what the camera sees\\, every light on\\, outfits ready.',
+    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  var blob = new Blob([ics], {type: 'text/calendar;charset=utf-8'});
+  var a2 = document.createElement('a');
+  a2.href = URL.createObjectURL(blob);
+  a2.download = 'shoot-' + String(o.d) + '.ics';
+  document.body.appendChild(a2);
+  a2.click();
+  a2.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a2.href); }, 4000);
 }
 /* ---- testimonials: kept internal — they land in your chat + inbox email ---- */
 var TESTI = {};
@@ -378,6 +405,8 @@ document.getElementById('body').addEventListener('click', function(ev){
   var t = ev.target;
   var bk = t.closest ? t.closest('.heroact .go') : null;
   if(bk){ ev.preventDefault(); openCalendly(); return; }
+  var ic = t.closest ? t.closest('a.ics') : null;
+  if(ic){ ev.preventDefault(); downloadIcs(ic.getAttribute('data-ics')); return; }
   var b = t.closest ? t.closest('[data-testi]') : null;
   if(b){ openTesti(b.getAttribute('data-testi'), b); return; }
   if(t.classList && t.classList.contains('tcancel')){ closeTesti(t.getAttribute('data-tid')); return; }
