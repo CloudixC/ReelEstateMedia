@@ -35,6 +35,12 @@
 
   #sidebar { transition: transform .28s cubic-bezier(.2,.7,.2,1); }
   #backdrop { transition: opacity .28s ease; }
+
+  .flash { animation: flashring 1.6s ease-out; }
+  @keyframes flashring {
+    0% { box-shadow: 0 0 0 3px rgba(225,29,42,.75); }
+    100% { box-shadow: 0 0 0 14px rgba(225,29,42,0); }
+  }
 </style>
 </head>
 <body class="min-h-screen w-full film-grain flex items-center justify-center p-0 sm:p-6">
@@ -89,6 +95,9 @@
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <a id="book-btn" href="#" target="_blank" rel="noopener" class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#e11d2a] border border-[#e11d2a]/50 hover:bg-[#e11d2a]/10 rounded-full px-3 py-1.5 transition-colors" title="Book a new shoot — opens the 2-minute brief">
+            <span>📅</span><span class="hidden sm:inline">Book a shoot</span>
+          </a>
           <a id="proj-link" href="#" target="_blank" rel="noopener" class="hidden items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-3 py-1.5 transition-colors" title="Open this project">
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             <span class="hidden sm:inline">Project</span>
@@ -102,10 +111,17 @@
       <div id="thread" class="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-6 space-y-5"></div>
 
       <div class="border-t border-[#262626] bg-[#111111] px-4 sm:px-5 py-4">
+        <div id="composer-ctx" class="hidden mb-2.5 mx-1 flex items-center gap-3 bg-[#1a1a1a] border border-[#2a2a2a] border-l-2 border-l-[#e11d2a] rounded-xl px-3.5 py-2">
+          <div class="min-w-0 flex-1">
+            <p id="ctx-title" class="text-[10px] uppercase tracking-[0.14em] text-[#e11d2a] font-semibold"></p>
+            <p id="ctx-text" class="text-[12px] text-[#8a8a8a] truncate"></p>
+          </div>
+          <button id="ctx-cancel" class="shrink-0 w-6 h-6 grid place-items-center rounded-full text-[#7a7a7a] hover:text-white" aria-label="Cancel">✕</button>
+        </div>
         <p id="input-label" class="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-2 ml-1"></p>
         <div class="flex items-center gap-2 sm:gap-3">
-          <input id="file-input" type="file" multiple accept="image/*" class="hidden" />
-          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach photo" title="Attach a photo">
+          <input id="file-input" type="file" multiple class="hidden" />
+          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach a file" title="Attach photos, videos or files (up to 24 MB)">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
           </button>
           <div class="flex-1">
@@ -251,9 +267,9 @@
   function parseBody(body){
     const s = String(body || '');
     if (s.charAt(0) === '{'){
-      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [] }; } catch(e){}
+      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null }; } catch(e){}
     }
-    return { text: s, atts: [] };
+    return { text: s, atts: [], q: null };
   }
 
   // ---------- distribute thread rows ----------
@@ -263,8 +279,13 @@
     const deleted = new Set();
     const byLabel = {};
     conversations.forEach(c => byLabel[c.label] = c);
+    const edits = {};
     rows.forEach(r => {
       if (r.kind === 'del'){ deleted.add(String(r.body || '')); return; }
+      if (r.kind === 'edit'){
+        try { const o = JSON.parse(String(r.body || '{}')); if (o.m) edits[String(o.m)] = String(o.b || ''); } catch(e){}
+        return;
+      }
       const c = byLabel[String(r.project || '')] || convoById('general');
       const side = r.from === 'jag' ? 'j' : 'a';
       if (r.kind === 'read'){
@@ -291,11 +312,14 @@
         ts: String(r.ts || ''),
         side: side === 'j' ? 'in' : 'out',
         who: side === 'j' ? 'Reel Estate Media' : (r.who || AGENT || 'You'),
-        text: b.text, atts: b.atts
+        text: b.text, atts: b.atts, q: b.q
       });
     });
     conversations.forEach(c => {
       c.messages = c.messages.filter(m => !deleted.has(m.id));
+      c.messages.forEach(m => {
+        if (edits[m.id] !== undefined){ m.text = edits[m.id]; m.edited = true; }
+      });
       c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
       if (c.messages.length) c.lastTs = c.messages[c.messages.length - 1].ts;
     });
@@ -344,7 +368,8 @@
   function previewOf(c){
     const last = c.messages[c.messages.length - 1];
     if (!last) return 'No messages yet — say hi 👋';
-    const txt = last.text || (last.atts && last.atts.length ? '📷 Photo' : '');
+    const at = last.atts && last.atts[0];
+    const txt = last.text || (at ? (at.k === 'image' ? '📷 Photo' : '📎 ' + (at.n || 'File')) : '');
     return (last.side === 'out' ? 'You: ' : '') + txt;
   }
 
@@ -483,10 +508,28 @@
   }
 
   // ---------- messages ----------
+  function fmtSize(b){
+    if (b == null || isNaN(b)) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+  const thumbOf = at => at.d || ('https://drive.google.com/thumbnail?id=' + at.id + '&sz=w900');
+  const fullOf = at => at.d || ('https://drive.google.com/thumbnail?id=' + at.id + '&sz=w2048');
+
   function attachmentsHTML(atts, inSide){
     return (atts || []).map(at => {
-      if (at.k === 'image' && at.d){
-        return `<button type="button" class="attach-image block w-full" data-url="${esc(at.d)}"><img src="${esc(at.d)}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
+      if (at.k === 'image' && (at.d || at.id)){
+        return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"${at.id ? ` data-view="https://drive.google.com/file/d/${esc(at.id)}/view"` : ''}><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
+      }
+      if (at.id){
+        const pill = inSide ? 'bg-[#111] border-[#2a2a2a]' : 'bg-black/15 border-white/25';
+        const icon = inSide ? 'bg-[#1c1c1c] text-[#e11d2a]' : 'bg-black/25 text-white';
+        const sub = inSide ? 'text-[#8a8a8a]' : 'text-white/70';
+        return `<a href="https://drive.google.com/file/d/${esc(at.id)}/view" target="_blank" rel="noopener" class="flex items-center gap-2.5 rounded-xl border ${pill} px-2.5 py-2 min-w-[180px] max-w-[260px]">
+          <span class="w-9 h-9 grid place-items-center rounded-lg ${icon} shrink-0"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="min-w-0"><span class="block text-[13px] ${inSide ? 'text-white' : 'text-white'} truncate">${esc(at.n || 'file')}</span><span class="block text-[11px] ${sub}">${fmtSize(at.s)}</span></span>
+        </a>`;
       }
       return '';
     }).join('');
@@ -501,21 +544,27 @@
       : 'bg-[#e11d2a] text-white rounded-2xl rounded-tr-md shadow-[0_6px_20px_-6px_rgba(225,29,42,0.5)]';
     const timeAlign = inSide ? 'ml-1' : 'mr-1';
     const hasAtt = m.atts && m.atts.length;
+    const quote = m.q
+      ? `<button type="button" class="quote-jump block w-full text-left mb-1.5 px-2.5 py-1.5 rounded-lg border ${inSide ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-black/20 border-white/20'}" data-qmid="${esc(m.q.m || '')}">
+          <span class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'}">${esc(m.q.w || '')}</span>
+          <span class="block text-[11.5px] ${inSide ? 'text-[#8a8a8a]' : 'text-white/70'} truncate">${esc(m.q.t || '')}</span>
+        </button>`
+      : '';
     const inner = hasAtt
-      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
-      : linkify(m.text);
-    const pad = hasAtt ? 'p-1.5' : 'px-4 py-3';
-    const trigger = m.id
-      ? `<button class="react-trigger opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(m.id)}" aria-label="Add reaction"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>`
-      : '';
-    const delBtn = (m.id && m.side === 'out')
-      ? `<button class="del-trigger opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-[#e11d2a]" data-mid="${esc(m.id)}" title="Delete this message" aria-label="Delete message"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>`
-      : '';
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
+      : quote + linkify(m.text);
+    const pad = hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
+    const hoverBtn = (cls, mid, title, svg) =>
+      `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
+    const trigger = m.id ? hoverBtn('react-trigger', m.id, 'Add reaction', '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>') : '';
+    const replyBtn = m.id ? hoverBtn('reply-trigger', m.id, 'Reply', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>') : '';
+    const editBtn = (m.id && m.side === 'out') ? hoverBtn('edit-trigger', m.id, 'Edit this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>') : '';
+    const delBtn = (m.id && m.side === 'out') ? hoverBtn('del-trigger', m.id, 'Delete this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>') : '';
     const bubble = `<div class="react-bubble ${bubbleCls} ${pad} text-[14px] leading-relaxed ${m.id ? 'cursor-pointer' : ''} select-none" data-mid="${esc(m.id || '')}">${inner}</div>`;
     return `<div class="group flex flex-col ${colAlign} max-w-[80%] msg-enter">
-      <div class="flex items-center gap-2 ${rowDir}">${bubble}${trigger}${delBtn}</div>
+      <div class="flex items-center gap-1.5 ${rowDir}">${bubble}${replyBtn}${trigger}${editBtn}${delBtn}</div>
       ${reactionChips(m)}
-      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
+      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${m.edited ? ' · edited' : ''}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
     </div>`;
   }
 
@@ -608,6 +657,37 @@
     toastTimer = setTimeout(() => toast.classList.add('hidden'), 2600);
   }
 
+  // ---------- composer context (reply / edit) ----------
+  let composerMode = null;   // {type:'quote', m, t, w} | {type:'edit', m}
+  function showCtx(title, text){
+    $('#ctx-title').textContent = title;
+    $('#ctx-text').textContent = text;
+    $('#composer-ctx').classList.remove('hidden');
+    $('#composer-ctx').classList.add('flex');
+  }
+  function clearCtx(){
+    composerMode = null;
+    $('#composer-ctx').classList.add('hidden');
+    $('#composer-ctx').classList.remove('flex');
+  }
+  $('#ctx-cancel').addEventListener('click', () => { if (composerMode && composerMode.type === 'edit') $('#chat-input').value = ''; clearCtx(); });
+  function startQuote(mid){
+    const c = convoById(activeId); if (!c) return;
+    const msg = c.messages.find(m => m.id === mid); if (!msg) return;
+    composerMode = { type:'quote', m: mid, t: (msg.text || '📎 attachment').slice(0, 120), w: msg.side === 'out' ? 'You' : msg.who };
+    showCtx('Replying to ' + composerMode.w, composerMode.t);
+    $('#chat-input').focus();
+  }
+  function startEdit(mid){
+    const c = convoById(activeId); if (!c) return;
+    const msg = c.messages.find(m => m.id === mid);
+    if (!msg || msg.side !== 'out') return;
+    composerMode = { type:'edit', m: mid };
+    $('#chat-input').value = msg.text;
+    showCtx('Editing message', 'Send to save your change — attachments stay as they are.');
+    $('#chat-input').focus();
+  }
+
   // ---------- send ----------
   function postMsg(c, body){
     return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
@@ -620,14 +700,28 @@
     const text = input.value.trim();
     if (!text) return;
     const c = convoById(activeId); if (!c) return;
+    const mode = composerMode;
     input.value = '';
+    clearCtx();
+    if (mode && mode.type === 'edit'){
+      const msg = c.messages.find(m => m.id === mode.m);
+      if (msg){ msg.text = text; msg.edited = true; }
+      renderThread(); renderSidebar();
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'edit', ref: a, project: c.label, dname:'',
+        who: AGENT || 'Agent', from:'agent', body: JSON.stringify({ m: mode.m, b: text })
+      })}).then(() => setTimeout(loadThread, 1200)).catch(() => {});
+      return;
+    }
+    const q = (mode && mode.type === 'quote') ? { m: mode.m, t: mode.t, w: mode.w } : null;
     const now = new Date().toISOString();
-    c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text, atts: [] });
+    c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text, atts: [], q });
     c.lastTs = now;
     markRead(activeId);
     renderThread();
     renderSidebar();
-    postMsg(c, text).then(() => setTimeout(loadThread, 1200)).catch(() => {});
+    const body = q ? JSON.stringify({ __rc:1, t: text, q }) : text;
+    postMsg(c, body).then(() => setTimeout(loadThread, 1200)).catch(() => {});
   }
   $('#send-btn').addEventListener('click', sendMessage);
   $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
@@ -656,6 +750,20 @@
       img.src = url;
     });
   }
+  async function uploadToDrive(f){
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1] || '');
+      r.onerror = () => rej(new Error('read failed'));
+      r.readAsDataURL(f);
+    });
+    const j = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'file', name: f.name, mime: f.type || 'application/octet-stream', data: b64
+    })}).then(r => r.json());
+    if (!j.ok || !j.id) throw new Error(j.error || 'upload failed');
+    return j.id;
+  }
+  const MAX_UPLOAD = 24 * 1024 * 1024;
   const fileInput = $('#file-input');
   $('#attach-btn').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -665,21 +773,31 @@
     fileInput.value = '';
     const caption = $('#chat-input').value.trim();
     $('#chat-input').value = '';
+    const mode = composerMode;
+    clearCtx();
+    const q = (mode && mode.type === 'quote') ? { m: mode.m, t: mode.t, w: mode.w } : null;
     let first = true;
     for (const f of files){
-      if (!f.type.startsWith('image/')){ showToast('Only photos can be sent here for now.'); continue; }
+      if (f.size > MAX_UPLOAD){ showToast(f.name + ' is over 24 MB — share it via a Drive link instead.'); continue; }
+      const isImg = (f.type || '').startsWith('image/');
+      let att = null;
       try {
-        const d = await compressImage(f);
-        const body = JSON.stringify({ __rc:1, t: first ? caption : '', att: [{ k:'image', n: f.name, d }] });
-        const now = new Date().toISOString();
-        c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: first ? caption : '', atts: [{ k:'image', n: f.name, d }] });
-        c.lastTs = now;
-        first = false;
-        renderThread(); renderSidebar();
-        await postMsg(c, body);
+        showToast('Uploading ' + f.name + '…');
+        const id = await uploadToDrive(f);
+        att = { k: isImg ? 'image' : 'file', id, n: f.name, s: f.size, m: f.type || '' };
       } catch(e){
-        showToast("Couldn't send " + f.name + ' — try a smaller photo.');
+        if (isImg){
+          try { att = { k:'image', n: f.name, d: await compressImage(f) }; showToast('Sent a compressed copy of ' + f.name + '.'); }
+          catch(e2){ showToast("Couldn't send " + f.name + '.'); continue; }
+        } else { showToast("Couldn't upload " + f.name + ' — try again in a moment.'); continue; }
       }
+      const body = JSON.stringify({ __rc:1, t: first ? caption : '', att: [att], q: first ? q : null });
+      const now = new Date().toISOString();
+      c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: first ? caption : '', atts: [att], q: first ? q : null });
+      c.lastTs = now;
+      first = false;
+      renderThread(); renderSidebar();
+      await postMsg(c, body);
     }
     markRead(activeId);
     setTimeout(loadThread, 1200);
@@ -803,6 +921,16 @@
 
   thread.addEventListener('click', e => {
     if (e.target.closest('a')) return;
+    const qj = e.target.closest('.quote-jump');
+    if (qj && qj.dataset.qmid){
+      const el = thread.querySelector('.react-bubble[data-mid="' + qj.dataset.qmid + '"]');
+      if (el){ el.scrollIntoView({ block:'center', behavior:'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1800); }
+      return;
+    }
+    const rep = e.target.closest('.reply-trigger');
+    if (rep) { startQuote(rep.dataset.mid); return; }
+    const ed = e.target.closest('.edit-trigger');
+    if (ed) { startEdit(ed.dataset.mid); return; }
     const img = e.target.closest('.attach-image');
     if (img) { openLightbox(img.dataset.url); return; }
     const del = e.target.closest('.del-trigger');
@@ -860,6 +988,22 @@
         if (!(j.ok && j.hub)) { fail("We couldn't find your page.", 'Ask us for a fresh link — it takes ten seconds.'); return; }
         buildConversations(j.hub);
         document.title = (AGENT ? AGENT + ' — ' : '') + 'Messages';
+        // 📅 Book a shoot → opens the pre-shoot brief, pre-filled for this agent,
+        // and drops a note in the direct chat so the request is tracked here.
+        const bk = $('#book-btn');
+        bk.href = 'brief-form.html?e=' + encodeURIComponent(ENDPOINT) + '&r=' + encodeURIComponent(a) +
+                  '&t=' + encodeURIComponent(t) + '&n=' + encodeURIComponent(AGENT) +
+                  '&p=' + encodeURIComponent('New Shoot — ' + (AGENT || 'Agent'));
+        bk.addEventListener('click', () => {
+          const g = convoById('general');
+          if (!g) return;
+          const now = new Date().toISOString();
+          const txt = '📅 I’d like to book a shoot — filling out the brief now.';
+          g.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: txt, atts: [], q: null });
+          g.lastTs = now;
+          renderThread(); renderSidebar();
+          postMsg(g, txt).catch(() => {});
+        });
         renderSidebar();
         renderThread();
         loadThread().then(() => { markRead('general'); renderSidebar(); });
