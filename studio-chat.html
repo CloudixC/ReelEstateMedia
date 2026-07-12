@@ -35,6 +35,12 @@
 
   #sidebar { transition: transform .28s cubic-bezier(.2,.7,.2,1); }
   #backdrop { transition: opacity .28s ease; }
+
+  .flash { animation: flashring 1.6s ease-out; }
+  @keyframes flashring {
+    0% { box-shadow: 0 0 0 3px rgba(225,29,42,.75); }
+    100% { box-shadow: 0 0 0 14px rgba(225,29,42,0); }
+  }
 </style>
 </head>
 <body class="min-h-screen w-full film-grain flex items-center justify-center p-0 sm:p-6">
@@ -124,6 +130,9 @@
           <input id="file-input" type="file" multiple accept="image/*" class="hidden" />
           <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach photo" title="Attach a photo">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
+          </button>
+          <button id="qr-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Quick replies" title="Quick replies">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </button>
           <div class="flex-1">
             <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
@@ -485,9 +494,38 @@
         return c.name.toLowerCase().includes(term) || (c.sub||'').toLowerCase().includes(term)
           || (ag.name||'').toLowerCase().includes(term) || (ag.brokerage||'').toLowerCase().includes(term);
       });
-      convoList.innerHTML = hits.length
-        ? hits.map(c => convoRow(c, false)).join('')
-        : `<div class="px-5 py-10 text-center text-[12px] text-[#6a6a6a] leading-relaxed">No results for<br><span class="text-[#8a8a8a]">"${esc(searchTerm)}"</span></div>`;
+
+      // search inside the messages themselves too
+      const msgHits = [];
+      allConvos().forEach(c => c.messages.forEach(m => {
+        if (msgHits.length >= 25 || !m.text) return;
+        if (m.text.toLowerCase().includes(term)) msgHits.push({ c, m });
+      }));
+      const snippet = (text) => {
+        const i = text.toLowerCase().indexOf(term);
+        const s = Math.max(0, i - 28);
+        return (s > 0 ? '…' : '') + text.slice(s, i + term.length + 60) + (i + term.length + 60 < text.length ? '…' : '');
+      };
+      const sec = label => `<div class="px-4 pt-3 pb-1 text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">${label}</div>`;
+
+      let html = '';
+      if (hits.length) html += sec('Conversations') + hits.map(c => convoRow(c, false)).join('');
+      if (msgHits.length) html += sec('Messages') + msgHits.map(({c, m}) => {
+        const ag = agentOf(c) || {};
+        return `<button data-goto="${esc(c.id)}" data-gmid="${esc(m.id)}" class="w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#161616] border-l-2 border-transparent transition-colors">
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[11px] shrink-0">💬</span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-1.5">
+              <span class="text-[11px] text-[#8a8a8a] truncate">${esc((m.side === 'out' ? 'You → ' : '') + (ag.name || '') + (c.kind === 'direct' ? '' : ' · ' + c.name))}</span>
+              <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(sideTime(m.ts))}</span>
+            </span>
+            <span class="block text-[12.5px] text-[#c4c4c4] mt-0.5 leading-snug">${esc(snippet(m.text))}</span>
+          </span>
+        </button>`;
+      }).join('');
+
+      convoList.innerHTML = html
+        || `<div class="px-5 py-10 text-center text-[12px] text-[#6a6a6a] leading-relaxed">No results for<br><span class="text-[#8a8a8a]">"${esc(searchTerm)}"</span></div>`;
       return;
     }
 
@@ -542,9 +580,25 @@
     }).join('');
   }
 
+  function goToMessage(cid, mid){
+    $('#search').value = '';
+    searchTerm = '';
+    selectConversation(cid);
+    setTimeout(() => {
+      const el = thread.querySelector('.react-bubble[data-mid="' + mid + '"]');
+      if (el){
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 1800);
+      }
+    }, 120);
+  }
+
   let suppressClick = false;
   convoList.addEventListener('click', e => {
     if (suppressClick) { suppressClick = false; return; }
+    const gm = e.target.closest('[data-gmid]');
+    if (gm){ goToMessage(gm.dataset.goto, gm.dataset.gmid); return; }
     const node = e.target.closest('[data-node]');
     if (node && !e.target.closest('[data-convo]')){
       const key = node.dataset.node;
@@ -1006,6 +1060,90 @@
   });
   window.addEventListener('resize', closeReactUI);
   thread.addEventListener('scroll', closeReactUI);
+
+  // ---------- quick replies ----------
+  const QR_KEY = 'rem_quick_replies_v1';
+  const QR_DEFAULTS = [
+    'On it — I’ll get back to you shortly. 🎬',
+    'First cut lands tomorrow.',
+    'Approved and moving to finals ✅',
+    'Can you approve by end of day so we stay on schedule?',
+    'Thanks — received! 🙌'
+  ];
+  function quickReplies(){
+    try { const v = JSON.parse(localStorage.getItem(QR_KEY)); return Array.isArray(v) ? v : QR_DEFAULTS.slice(); }
+    catch(e){ return QR_DEFAULTS.slice(); }
+  }
+  function saveQuickReplies(list){ try { localStorage.setItem(QR_KEY, JSON.stringify(list)); } catch(e){} }
+
+  const qrPanel = document.createElement('div');
+  qrPanel.id = 'qr-panel';
+  qrPanel.className = 'fixed z-50 hidden flex-col w-[340px] max-w-[92vw] max-h-[320px] bg-[#141414] border border-[#2a2a2a] rounded-2xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden';
+  document.body.appendChild(qrPanel);
+  function renderQrPanel(){
+    const list = quickReplies();
+    qrPanel.innerHTML = `
+      <div class="px-4 py-3 border-b border-[#262626] flex items-center justify-between shrink-0">
+        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">⚡ Quick replies</span>
+      </div>
+      <div class="flex-1 overflow-y-auto scrollbar-thin py-1">${list.length ? list.map((t, i) => `
+        <div class="group/qr flex items-center gap-1 pr-2 hover:bg-[#1a1a1a]">
+          <button class="qr-use flex-1 min-w-0 text-left px-4 py-2.5 text-[13px] text-[#c4c4c4]" data-i="${i}"><span class="block truncate">${esc(t)}</span></button>
+          <button class="qr-del opacity-0 group-hover/qr:opacity-100 w-6 h-6 grid place-items-center rounded-full text-[#6a6a6a] hover:text-[#e11d2a]" data-i="${i}" title="Remove">✕</button>
+        </div>`).join('') : '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No quick replies yet — add one below.</p>'}
+      </div>
+      <div class="p-2 border-t border-[#262626] flex gap-2 shrink-0">
+        <input id="qr-new" type="text" placeholder="Add a reply…" class="flex-1 min-w-0 bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-full px-3.5 py-2 focus:outline-none focus:border-[#e11d2a]/60">
+        <button id="qr-add" class="shrink-0 bg-[#e11d2a] hover:bg-[#c81824] text-white text-[11px] font-bold uppercase tracking-[0.1em] rounded-full px-4">Add</button>
+      </div>`;
+  }
+  function openQrPanel(anchorEl){
+    renderQrPanel();
+    qrPanel.classList.remove('hidden'); qrPanel.classList.add('flex');
+    place(qrPanel, anchorEl);
+  }
+  function closeQrPanel(){ qrPanel.classList.add('hidden'); qrPanel.classList.remove('flex'); }
+  $('#qr-btn').addEventListener('click', e => {
+    if (qrPanel.classList.contains('hidden')) openQrPanel(e.currentTarget); else closeQrPanel();
+  });
+  qrPanel.addEventListener('click', e => {
+    const use = e.target.closest('.qr-use');
+    if (use){
+      const t = quickReplies()[+use.dataset.i] || '';
+      const input = $('#chat-input');
+      input.value = input.value ? input.value.trimEnd() + ' ' + t : t;
+      closeQrPanel();
+      input.focus();
+      return;
+    }
+    const del = e.target.closest('.qr-del');
+    if (del){
+      const list = quickReplies();
+      list.splice(+del.dataset.i, 1);
+      saveQuickReplies(list);
+      renderQrPanel();
+      return;
+    }
+    if (e.target.closest('#qr-add')){
+      const inp = qrPanel.querySelector('#qr-new');
+      const t = inp.value.trim();
+      if (!t) return;
+      const list = quickReplies();
+      list.push(t);
+      saveQuickReplies(list);
+      renderQrPanel();
+      qrPanel.querySelector('#qr-new').focus();
+    }
+  });
+  qrPanel.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'qr-new'){ qrPanel.querySelector('#qr-add').click(); }
+  });
+  document.addEventListener('click', e => {
+    if (qrPanel.classList.contains('hidden')) return;
+    if (e.target.closest('#qr-panel') || e.target.closest('#qr-btn')) return;
+    closeQrPanel();
+  });
+  window.addEventListener('resize', closeQrPanel);
 
   // ---------- broadcast (mass message) ----------
   const bcast = document.createElement('div');
