@@ -243,6 +243,18 @@ h1 .p{color:var(--red)}
 .bsave{background:linear-gradient(135deg,#ff3d46,#c4141e 70%);color:#fff;border:none;border-radius:11px;padding:11px 20px;font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;font-family:var(--sans);box-shadow:0 8px 22px -10px rgba(227,34,44,.5)}
 .bsave:disabled{opacity:.6;cursor:default}
 .bstat{font-size:12px;color:var(--dim);margin-left:10px}
+/* ---- floating chat bubble ---- */
+.chatfab{position:fixed;right:16px;bottom:16px;z-index:50;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#ff3d46,#c4141e 70%);display:flex;align-items:center;justify-content:center;font-size:22px;text-decoration:none;box-shadow:0 12px 30px -8px rgba(227,34,44,.65);transition:transform .18s ease;border:1px solid rgba(255,255,255,.15)}
+.chatfab:hover{transform:translateY(-2px) scale(1.04)}
+.chatfab .fbadge{position:absolute;top:-4px;right:-4px;background:#fff;color:#c4141e;font-size:11px;font-weight:800;border-radius:20px;min-width:20px;height:20px;display:none;place-items:center;padding:0 6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+/* ---- brand kit collapsed ---- */
+#brandwrap.collapsed .brow,#brandwrap.collapsed .psub{display:none}
+#brandwrap.collapsed h3{margin-bottom:0}
+.bksaved{display:none;align-items:center;gap:12px;margin-top:9px;font-size:12.5px;color:var(--teal);font-weight:600}
+#brandwrap.collapsed .bksaved{display:flex}
+.bkedit{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:9px;padding:7px 13px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;font-family:var(--sans);transition:border-color .15s ease,color .15s ease}
+.bkedit:hover{border-color:var(--red);color:var(--txt)}
+.tnote{font-size:11px;color:var(--faint);margin-top:7px;line-height:1.5}
 /* ---- what's included ---- */
 .feat{display:none;margin-top:6px}
 .pcard.open .feat{display:block}
@@ -292,6 +304,7 @@ h1 .p{color:var(--red)}
 <div class="pcard" id="brandwrap" style="display:none">
   <h3>🎨 Your brand kit</h3>
   <div class="psub">Drop your logo, headshot and colours here once — we bake them into every edit without chasing you.</div>
+  <div class="bksaved">✓ On file — we’ve got your brand<button class="bkedit" id="bk-edit">Edit</button></div>
   <div class="brow"><label>Logo</label><img class="bthumb" id="bk-logo-img" style="display:none"><button class="upbtn" id="bk-logo">＋ Upload logo</button></div>
   <div class="brow"><label>Headshot</label><img class="bthumb" id="bk-head-img" style="display:none"><button class="upbtn" id="bk-head">＋ Upload headshot</button></div>
   <div class="brow"><label>Colours</label><input type="color" id="bk-c1" value="#e3222c"><input type="color" id="bk-c2" value="#f5f2e9"></div>
@@ -326,6 +339,7 @@ h1 .p{color:var(--red)}
     <div class="frow2"><span class="fi">📈</span><span><b>Monthly recap</b> — the first of each month: what you delivered, what’s in production, and a one-tap way to line up next month.</span></div>
   </div>
 </div>
+<a class="chatfab" id="chatfab" style="display:none" href="#" aria-label="Open your messages">💬<span class="fbadge" id="fbadge">0</span></a>
 <div class="note" id="foot" style="display:none">📌 Bookmark this page — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
 <div class="sign" id="sign" style="display:none"></div>
 <script>
@@ -543,6 +557,7 @@ function openTesti(tid, btn){
   btn.style.display = 'none';
   slot.innerHTML = '<div class="tform">' +
     '<textarea id="tt-' + tid + '" placeholder="What did you think of the finals? A line or two goes a long way 🙏"></textarea>' +
+    '<div class="tnote">With your OK, we may feature your words on our public reviews page — we’ll always check with you first.</div>' +
     '<div class="trow"><span class="terr" id="te-' + tid + '"></span>' +
     '<button class="tcancel" data-tid="' + tid + '">Cancel</button>' +
     '<button class="tsend" data-tid="' + tid + '">Send ★</button></div></div>';
@@ -846,6 +861,7 @@ function loadBrand(){
       if(!j.ok || !j.kit) return;
       WELCOME.brand = true;
       updateWelcome();
+      document.getElementById('brandwrap').classList.add('collapsed');
       var k = j.kit;
       BK.logo = String(k.logo || ''); BK.head = String(k.head || '');
       if(BK.logo) bkThumb('logo', BK.logo);
@@ -857,6 +873,7 @@ function loadBrand(){
       document.getElementById('bk-stat').textContent = 'Saved ✓';
     }).catch(function(){});
 }
+document.getElementById('bk-edit').addEventListener('click', function(){ document.getElementById('brandwrap').classList.remove('collapsed'); });
 document.getElementById('bk-logo').addEventListener('click', function(){ bkTarget = 'logo'; document.getElementById('bk-file').click(); });
 document.getElementById('bk-head').addEventListener('click', function(){ bkTarget = 'head'; document.getElementById('bk-file').click(); });
 document.getElementById('bk-file').addEventListener('change', function(){
@@ -904,6 +921,7 @@ document.getElementById('bk-save').addEventListener('click', function(){
       document.getElementById('bk-stat').textContent = 'Saved ✓ — thank you!';
       WELCOME.brand = true;
       updateWelcome();
+      document.getElementById('brandwrap').classList.add('collapsed');
       // drop a note in the chat thread so it shows up in Studio Chat too
       var bits = [];
       if(BK.logo) bits.push('logo');
@@ -964,17 +982,22 @@ function fail(big, sm){
 /* ---- messages: the full chat lives on chat.html — this is the door in ---- */
 function startMessages(h){
   document.getElementById('msgwrap').style.display = '';
-  document.getElementById('msglink').href = 'chat.html?a=' + encodeURIComponent(a) + '&t=' + (pin ? 'pin' : 'rem');
+  var chatHref = 'chat.html?a=' + encodeURIComponent(a) + '&t=' + (pin ? 'pin' : 'rem');
+  document.getElementById('msglink').href = chatHref;
+  var fab = document.getElementById('chatfab');
+  fab.href = chatHref;
+  fab.style.display = '';
   // Unread = messages from us newer than the agent's last-read marker.
   // Markers sync through the backend ('read' rows) and merge with this
   // device's local overlay. Same conversation ids as chat.html:
   // 'general' + 'p-<slugged project title>'.
-  var readMap = {};
-  try{ readMap = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {}; }catch(e){}
   var slug = function(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); };
   var idOf = {};
   idOf[(h.agent || 'Agent') + ' — Content Hub'] = 'general';
   h.items.forEach(function(x){ if(x.t) idOf[(h.agent || 'Agent') + ' — ' + x.t] = 'p-' + slug(x.t); });
+  function pollThread(){
+  var readMap = {};
+  try{ readMap = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {}; }catch(e){}
   fetch(ENDPOINT + '?thread=' + encodeURIComponent(a) + '&full=1')
     .then(function(r){ return r.json(); })
     .then(function(j){
@@ -1011,7 +1034,11 @@ function startMessages(h){
           (ago(last.ts) ? ' <span style="color:var(--faint)">· ' + esc(ago(last.ts)) + '</span>' : '');
       }
       var b = document.getElementById('msgbadge');
-      if(count){ b.textContent = count > 9 ? '9+' : count; b.style.display = ''; }
+      b.textContent = count > 9 ? '9+' : count;
+      b.style.display = count ? '' : 'none';
+      var fb = document.getElementById('fbadge');
+      fb.textContent = count > 9 ? '9+' : count;
+      fb.style.display = count ? 'grid' : 'none';
       // fold unread messages into the recap banner, if it's showing
       var rm = document.getElementById('recapmsgs');
       if(rm && count){
@@ -1019,6 +1046,9 @@ function startMessages(h){
         rm.style.display = '';
       }
     }).catch(function(){});
+  }
+  pollThread();
+  setInterval(function(){ if(document.visibilityState === 'visible') pollThread(); }, 60000);
 }
 if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
 else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
