@@ -295,9 +295,9 @@
   function parseBody(body){
     const s = String(body || '');
     if (s.charAt(0) === '{'){
-      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null, poll: o.poll || null }; } catch(e){}
+      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null, poll: o.poll || null, brief: o.brief || null }; } catch(e){}
     }
-    return { text: s, atts: [], q: null, poll: null };
+    return { text: s, atts: [], q: null, poll: null, brief: null };
   }
 
   // ---------- build model from the inbox rows ----------
@@ -443,7 +443,7 @@
         ts: String(r.ts || ''),
         side: side === 'j' ? 'out' : 'in',
         who: side === 'j' ? 'You' : (r.who || c.name),
-        text: b.text, atts: b.atts, q: b.q, poll: b.poll
+        text: b.text, atts: b.atts, q: b.q, poll: b.poll, brief: b.brief
       });
     });
 
@@ -534,7 +534,10 @@
     const last = c.messages[c.messages.length - 1];
     if (!last) return 'No messages yet';
     const at = last.atts && last.atts[0];
-    const txt = last.text || (at ? (at.k === 'image' ? '📷 Photo' : at.k === 'audio' ? '🎙 Voice note' : '📎 ' + (at.n || 'File')) : '');
+    const txt = last.text
+      || (last.brief ? '📋 Shoot brief' + (last.brief.addr ? ' — ' + last.brief.addr : '') : '')
+      || (last.poll ? '🗳 ' + (last.poll.q || 'Poll') : '')
+      || (at ? (at.k === 'image' ? '📷 Photo' : at.k === 'audio' ? '🎙 Voice note' : '📎 ' + (at.n || 'File')) : '');
     return (last.side === 'out' ? 'You: ' : '') + txt;
   }
 
@@ -913,6 +916,17 @@
     </div>`;
   }
 
+  // 📋 shoot brief card — the hub posts these before shoot day
+  function briefBlock(m, inSide){
+    const b = m.brief || {};
+    const lbl = inSide ? 'text-[#8a8a8a]' : 'text-white/70';
+    const row = (ic, l, v) => v ? `<div class="flex gap-2 text-[12.5px] leading-snug mb-1"><span class="shrink-0">${ic}</span><span class="min-w-0"><span class="${lbl}">${l}: </span>${esc(v)}</span></div>` : '';
+    return `<div class="min-w-[230px] max-w-[320px] px-1 pt-1">
+      <div class="text-[13px] font-semibold ${inSide ? 'text-white' : ''} mb-1.5">📋 Shoot brief${b.when ? ' <span class="font-normal ' + lbl + '">· ' + esc(b.when) + '</span>' : ''}</div>
+      ${row('📍','Address', b.addr)}${row('🔑','Access', b.access)}${row('🏠','Seller', b.seller)}${row('⭐','Must-shoot', b.feats)}${row('🚫','Avoid', b.avoid)}${row('📝','Notes', b.notes)}
+    </div>`;
+  }
+
   function buildMessage(m, seen){
     const inSide = m.side === 'in';
     const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
@@ -928,12 +942,14 @@
           <span class="block text-[11.5px] ${inSide ? 'text-[#8a8a8a]' : 'text-white/70'} truncate">${esc(m.q.t || '')}</span>
         </button>`
       : '';
-    const inner = m.poll
+    const inner = m.brief
+      ? `<div class="flex flex-col gap-1 min-w-[200px]">${quote}${briefBlock(m, inSide)}</div>`
+      : m.poll
       ? `<div class="flex flex-col gap-1 min-w-[180px]">${quote}${pollBlock(m, inSide)}</div>`
       : hasAtt
       ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
       : quote + mentionize(linkify(m.text), inSide);
-    const pad = m.poll ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
+    const pad = (m.poll || m.brief) ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
     const hoverBtn = (cls, mid, title, svg) =>
       `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
     const trigger = m.id ? hoverBtn('react-trigger', m.id, 'Add reaction', '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>') : '';

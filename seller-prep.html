@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Home's Camera Day — Prep Checklist · Reel Estate Media</title>
+<meta name="description" content="A 10-minute prep checklist so your home looks incredible on camera.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340..640;1,9..144,340..640&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#e3222c; --red2:#ff4a52; --red-soft:rgba(227,34,44,.14);
+  --bg:#050506; --panel:rgba(20,20,24,.55); --panel2:rgba(26,26,31,.5);
+  --line:rgba(245,242,233,.09); --line2:rgba(245,242,233,.14);
+  --txt:#f5f2e9; --dim:#a3a097; --faint:#6d6a63;
+  --amber:#e8b84a; --teal:#4cc38a;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.6;padding:0 18px 70px;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:-40% -20% auto;height:80%;background:
+  radial-gradient(42% 55% at 22% 40%, rgba(227,34,44,.16), transparent 70%),
+  radial-gradient(38% 50% at 74% 30%, rgba(232,184,74,.08), transparent 70%);
+  pointer-events:none;z-index:0;filter:blur(10px)}
+.wrap{position:relative;z-index:1;max-width:660px;margin:0 auto}
+header{display:flex;align-items:center;gap:10px;padding:26px 0 6px}
+.mark{font-family:var(--serif);font-size:17px;letter-spacing:.01em}
+.mark em{color:var(--red2);font-style:italic}
+.hero{padding:38px 0 10px}
+.overline{display:flex;align-items:center;gap:9px;font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:14px}
+.overline i{display:inline-block;width:26px;height:1px;background:var(--amber);opacity:.6}
+h1{font-family:var(--serif);font-weight:480;font-size:clamp(30px,7vw,44px);line-height:1.12;letter-spacing:-.01em}
+h1 em{color:var(--red2);font-style:italic}
+.sub{color:var(--dim);font-size:15px;margin:14px 0 6px;max-width:52ch}
+.timebadge{display:inline-flex;align-items:center;gap:8px;margin-top:16px;background:rgba(232,184,74,.07);border:1px solid rgba(232,184,74,.26);border-radius:30px;padding:8px 16px;font-size:12.5px;font-weight:600;color:var(--amber)}
+.sec{display:flex;align-items:baseline;gap:12px;margin:38px 0 14px}
+.sec .no{font-family:var(--serif);font-style:italic;color:var(--red2);font-size:15px}
+.sec .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.sec .line{flex:1;height:1px;background:var(--line)}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:16px;padding:8px 18px;backdrop-filter:blur(8px)}
+.item{display:flex;gap:13px;align-items:flex-start;padding:13px 0;border-bottom:1px dashed rgba(245,242,233,.07);cursor:pointer;user-select:none}
+.item:last-child{border-bottom:none}
+.tick{width:24px;height:24px;border-radius:8px;border:1.5px solid var(--line2);display:grid;place-items:center;flex-shrink:0;margin-top:1px;font-size:13px;color:transparent;transition:all .15s ease}
+.item.on .tick{background:var(--teal);border-color:var(--teal);color:#04150c}
+.item .tx b{display:block;font-size:14.5px;font-weight:600}
+.item .tx span{display:block;font-size:12.5px;color:var(--dim);margin-top:2px}
+.item.on .tx{opacity:.55;text-decoration:line-through;text-decoration-color:rgba(245,242,233,.35);text-decoration-thickness:1px}
+.why{background:rgba(227,34,44,.06);border:1px solid rgba(227,34,44,.22);border-radius:16px;padding:16px 18px;margin-top:38px;font-size:13.5px;color:var(--dim);line-height:1.7}
+.why b{color:var(--txt)}
+.foot{margin-top:44px;text-align:center;color:var(--faint);font-size:12px;line-height:1.8}
+.foot .mark{font-size:15px}
+.progress{position:sticky;top:0;z-index:5;background:rgba(5,5,6,.85);backdrop-filter:blur(10px);margin:0 -18px;padding:10px 18px;border-bottom:1px solid var(--line);display:none}
+.progress.on{display:block}
+.pbar{height:5px;border-radius:4px;background:rgba(245,242,233,.07);overflow:hidden}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:4px;transition:width .25s ease}
+.plabel{font-size:11px;color:var(--dim);margin-top:5px;font-weight:600}
+@media print{
+  body{background:#fff;color:#111;padding:0 6mm}
+  body::before,.progress{display:none!important}
+  .card{border:1px solid #ddd;background:#fff}
+  .item .tx span{color:#555}
+  .tick{border-color:#bbb}
+  h1 em,.mark em,.sec .no{color:#c4141e}
+  .why{background:#faf4f4;border-color:#eecccc;color:#444}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="prog"><div class="pbar"><i id="pfill" style="width:0%"></i></div><div class="plabel" id="plabel"></div></div>
+<div class="wrap">
+  <header><span class="mark">Reel <em>Estate</em> Media</span></header>
+
+  <div class="hero">
+    <div class="overline"><i></i>Shoot-day prep · about 10 minutes</div>
+    <h1>Your home's <em>camera day</em> is coming up.</h1>
+    <p class="sub">Great listing photos and video sell homes faster — and 90% of "great" happens before we even ring the doorbell. Here's the short list. Tap items as you go.</p>
+    <span class="timebadge">⏱ 10 minutes the night before · 5 the morning of</span>
+  </div>
+
+  <div class="sec"><span class="no">01</span><span class="lbl">The night before</span><span class="line"></span></div>
+  <div class="card" id="s1">
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Clear the counters</b><span>Kitchen and bathrooms — appliances, dish racks, soaps, toothbrushes into a drawer. Bare counters read "spacious" on camera.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Declutter what the camera sees</b><span>Shoes by the door, cords, laundry, fridge magnets, garbage bins. A laundry basket makes a great 5-minute hiding spot.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Make every bed like a hotel</b><span>Smooth duvets, fluffed pillows. Beds are the first thing the camera lands on in a bedroom.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Tuck away personal photos & valuables</b><span>For your privacy and security — family photos, documents, jewellery, medications out of sight.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Replace any burnt-out bulbs</b><span>Every light gets turned on for the shoot — one dead bulb is surprisingly visible. Matching warm-white looks best.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Tidy the yard & entrance</b><span>Hose off the porch, hide the bins and hoses, straighten cushions, mow if it's shaggy. The front of the house is photo #1.</span></span></div>
+  </div>
+
+  <div class="sec"><span class="no">02</span><span class="lbl">The morning of</span><span class="line"></span></div>
+  <div class="card" id="s2">
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Turn on every light, open every blind</b><span>Lamps too. Bright rooms look bigger, warmer and more expensive. We'll fine-tune from there.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Hide the daily-life extras</b><span>Pet bowls, litter boxes, kids' toys, remotes, chargers, paper piles — one quick sweep.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Clear the driveway</b><span>Move cars off the driveway and away from the front of the house — for exterior shots and drone, if booked.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Set the scene, lightly</b><span>A bowl of fruit, fresh towels folded in bathrooms, toilet lids down, chairs tucked in. Small touches, big difference.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Plan for pets</b><span>We love them — the camera doesn't. A walk, a crate, or a neighbour visit during the shoot works perfectly.</span></span></div>
+  </div>
+
+  <div class="sec"><span class="no">03</span><span class="lbl">While we shoot</span><span class="line"></span></div>
+  <div class="card" id="s3">
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>Give us the run of the house</b><span>Shoots take roughly 45–90 minutes. It's easiest (and fastest) if rooms stay empty while we work through them.</span></span></div>
+    <div class="item"><span class="tick">✓</span><span class="tx"><b>No need to follow us around</b><span>We've photographed hundreds of homes — we'll treat yours with care, close what we open, and leave everything as we found it.</span></span></div>
+  </div>
+
+  <div class="why"><b>Why this matters:</b> listings with professional photos and video get more views, more showings, and routinely sell faster. The ten minutes you spend on this list shows up in every single frame — and in the offers.</div>
+
+  <div class="foot">
+    Brought to you by your agent &amp; <span class="mark">Reel <em>Estate</em> Media</span><br>
+    Questions about the shoot? Your agent has a direct line to us.
+  </div>
+</div>
+<script>
+(function(){
+  var items = Array.prototype.slice.call(document.querySelectorAll('.item'));
+  var done = 0;
+  var prog = document.getElementById('prog'), fill = document.getElementById('pfill'), lab = document.getElementById('plabel');
+  function update(){
+    done = items.filter(function(i){ return i.classList.contains('on'); }).length;
+    var pct = Math.round(done * 100 / items.length);
+    fill.style.width = pct + '%';
+    lab.textContent = done === items.length ? '🎉 Camera-ready! See you on shoot day.' : done + ' of ' + items.length + ' done';
+    prog.classList.toggle('on', done > 0);
+  }
+  items.forEach(function(it){
+    it.addEventListener('click', function(){ it.classList.toggle('on'); update(); });
+  });
+})();
+</script>
+</body>
+</html>

@@ -751,6 +751,23 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     if(s.kind === 'perf'){
       try{ const o = JSON.parse(s.body); return (o.mood === 'up' ? '📈 Crushing it' : o.mood === 'mid' ? '😐 Doing okay' : '📉 Quiet so far') + (o.t ? ' — ' + o.t : ''); }catch(e){ return s.body; }
     }
+    if(s.kind === 'msg' && String(s.body || '').charAt(0) === '{'){
+      try{
+        const o = JSON.parse(s.body);
+        if(o && o.__rc){
+          if(o.brief){
+            const b = o.brief;
+            return '📋 SHOOT BRIEF' + (b.when ? ' · ' + b.when : '') + '\n' + [
+              b.addr ? '📍 ' + b.addr : '', b.access ? '🔑 ' + b.access : '',
+              b.seller ? '🏠 ' + b.seller : '', b.feats ? '⭐ ' + b.feats : '',
+              b.avoid ? '🚫 ' + b.avoid : '', b.notes ? '📝 ' + b.notes : ''
+            ].filter(Boolean).join('\n');
+          }
+          if(o.poll) return '🗳 Poll: ' + (o.poll.q || '') + ' — ' + ((o.poll.o || []).join(' / '));
+          return (o.t || '') + (o.att && o.att.length ? (o.t ? ' ' : '') + '📎 [attachment — open the chat]' : '');
+        }
+      }catch(e){}
+    }
     if(s.kind === 'brand'){
       try{ const o = JSON.parse(s.body);
         return [o.logo ? 'Logo: https://drive.google.com/file/d/' + o.logo + '/view' : '',
@@ -1128,15 +1145,19 @@ function App(){
       const projects = db.deliverables
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
+          const owing = d.status === 'Delivered' && o.payment && o.payment !== 'paid';
           return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
-            du: (d.status === 'Delivered' && o.payment && o.payment !== 'paid') ? 1 : 0,
+            du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || '')}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal';
       const co = companyOf(c);
-      const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects});
+      // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
+      const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail}));
+      const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
+        pay: db.settings.payUrl || '', svc: svcMenu});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
       const base = (db.settings.reviewPageUrl || '').replace('review.html', 'hub.html');
       return base ? base + '?a=' + hk + '&t=' + (pin ? 'pin' : 'rem') : null;
@@ -1277,6 +1298,21 @@ function App(){
     const cur = db.orders.find(o => o.id === id);
     setDb(p => ({...p, orders: p.orders.map(o => o.id === id ? {...o, ...patch} : o)}));
     if(cur && patch.payment && patch.payment !== cur.payment) logActivity(`${cur.project || 'Order'} marked ${patch.payment}`);
+    // 🧾 marked paid → drop a receipt in the agent's chat + refresh their hub (clears the 💳 pill)
+    if(cur && patch.payment === 'paid' && cur.payment !== 'paid'){
+      const c = db.clients.find(x => x.id === cur.clientId);
+      const hk = c && (c.hubKey || c.hubId);
+      if(hk && db.settings.inboxUrl){
+        const tot = orderTotals(cur).total;
+        const when = new Date().toLocaleDateString('en-CA', {month:'long', day:'numeric', year:'numeric'});
+        fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({
+          kind:'msg', ref: hk, project: (c.name || 'Agent') + ' — Content Hub', dname:'',
+          who: 'Reel Estate Media', from: 'jag',
+          body: '🧾 Payment received — ' + money(tot) + ' for “' + (cur.project || 'your order') + '”, ' + when + '. Keep this message as your receipt (HST included where applicable). Thank you! 🙏'
+        })}).catch(() => {});
+        setTimeout(() => pushHub(c.id), 900);
+      }
+    }
     if(cur && patch.rating && patch.rating !== cur.rating){
       const c = db.clients.find(x => x.id === cur.clientId) || {};
       logActivity(`⭐ ${patch.rating}/5 from ${c.name || 'client'}${cur.project ? ' · ' + cur.project : ''}`);
@@ -2929,6 +2965,8 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
       <div style={{marginTop:10}}>
         <label className="f">Google review link (saved once, used in every review request)</label>
         <input placeholder="https://g.page/r/…" value={db.settings.reviewLink || ''} onChange={e => updateSettings({reviewLink: e.target.value})}/>
+        <label className="f" style={{marginTop:8}}>Payment link (Stripe / PayPal.me — shown on every agent's "Balance due" pill; leave blank for e-transfer only)</label>
+        <input placeholder="https://buy.stripe.com/… or https://paypal.me/…" value={db.settings.payUrl || ''} onChange={e => updateSettings({payUrl: e.target.value})}/>
       </div>
       </>);})()}
     </div>}
