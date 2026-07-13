@@ -98,6 +98,9 @@
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+          <button id="grp-edit" class="hidden items-center justify-center w-9 h-9 rounded-full text-[#7a7a7a] hover:text-white hover:bg-[#1c1c1c] transition-colors" title="Edit group name & photo" aria-label="Edit group">
+            <svg class="w-4.5 h-4.5 w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
           <a id="book-btn" href="#" target="_blank" rel="noopener" class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#e11d2a] border border-[#e11d2a]/50 hover:bg-[#e11d2a]/10 rounded-full px-3 py-1.5 transition-colors" title="Book a new shoot — opens the 2-minute brief">
             <span>📅</span><span class="hidden sm:inline">Book a shoot</span>
           </a>
@@ -178,6 +181,8 @@
   let pollTimer = null;
 
   const convoById = id => conversations.find(c => c.id === id);
+  const refOf = c => (c && c.gid) ? c.gid : a;
+  const projOf = c => (c && c.gid) ? '' : (c ? c.label : '');
   const initialsOf = name => name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
   const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 
@@ -200,7 +205,7 @@
     if (hadUnread){
       serverRead[id] = c.lastTs;
       fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-        kind:'read', ref: a, project: c.label, dname:'',
+        kind:'read', ref: refOf(c), project: projOf(c), dname: (c.gid ? a : ''),
         who: AGENT || 'Agent', from:'agent', body: c.lastTs
       })}).catch(() => {});
     }
@@ -220,7 +225,7 @@
     serverRead[id] = ts;
     manualUnread.add(id);
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'read', ref: a, project: c.label, dname:'',
+      kind:'read', ref: refOf(c), project: projOf(c), dname: (c.gid ? a : ''),
       who: AGENT || 'Agent', from:'agent', body: ts
     })}).catch(() => {});
     renderSidebar();
@@ -280,7 +285,7 @@
 
   // ---------- distribute thread rows ----------
   function applyRows(rows){
-    conversations.forEach(c => { c.messages = []; c.lastTs = ''; });
+    conversations.forEach(c => { if (!c.group){ c.messages = []; c.lastTs = ''; } });
     serverRead = {}; theirRead = {}; reactMap = {};
     const deleted = new Set();
     const byLabel = {};
@@ -399,7 +404,7 @@
       const un = unreadOf(c);
       const active = c.id === activeId;
       return `<button data-convo="${c.id}" class="w-full text-left px-4 py-3 flex items-center gap-3 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
-        <span class="w-9 h-9 rounded-${c.id==='general'?'full':'lg'} bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[11px] font-serif-display ${un?'text-[#e11d2a]':'text-[#8a8a8a]'} shrink-0">${esc(c.initials)}</span>
+        <span class="w-9 h-9 rounded-${c.id==='general'?'full':'lg'} bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[11px] font-serif-display ${un?'text-[#e11d2a]':'text-[#8a8a8a]'} shrink-0 overflow-hidden">${c.pic ? `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w80" class="w-full h-full object-cover">` : esc(c.initials)}</span>
         <span class="min-w-0 flex-1">
           <span class="flex items-center gap-1.5">
             <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.name)}</span>
@@ -507,7 +512,7 @@
     st[MY_SIDE] = nowOn ? 1 : 0;
     renderThread();
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'react', ref: a, project: c.label, dname:'',
+      kind:'react', ref: refOf(c), project: projOf(c), dname:'',
       who: AGENT || 'Agent', from:'agent',
       body: JSON.stringify({ m: msgId, e: emoji, op: nowOn ? '+' : '-' })
     })}).catch(() => {});
@@ -560,9 +565,12 @@
           <span class="block text-[11.5px] ${inSide ? 'text-[#8a8a8a]' : 'text-white/70'} truncate">${esc(m.q.t || '')}</span>
         </button>`
       : '';
+    const cc = convoById(activeId);
+    const gwho = (cc && cc.group && inSide)
+      ? `<span class="block text-[10px] font-semibold text-[#e11d2a] mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">${esc(m.who)}</span>` : '';
     const inner = hasAtt
-      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
-      : quote + linkify(m.text);
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${gwho}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
+      : gwho + quote + linkify(m.text);
     const pad = hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
     const hoverBtn = (cls, mid, title, svg) =>
       `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
@@ -582,12 +590,21 @@
     const c = convoById(activeId); if (!c) return;
     const parts = c.name.split(' ');
     $('#hdr-name').innerHTML = esc(parts[0]) + (parts.length > 1 ? ' <span class="text-[#e11d2a] italic">' + esc(parts.slice(1).join(' ')) + '</span>' : '');
-    $('#hdr-role').textContent = c.id === 'general'
-      ? (BROKERAGE ? BROKERAGE + ' · Direct chat' : 'Direct chat')
-      : (c.sub || 'Project chat');
-    $('#hdr-avatar').textContent = c.initials;
+    $('#hdr-role').textContent = c.group
+      ? 'Group · ' + [ 'Reel Estate Media' ].concat((c.members || []).map(m => m.n || 'Agent')).join(', ').slice(0, 60)
+      : (c.id === 'general'
+        ? (BROKERAGE ? BROKERAGE + ' · Direct chat' : 'Direct chat')
+        : (c.sub || 'Project chat'));
+    if (c.group && c.pic){
+      $('#hdr-avatar').innerHTML = `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w120" class="w-full h-full object-cover rounded-full">`;
+      $('#hdr-avatar').classList.add('overflow-hidden');
+    } else {
+      $('#hdr-avatar').textContent = c.initials;
+    }
+    const ge = $('#grp-edit');
+    if (ge){ ge.classList.toggle('hidden', !c.group); ge.classList.toggle('flex', !!c.group); }
     $('#input-label').textContent = 'Message · ' + c.name;
-    $('#chat-input').placeholder = c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…';
+    $('#chat-input').placeholder = c.group ? 'Message ' + c.name + '…' : (c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…');
     const pl = $('#proj-link');
     if (c.url){ pl.href = c.url; pl.classList.remove('hidden'); pl.classList.add('flex'); }
     else { pl.classList.add('hidden'); pl.classList.remove('flex'); }
@@ -630,7 +647,7 @@
     renderThread();
     renderSidebar();
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'del', ref: a, project: c.label, dname:'',
+      kind:'del', ref: refOf(c), project: projOf(c), dname:'',
       who: AGENT || 'Agent', from:'agent', body: msgId
     })}).catch(() => {});
   }
@@ -701,7 +718,7 @@
   // ---------- send ----------
   function postMsg(c, body){
     return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref: a, project: c.label, dname:'',
+      kind:'msg', ref: refOf(c), project: projOf(c), dname:'',
       who: AGENT || 'Agent', from:'agent', body
     })});
   }
@@ -718,7 +735,7 @@
       if (msg){ msg.text = text; msg.edited = true; }
       renderThread(); renderSidebar();
       fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-        kind:'edit', ref: a, project: c.label, dname:'',
+        kind:'edit', ref: refOf(c), project: projOf(c), dname:'',
         who: AGENT || 'Agent', from:'agent', body: JSON.stringify({ m: mode.m, b: text })
       })}).then(() => setTimeout(loadThread, 1200)).catch(() => {});
       return;
@@ -773,6 +790,69 @@
     if (!j.ok || !j.id) throw new Error(j.error || 'upload failed');
     return j.id;
   }
+
+  // ---------- 👥 group settings (any member can rename / change the photo) ----------
+  const gpicInput = document.createElement('input');
+  gpicInput.type = 'file'; gpicInput.accept = 'image/*'; gpicInput.className = 'hidden';
+  document.body.appendChild(gpicInput);
+  let grpPanel = null;
+  $('#grp-edit').addEventListener('click', () => {
+    const c = convoById(activeId);
+    if (!c || !c.group) return;
+    if (grpPanel){ grpPanel.remove(); grpPanel = null; return; }
+    grpPanel = document.createElement('div');
+    grpPanel.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-6';
+    grpPanel.innerHTML = `
+      <div class="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+        <p class="font-serif-display text-lg text-white mb-1">Group settings</p>
+        <p class="text-[12px] text-[#8a8a8a] mb-4">Anyone in the group can change these \u2014 everyone sees the update.</p>
+        <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Group name</label>
+        <input id="grp-name" type="text" maxlength="40" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[14px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-4">
+        <div class="flex items-center gap-3 mb-5">
+          <span id="grp-pic-prev" class="w-12 h-12 rounded-full bg-[#101010] border border-[#2a2a2a] grid place-items-center overflow-hidden text-lg shrink-0">👥</span>
+          <button id="grp-pic-btn" class="text-[12px] px-3.5 py-2 rounded-full border border-[#2a2a2a] text-[#b3b3b3] hover:text-white hover:border-[#e11d2a]/50 transition-colors">📷 Change photo</button>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button id="grp-cancel" class="text-[12px] px-4 py-2.5 rounded-full border border-[#2a2a2a] text-[#8a8a8a] hover:text-white">Cancel</button>
+          <button id="grp-save" class="text-[12px] font-semibold px-5 py-2.5 rounded-full bg-[#e11d2a] hover:bg-[#c81824] text-white">Save</button>
+        </div>
+      </div>`;
+    document.body.appendChild(grpPanel);
+    const nameEl = grpPanel.querySelector('#grp-name');
+    nameEl.value = c.name;
+    let newPic = c.pic || '';
+    const paintPic = () => {
+      grpPanel.querySelector('#grp-pic-prev').innerHTML = newPic
+        ? `<img src="https://drive.google.com/thumbnail?id=${esc(newPic)}&sz=w120" class="w-full h-full object-cover">` : '👥';
+    };
+    paintPic();
+    grpPanel.querySelector('#grp-pic-btn').addEventListener('click', () => gpicInput.click());
+    gpicInput.onchange = async () => {
+      const f = gpicInput.files && gpicInput.files[0];
+      gpicInput.value = '';
+      if (!f || !grpPanel) return;
+      if (f.size > 8 * 1024 * 1024){ showToast('Photo is over 8 MB \u2014 try a smaller one.'); return; }
+      const btn = grpPanel.querySelector('#grp-pic-btn');
+      btn.textContent = 'Uploading\u2026';
+      try { newPic = await uploadToDrive(f); paintPic(); btn.textContent = '📷 Change photo'; }
+      catch(e){ btn.textContent = '📷 Change photo'; showToast("Couldn't upload the photo \u2014 try again."); }
+    };
+    grpPanel.querySelector('#grp-cancel').addEventListener('click', () => { grpPanel.remove(); grpPanel = null; });
+    grpPanel.addEventListener('click', e => { if (e.target === grpPanel){ grpPanel.remove(); grpPanel = null; } });
+    grpPanel.querySelector('#grp-save').addEventListener('click', () => {
+      const nm = nameEl.value.trim() || c.name;
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'group', ref: c.gid, project:'', dname:'',
+        who: AGENT || 'Agent', from:'agent',
+        body: JSON.stringify({ name: nm, pic: newPic, members: (c.members || []).map(m => m.k), on: true })
+      })}).then(() => {
+        c.name = nm; c.pic = newPic;
+        renderSidebar(); renderThread();
+        showToast('Group updated \u2713');
+      }).catch(() => showToast("Couldn't save \u2014 try again in a moment."));
+      grpPanel.remove(); grpPanel = null;
+    });
+  });
 
   // ---------- \u{1F399} voice notes ----------
   let vRec = null, vChunks = [], vT0 = 0, vTimer = null;
@@ -1022,11 +1102,58 @@
   thread.addEventListener('scroll', closeReactUI);
 
   // ---------- data loading ----------
+  // group threads live on their own ref; my read marker is the row with dname === my key
+  function applyGroupRows(c, rows){
+    c.messages = [];
+    const deleted = new Set(), edits = {};
+    rows.forEach(r => {
+      if (r.kind === 'del'){ deleted.add(String(r.body || '')); return; }
+      if (r.kind === 'edit'){
+        try { const o = JSON.parse(String(r.body || '{}')); if (o.m) edits[String(o.m)] = String(o.b || ''); } catch(e){}
+        return;
+      }
+      if (r.kind === 'read'){
+        if (String(r.dname || '') === a) serverRead[c.id] = String(r.body || '');
+        return;
+      }
+      if (r.kind === 'react'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (!o.m || !o.e) return;
+          const ent = (reactMap[o.m] = reactMap[o.m] || {});
+          const st = (ent[o.e] = ent[o.e] || {a:0, j:0});
+          st[r.from === 'jag' ? 'j' : 'a'] = o.op === '-' ? 0 : 1;
+        } catch(e){}
+        return;
+      }
+      if (r.kind && r.kind !== 'msg') return;
+      const b = parseBody(r.body);
+      const mine = r.from !== 'jag' && String(r.who || '') === (AGENT || '');
+      c.messages.push({
+        id: String(r.id || ''),
+        ts: String(r.ts || ''),
+        side: mine ? 'out' : 'in',
+        who: r.from === 'jag' ? 'Reel Estate Media' : (r.who || 'Agent'),
+        text: b.text, atts: b.atts, q: b.q
+      });
+    });
+    c.messages = c.messages.filter(m => !deleted.has(m.id));
+    c.messages.forEach(m => { if (edits[m.id] !== undefined){ m.text = edits[m.id]; m.edited = true; } });
+    c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
+    c.lastTs = c.messages.length ? c.messages[c.messages.length - 1].ts : '';
+  }
+
   function loadThread(){
     return fetch(ENDPOINT + '?thread=' + encodeURIComponent(a) + '&full=1')
       .then(r => r.json())
-      .then(j => {
-        applyRows(j.rows || []);
+      .then(j => { applyRows(j.rows || []); })
+      .then(() => Promise.all(conversations.filter(c => c.group).map(c =>
+        fetch(ENDPOINT + '?thread=' + encodeURIComponent(c.gid) + '&full=1')
+          .then(r => r.json())
+          .then(j => applyGroupRows(c, j.rows || []))
+          .catch(() => {})
+      )))
+      .then(() => {
         renderSidebar();
         renderThread();
       }).catch(() => {});
@@ -1107,7 +1234,19 @@
         });
         renderSidebar();
         renderThread();
-        loadThread().then(() => { markRead('general'); renderSidebar(); });
+        fetch(ENDPOINT + '?groups=' + encodeURIComponent(a))
+          .then(r => r.json())
+          .then(g => {
+            (g.items || []).forEach(it => conversations.push({
+              id: 'g|' + it.id, gid: it.id, name: it.name || 'Group',
+              sub: '\uD83D\uDC65 Group \u00B7 ' + ((it.members || []).length + 1) + ' people',
+              initials: '\uD83D\uDC65', pic: it.pic || '', members: it.members || [],
+              group: true, messages: [], lastTs: ''
+            }));
+          })
+          .catch(() => {})
+          .then(() => loadThread())
+          .then(() => { markRead('general'); renderSidebar(); });
         pollTimer = setInterval(loadThread, POLL_MS);
       })
       .catch(() => fail("Couldn't load your messages.", 'Check your connection and refresh.'));

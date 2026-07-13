@@ -119,6 +119,9 @@
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             <span class="hidden sm:inline">Project</span>
           </a>
+          <button id="grp-edit-btn" class="hidden text-[#7a7a7a] hover:text-white transition-colors" aria-label="Edit group" title="Edit group name, photo & members">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
           <button id="pin-btn" class="text-[#7a7a7a] hover:text-white transition-colors" aria-label="Pin conversation" title="Pin to top">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
           </button>
@@ -191,6 +194,7 @@
   // ---------- state ----------
   let TOKEN = '';
   let agents = [];              // {key, name, brokerage, initials, hubIdx, stale, convos:[...]}
+  let groupConvos = [];         // 👥 group chats built from kind:'group' rows
   let activeId = '';
   let searchTerm = '';
   let reactMap = {};            // msgId -> emoji -> {a:0|1, j:0|1}
@@ -211,7 +215,7 @@
   const seenDot = ts => (ts && Date.now() - new Date(ts).getTime() < 600000)
     ? '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#4cc38a] mr-1"></span>' : '';
 
-  const allConvos = () => agents.flatMap(ag => ag.convos);
+  const allConvos = () => agents.flatMap(ag => ag.convos).concat(groupConvos);
   const convoById = id => allConvos().find(c => c.id === id);
   const agentOf = c => agents.find(ag => ag.key === c.key);
   const brokerageName = ag => ag.brokerage || 'Independent';
@@ -314,6 +318,26 @@
       byKey[key] = ag;
     });
 
+    // ---- 👥 group chats (kind:'group' rows — the latest row per group id wins) ----
+    const gLatest = {};
+    rows.forEach(r => { if (r.kind === 'group'){ try { gLatest[String(r.ref)] = JSON.parse(String(r.body || '{}')); } catch(e){} } });
+    const gMap = {};
+    groupConvos = [];
+    Object.keys(gLatest).forEach(gid => {
+      const g = gLatest[gid] || {};
+      if (g.on === false) return;
+      const members = (g.members || []).map(String);
+      const c = {
+        id: 'g|' + gid, gid, key: gid, kind: 'group', label: '',
+        name: String(g.name || 'Group'), pic: String(g.pic || ''),
+        members, memberNames: members.map(k => (byKey[k] ? byKey[k].name : k)),
+        sub: '👥 Group · ' + (members.length + 1) + ' people',
+        initials: '👥', messages: [], lastTs: ''
+      };
+      gMap[gid] = c;
+      groupConvos.push(c);
+    });
+
     serverRead = {}; agentRead = {}; reactMap = {};
 
     // Threads whose ref isn't a hub key (e.g. review-page chats) get matched
@@ -337,6 +361,7 @@
     };
     const resolveConvo = r => {
       const key = String(r.ref);
+      if (gMap[key]) return gMap[key];
       const label = String(r.project || '');
       if (byKey[key]){
         const ag = byKey[key];
@@ -401,14 +426,14 @@
       });
     });
 
-    Object.values(byKey).forEach(ag => ag.convos.forEach(c => {
+    Object.values(byKey).flatMap(ag => ag.convos).concat(groupConvos).forEach(c => {
       c.messages = c.messages.filter(m => !deleted.has(m.id));
       c.messages.forEach(m => {
         if (edits[m.id] !== undefined){ m.text = edits[m.id]; m.edited = true; }
       });
       c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
       if (c.messages.length) c.lastTs = c.messages[c.messages.length - 1].ts;
-    }));
+    });
 
     // Dedupe: several hubs sharing one agent name = old pushes. The newest hub
     // is the live one; older duplicates only stay if they hold real history.
@@ -518,8 +543,29 @@
     ((x.kind==='direct'?1:0) !== (y.kind==='direct'?1:0) ? ((y.kind==='direct'?1:0) - (x.kind==='direct'?1:0)) : 0) ||
     ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
 
+  function groupRow(c){
+    const un = unreadOf(c);
+    const active = c.id === activeId;
+    const av = c.pic
+      ? `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w80" class="w-7 h-7 rounded-lg object-cover border border-[#2a2a2a] shrink-0" alt="">`
+      : `<span class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[12px] shrink-0">👥</span>`;
+    return `<button data-convo="${esc(c.id)}" class="w-full text-left pl-4 pr-3 py-2 flex items-center gap-2.5 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
+      ${av}
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5">
+          <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.name)}</span>
+          ${isPinned(c.id) ? pinIcon : ''}
+          <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(c.lastTs ? sideTime(c.lastTs) : '')}</span>
+        </span>
+        <span class="flex items-center justify-between gap-2 mt-0.5">
+          <span class="text-[12px] text-[#8a8a8a] truncate">${esc(previewOf(c))}</span>${badge(un)}
+        </span>
+      </span>
+    </button>`;
+  }
+
   function renderSidebar(){
-    const total = agents.reduce((s,ag) => s + agentUnread(ag), 0);
+    const total = agents.reduce((s,ag) => s + agentUnread(ag), 0) + groupConvos.reduce((s,c) => s + unreadOf(c), 0);
     $('#total-badge').textContent = total;
     $('#total-badge').style.display = total ? '' : 'none';
     $('#agent-count').textContent = agents.length + ' agent' + (agents.length === 1 ? '' : 's');
@@ -566,10 +612,20 @@
       return;
     }
 
-    if (!agents.length){
+    if (!agents.length && !groupConvos.length){
       convoList.innerHTML = `<div class="px-6 py-12 text-center text-[12.5px] text-[#6a6a6a] leading-relaxed">No agent hubs yet.<br>Push a hub from your Command Centre and it appears here automatically.</div>`;
       return;
     }
+
+    // 👥 groups — sit above the brokerage tree; creating one lives here only
+    const gSorted = groupConvos.slice().sort((x,y) =>
+      ((isPinned(y.id)?1:0) - (isPinned(x.id)?1:0)) || ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
+    const groupsHtml = `<div class="px-4 pt-3 pb-1 flex items-center justify-between">
+        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">👥 Groups</span>
+        <button id="new-group-btn" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-2.5 py-1 transition-colors" title="Start a group chat">＋ New group</button>
+      </div>`
+      + (gSorted.length ? gSorted.map(groupRow).join('') : `<div class="px-4 pb-1 text-[11px] text-[#5c5c5c]">No groups yet — start one with ＋.</div>`)
+      + `<div class="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">Agents</div>`;
 
     // group agents by brokerage, both levels sorted by pin-presence then recency
     const lastOfAg = ag => ag.convos.reduce((m,c) => c.lastTs > m ? c.lastTs : m, '');
@@ -580,7 +636,7 @@
       ((groups[y].some(pinInAg)?1:0) - (groups[x].some(pinInAg)?1:0)) ||
       (Math.max(...groups[y].map(a=>lastOfAg(a)||'').map(s=>s||'')) < Math.max(...groups[x].map(a=>lastOfAg(a)||'').map(s=>s||'')) ? -1 : 1));
 
-    convoList.innerHTML = brokerageList.map(bName => {
+    convoList.innerHTML = groupsHtml + brokerageList.map(bName => {
       const bOpen = expanded.has('b:' + bName);
       const bAgents = groups[bName].slice().sort((x,y) =>
         ((pinInAg(y)?1:0) - (pinInAg(x)?1:0)) || (lastOfAg(y) < lastOfAg(x) ? -1 : 1));
@@ -635,6 +691,7 @@
   let suppressClick = false;
   convoList.addEventListener('click', e => {
     if (suppressClick) { suppressClick = false; return; }
+    if (e.target.closest('#new-group-btn')){ openGroupModal(null); return; }
     const gm = e.target.closest('[data-gmid]');
     if (gm){ goToMessage(gm.dataset.goto, gm.dataset.gmid); return; }
     const node = e.target.closest('[data-node]');
@@ -812,12 +869,23 @@
     const parts = c.name.split(' ');
     $('#hdr-name').innerHTML = esc(parts[0]) + (parts.length > 1 ? ' <span class="text-[#e11d2a] italic">' + esc(parts.slice(1).join(' ')) + '</span>' : '');
     const lastSeen = agentSeen[ag.key];
-    $('#hdr-role').textContent = c.kind === 'direct'
-      ? ((ag.brokerage ? ag.brokerage + ' · ' : '') + (lastSeen ? 'active ' + relTime(lastSeen) : 'Direct chat'))
-      : (ag.name + (c.sub ? ' · ' + c.sub : '') + (lastSeen ? ' · active ' + relTime(lastSeen) : ''));
-    $('#hdr-avatar').textContent = c.initials;
-    $('#input-label').textContent = 'Replying as Reel Estate Media · ' + (c.kind === 'direct' ? ag.name : ag.name + ' — ' + c.name);
-    $('#chat-input').placeholder = 'Message ' + (c.kind === 'direct' ? ag.name : ag.name + ' about ' + c.name) + '…';
+    if (c.kind === 'group'){
+      const who = ['You'].concat(c.memberNames || []);
+      $('#hdr-role').textContent = '👥 ' + who.join(' · ');
+      $('#hdr-avatar').innerHTML = c.pic
+        ? `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w96" class="w-10 h-10 rounded-full object-cover" alt="">`
+        : '👥';
+      $('#input-label').textContent = 'Messaging as Reel Estate Media · ' + c.name;
+      $('#chat-input').placeholder = 'Message ' + c.name + '…';
+    } else {
+      $('#hdr-role').textContent = c.kind === 'direct'
+        ? ((ag.brokerage ? ag.brokerage + ' · ' : '') + (lastSeen ? 'active ' + relTime(lastSeen) : 'Direct chat'))
+        : (ag.name + (c.sub ? ' · ' + c.sub : '') + (lastSeen ? ' · active ' + relTime(lastSeen) : ''));
+      $('#hdr-avatar').textContent = c.initials;
+      $('#input-label').textContent = 'Replying as Reel Estate Media · ' + (c.kind === 'direct' ? ag.name : ag.name + ' — ' + c.name);
+      $('#chat-input').placeholder = 'Message ' + (c.kind === 'direct' ? ag.name : ag.name + ' about ' + c.name) + '…';
+    }
+    $('#grp-edit-btn').classList.toggle('hidden', c.kind !== 'group');
     const pl = $('#proj-link');
     if (c.url){ pl.href = c.url; pl.classList.remove('hidden'); pl.classList.add('flex'); }
     else { pl.classList.add('hidden'); pl.classList.remove('flex'); }
@@ -830,7 +898,7 @@
     if (!c.messages.length){
       html = `<div class="h-full flex flex-col items-center justify-center text-center gap-2 py-16">
         <div class="w-12 h-12 rounded-full bg-[#1a1a1a] border border-[#262626] grid place-items-center text-[#e11d2a] font-serif-display text-lg">${esc(c.initials)}</div>
-        <p class="text-[13px] text-[#8a8a8a] max-w-[34ch]">No messages yet — anything you send lands on ${esc(ag.name || 'the agent')}'s hub as Reel Estate Media.</p>
+        <p class="text-[13px] text-[#8a8a8a] max-w-[34ch]">${c.kind === 'group' ? 'No messages yet — say hi. Everyone in the group sees what you send.' : `No messages yet — anything you send lands on ${esc(ag.name || 'the agent')}'s hub as Reel Estate Media.`}</p>
       </div>`;
     } else {
       const theirTs = agentRead[c.id] || '';
@@ -1466,6 +1534,164 @@
     renderSidebar(); renderThread();
     showToast(failed ? `Sent to ${sent} agent${sent === 1 ? '' : 's'} — ${failed} failed, try them again` : `📣 Sent to ${sent} agent${sent === 1 ? '' : 's'}`);
     setTimeout(() => loadAll().catch(()=>{}), 1500);
+  });
+
+  // ---------- 👥 groups: create (studio-only) + edit name / photo / members ----------
+  const grpModal = document.createElement('div');
+  grpModal.id = 'grp-modal';
+  grpModal.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  document.body.appendChild(grpModal);
+  let grpEditing = null;        // null = creating a new group; convo object = editing
+  let grpPicId = '';            // Drive file id of the chosen group photo
+  const grpTargets = () => agents.filter(ag => ag.hubIdx >= 0 && !ag.stale);
+
+  const grpAvatarHtml = () => grpPicId
+    ? `<img src="https://drive.google.com/thumbnail?id=${esc(grpPicId)}&sz=w160" class="w-16 h-16 rounded-2xl object-cover border border-[#2e2e2e]" alt="">`
+    : `<span class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[26px]">👥</span>`;
+
+  function grpRefreshFooter(){
+    const n = grpModal.querySelectorAll('input[data-key]:checked').length;
+    const cEl = grpModal.querySelector('#grp-count');
+    if (cEl) cEl.textContent = n ? n + ' selected · ' + (n + 1) + ' incl. you' : 'none selected';
+  }
+  function renderGrpModal(){
+    const editing = !!grpEditing;
+    const sel = new Set(editing ? grpEditing.members : []);
+    grpModal.innerHTML = `
+    <div class="w-full max-w-md bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col max-h-[88vh]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">${editing ? 'Edit <span class="text-[#e11d2a] italic">group</span>' : 'New <span class="text-[#e11d2a] italic">group</span>'}</h3>
+        <button id="grp-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="px-5 py-4 flex items-center gap-4">
+        <button id="grp-pic-btn" class="relative shrink-0" title="Set a group photo">
+          <span id="grp-pic-wrap">${grpAvatarHtml()}</span>
+          <span class="absolute -bottom-1 -right-1 w-6 h-6 grid place-items-center rounded-full bg-[#e11d2a] text-white text-[11px] border-2 border-[#141414]">📷</span>
+        </button>
+        <input id="grp-pic-input" type="file" accept="image/*" class="hidden">
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Group name</p>
+          <input id="grp-name" type="text" maxlength="48" placeholder="e.g. Pinnacle Power Team" value="${editing ? esc(grpEditing.name) : ''}" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+        </div>
+      </div>
+      <div class="px-5 pb-1 flex items-center justify-between">
+        <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a]">Members</p>
+        <span id="grp-count" class="text-[11px] text-[#8a8a8a]"></span>
+      </div>
+      <div id="grp-list" class="px-3 pb-2 overflow-y-auto scrollbar-thin" style="max-height:210px">
+        ${grpTargets().map(ag => `
+        <label class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1a1a1a] cursor-pointer">
+          <input type="checkbox" data-key="${esc(ag.key)}" ${sel.has(ag.key) ? 'checked' : ''} class="accent-[#e11d2a] w-4 h-4 shrink-0">
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[10px] font-serif-display text-[#9a9a9a] shrink-0">${esc(ag.initials)}</span>
+          <span class="min-w-0">
+            <span class="block text-[13px] text-[#d4d4d4] truncate">${esc(ag.name)}</span>
+            <span class="block text-[11px] text-[#6a6a6a] truncate">${esc(ag.brokerage || 'Independent')}</span>
+          </span>
+        </label>`).join('') || '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No agents yet — push a hub first.</p>'}
+      </div>
+      <div class="px-5 py-4 border-t border-[#262626]">
+        <button id="grp-save" class="w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">${editing ? 'Save changes' : 'Create group'}</button>
+        ${editing ? '<button id="grp-off" class="w-full mt-2 text-[11px] font-semibold text-[#6a6a6a] hover:text-[#e11d2a] py-1.5 transition-colors">Delete this group</button>' : ''}
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">${editing ? 'Everyone in the group can rename it or change its photo — members are yours to manage.' : "Only you can start groups — agents can't."}</p>
+      </div>
+    </div>`;
+    grpRefreshFooter();
+  }
+  function openGroupModal(c){
+    grpEditing = c || null;
+    grpPicId = c ? (c.pic || '') : '';
+    renderGrpModal();
+    grpModal.classList.remove('hidden');
+    grpModal.classList.add('flex');
+    const nm = grpModal.querySelector('#grp-name');
+    if (nm && !c) nm.focus();
+  }
+  function closeGrpModal(){ grpModal.classList.add('hidden'); grpModal.classList.remove('flex'); grpEditing = null; }
+
+  function postGroup(gid, meta){
+    return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'group', ref: gid, project:'', dname:'',
+      who: 'Reel Estate Media', from:'jag', body: JSON.stringify(meta)
+    })});
+  }
+  async function grpSave(){
+    const name = (grpModal.querySelector('#grp-name').value || '').trim();
+    const members = [...grpModal.querySelectorAll('input[data-key]:checked')].map(x => x.dataset.key);
+    if (!name){ showToast('Give the group a name first.'); return; }
+    if (!members.length){ showToast('Pick at least one agent for the group.'); return; }
+    const editing = grpEditing;
+    const gid = editing ? editing.gid : 'grp-' + Math.random().toString(36).slice(2, 10);
+    const btn = grpModal.querySelector('#grp-save');
+    btn.disabled = true; btn.textContent = editing ? 'Saving…' : 'Creating…';
+    try { await postGroup(gid, { name, pic: grpPicId, members, on: true }); } catch(e){}
+    const nameOf = k => { const ag = agents.find(a2 => a2.key === k); return ag ? ag.name : k; };
+    if (editing){
+      editing.name = name; editing.pic = grpPicId;
+      editing.members = members; editing.memberNames = members.map(nameOf);
+      editing.sub = '👥 Group · ' + (members.length + 1) + ' people';
+      closeGrpModal();
+      showToast('👥 Group updated');
+      renderSidebar(); renderThread();
+    } else {
+      const c = { id: 'g|' + gid, gid, key: gid, kind: 'group', label: '',
+        name, pic: grpPicId, members, memberNames: members.map(nameOf),
+        sub: '👥 Group · ' + (members.length + 1) + ' people',
+        initials: '👥', messages: [], lastTs: '' };
+      groupConvos.push(c);
+      closeGrpModal();
+      showToast("👥 Group created — it's live in every member's chat");
+      selectConversation(c.id);
+    }
+    setTimeout(() => loadAll().catch(()=>{}), 1500);
+  }
+  grpModal.addEventListener('click', async e => {
+    if (e.target === grpModal || e.target.closest('#grp-close')){ closeGrpModal(); return; }
+    if (e.target.closest('#grp-pic-btn')){ grpModal.querySelector('#grp-pic-input').click(); return; }
+    if (e.target.closest('#grp-save')){ grpSave(); return; }
+    const off = e.target.closest('#grp-off');
+    if (off){
+      if (!off.dataset.armed){
+        off.dataset.armed = '1';
+        off.textContent = 'Tap again to delete — the chat disappears for everyone';
+        off.classList.add('text-[#e11d2a]');
+        setTimeout(() => { delete off.dataset.armed; off.textContent = 'Delete this group'; off.classList.remove('text-[#e11d2a]'); }, 3000);
+        return;
+      }
+      const g = grpEditing;
+      closeGrpModal();
+      if (g){
+        try { await postGroup(g.gid, { name: g.name, pic: g.pic, members: g.members, on: false }); } catch(e2){}
+        groupConvos = groupConvos.filter(x => x.gid !== g.gid);
+        if (activeId === g.id){ const first = allConvos()[0]; activeId = first ? first.id : ''; }
+        showToast('Group deleted');
+        renderSidebar(); renderThread();
+        setTimeout(() => loadAll().catch(()=>{}), 1500);
+      }
+      return;
+    }
+  });
+  grpModal.addEventListener('change', async e => {
+    if (e.target.closest('input[data-key]')){ grpRefreshFooter(); return; }
+    const inp = e.target.closest('#grp-pic-input');
+    if (inp && inp.files && inp.files.length){
+      const f = inp.files[0];
+      inp.value = '';
+      const wrap = grpModal.querySelector('#grp-pic-wrap');
+      try {
+        showToast('Uploading photo…');
+        grpPicId = await uploadToDrive(f);
+        if (wrap) wrap.innerHTML = grpAvatarHtml();
+        showToast('Photo set — save to apply');
+      } catch(e2){ showToast("Couldn't upload that photo — try another one."); }
+    }
+  });
+  grpModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'grp-name') grpSave(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !grpModal.classList.contains('hidden')) closeGrpModal(); });
+  $('#grp-edit-btn').addEventListener('click', () => {
+    const c = convoById(activeId);
+    if (c && c.kind === 'group') openGroupModal(c);
   });
 
   // ---------- data loading ----------
