@@ -133,6 +133,9 @@
           <button id="mic-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Record a voice note" title="Record a voice note — tap again to send">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </button>
+          <button id="poll-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Create a poll" title="Create a poll">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+          </button>
           <div class="flex-1">
             <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
           </div>
@@ -161,6 +164,8 @@
   const t = q.get('t') || 'pin';
   const POLL_MS = 45000;
   const MY_SIDE = 'a';          // reactions ledger: 'a' = agent, 'j' = studio
+  let pinMsg = {};              // convoId -> {m, t, w} — 📌 latest pin per thread
+  let voteMap = {};             // pollMsgId -> {voterName: optionIndex}
 
   const $ = (s) => document.querySelector(s);
   const convoList = $('#convo-list');
@@ -278,15 +283,15 @@
   function parseBody(body){
     const s = String(body || '');
     if (s.charAt(0) === '{'){
-      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null }; } catch(e){}
+      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null, poll: o.poll || null }; } catch(e){}
     }
-    return { text: s, atts: [], q: null };
+    return { text: s, atts: [], q: null, poll: null };
   }
 
   // ---------- distribute thread rows ----------
   function applyRows(rows){
     conversations.forEach(c => { if (!c.group){ c.messages = []; c.lastTs = ''; } });
-    serverRead = {}; theirRead = {}; reactMap = {};
+    serverRead = {}; theirRead = {}; reactMap = {}; pinMsg = {}; voteMap = {};
     const deleted = new Set();
     const byLabel = {};
     conversations.forEach(c => byLabel[c.label] = c);
@@ -316,6 +321,20 @@
         } catch(e){}
         return;
       }
+      if (r.kind === 'pin'){
+        try { const o = JSON.parse(String(r.body || '{}')); pinMsg[c.id] = (o && o.m) ? o : null; } catch(e){}
+        return;
+      }
+      if (r.kind === 'vote'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (o.m){
+            const ent = (voteMap[String(o.m)] = voteMap[String(o.m)] || {});
+            if (+o.i < 0) delete ent[String(o.w || '')]; else ent[String(o.w || '')] = +o.i;
+          }
+        } catch(e){}
+        return;
+      }
       if (r.kind && r.kind !== 'msg') return;
       const b = parseBody(r.body);
       c.messages.push({
@@ -323,7 +342,7 @@
         ts: String(r.ts || ''),
         side: side === 'j' ? 'in' : 'out',
         who: side === 'j' ? 'Reel Estate Media' : (r.who || AGENT || 'You'),
-        text: b.text, atts: b.atts, q: b.q
+        text: b.text, atts: b.atts, q: b.q, poll: b.poll
       });
     });
     conversations.forEach(c => {
@@ -550,6 +569,34 @@
     }).join('');
   }
 
+  // @mentions — bold + red on incoming, bold + underline on your red bubbles
+  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'\u2019-]*)/g,
+    (mm, pre, nm) => pre + '<span class="font-bold ' + (inSide ? 'text-[#e11d2a]' : 'underline underline-offset-2') + '">@' + nm + '</span>');
+
+  // 🗳 poll bubble — tap an option to vote, tap again to retract
+  function pollBlock(m, inSide){
+    const votes = voteMap[m.id] || {};
+    const voters = Object.keys(votes);
+    const opts = (m.poll && m.poll.o) || [];
+    const me = AGENT || 'You';
+    const mine = votes[me];
+    const bar = inSide ? 'bg-[#e11d2a]/25' : 'bg-white/25';
+    const line = inSide ? 'border-[#2e2e2e]' : 'border-white/25';
+    return `<div class="min-w-[220px] max-w-[300px] px-1 pt-1">
+      <div class="text-[13px] font-semibold ${inSide ? 'text-white' : ''} mb-1.5">🗳 ${esc((m.poll && m.poll.q) || 'Poll')}</div>
+      ${opts.map((o, i) => {
+        const who = voters.filter(w => votes[w] === i);
+        const pct = voters.length ? Math.round(who.length * 100 / voters.length) : 0;
+        return `<button type="button" class="poll-opt relative block w-full text-left mb-1 rounded-lg border ${line} px-2.5 py-1.5 overflow-hidden" data-mid="${esc(m.id || '')}" data-i="${i}">
+          <span class="absolute inset-y-0 left-0 ${bar}" style="width:${pct}%"></span>
+          <span class="relative flex items-center justify-between gap-2 text-[12.5px]"><span>${mine === i ? '✓ ' : ''}${esc(o)}</span><span class="text-[11px] opacity-75">${who.length || ''}</span></span>
+          ${who.length ? `<span class="relative block text-[10px] opacity-60 truncate">${esc(who.map(w => w === me ? 'You' : (w === 'Reel Estate Media' ? 'Reel Estate' : w.split(' ')[0])).join(', '))}</span>` : ''}
+        </button>`;
+      }).join('')}
+      <div class="text-[10px] opacity-60 pb-0.5">${voters.length ? voters.length + ' vote' + (voters.length === 1 ? '' : 's') : 'No votes yet — tap an option'}</div>
+    </div>`;
+  }
+
   function buildMessage(m, seen){
     const inSide = m.side === 'in';
     const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
@@ -568,21 +615,24 @@
     const cc = convoById(activeId);
     const gwho = (cc && cc.group && inSide)
       ? `<span class="block text-[10px] font-semibold text-[#e11d2a] mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">${esc(m.who)}</span>` : '';
-    const inner = hasAtt
-      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${gwho}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${linkify(m.text)}</div>` : ''}</div>`
-      : gwho + quote + linkify(m.text);
-    const pad = hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
+    const inner = m.poll
+      ? `<div class="flex flex-col gap-1 min-w-[180px]">${gwho ? `<div class="px-1 pt-1">${gwho}</div>` : ''}${quote}${pollBlock(m, inSide)}</div>`
+      : hasAtt
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${gwho}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
+      : gwho + quote + mentionize(linkify(m.text), inSide);
+    const pad = m.poll ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
     const hoverBtn = (cls, mid, title, svg) =>
       `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
     const trigger = m.id ? hoverBtn('react-trigger', m.id, 'Add reaction', '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>') : '';
     const replyBtn = m.id ? hoverBtn('reply-trigger', m.id, 'Reply', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>') : '';
+    const pinBtn2 = m.id ? hoverBtn('pin-trigger', m.id, 'Pin this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>') : '';
     const editBtn = (m.id && m.side === 'out') ? hoverBtn('edit-trigger', m.id, 'Edit this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>') : '';
     const delBtn = (m.id && m.side === 'out') ? hoverBtn('del-trigger', m.id, 'Delete this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>') : '';
     const bubble = `<div class="react-bubble ${bubbleCls} ${pad} text-[14px] leading-relaxed ${m.id ? 'cursor-pointer' : ''} select-none" data-mid="${esc(m.id || '')}">${inner}</div>`;
     return `<div class="group flex flex-col ${colAlign} max-w-[80%] msg-enter">
-      <div class="flex items-center gap-1.5 ${rowDir}">${bubble}${replyBtn}${trigger}${editBtn}${delBtn}</div>
+      <div class="flex items-center gap-1.5 ${rowDir}">${bubble}${replyBtn}${trigger}${pinBtn2}${editBtn}${delBtn}</div>
       ${reactionChips(m)}
-      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${m.edited ? ' · edited' : ''}${seen ? ' · <span class="text-[#e11d2a] font-semibold">Seen</span>' : ''}</span>
+      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc(timeOf(m.ts))}${m.edited ? ' · edited' : ''}${seen ? ' · <span class="text-[#e11d2a] font-semibold">' + esc(seen) + '</span>' : ''}</span>
     </div>`;
   }
 
@@ -591,10 +641,11 @@
     const parts = c.name.split(' ');
     $('#hdr-name').innerHTML = esc(parts[0]) + (parts.length > 1 ? ' <span class="text-[#e11d2a] italic">' + esc(parts.slice(1).join(' ')) + '</span>' : '');
     $('#hdr-role').textContent = c.group
-      ? 'Group · ' + [ 'Reel Estate Media' ].concat((c.members || []).map(m => m.n || 'Agent')).join(', ').slice(0, 60)
+      ? (c.desc ? c.desc + '  ·  ' : '') + 'Group · ' + [ 'Reel Estate Media' ].concat((c.members || []).map(m => m.n || 'Agent')).join(', ').slice(0, 80)
       : (c.id === 'general'
         ? (BROKERAGE ? BROKERAGE + ' · Direct chat' : 'Direct chat')
         : (c.sub || 'Project chat'));
+    if (c.group) $('#hdr-role').title = (c.desc ? c.desc + ' — ' : '') + ['Reel Estate Media'].concat((c.members || []).map(m => m.n || 'Agent')).join(', ');
     if (c.group && c.pic){
       $('#hdr-avatar').innerHTML = `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w120" class="w-full h-full object-cover rounded-full">`;
       $('#hdr-avatar').classList.add('overflow-hidden');
@@ -623,6 +674,16 @@
       const theirTs = theirRead[c.id] || '';
       let lastOut = -1;
       c.messages.forEach((m,i) => { if (m.side === 'out') lastOut = i; });
+      const seenLabel = m => {
+        if (c.group){
+          const rb = c.readsBy || {};
+          const names = [];
+          if ((rb['_studio'] || '') >= m.ts) names.push('Reel Estate');
+          (c.members || []).forEach(mm => { if (mm.k !== a && (rb[mm.k] || '') >= m.ts) names.push((mm.n || 'Agent').split(' ')[0]); });
+          return names.length ? 'Seen by ' + names.join(' · ') : '';
+        }
+        return (!!theirTs && theirTs >= m.ts) ? 'Seen' : '';
+      };
       c.messages.forEach((m, i) => {
         const d = dayOf(m.ts);
         if (d !== curDay){
@@ -633,10 +694,25 @@
           unreadShown = true;
           html += `<div class="flex items-center gap-3"><div class="flex-1 h-px" style="background:linear-gradient(90deg,transparent,rgba(225,29,42,0.5))"></div><span class="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#e11d2a] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a]"></span>${unreadCount} unread message${unreadCount>1?'s':''}</span><div class="flex-1 h-px" style="background:linear-gradient(90deg,rgba(225,29,42,0.5),transparent)"></div></div>`;
         }
-        html += buildMessage(m, i === lastOut && !!theirTs && theirTs >= m.ts);
+        html += buildMessage(m, i === lastOut ? seenLabel(m) : '');
       });
     }
-    thread.innerHTML = html;
+    // 📌 pinned message banner — sticks to the top of the thread
+    const pn = pinMsg[c.id];
+    let pinBanner = '';
+    if (pn && pn.m){
+      const pm = c.messages.find(mm => mm.id === pn.m);
+      const ptxt = pm ? (pm.text || (pm.poll ? '🗳 ' + (pm.poll.q || 'Poll') : '📎 attachment')) : String(pn.t || 'Pinned message');
+      pinBanner = `<div class="sticky top-0 z-10"><div class="flex items-center gap-2.5 bg-[#1a1a1a]/95 backdrop-blur border border-[#2a2a2a] border-l-2 border-l-[#e11d2a] rounded-xl px-3 py-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]">
+        <span class="shrink-0 text-[#e11d2a] text-[13px]">📌</span>
+        <button class="pin-jump flex-1 min-w-0 text-left" data-pjump="${esc(pn.m)}">
+          <span class="block text-[10px] uppercase tracking-[0.14em] text-[#e11d2a] font-semibold">Pinned${pn.w ? ' by ' + esc(pn.w === (AGENT || '') ? 'you' : pn.w) : ''}</span>
+          <span class="block text-[12.5px] text-[#c4c4c4] truncate">${esc(String(ptxt).slice(0, 140))}</span>
+        </button>
+        <button class="pin-clear shrink-0 w-6 h-6 grid place-items-center rounded-full text-[#7a7a7a] hover:text-white" title="Unpin">✕</button>
+      </div></div>`;
+    }
+    thread.innerHTML = pinBanner + html;
     thread.scrollTop = thread.scrollHeight;
   }
 
@@ -808,6 +884,8 @@
         <p class="text-[12px] text-[#8a8a8a] mb-4">Anyone in the group can change these \u2014 everyone sees the update.</p>
         <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Group name</label>
         <input id="grp-name" type="text" maxlength="40" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[14px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-4">
+        <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Description</label>
+        <input id="grp-desc" type="text" maxlength="140" placeholder="What's this group for?" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[13px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-4">
         <div class="flex items-center gap-3 mb-5">
           <span id="grp-pic-prev" class="w-12 h-12 rounded-full bg-[#101010] border border-[#2a2a2a] grid place-items-center overflow-hidden text-lg shrink-0">👥</span>
           <button id="grp-pic-btn" class="text-[12px] px-3.5 py-2 rounded-full border border-[#2a2a2a] text-[#b3b3b3] hover:text-white hover:border-[#e11d2a]/50 transition-colors">📷 Change photo</button>
@@ -820,6 +898,8 @@
     document.body.appendChild(grpPanel);
     const nameEl = grpPanel.querySelector('#grp-name');
     nameEl.value = c.name;
+    const descEl = grpPanel.querySelector('#grp-desc');
+    descEl.value = c.desc || '';
     let newPic = c.pic || '';
     const paintPic = () => {
       grpPanel.querySelector('#grp-pic-prev').innerHTML = newPic
@@ -841,12 +921,13 @@
     grpPanel.addEventListener('click', e => { if (e.target === grpPanel){ grpPanel.remove(); grpPanel = null; } });
     grpPanel.querySelector('#grp-save').addEventListener('click', () => {
       const nm = nameEl.value.trim() || c.name;
+      const ds = descEl.value.trim();
       fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
         kind:'group', ref: c.gid, project:'', dname:'',
         who: AGENT || 'Agent', from:'agent',
-        body: JSON.stringify({ name: nm, pic: newPic, members: (c.members || []).map(m => m.k), on: true })
+        body: JSON.stringify({ name: nm, desc: ds, pic: newPic, members: (c.members || []).map(m => m.k), on: true })
       })}).then(() => {
-        c.name = nm; c.pic = newPic;
+        c.name = nm; c.pic = newPic; c.desc = ds;
         renderSidebar(); renderThread();
         showToast('Group updated \u2713');
       }).catch(() => showToast("Couldn't save \u2014 try again in a moment."));
@@ -1086,6 +1167,17 @@
       }
       return;
     }
+    const pj = e.target.closest('.pin-jump');
+    if (pj && pj.dataset.pjump){
+      const el = thread.querySelector('.react-bubble[data-mid="' + pj.dataset.pjump + '"]');
+      if (el){ el.scrollIntoView({ block:'center', behavior:'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1800); }
+      return;
+    }
+    if (e.target.closest('.pin-clear')) { clearPin(); return; }
+    const pt = e.target.closest('.pin-trigger');
+    if (pt) { pinMessage(pt.dataset.mid); return; }
+    const po = e.target.closest('.poll-opt');
+    if (po) { if (po.dataset.mid) votePoll(po.dataset.mid, +po.dataset.i); return; }
     const trig = e.target.closest('.react-trigger');
     if (trig) { openPicker(trig.dataset.mid, trig); return; }
     const chip = e.target.closest('.reaction-chip');
@@ -1101,10 +1193,135 @@
   window.addEventListener('resize', closeReactUI);
   thread.addEventListener('scroll', closeReactUI);
 
+  // ---------- 📌 pins ----------
+  function pinMessage(mid){
+    const c = convoById(activeId); if (!c || !mid) return;
+    const msg = c.messages.find(m => m.id === mid); if (!msg) return;
+    const meta = { m: mid, t: String(msg.text || (msg.poll ? '🗳 ' + (msg.poll.q || 'Poll') : (msg.atts && msg.atts.length ? '📎 ' + (msg.atts[0].n || 'attachment') : ''))).slice(0, 140), w: AGENT || 'Agent' };
+    pinMsg[c.id] = meta;
+    renderThread();
+    showToast('📌 Pinned — everyone in this chat sees it at the top');
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'pin', ref: refOf(c), project: projOf(c), dname:'',
+      who: AGENT || 'Agent', from:'agent', body: JSON.stringify(meta)
+    })}).catch(() => {});
+  }
+  function clearPin(){
+    const c = convoById(activeId); if (!c) return;
+    pinMsg[c.id] = null;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'pin', ref: refOf(c), project: projOf(c), dname:'',
+      who: AGENT || 'Agent', from:'agent', body: JSON.stringify({ m:'' })
+    })}).catch(() => {});
+  }
+
+  // ---------- 🗳 polls ----------
+  function votePoll(mid, i){
+    const c = convoById(activeId); if (!c || !mid) return;
+    const me = AGENT || 'You';
+    const ent = (voteMap[mid] = voteMap[mid] || {});
+    const retract = ent[me] === i;
+    if (retract) delete ent[me]; else ent[me] = i;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'vote', ref: refOf(c), project: projOf(c), dname:'',
+      who: me, from:'agent', body: JSON.stringify({ m: mid, i: retract ? -1 : i, w: me })
+    })}).catch(() => {});
+  }
+
+  const pollModal = document.createElement('div');
+  pollModal.id = 'poll-modal';
+  pollModal.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  pollModal.innerHTML = `
+    <div class="w-full max-w-sm bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">New <span class="text-[#e11d2a] italic">poll</span></h3>
+        <button id="poll-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">✕</button>
+      </div>
+      <div class="px-5 py-4 space-y-2.5">
+        <input id="poll-q" type="text" maxlength="120" placeholder="Ask the question — e.g. Which shoot day works?"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+        ${[1,2,3,4].map(i => `<input data-opt="${i}" type="text" maxlength="60" placeholder="Option ${i}${i > 2 ? ' (optional)' : ''}"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-2 focus:outline-none focus:border-[#e11d2a]/60">`).join('')}
+      </div>
+      <div class="px-5 pb-5">
+        <button id="poll-send" class="w-full bg-[#e11d2a] hover:bg-[#c81824] text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">Send poll</button>
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">One tap to vote, tap again to change — results update live for everyone.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(pollModal);
+  function closePollModal(){ pollModal.classList.add('hidden'); pollModal.classList.remove('flex'); }
+  $('#poll-btn').addEventListener('click', () => {
+    pollModal.querySelector('#poll-q').value = '';
+    pollModal.querySelectorAll('[data-opt]').forEach(x => x.value = '');
+    pollModal.classList.remove('hidden'); pollModal.classList.add('flex');
+    pollModal.querySelector('#poll-q').focus();
+  });
+  pollModal.addEventListener('click', e => {
+    if (e.target === pollModal || e.target.closest('#poll-close')){ closePollModal(); return; }
+    if (e.target.closest('#poll-send')){
+      const c = convoById(activeId); if (!c) return;
+      const q2 = pollModal.querySelector('#poll-q').value.trim();
+      const opts = [...pollModal.querySelectorAll('[data-opt]')].map(x => x.value.trim()).filter(Boolean);
+      if (!q2){ showToast('Give the poll a question first.'); return; }
+      if (opts.length < 2){ showToast('A poll needs at least two options.'); return; }
+      closePollModal();
+      const poll = { q: q2, o: opts };
+      const now = new Date().toISOString();
+      c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text:'', atts: [], q: null, poll });
+      c.lastTs = now;
+      markRead(activeId);
+      renderThread(); renderSidebar();
+      postMsg(c, JSON.stringify({ __rc:1, t:'', poll })).then(() => setTimeout(loadThread, 1200)).catch(() => {});
+    }
+  });
+
+  // ---------- @ mention picker (group chats) ----------
+  const mentionPop = document.createElement('div');
+  mentionPop.id = 'mention-pop';
+  mentionPop.className = 'fixed z-50 hidden flex-col min-w-[200px] max-w-[280px] bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden py-1';
+  document.body.appendChild(mentionPop);
+  function closeMentionPop(){ mentionPop.classList.add('hidden'); mentionPop.classList.remove('flex'); }
+  function refreshMentionPop(){
+    const c = convoById(activeId);
+    const input = $('#chat-input');
+    if (!c || !c.group){ closeMentionPop(); return; }
+    const mm = input.value.match(/@([\w]*)$/);
+    if (!mm){ closeMentionPop(); return; }
+    const part = mm[1].toLowerCase();
+    const others = (c.members || []).map(x => x.n || '').filter(n => n && n !== (AGENT || ''));
+    const cands = others.concat(['Reel Estate Media', 'everyone']).filter(n =>
+      !part || n.toLowerCase().indexOf(part) === 0 || n.split(' ')[0].toLowerCase().indexOf(part) === 0);
+    if (!cands.length){ closeMentionPop(); return; }
+    mentionPop.innerHTML = cands.map(n => `<button class="mention-pick w-full text-left px-3.5 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2" data-name="${esc(n)}">
+      <span class="text-[#e11d2a] font-bold">@</span>${esc(n === 'everyone' ? 'everyone — nudge the whole group' : n)}</button>`).join('');
+    mentionPop.classList.remove('hidden'); mentionPop.classList.add('flex');
+    place(mentionPop, input);
+  }
+  $('#chat-input').addEventListener('input', refreshMentionPop);
+  mentionPop.addEventListener('click', e => {
+    const b = e.target.closest('.mention-pick');
+    if (!b) return;
+    const input = $('#chat-input');
+    const nm = b.dataset.name === 'everyone' ? 'everyone'
+             : b.dataset.name === 'Reel Estate Media' ? 'Reel'
+             : b.dataset.name.split(' ')[0];
+    input.value = input.value.replace(/@[\w]*$/, '@' + nm + ' ');
+    closeMentionPop();
+    input.focus();
+  });
+  document.addEventListener('click', e => {
+    if (mentionPop.classList.contains('hidden')) return;
+    if (e.target.closest('#mention-pop') || e.target.closest('#chat-input')) return;
+    closeMentionPop();
+  });
+
   // ---------- data loading ----------
   // group threads live on their own ref; my read marker is the row with dname === my key
   function applyGroupRows(c, rows){
     c.messages = [];
+    c.readsBy = {};               // 👀 who has read up to when (seen-by)
     const deleted = new Set(), edits = {};
     rows.forEach(r => {
       if (r.kind === 'del'){ deleted.add(String(r.body || '')); return; }
@@ -1112,8 +1329,24 @@
         try { const o = JSON.parse(String(r.body || '{}')); if (o.m) edits[String(o.m)] = String(o.b || ''); } catch(e){}
         return;
       }
+      if (r.kind === 'pin'){
+        try { const o = JSON.parse(String(r.body || '{}')); pinMsg[c.id] = (o && o.m) ? o : null; } catch(e){}
+        return;
+      }
+      if (r.kind === 'vote'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (o.m){
+            const ent = (voteMap[String(o.m)] = voteMap[String(o.m)] || {});
+            if (+o.i < 0) delete ent[String(o.w || '')]; else ent[String(o.w || '')] = +o.i;
+          }
+        } catch(e){}
+        return;
+      }
       if (r.kind === 'read'){
         if (String(r.dname || '') === a) serverRead[c.id] = String(r.body || '');
+        if (r.from === 'jag') c.readsBy['_studio'] = String(r.body || '');
+        else if (r.dname && String(r.dname) !== a) c.readsBy[String(r.dname)] = String(r.body || '');
         return;
       }
       if (r.kind === 'react'){
@@ -1134,7 +1367,7 @@
         ts: String(r.ts || ''),
         side: mine ? 'out' : 'in',
         who: r.from === 'jag' ? 'Reel Estate Media' : (r.who || 'Agent'),
-        text: b.text, atts: b.atts, q: b.q
+        text: b.text, atts: b.atts, q: b.q, poll: b.poll
       });
     });
     c.messages = c.messages.filter(m => !deleted.has(m.id));
@@ -1238,7 +1471,7 @@
           .then(r => r.json())
           .then(g => {
             (g.items || []).forEach(it => conversations.push({
-              id: 'g|' + it.id, gid: it.id, name: it.name || 'Group',
+              id: 'g|' + it.id, gid: it.id, name: it.name || 'Group', desc: it.desc || '',
               sub: '\uD83D\uDC65 Group \u00B7 ' + ((it.members || []).length + 1) + ' people',
               initials: '\uD83D\uDC65', pic: it.pic || '', members: it.members || [],
               group: true, messages: [], lastTs: ''
