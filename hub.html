@@ -284,6 +284,11 @@ body.light .date-chip{background:rgba(23,23,26,.05);color:var(--dim)}
 body.light .badge{background:rgba(255,255,255,.65);color:var(--dim)}
 body.light .stats{background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(250,248,242,.8))}
 body.light .wcard{background:linear-gradient(180deg,rgba(255,246,246,.9),rgba(255,251,248,.85) 60%)}
+#previewbar{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(90deg,rgba(227,34,44,.92),rgba(180,16,26,.92));color:#fff;font-family:var(--sans);font-size:12.5px;padding:8px 14px;backdrop-filter:blur(8px);box-shadow:0 6px 20px -8px rgba(0,0,0,.5)}
+#previewbar b{font-weight:700}
+#previewbar button{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:20px;padding:4px 13px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+#previewbar button:hover{background:rgba(255,255,255,.28)}
+body.haspreview{padding-top:44px}
 #themefab{position:fixed;left:18px;bottom:18px;z-index:60;width:46px;height:46px;border-radius:50%;border:1px solid var(--line2);background:var(--panel2);color:var(--txt);font-size:19px;cursor:pointer;box-shadow:0 10px 26px -10px rgba(0,0,0,.5);display:grid;place-items:center;transition:transform .15s ease}
 #themefab:hover{transform:scale(1.08)}
 #themefab .auto{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;letter-spacing:.1em;background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;display:none}
@@ -392,6 +397,49 @@ body.light .wcard{background:linear-gradient(180deg,rgba(255,246,246,.9),rgba(25
 <div class="sign" id="sign" style="display:none"></div>
 <script>
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+
+/* ---- 👁 studio preview: browse any agent's hub without leaving a trace.
+   Turns on automatically when this browser holds your admin token, or with
+   ?preview=1. Nothing posts, nothing saves locally, welcome steps stay
+   pristine. "Go live" (per tab) re-enables real actions for genuine tests. ---- */
+var PREVIEW = false;
+(function(){
+  try{
+    var q0 = new URLSearchParams(location.search);
+    if(q0.get('live') === '1'){ sessionStorage.setItem('rem_preview_live', '1'); }
+    var wantsLive = sessionStorage.getItem('rem_preview_live') === '1';
+    var isStudio = false;
+    try{ isStudio = !!localStorage.getItem('rem_admin_token_v1'); }catch(e0){}
+    PREVIEW = !wantsLive && (q0.get('preview') === '1' || isStudio);
+  }catch(e){ PREVIEW = false; }
+  if(!PREVIEW) return;
+  // 1) no server writes — POSTs resolve ok but never leave the page
+  var _fetch = window.fetch;
+  window.fetch = function(u, o){
+    if(o && String(o.method || '').toUpperCase() === 'POST'){
+      try{ if(typeof toast === 'function') toast('👁 Preview — nothing was saved'); }catch(e1){}
+      return Promise.resolve(new Response('{"ok":true,"id":"preview"}', {status: 200, headers: {'Content-Type': 'application/json'}}));
+    }
+    return _fetch.apply(this, arguments);
+  };
+  // 2) no local traces — hub state keys are neither read nor written
+  var _set = Storage.prototype.setItem, _get = Storage.prototype.getItem;
+  Storage.prototype.setItem = function(k, v){ if(/^rem_hub_/.test(String(k))) return; return _set.apply(this, arguments); };
+  Storage.prototype.getItem = function(k){ if(/^rem_hub_/.test(String(k))) return null; return _get.apply(this, arguments); };
+  // 3) the ribbon
+  document.addEventListener('DOMContentLoaded', function(){
+    var bar = document.createElement('div');
+    bar.id = 'previewbar';
+    bar.innerHTML = '<span>👁 <b>Studio preview</b> — browsing doesn\'t count: welcome steps, recaps and messages are untouched.</span>' +
+      '<button id="golive" title="Turn real actions back on for this tab — for genuine end-to-end tests.">Go live</button>';
+    document.body.appendChild(bar);
+    document.body.classList.add('haspreview');
+    document.getElementById('golive').addEventListener('click', function(){
+      try{ sessionStorage.setItem('rem_preview_live', '1'); }catch(e2){}
+      location.reload();
+    });
+  });
+})();
 const q = new URLSearchParams(location.search);
 const a = q.get('a') || '';
 const pin = (q.get('t') || 'pin') === 'pin';
@@ -1026,6 +1074,14 @@ function loadBrand(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if(!j.ok || !j.kit) return;
+      var k0 = j.kit;
+      // a fully blank kit (e.g. after ✕ Remove) counts as "not set up yet"
+      var hasKit = !!(String(k0.logo || '') || String(k0.head || '') || String(k0.ig || '').trim() || String(k0.notes || '').trim());
+      if(!hasKit){
+        if(k0.colors && k0.colors[0]) document.getElementById('bk-c1').value = k0.colors[0];
+        if(k0.colors && k0.colors[1]) document.getElementById('bk-c2').value = k0.colors[1];
+        return;
+      }
       WELCOME.brand = true;
       updateWelcome();
       document.getElementById('brandwrap').classList.add('collapsed');
