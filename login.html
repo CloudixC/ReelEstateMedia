@@ -226,6 +226,10 @@
                 <option value="">— Paste your token, agents load here —</option>
               </select>
             </div>
+            <div id="adCur" class="hidden mt-2 rounded-xl border px-3.5 py-2.5 text-sm flex items-center gap-2" style="border-color:var(--line); background:rgba(255,255,255,0.03);">
+              <span id="adCurText" class="text-neutral-300 min-w-0 truncate"></span>
+              <button type="button" id="adCurCopy" class="ghost-btn shrink-0 ml-auto text-xs font-semibold rounded-lg border px-2.5 py-1.5 text-neutral-300" style="border-color:var(--line);">📋 Copy code</button>
+            </div>
           </div>
           <div id="adKeyWrap" class="hidden">
             <label class="label block mb-2">Hub key <span class="normal-case tracking-normal text-neutral-600">— or paste their whole hub link</span></label>
@@ -430,6 +434,29 @@
      Every hub your Command Centre has pushed shows up in the dropdown;
      picking one auto-fills the key, first name and hub type. */
   var AGENTS = {};
+  var LOGINS = {};   // hub key -> {pin, email, name} — the agent's CURRENT access code
+  function paintCurrent(key){
+    var box = $('adCur');
+    if(!key || key === '__manual__'){ box.classList.add('hidden'); return; }
+    var lg = LOGINS[key];
+    if(lg){
+      $('adCurText').innerHTML = 'Current code: <b class="text-white tracking-widest">' + lg.pin + '</b>' +
+        (lg.email ? ' <span class="text-neutral-500">· ' + lg.email + '</span>' : '');
+      $('adCurCopy').classList.remove('hidden');
+    } else {
+      $('adCurText').textContent = 'No login yet — generate a code below and save.';
+      $('adCurCopy').classList.add('hidden');
+    }
+    box.classList.remove('hidden');
+  }
+  $('adCurCopy').addEventListener('click', function(){
+    var key = $('adAgent').value;
+    var lg = LOGINS[key];
+    if(!lg) return;
+    var btn = this;
+    var done = function(){ btn.textContent = '✓ Copied'; setTimeout(function(){ btn.textContent = '📋 Copy code'; }, 1500); };
+    if(navigator.clipboard) navigator.clipboard.writeText(lg.pin).then(done).catch(done); else done();
+  });
   function loadAgents(){
     var token = $('adToken').value.trim();
     var status = $('adAgentStatus');
@@ -441,6 +468,18 @@
         if(!j.ok){ status.textContent = j.error === 'bad token' ? 'Token not accepted' : 'Couldn\'t load agents'; return; }
         var latest = {};
         (j.rows || []).forEach(function(r){ if(r.kind === 'hub') latest[r.ref] = r; });
+        LOGINS = {};
+        (j.rows || []).forEach(function(r){
+          if(r.kind !== 'agent') return;
+          try{
+            var lo = JSON.parse(String(r.body || '{}'));
+            var lm = String(lo.qs || '').match(/(?:^|&)a=([^&]+)/);
+            if(!lm) return;
+            var lk = decodeURIComponent(lm[1]);
+            if(String(lo.pin || '').trim()) LOGINS[lk] = {pin: String(lo.pin).trim(), email: String(r.ref || ''), name: String(lo.name || '')};
+            else delete LOGINS[lk];    // blank pin = account disabled
+          }catch(e5){}
+        });
         AGENTS = {};
         var sel = $('adAgent');
         sel.innerHTML = '<option value="">— Pick an agent —</option>';
@@ -477,13 +516,15 @@
       if(v && v !== '__manual__' && AGENTS[v]){
         $('adName').value = AGENTS[v].name;
         $('adType').value = AGENTS[v].t;
-        if(AGENTS[v].email){
-          $('adEmail').value = AGENTS[v].email;
+        var known = (LOGINS[v] && LOGINS[v].email) || AGENTS[v].email;
+        if(known){
+          $('adEmail').value = known;
         } else {
           $('adEmail').value = '';
           $('adEmail').placeholder = 'No email on their profile — type it here';
         }
       }
+      paintCurrent(v);
     });
     if($('adToken').value.trim()) loadAgents();
   }
@@ -526,10 +567,12 @@
           if(pin){
             adNote('✓ Saved. ' + (name || email) + ' can now sign in with the code ' + pin + '.', true);
             lastSaved = {name: name, email: email, pin: pin};
+            if(key){ LOGINS[key] = {pin: pin, email: email, name: name}; paintCurrent($('adAgent').value); }
             $('adResult').classList.remove('hidden');
           } else {
             adNote('✓ Account for ' + email + ' is now disabled.', true);
             lastSaved = null;
+            if(key){ delete LOGINS[key]; paintCurrent($('adAgent').value); }
           }
         } else {
           adNote(j.error === 'bad token' ? 'That token isn\'t right — copy it from the top of your inbox script.' : 'Save failed: ' + (j.error || 'unknown error'), false);
