@@ -1143,20 +1143,33 @@ function App(){
     const t = setInterval(check, 30 * 60 * 1000);
     return () => { clearTimeout(t0); clearInterval(t); };
   }, []);
-  // 🔁 Unlimited plans: raise the flat monthly invoice on the first open of each month
+  // 🔁 Unlimited plans: keep every month invoiced, from the plan's start month
+  // through today, and on the 1st going forward. Missing months backfill
+  // automatically; unpaid auto-invoices from before the start month clean up.
   useEffect(() => {
-    const mo = today().slice(0, 7);
-    const missing = db.clients.filter(c => c.tier === 'unlimited' &&
-      +(c.retainer !== undefined ? c.retainer : 1750) > 0 &&
-      !db.orders.some(o => o.retainer && o.clientId === c.id && String(o.rmonth) === mo));
-    if(!missing.length) return;
-    const label = new Date(mo + '-15T12:00:00').toLocaleDateString('en-CA', {month: 'long', year: 'numeric'});
-    setDb(p => ({...p, orders: [...missing.map(c => ({
-      id: uid(), clientId: c.id, project: 'Unlimited Plan — ' + label,
-      date: mo + '-01', payment: 'unpaid', hst: true, retainer: true, rmonth: mo,
-      items: [{ name: 'Unlimited Content Plan (monthly)', price: +(c.retainer !== undefined ? c.retainer : 1750), qty: 1 }]
-    })), ...p.orders]}));
-    missing.forEach(c => logActivity(`🔁 Monthly retainer invoice raised — ${c.name} · ${money(+(c.retainer !== undefined ? c.retainer : 1750))} + HST (${label})`));
+    const cur = today().slice(0, 7);
+    const nextMo = m => { const y = +m.slice(0, 4), mm = +m.slice(5, 7); return mm === 12 ? (y + 1) + '-01' : y + '-' + String(mm + 1).padStart(2, '0'); };
+    const moLabel = m => new Date(m + '-15T12:00:00').toLocaleDateString('en-CA', {month: 'long', year: 'numeric'});
+    const add = [], drop = [];
+    db.clients.forEach(c => {
+      if(c.tier !== 'unlimited') return;
+      const amt = +(c.retainer !== undefined ? c.retainer : 1750);
+      if(!(amt > 0)) return;
+      const start = /^\d{4}-\d{2}$/.test(String(c.retainerStart || '')) ? String(c.retainerStart) : cur;
+      db.orders.forEach(o => { if(o.retainer && o.clientId === c.id && String(o.rmonth) < start && o.payment !== 'paid') drop.push(o.id); });
+      for(let mo = start; mo <= cur; mo = nextMo(mo)){
+        if(db.orders.some(o => o.retainer && o.clientId === c.id && String(o.rmonth) === mo)) continue;
+        add.push({ id: uid(), clientId: c.id, project: 'Unlimited Plan — ' + moLabel(mo),
+          date: mo + '-01', payment: 'unpaid', hst: true, retainer: true, rmonth: mo,
+          items: [{ name: 'Unlimited Content Plan (monthly)', price: amt, qty: 1 }] });
+      }
+      if(add.filter(o => o.clientId === c.id).length)
+        logActivity(`🔁 Retainer invoices for ${c.name}: ${add.filter(o => o.clientId === c.id).length} month(s) at ${money(amt)} + HST`);
+    });
+    if(!add.length && !drop.length) return;
+    const dropSet = new Set(drop);
+    setDb(p => ({...p, orders: [...add, ...p.orders.filter(o => !dropSet.has(o.id))]}));
+    if(drop.length) logActivity(`Cleaned up ${drop.length} unpaid retainer invoice${drop.length === 1 ? '' : 's'} from before the plan start`);
   }, [db.clients, db.orders]);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
   const dbRef = React.useRef(db); dbRef.current = db;
@@ -3350,7 +3363,8 @@ function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient, pus
                 }}>🏠 Hub</button>
                 <button className="btn ghost sm" onClick={() => setEditingClient(c)}>Edit</button>
               </div>
-              <div style={{marginTop:5}}><span className={'pill ' + c.tier}>{TIER_LABEL[c.tier] || c.tier}</span></div>
+              <div style={{marginTop:5}}><span className={'pill ' + c.tier}>{TIER_LABEL[c.tier] || c.tier}</span>
+                {c.tier === 'unlimited' && <span className="small faint" style={{marginLeft:8}}>{money(+(c.retainer !== undefined ? c.retainer : 1750))}/mo{c.retainerStart ? ' since ' + c.retainerStart : ''}</span>}</div>
               <div className="crows">
                 {em && <div>📧 <a href={'mailto:' + em}>{em}</a></div>}
                 {c.phone && <div>📱 <a href={'tel:' + tel}>{c.phone}</a></div>}
@@ -4119,6 +4133,7 @@ function NewClientModal({onClose, onSave}){
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
   const [retainer, setRetainer] = useState(1750);
+  const [retainerStart, setRetainerStart] = useState(today().slice(0, 7));
   useEffect(() => { if(tier === 'direct' && company === 'Pinnacle') setCompany(''); if(tier !== 'direct' && !company) setCompany('Pinnacle'); }, [tier]);
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -4140,9 +4155,13 @@ function NewClientModal({onClose, onSave}){
             <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
           {tier === 'unlimited' && <div style={{marginTop:8}}>
-            <label className="f">Monthly retainer (before HST)</label>
-            <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/>
-            <p className="small faint" style={{marginTop:4}}>An invoice for this amount is raised automatically on the 1st of every month. Items on their orders price at $0 — the plan covers them.</p>
+            <div className="frow">
+              <div><label className="f">Monthly retainer (before HST)</label>
+                <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/></div>
+              <div><label className="f">Plan started (first billed month)</label>
+                <input type="month" value={retainerStart} onChange={e => setRetainerStart(e.target.value)}/></div>
+            </div>
+            <p className="small faint" style={{marginTop:4}}>Invoices auto-raise for every month from the start month through today — back-months included — then on the 1st going forward. Items on their orders price at $0.</p>
           </div>}
         </div>
       </div>
@@ -4156,7 +4175,7 @@ function NewClientModal({onClose, onSave}){
       </div>
       <div className="modalfoot">
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;} onSave({id: uid(), name: name.trim(), tier, company: company.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0} : {})}); }}>Add</button>
+        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;} onSave({id: uid(), name: name.trim(), tier, company: company.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7)} : {})}); }}>Add</button>
       </div>
     </div>
   </div>);
@@ -4174,6 +4193,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
   const [notes, setNotes] = useState(client.notes || '');
   const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : (client.tier === 'direct' || client.tier === 'unlimited'));
   const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
+  const [retainerStart, setRetainerStart] = useState(client.retainerStart || today().slice(0, 7));
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
     <div className="modal" style={{maxWidth:540}}>
@@ -4195,9 +4215,13 @@ function EditClientModal({client, onClose, onSave, onDelete}){
             <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
           {tier === 'unlimited' && <div style={{marginTop:8}}>
-            <label className="f">Monthly retainer (before HST)</label>
-            <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/>
-            <p className="small faint" style={{marginTop:4}}>Invoiced automatically on the 1st of each month. New order items price at $0 — the plan covers them.</p>
+            <div className="frow">
+              <div><label className="f">Monthly retainer (before HST)</label>
+                <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/></div>
+              <div><label className="f">Plan started (first billed month)</label>
+                <input type="month" value={retainerStart} onChange={e => setRetainerStart(e.target.value)}/></div>
+            </div>
+            <p className="small faint" style={{marginTop:4}}>Missing months from the start month to today backfill automatically. Amount changes apply to newly raised months only — already-raised invoices keep their price (edit those orders directly if needed). Moving the start later removes unpaid pre-start invoices; paid ones are never touched.</p>
           </div>}
           <p className="small faint" style={{marginTop:5}}>Changing type recalculates margin everywhere instantly. Locked prices on existing orders don't change.</p>
         </div>
@@ -4227,7 +4251,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <span className="spacer"></span>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;}
-          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0} : {})}); }}>Save Changes</button>
+          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7)} : {})}); }}>Save Changes</button>
       </div>
     </div>
   </div>);
