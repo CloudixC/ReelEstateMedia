@@ -1223,6 +1223,22 @@ function App(){
     setOpenOrder(order.id);
     showToast('⟳ Rebooked — fresh deliverables created');
   };
+  const deleteDeliverable = (id) => {
+    const cur = db.deliverables.find(x => x.id === id);
+    if(!cur) return;
+    const o = db.orders.find(x => x.id === cur.orderId);
+    if(!confirm(`Remove "${dlTitle(cur)}"${cur.status === 'Delivered' ? ' (already delivered)' : ''}?\nIt disappears from the pipeline and from the agent's hub.`)) return;
+    setDb(p => ({...p, deliverables: p.deliverables.filter(d => d.id !== id)}));
+    logActivity(`Removed deliverable: ${dlTitle(cur)}${o && o.project ? ' · ' + o.project : ''}`);
+    showToast('Deliverable removed', [{label: 'Undo', fn: () => {
+      setDb(p => ({...p, deliverables: [...p.deliverables, cur]}));
+      const c2 = o && db.clients.find(x => x.id === o.clientId);
+      if(c2 && (c2.hubKey || c2.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c2.id), 900);
+    }}]);
+    // keep the agent's hub in sync so the card disappears there too
+    const c = o && db.clients.find(x => x.id === o.clientId);
+    if(c && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
+  };
   const updateDeliverable = (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
@@ -2988,13 +3004,13 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
         <div className="dl-row small faint" style={{borderBottom:'1px solid var(--line)'}}>
           <span>Deliverable</span><span>Status</span><span>Shoot date</span><span>Prep / Brief</span>
         </div>
-        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} db={db} updateSettings={updateSettings} />)}
+        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} db={db} updateSettings={updateSettings} />)}
       </div>))}
   </>);
 }
 
 /* ---------------- Deliverable row + production brief ---------------- */
-function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, siblings, splitDeliverable, db, updateSettings}){
+function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, db, updateSettings}){
   const [showImport, setShowImport] = useState(false);
   const [importTxt, setImportTxt] = useState('');
   const [open, setOpen] = useState(!!defaultOpen);
@@ -3018,6 +3034,7 @@ function DeliverableRow({d, updateDeliverable, defaultOpen, order, client, sibli
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
         {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
+        {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
       </span>
     </div>
     {open &&
