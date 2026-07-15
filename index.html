@@ -403,8 +403,8 @@ const LS_KEY = 'rem_pipeline_v1';
    partner  = agent booking via Pinnacle Command Centre → bills REM rate, Pinnacle earns the retail spread
    internal = house work for Pinnacle itself → bills REM rate, NO margin (nobody pays retail)
    direct   = REM's own client → bills retail rate */
-const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal', direct:'Direct · retail'};
-const rateFor = (tier, s) => tier === 'direct' ? s.retail : s.partner;
+const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal', direct:'Direct · retail', unlimited:'Unlimited Plan · monthly'};
+const rateFor = (tier, s) => tier === 'unlimited' ? 0 : tier === 'direct' ? s.retail : s.partner;
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
@@ -1143,6 +1143,21 @@ function App(){
     const t = setInterval(check, 30 * 60 * 1000);
     return () => { clearTimeout(t0); clearInterval(t); };
   }, []);
+  // 🔁 Unlimited plans: raise the flat monthly invoice on the first open of each month
+  useEffect(() => {
+    const mo = today().slice(0, 7);
+    const missing = db.clients.filter(c => c.tier === 'unlimited' &&
+      +(c.retainer !== undefined ? c.retainer : 1750) > 0 &&
+      !db.orders.some(o => o.retainer && o.clientId === c.id && String(o.rmonth) === mo));
+    if(!missing.length) return;
+    const label = new Date(mo + '-15T12:00:00').toLocaleDateString('en-CA', {month: 'long', year: 'numeric'});
+    setDb(p => ({...p, orders: [...missing.map(c => ({
+      id: uid(), clientId: c.id, project: 'Unlimited Plan — ' + label,
+      date: mo + '-01', payment: 'unpaid', hst: true, retainer: true, rmonth: mo,
+      items: [{ name: 'Unlimited Content Plan (monthly)', price: +(c.retainer !== undefined ? c.retainer : 1750), qty: 1 }]
+    })), ...p.orders]}));
+    missing.forEach(c => logActivity(`🔁 Monthly retainer invoice raised — ${c.name} · ${money(+(c.retainer !== undefined ? c.retainer : 1750))} + HST (${label})`));
+  }, [db.clients, db.orders]);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
   const dbRef = React.useRef(db); dbRef.current = db;
   const pushHub = (clientId) => {
@@ -1167,7 +1182,8 @@ function App(){
             du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || '')}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
-      const pin = c.tier === 'partner' || c.tier === 'internal';
+      const pin = c.tier === 'partner' || c.tier === 'internal' ||
+        (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
       const co = companyOf(c);
       // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
       const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail}));
@@ -1340,7 +1356,7 @@ function App(){
     if(cur && patch.payment === 'paid' && cur.payment !== 'paid'){
       const c = db.clients.find(x => x.id === cur.clientId);
       const hk = c && (c.hubKey || c.hubId);
-      const balOn = c && (c.showBalance !== undefined ? !!c.showBalance : c.tier === 'direct');
+      const balOn = c && (c.showBalance !== undefined ? !!c.showBalance : (c.tier === 'direct' || c.tier === 'unlimited'));
       if(hk && db.settings.inboxUrl && balOn){
         const tot = orderTotals(cur).total;
         const when = new Date().toLocaleDateString('en-CA', {month:'long', day:'numeric', year:'numeric'});
@@ -4102,6 +4118,7 @@ function NewClientModal({onClose, onSave}){
   const [contact, setContact] = useState('');
   const [phone, setPhone] = useState('');
   const [birthday, setBirthday] = useState('');
+  const [retainer, setRetainer] = useState(1750);
   useEffect(() => { if(tier === 'direct' && company === 'Pinnacle') setCompany(''); if(tier !== 'direct' && !company) setCompany('Pinnacle'); }, [tier]);
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -4120,7 +4137,13 @@ function NewClientModal({onClose, onSave}){
             <option value="partner">Pinnacle Agent — REM rate, Pinnacle earns the retail spread</option>
             <option value="internal">Pinnacle Internal — REM rate, house work, no margin</option>
             <option value="direct">Direct Client — retail rate, no Pinnacle involvement</option>
+            <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
+          {tier === 'unlimited' && <div style={{marginTop:8}}>
+            <label className="f">Monthly retainer (before HST)</label>
+            <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/>
+            <p className="small faint" style={{marginTop:4}}>An invoice for this amount is raised automatically on the 1st of every month. Items on their orders price at $0 — the plan covers them.</p>
+          </div>}
         </div>
       </div>
       <div className="frow">
@@ -4133,7 +4156,7 @@ function NewClientModal({onClose, onSave}){
       </div>
       <div className="modalfoot">
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;} onSave({id: uid(), name: name.trim(), tier, company: company.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:''}); }}>Add</button>
+        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;} onSave({id: uid(), name: name.trim(), tier, company: company.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0} : {})}); }}>Add</button>
       </div>
     </div>
   </div>);
@@ -4149,7 +4172,8 @@ function EditClientModal({client, onClose, onSave, onDelete}){
   const [birthday, setBirthday] = useState(client.birthday || '');
   const [instagram, setInstagram] = useState(client.instagram || '');
   const [notes, setNotes] = useState(client.notes || '');
-  const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : client.tier === 'direct');
+  const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : (client.tier === 'direct' || client.tier === 'unlimited'));
+  const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
     <div className="modal" style={{maxWidth:540}}>
@@ -4168,7 +4192,13 @@ function EditClientModal({client, onClose, onSave, onDelete}){
             <option value="partner">Pinnacle Agent — REM rate, Pinnacle earns the retail spread</option>
             <option value="internal">Pinnacle Internal — REM rate, house work, no margin</option>
             <option value="direct">Direct Client — retail rate, no Pinnacle involvement</option>
+            <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
+          {tier === 'unlimited' && <div style={{marginTop:8}}>
+            <label className="f">Monthly retainer (before HST)</label>
+            <input type="number" min="0" step="50" value={retainer} onChange={e => setRetainer(e.target.value)}/>
+            <p className="small faint" style={{marginTop:4}}>Invoiced automatically on the 1st of each month. New order items price at $0 — the plan covers them.</p>
+          </div>}
           <p className="small faint" style={{marginTop:5}}>Changing type recalculates margin everywhere instantly. Locked prices on existing orders don't change.</p>
         </div>
       </div>
@@ -4197,7 +4227,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <span className="spacer"></span>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;}
-          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance}); }}>Save Changes</button>
+          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0} : {})}); }}>Save Changes</button>
       </div>
     </div>
   </div>);
