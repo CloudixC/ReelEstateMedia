@@ -528,6 +528,14 @@ function tracker(x){
     '<span class="stepno">Step ' + (ph + 1) + ' / 6</span></div>';
 }
 // Shoot-day countdown — only meaningful before the camera rolls (dt = shootDate then).
+function briefBtn(x){
+  if(!x.t) return '';
+  var sent = {};
+  try{ sent = JSON.parse(localStorage.getItem('rem_hub_sbrief_v1:' + a)) || {}; }catch(eB){}
+  var bid = 'proj|' + x.t;
+  return '<button class="tbtn briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(x.t) + '" data-bw="" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + x.t) + '">' +
+    (sent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</button>';
+}
 function shootLine(x){
   if(phaseOf(x) > 1 || !x.dt) return '';
   var d = new Date(String(x.dt) + 'T12:00:00');
@@ -842,7 +850,7 @@ function render(raw){
   }
   if(work.length){
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span></div>';
-    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x)));
+    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x), briefBtn(x)));
   }
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
@@ -1001,13 +1009,17 @@ function ensureBriefModal(){
   briefModal.querySelector('#bf-cancel').addEventListener('click', function(){ briefModal.classList.remove('on'); });
   briefModal.querySelector('#bf-send').addEventListener('click', function(){
     var v = function(id){ return (briefModal.querySelector(id).value || '').trim(); };
-    var addr = v('#bf-addr');
-    if(!addr){ briefModal.querySelector('#bf-addr').focus(); return; }
     var brief = { when: BRIEF_CTX ? (BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' — ' + BRIEF_CTX.bw : '')) : '',
-      addr: addr, access: v('#bf-access'), seller: v('#bf-seller'),
+      addr: v('#bf-addr'), access: v('#bf-access'), seller: v('#bf-seller'),
       feats: v('#bf-feats'), avoid: v('#bf-avoid'), notes: v('#bf-notes') };
+    if(!brief.addr && !brief.access && !brief.seller && !brief.feats && !brief.avoid && !brief.notes){
+      briefModal.querySelector('#bf-addr').focus();
+      toast('Give us at least one detail — even just the address or a note.');
+      return;
+    }
+    var thread = (BRIEF_CTX && BRIEF_CTX.bl) ? BRIEF_CTX.bl : (AGENTNAME || 'Agent') + ' — Content Hub';
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'',
+      kind:'msg', ref:a, project: thread, dname:'',
       who:AGENTNAME || 'Agent', from:'',
       body: JSON.stringify({ __rc:1, t:'', brief: brief }) }) }).catch(function(){});
     try{
@@ -1017,7 +1029,12 @@ function ensureBriefModal(){
       localStorage.setItem(k2, JSON.stringify(st));
     }catch(eS){}
     briefModal.classList.remove('on');
-    toast('📋 Brief sent — we\'ll walk in already knowing the house. 🙌');
+    toast('📋 Brief sent — we\'ll walk in already knowing the plan. 🙌');
+    if(BRIEF_CTX){
+      document.querySelectorAll('.briefbtn[data-bid="' + (window.CSS && CSS.escape ? CSS.escape(BRIEF_CTX.bid) : BRIEF_CTX.bid) + '"]').forEach(function(b){
+        b.textContent = '✓ Brief sent · update';
+      });
+    }
     loadBookings();
   });
   return briefModal;
@@ -1026,10 +1043,11 @@ document.addEventListener('click', function(e){
   var bb = e.target.closest ? e.target.closest('.briefbtn') : null;
   if(bb){
     e.preventDefault();
-    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw') };
+    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '' };
     var mdl = ensureBriefModal();
+    ['#bf-addr','#bf-access','#bf-seller','#bf-feats','#bf-avoid','#bf-notes'].forEach(function(id){ mdl.querySelector(id).value = ''; });
     mdl.querySelector('#bf-sub').textContent = (BRIEF_CTX.bn ? BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' · ' + BRIEF_CTX.bw : '') + ' — ' : '') +
-      'two minutes now = a smoother shoot day. Only the address is essential.';
+      'two minutes now = a smoother shoot day. Fill what you know, skip the rest — you can update it anytime.';
     mdl.classList.add('on');
     mdl.querySelector('#bf-addr').focus();
     return;
