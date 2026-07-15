@@ -1153,10 +1153,14 @@ function App(){
       let hk = c.hubKey || c.hubId;
       if(!hk){ hk = Math.random().toString(36).slice(2, 10); }
       if(c.hubKey !== hk) setDb(p => ({...p, clients: p.clients.map(x => x.id === clientId ? {...x, hubKey: hk} : x)}));
+      // 💳 who sees a balance? Direct clients: yes. Pinnacle agents (partner/
+      // internal): only if you flip "Show balance on their hub" on the client.
+      const pinTier = c.tier === 'partner' || c.tier === 'internal';
+      const showBal = c.showBalance !== undefined ? !!c.showBalance : !pinTier;
       const projects = db.deliverables
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
-          const owing = d.status === 'Delivered' && o.payment && o.payment !== 'paid';
+          const owing = showBal && d.status === 'Delivered' && o.payment && o.payment !== 'paid';
           return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
@@ -1320,6 +1324,13 @@ function App(){
       // keep the agent's hub in sync so they can watch their project move through the pipeline
       if(c && c.id && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
     }
+    // renamed → log it + refresh the agent's hub so the card matches
+    if(cur && patch.name !== undefined && patch.name !== cur.name){
+      const o2 = db.orders.find(x => x.id === cur.orderId) || {};
+      const c2 = db.clients.find(x => x.id === o2.clientId) || {};
+      logActivity(`Renamed "${cur.name}" → "${patch.name}"${o2.project ? ' · ' + o2.project : ''}`);
+      if(c2 && c2.id && (c2.hubKey || c2.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c2.id), 900);
+    }
   };
   const updateOrder = (id, patch) => {
     const cur = db.orders.find(o => o.id === id);
@@ -1329,7 +1340,8 @@ function App(){
     if(cur && patch.payment === 'paid' && cur.payment !== 'paid'){
       const c = db.clients.find(x => x.id === cur.clientId);
       const hk = c && (c.hubKey || c.hubId);
-      if(hk && db.settings.inboxUrl){
+      const balOn = c && (c.showBalance !== undefined ? !!c.showBalance : c.tier === 'direct');
+      if(hk && db.settings.inboxUrl && balOn){
         const tot = orderTotals(cur).total;
         const when = new Date().toLocaleDateString('en-CA', {month:'long', day:'numeric', year:'numeric'});
         fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({
@@ -1337,8 +1349,8 @@ function App(){
           who: 'Reel Estate Media', from: 'jag',
           body: '🧾 Payment received — ' + money(tot) + ' for “' + (cur.project || 'your order') + '”, ' + when + '. Keep this message as your receipt (HST included where applicable). Thank you! 🙏'
         })}).catch(() => {});
-        setTimeout(() => pushHub(c.id), 900);
       }
+      if(hk && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
     }
     if(cur && patch.rating && patch.rating !== cur.rating){
       const c = db.clients.find(x => x.id === cur.clientId) || {};
@@ -3023,6 +3035,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
     <div className="dl-row" ref={rowRef}>
       <span style={{fontWeight:600, fontSize:14}}>{b.topic ? b.topic : d.name}{b.topic && <span className="faint small"> · {d.name}</span>}
         <span className="faint small"> · {MEDIA_LABEL[mediaOf(d)]}</span>{b.orientation && <span className="faint small"> · {b.orientation === 'Vertical' ? '9:16 Vertical' : b.orientation === 'Horizontal' ? '16:9 Horizontal' : '9:16 + 16:9'}</span>}
+        <button className="btn ghost sm" title="Rename this deliverable" style={{padding:'0 7px', marginLeft:6, fontSize:12}}
+          onClick={() => { const n = prompt('Rename this deliverable', d.name); if(n !== null && n.trim() && n.trim() !== d.name) updateDeliverable(d.id, {name: n.trim()}); }}>✎</button>
       </span>
       <select value={d.status} onChange={e => updateDeliverable(d.id, {status: e.target.value})}>
         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL(s)}</option>)}
@@ -4135,6 +4149,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
   const [birthday, setBirthday] = useState(client.birthday || '');
   const [instagram, setInstagram] = useState(client.instagram || '');
   const [notes, setNotes] = useState(client.notes || '');
+  const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : client.tier === 'direct');
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
     <div className="modal" style={{maxWidth:540}}>
@@ -4168,12 +4183,21 @@ function EditClientModal({client, onClose, onSave, onDelete}){
       <div className="frow one">
         <div><label className="f">Relationship Notes</label><textarea rows="2" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kids' names, favourite coffee, farm area, referral source…"/></div>
       </div>
+      <div className="frow one">
+        <div>
+          <label className="f" style={{display:'flex', alignItems:'center', gap:8, cursor:'pointer', textTransform:'none', letterSpacing:0, fontSize:13.5}}>
+            <input type="checkbox" style={{width:'auto'}} checked={showBalance} onChange={e => setShowBalance(e.target.checked)}/>
+            💳 Show unpaid balances on their hub
+          </label>
+          <p className="small faint" style={{marginTop:4}}>Off = no "Balance due" pill ever appears on their page. Pinnacle agents default to off (they settle with Pinnacle, not you); direct clients default to on. Takes effect on the next hub push.</p>
+        </div>
+      </div>
       <div className="modalfoot">
         <button className="btn ghost" style={{color:'var(--red)', borderColor:'rgba(215,33,42,.4)'}} onClick={() => onDelete(client.id)}>🗑 Delete</button>
         <span className="spacer"></span>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;}
-          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes}); }}>Save Changes</button>
+          onSave({name: name.trim(), tier, company: company.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance}); }}>Save Changes</button>
       </div>
     </div>
   </div>);
