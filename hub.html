@@ -739,8 +739,8 @@ let SVC = [];
 const SELLER_URL = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'seller-prep.html';
 /* ---- Calendly: booking happens in a popup right on this page ---- */
 const CAL_BASE = 'https://calendly.com/hello-reelestatemedia';
-function calUrl(){
-  return CAL_BASE + '?hide_gdpr_banner=1&background_color=121215&text_color=f5f2e9&primary_color=e3222c' +
+function calUrl(base){
+  return (base || CAL_BASE) + '?hide_gdpr_banner=1&background_color=121215&text_color=f5f2e9&primary_color=e3222c' +
     '&name=' + encodeURIComponent(AGENTNAME || '') +
     (AGENTEMAIL ? '&email=' + encodeURIComponent(AGENTEMAIL) : '');
 }
@@ -758,12 +758,12 @@ function loadCalendly(){
   });
   return calReady;
 }
-function openCalendly(){
+function openCalendly(base){
   loadCalendly().then(function(){
-    Calendly.initPopupWidget({url: calUrl()});
+    Calendly.initPopupWidget({url: calUrl(base)});
   }).catch(function(){
     calReady = null;
-    window.open(calUrl(), '_blank');   // widget blocked? plain Calendly still works
+    window.open(calUrl(base), '_blank');   // widget blocked? plain Calendly still works
   });
 }
 // When Calendly confirms a booking inside the popup, tell the chat thread.
@@ -880,7 +880,7 @@ function render(raw){
     svcCats.forEach(function(cat){
       html += '<div class="svccat">' + esc(cat) + '</div>';
       SVC.filter(function(s){ return s.c === cat; }).forEach(function(s){
-        html += '<div class="svcrow"><span class="svcn">' + esc(s.n || '') + '</span><span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook">Book</button></div>';
+        html += '<div class="svcrow"><span class="svcn">' + esc(s.n || '') + '</span><span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook"' + (s.u ? ' data-cal="' + esc(s.u) + '"' : '') + ' title="' + (s.u ? 'Books this exact shoot — your name pre-filled' : 'Opens our calendar') + '">Book</button></div>';
       });
     });
     html += '<div class="svcnote">Prices in CAD before tax. Not sure what fits the listing? Ask in chat — we\'ll point you to the right package.</div></div>';
@@ -1035,7 +1035,7 @@ document.addEventListener('click', function(e){
     return;
   }
   var sv = e.target.closest ? e.target.closest('.svcbook') : null;
-  if(sv){ openCalendly(); return; }
+  if(sv){ openCalendly(sv.getAttribute('data-cal') || undefined); return; }
 });
 
 /* ---- referral link ---- */

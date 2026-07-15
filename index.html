@@ -405,6 +405,19 @@ const LS_KEY = 'rem_pipeline_v1';
    direct   = REM's own client → bills retail rate */
 const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal', direct:'Direct · retail', unlimited:'Unlimited Plan · monthly'};
 const rateFor = (tier, s) => tier === 'unlimited' ? 0 : tier === 'direct' ? s.retail : s.partner;
+/* Each bookable service's Calendly event — powers the hub's deep-linked Book buttons */
+const CAL_EVENT_SLUG = {
+  pod1:'podcast-teleprompter', pod5:'podcast-teleprompter', pod10:'podcast-teleprompter',
+  dyn1:'dynamic-shoot', dyn5:'dynamic-shoot', dyn10:'dynamic-shoot',
+  ysw1:'you-shoot-we-edit', ysw5:'you-shoot-we-edit', ysw10:'you-shoot-we-edit',
+  evt:'event-recap', head:'30min',
+  p20:'essential-listing-photos-20-hdr', p35:'professional-listing-photos-35-hdr',
+  p50:'premium-listing-photos-50-hdr', p60:'luxury-estate-photos-60-hdr',
+  v1:'essential-walkthrough-video-30s-vertical', v2:'professional-listing-video-30s-cinematic',
+  v3:'cinematic-listing-video-60s', v4:'luxury-property-film',
+  b1:'essential-listing-bundle', b2:'pro-listing-bundle', b3:'luxury-listing-bundle',
+  t1:'virtual-tour', t2:'floor-plans-virtual-tour', t4:'dedicated-twilight-shoot'
+};
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
@@ -1199,7 +1212,8 @@ function App(){
         (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
       const co = companyOf(c);
       // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
-      const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail}));
+      const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail,
+        ...(CAL_EVENT_SLUG[s.id] ? {u: 'https://calendly.com/hello-reelestatemedia/' + CAL_EVENT_SLUG[s.id]} : {})}));
       const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
         pay: db.settings.payUrl || '', svc: svcMenu});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
