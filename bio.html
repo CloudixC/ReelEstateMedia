@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Links</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340..640;1,9..144,340..640&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#e3222c; --red2:#ff4a52; --acc:#e3222c;
+  --bg:#050506; --panel:rgba(20,20,24,.6); --line:#232329; --line2:#32323a;
+  --txt:#f5f4f5; --dim:#a3a097; --faint:#6f6c74;
+  --serif:'Fraunces',Georgia,serif;
+  --sans:'Instrument Sans',-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:0 18px 60px;min-height:100vh}
+body::before{content:'';position:fixed;inset:-20% -10%;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(46% 30% at 50% 0%, color-mix(in srgb, var(--acc) 24%, transparent), transparent 70%),
+    radial-gradient(50% 34% at 65% 100%, color-mix(in srgb, var(--acc) 8%, transparent), transparent 70%);
+  animation:aurora 26s ease-in-out infinite alternate}
+@keyframes aurora{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(2%,2%,0) scale(1.06)}}
+.wrap{max-width:480px;margin:0 auto;position:relative;z-index:2;text-align:center;padding-top:52px}
+.head{width:112px;height:112px;border-radius:50%;object-fit:cover;border:2px solid var(--line2);box-shadow:0 18px 50px -18px rgba(0,0,0,.8);margin-bottom:18px;background:var(--panel)}
+.head.ph{display:inline-flex;align-items:center;justify-content:center;font-size:44px}
+h1{font-family:var(--serif);font-weight:520;font-size:clamp(30px,8vw,40px);letter-spacing:-.01em}
+h1 em{font-style:italic;color:var(--red2)}
+.brok{color:var(--dim);font-size:14.5px;margin-top:4px;letter-spacing:.04em}
+.blurb{color:var(--dim);font-size:15.5px;margin:14px auto 0;max-width:400px}
+.links{margin-top:30px;display:flex;flex-direction:column;gap:12px}
+.lbtn{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--panel);border:1px solid var(--line2);border-radius:16px;color:var(--txt);text-decoration:none;font-weight:600;font-size:16px;padding:16px 18px;transition:transform .14s ease,border-color .14s ease;backdrop-filter:blur(8px)}
+.lbtn:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--acc) 55%, var(--line2))}
+.lbtn.hot{background:linear-gradient(135deg,color-mix(in srgb, var(--acc) 92%, #fff), color-mix(in srgb, var(--acc) 75%, #000) 75%);border-color:transparent;color:#fff;box-shadow:0 14px 34px -12px color-mix(in srgb, var(--acc) 65%, transparent)}
+.crow{display:flex;gap:10px;margin-top:2px}
+.crow .lbtn{flex:1;padding:13px 10px;font-size:14.5px}
+.ig{margin-top:22px;color:var(--dim);font-size:14.5px;text-decoration:none;display:inline-flex;gap:7px;align-items:center}
+.ig:hover{color:var(--txt)}
+.credit{margin-top:54px;font-size:12.5px;color:var(--faint)}
+.credit a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line2)}
+.credit a:hover{color:var(--txt)}
+.center{padding:26vh 0;text-align:center;color:var(--dim)}
+@media(prefers-reduced-motion:reduce){body::before{animation:none}}
+</style></head><body>
+<div class="wrap" id="wrap"><div class="center">Loading…</div></div>
+<script>
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+const q = new URLSearchParams(location.search);
+const a = q.get('a') || '';
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+function fail(msg){ document.getElementById('wrap').innerHTML = '<div class="center">' + esc(msg) + '</div>'; }
+function driveImg(id){ return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400'; }
+function render(hub, kit, bio){
+  bio = bio || {}; kit = kit || {};
+  const name = hub.agent || 'Agent';
+  const brok = hub.brokerage || '';
+  document.title = name + (brok ? ' · ' + brok : '') + ' — Links';
+  if(kit.c1 && !/^#?f{3,8}$/i.test(kit.c1)) document.documentElement.style.setProperty('--acc', kit.c1);
+  let h = '';
+  h += kit.head
+    ? '<img class="head" src="' + esc(driveImg(kit.head)) + '" alt="' + esc(name) + '" onerror="this.outerHTML=\'<div class=&quot;head ph&quot;>🏡</div>\'">'
+    : '<div class="head ph">🏡</div>';
+  h += '<h1>' + esc(name).replace(/ ([^ ]+)$/, ' <em>$1</em>') + '</h1>';
+  if(brok) h += '<div class="brok">' + esc(brok) + '</div>';
+  if(bio.blurb) h += '<div class="blurb">' + esc(bio.blurb) + '</div>';
+  h += '<div class="links">';
+  (bio.links || []).forEach(function(l, i){
+    if(!l || !l.u) return;
+    h += '<a class="lbtn' + (i === 0 ? ' hot' : '') + '" href="' + esc(l.u) + '" target="_blank" rel="noopener">' + esc(l.t || l.u) + '</a>';
+  });
+  const tel = String(bio.phone || '').replace(/[^+0-9]/g, '');
+  const contact = [];
+  if(tel){ contact.push('<a class="lbtn" href="tel:' + esc(tel) + '">📞 Call</a>'); contact.push('<a class="lbtn" href="sms:' + esc(tel) + '">💬 Text</a>'); }
+  if(hub.email) contact.push('<a class="lbtn" href="mailto:' + esc(hub.email) + '">✉️ Email</a>');
+  if(contact.length) h += '<div class="crow">' + contact.join('') + '</div>';
+  h += '</div>';
+  const ig = String(kit.ig || bio.ig || '').replace(/^@/, '');
+  if(ig) h += '<a class="ig" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener">📸 @' + esc(ig) + '</a>';
+  h += '<div class="credit">🎬 Content by <a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Reel Estate Media</a></div>';
+  document.getElementById('wrap').innerHTML = h;
+}
+if(!a){ fail('This link is missing its key.'); }
+else Promise.all([
+  fetch(ENDPOINT + '?hub=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
+  fetch(ENDPOINT + '?brand=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
+  fetch(ENDPOINT + '?bio=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({}))
+]).then(function(rs){
+  if(!rs[0].ok || !rs[0].hub){ fail('We couldn’t find this page.'); return; }
+  render(rs[0].hub, rs[1] && rs[1].kit, rs[2] && rs[2].bio);
+});
+</script></body></html>

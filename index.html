@@ -1059,6 +1059,7 @@ function App(){
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 7000);
   };
+  window.showToast = showToast;   // reachable from standalone components (brief editor script sync)
   const logActivity = (text) => setDb(p => ({...p, activity: [{t: Date.now(), text}, ...(p.activity || [])].slice(0, 1000)}));
 
   const addOrder = (order) => {
@@ -3142,6 +3143,31 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         <div>
           <label className="f">Script Link / Doc</label>
           <input placeholder="Google Doc, teleprompter link…" value={b.scriptLink} onChange={e => setBrief({scriptLink: e.target.value})}/>
+        </div>
+        <div style={{gridColumn:'1 / -1'}}>
+          <label className="f">📝 Script text — syncs with the Script Studio on their hub</label>
+          <textarea rows="4" placeholder="Write or paste the script. Send it to their hub and they can read, tweak, approve — and shoot it off the built-in teleprompter. Their edits email you instantly." value={b.scriptText || ''} onChange={e => setBrief({scriptText: e.target.value})}/>
+          <div className="flex" style={{gap:8, marginTop:6, flexWrap:'wrap'}}>
+            <button className="btn ghost sm" onClick={async () => {
+              const hk = client && (client.hubKey || client.hubId);
+              if(!db.settings.inboxUrl || !hk){ alert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
+              try{
+                const j = await fetch(db.settings.inboxUrl + '?scripts=' + encodeURIComponent(hk)).then(r => r.json());
+                const items = j.items || [];
+                const hit = items.find(x => x.p === (order ? order.project : '') && x.d === dlTitle(d)) || items.find(x => x.d === dlTitle(d));
+                if(hit && hit.t){ setBrief({scriptText: hit.t, script: hit.st === 'Approved' ? 'Approved' : 'Drafted'}); (window.showToast || alert)('⟳ Pulled their latest — ' + hit.st.toLowerCase() + (hit.by === 'studio' ? ' (your own version)' : ' by the agent')); }
+                else (window.showToast || alert)('No script on their hub yet for this deliverable.');
+              }catch(e){ alert("Couldn't reach the inbox — check the connection."); }
+            }}>⟳ Pull latest from their hub</button>
+            <button className="btn ghost sm" onClick={() => {
+              const txt = (b.scriptText || '').trim();
+              const hk = client && (client.hubKey || client.hubId);
+              if(!txt){ alert('Write the script first.'); return; }
+              if(!db.settings.inboxUrl || !hk){ alert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
+              fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'script', ref: hk, project: order ? order.project : (d.group || ''), dname: dlTitle(d), who: 'Reel Estate Media', from: 'jag', body: JSON.stringify({t: txt, st: b.script === 'Approved' ? 'Approved' : 'Drafted', by: 'studio'})})}).catch(() => {});
+              (window.showToast || alert)('📤 Script sent to their hub — they can read, tweak or approve it there.');
+            }}>📤 Send to their hub</button>
+          </div>
         </div>
         <div>
           <label className="f">Song / Track</label>

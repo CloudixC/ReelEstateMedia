@@ -293,6 +293,38 @@ body.haspreview{padding-top:44px}
 #themefab:hover{transform:scale(1.08)}
 #themefab .auto{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;letter-spacing:.1em;background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;display:none}
 #themefab.isauto .auto{display:block}
+/* ---- ⚡ next open slots ---- */
+.slotrow{display:none;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px}
+.slotlbl{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.slotchip{border:1px solid var(--line2);background:var(--panel2);color:var(--txt);border-radius:20px;padding:7px 13px;font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none;transition:transform .12s ease,border-color .12s ease}
+.slotchip:hover{transform:translateY(-1px);border-color:rgba(227,34,44,.5)}
+.slotchip b{color:var(--red2)}
+/* ---- 📝 script studio ---- */
+.scriptbtn.ok{border-color:rgba(80,200,120,.45)}
+#sc-text{min-height:170px}
+.scstate{font-size:12.5px;color:var(--dim);margin:-2px 0 10px}
+/* ---- ▶ teleprompter ---- */
+#teleo{position:fixed;inset:0;background:#000;z-index:300;display:none;flex-direction:column}
+#teleo.on{display:flex}
+#tele-view{flex:1;overflow:hidden;position:relative;cursor:pointer}
+#tele-inner{position:absolute;top:0;left:50%;transform:translateX(-50%);width:min(92vw,860px);font-size:46px;line-height:1.55;font-weight:600;color:#fff;padding:42vh 0 65vh;white-space:pre-wrap}
+#tele-inner.mir{transform:translateX(-50%) scaleX(-1)}
+#tele-bar{display:flex;gap:9px;align-items:center;justify-content:center;padding:12px;background:#0a0a0c;border-top:1px solid #222;flex-wrap:wrap}
+#tele-bar button{background:#17171b;border:1px solid #2c2c33;color:#fff;border-radius:10px;padding:9px 14px;font-size:14px;cursor:pointer}
+#tele-bar .tp{background:var(--red);border-color:transparent;font-weight:700}
+#tele-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);color:#777;font-size:12.5px;z-index:2}
+/* ---- 🎙 brief voice note ---- */
+#bf-mic.rec{background:var(--red) !important;color:#fff !important;animation:bfpulse 1.3s ease-in-out infinite}
+@keyframes bfpulse{0%,100%{box-shadow:0 0 0 0 rgba(227,34,44,.5)}50%{box-shadow:0 0 0 9px rgba(227,34,44,0)}}
+.bfmicrow{display:flex;gap:10px;align-items:center;margin:8px 0 2px;font-size:13px;color:var(--dim)}
+/* ---- 🔗 bio + 👥 assistant editors ---- */
+.biolink{display:flex;gap:8px;align-items:center;margin-bottom:7px;font-size:14px}
+.biolink .bt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.biolink .bu{color:var(--faint);font-size:12px;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.asstrow{display:flex;gap:8px;align-items:center;margin-bottom:7px;font-size:14px}
+/* ---- 👥 assistant view-only mode ---- */
+body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #brandwrap,body.assist #biowrap,body.assist #asstwrap,body.assist #welcomeslot,body.assist .pill.due2{display:none !important}
+.assistbar{background:var(--panel2);border:1px solid var(--line2);border-radius:14px;padding:10px 14px;font-size:13.5px;color:var(--dim);margin:0 0 16px}
 .bsave{background:linear-gradient(135deg,#ff3d46,#c4141e 70%);color:#fff;border:none;border-radius:11px;padding:11px 20px;font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;cursor:pointer;font-family:var(--sans);box-shadow:0 8px 22px -10px rgba(227,34,44,.5)}
 .bsave:disabled{opacity:.6;cursor:default}
 .bstat{font-size:12px;color:var(--dim);margin-left:10px}
@@ -366,6 +398,21 @@ body.haspreview{padding-top:44px}
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bk-save">Save brand kit</button><span class="bstat" id="bk-stat"></span></div>
   <input type="file" id="bk-file" accept="image/*" style="display:none">
 </div>
+<div class="pcard" id="biowrap" style="display:none">
+  <h3>🔗 Your link-in-bio page</h3>
+  <div class="psub">A clean personal page for your Instagram bio — your headshot, your links, your brand. It updates the moment you save.</div>
+  <div class="brow"><label>Tagline</label><input type="text" id="bio-blurb" maxlength="120" placeholder="Helping families move up in Mississauga · Royal LePage Pinnacle"></div>
+  <div class="brow"><label>Phone</label><input type="text" id="bio-phone" maxlength="25" placeholder="(905) 555-0123 — adds Call & Text buttons"></div>
+  <div id="bio-links"></div>
+  <div class="brow"><label>Add button</label><input type="text" id="bio-lt" maxlength="40" placeholder="Label — e.g. My listings"><input type="text" id="bio-lu" maxlength="300" placeholder="https://…"><button class="upbtn" id="bio-add" style="flex:0 0 auto">＋ Add</button></div>
+  <div class="brow" style="margin-bottom:0"><button class="bsave" id="bio-save">Save my page</button><button class="upbtn" id="bio-copy">🔗 Copy my bio link</button><a class="upbtn" id="bio-view" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">👁 Preview</a><span class="bstat" id="bio-stat"></span></div>
+</div>
+<div class="pcard" id="asstwrap" style="display:none">
+  <h3>👥 Assistant access</h3>
+  <div class="psub">Give your assistant their own link — they see progress, fill shoot briefs and grab files. Your chat and billing stay private to you. Turn any link off with one tap.</div>
+  <div id="asst-list"></div>
+  <div class="brow" style="margin-bottom:0"><input type="text" id="asst-name" maxlength="40" placeholder="Assistant's name"><button class="bsave" id="asst-add">＋ Create their link</button></div>
+</div>
 <div class="pcard" id="featwrap" style="display:none">
   <h3>✨ Everything in your hub</h3>
   <div class="psub">One link, on any device — here’s what it does for you.</div>
@@ -379,7 +426,11 @@ body.haspreview{padding-top:44px}
     <div class="frow2"><span class="fi">👀</span><span><b>“Since your last visit” recap</b> — open your hub after a few days and it catches you up instantly. Confetti when finals land. 🎉</span></div>
     <div class="fsec">💬 Direct chat</div>
     <div class="frow2"><span class="fi">💬</span><span><b>A straight line to the studio</b> — one thread per project. Reply, react, edit, full-quality photo &amp; video attachments up to 24 MB.</span></div>
-    <div class="frow2"><span class="fi">🎙</span><span><b>Voice notes</b> — between showings? Tap the mic, talk, done. Faster than typing.</span></div>
+    <div class="frow2"><span class="fi">🎙</span><span><b>Voice notes</b> — between showings? Tap the mic, talk, done. Faster than typing. Works in shoot briefs too.</span></div>
+    <div class="frow2"><span class="fi">📝</span><span><b>Script studio</b> — write or approve your talking-head script right here, then read it off the built-in teleprompter on shoot day.</span></div>
+    <div class="frow2"><span class="fi">⚡</span><span><b>Next openings</b> — the next few open shoot slots show at the top; tap one and it's yours.</span></div>
+    <div class="frow2"><span class="fi">🔗</span><span><b>Link-in-bio page</b> — your own mini page for the Instagram bio: headshot, links, brand colours.</span></div>
+    <div class="frow2"><span class="fi">👥</span><span><b>Assistant access</b> — a separate view-only link for your assistant; your chat and billing stay yours.</span></div>
     <div class="fsec">🎬 Review room</div>
     <div class="frow2"><span class="fi">⏱</span><span><b>Pin notes to the exact second</b> of any reel, one-tap feedback chips, star your selects, compare versions side-by-side — then approve and your downloads unlock.</span></div>
     <div class="fsec">📚 Your library</div>
@@ -441,7 +492,8 @@ var PREVIEW = false;
   });
 })();
 const q = new URLSearchParams(location.search);
-const a = q.get('a') || '';
+var a = q.get('a') || '';
+var AK = a; var ASSIST = null; var SCRIPTS = {}; var BF_VOICE = null;
 const pin = (q.get('t') || 'pin') === 'pin';
 document.getElementById('brandmark').innerHTML = pin ? 'Content <em>Hub</em><span class="dot">.</span>' : 'Reel Estate <em>Media</em><span class="dot">.</span>';
 document.getElementById('brandbadge').textContent = pin ? 'Royal LePage Pinnacle' : 'Client Portal';
@@ -837,7 +889,9 @@ function render(raw){
     '<div class="overline"><i></i>Your content · live pipeline</div>' +
     '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1>' +
     '<div class="heysub">Everything we’ve made together, and exactly where each piece is on its way to you.</div>' +
-    '<div class="heroact"><a class="go" href="' + esc(bookHref) + '" target="_blank" rel="noopener">📅 Book a shoot <span class="ar">→</span></a></div></div>';
+    '<div class="heroact"><a class="go" href="' + esc(bookHref) + '" target="_blank" rel="noopener">📅 Book a shoot <span class="ar">→</span></a></div>' +
+    '<div class="slotrow" id="slotrow"></div></div>';
+  if(ASSIST) html += '<div class="assistbar">👥 Viewing <b>' + esc(h.agent || 'the agent') + '</b>&rsquo;s hub as <b>' + esc(ASSIST.n) + '</b> — follow progress, fill shoot briefs, grab files. Chat and billing stay with ' + esc((h.agent || 'the agent').split(' ')[0]) + '.</div>';
   if(recap.length){
     html += '<div class="recap"><span class="beam"></span><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
@@ -858,7 +912,7 @@ function render(raw){
   }
   if(work.length){
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span></div>';
-    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x), briefBtn(x)));
+    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x), briefBtn(x) + scriptBtn(x)));
   }
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
@@ -911,6 +965,8 @@ function render(raw){
   startMessages(h);
   document.getElementById('refwrap').style.display = '';
   document.getElementById('brandwrap').style.display = '';
+  document.getElementById('biowrap').style.display = '';
+  document.getElementById('asstwrap').style.display = '';
   document.getElementById('featwrap').style.display = '';
   updateWelcome();
   loadBookings();
@@ -996,6 +1052,140 @@ function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ toastEl.style.display = 'none'; }, 3200);
 }
+/* ---- 📝 script studio + ▶ teleprompter ---- */
+function isScripty(x){ return /reel|video|film|podcast|walkthrough|teleprompter/i.test(String(x.t || '') + ' ' + String(x.p || '')); }
+function scriptBtn(x){
+  if(!x.t || x.dv || !isScripty(x)) return '';
+  return '<button class="tbtn scriptbtn" data-sp="' + esc(x.p || '') + '" data-sd="' + esc(x.t) + '">📝 Script</button>';
+}
+function paintScriptBtns(){
+  document.querySelectorAll('.scriptbtn').forEach(function(b){
+    var sc = SCRIPTS[String(b.getAttribute('data-sp')) + '|' + String(b.getAttribute('data-sd'))];
+    b.classList.toggle('ok', !!(sc && sc.st === 'Approved' && sc.t));
+    b.innerHTML = !sc || !sc.t ? '📝 Script' : (sc.st === 'Approved' ? '✅ Script ready' : '📝 Script · draft');
+  });
+}
+function loadScripts(){
+  fetch(ENDPOINT + '?scripts=' + encodeURIComponent(a)).then(function(r){ return r.json(); }).then(function(j){
+    if(!j.ok) return;
+    SCRIPTS = {};
+    (j.items || []).forEach(function(sc){ SCRIPTS[String(sc.p) + '|' + String(sc.d)] = sc; });
+    paintScriptBtns();
+  }).catch(function(){});
+}
+var scModal = null, SC_CTX = null;
+function ensureScModal(){
+  if(scModal) return scModal;
+  scModal = document.createElement('div');
+  scModal.className = 'bmodal';
+  scModal.innerHTML = '<div class="bcard">' +
+    '<h3>Your <em>script</em></h3>' +
+    '<div class="bsub" id="sc-sub"></div>' +
+    '<div class="scstate" id="sc-state"></div>' +
+    '<textarea id="sc-text" maxlength="6000" placeholder="Write it how you&rsquo;d say it — short lines read best on camera.\n\nHook first. One idea per line. End with where to reach you."></textarea>' +
+    '<div class="bact"><button class="mini" id="sc-cancel">Close</button><button class="mini" id="sc-tele">▶ Teleprompter</button><button class="mini" id="sc-save">Save draft</button><button class="go" id="sc-approve">✓ Approve <span class="ar">→</span></button></div>' +
+    '</div>';
+  document.body.appendChild(scModal);
+  scModal.addEventListener('click', function(e){ if(e.target === scModal) scModal.classList.remove('on'); });
+  scModal.querySelector('#sc-cancel').addEventListener('click', function(){ scModal.classList.remove('on'); });
+  function saveScript(st){
+    var txt = (scModal.querySelector('#sc-text').value || '').trim();
+    if(!txt){ toast('Write (or paste) the script first.'); return; }
+    if(!SC_CTX) return;
+    SCRIPTS[String(SC_CTX.p) + '|' + String(SC_CTX.d)] = {p: SC_CTX.p, d: SC_CTX.d, t: txt, st: st, by: 'agent'};
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'script', ref:a, project: SC_CTX.p, dname: SC_CTX.d,
+      who: ASSIST ? ASSIST.n + ' (assistant)' : (AGENTNAME || 'Agent'), from:'',
+      body: JSON.stringify({t: txt, st: st, by: 'agent'}) }) }).catch(function(){});
+    paintScriptBtns();
+    scModal.classList.remove('on');
+    toast(st === 'Approved' ? '✅ Script approved — we&rsquo;ll have the teleprompter loaded on shoot day.' : '📝 Draft saved — we&rsquo;ve been pinged to take a look.');
+  }
+  scModal.querySelector('#sc-save').addEventListener('click', function(){ saveScript('Drafted'); });
+  scModal.querySelector('#sc-approve').addEventListener('click', function(){ saveScript('Approved'); });
+  scModal.querySelector('#sc-tele').addEventListener('click', function(){
+    var txt = (scModal.querySelector('#sc-text').value || '').trim();
+    if(!txt){ toast('Nothing to read yet — write the script first.'); return; }
+    openTele(txt);
+  });
+  return scModal;
+}
+var teleEl = null, telePos = 0, teleSpeed = 1, telePlay = false, teleFont = 46;
+function openTele(txt){
+  if(!teleEl){
+    teleEl = document.createElement('div');
+    teleEl.id = 'teleo';
+    teleEl.innerHTML = '<div id="tele-view"><div id="tele-hint">tap the text to start &amp; pause</div><div id="tele-inner"></div></div>' +
+      '<div id="tele-bar">' +
+      '<button class="tp" id="tele-play">▶ Start</button>' +
+      '<button id="tele-slow">🐢 Slower</button><button id="tele-fast">🐇 Faster</button>' +
+      '<button id="tele-small">A−</button><button id="tele-big">A+</button>' +
+      '<button id="tele-mir" title="Flip for teleprompter glass">🪞</button>' +
+      '<button id="tele-close">✕ Close</button></div>';
+    document.body.appendChild(teleEl);
+    var inner = teleEl.querySelector('#tele-inner');
+    var setPlay = function(pl){ telePlay = pl; teleEl.querySelector('#tele-play').textContent = pl ? '⏸ Pause' : '▶ Start'; };
+    teleEl.querySelector('#tele-view').addEventListener('click', function(){ setPlay(!telePlay); });
+    teleEl.querySelector('#tele-play').addEventListener('click', function(){ setPlay(!telePlay); });
+    teleEl.querySelector('#tele-slow').addEventListener('click', function(){ teleSpeed = Math.max(.35, teleSpeed - .25); });
+    teleEl.querySelector('#tele-fast').addEventListener('click', function(){ teleSpeed = Math.min(4, teleSpeed + .25); });
+    teleEl.querySelector('#tele-small').addEventListener('click', function(){ teleFont = Math.max(24, teleFont - 6); inner.style.fontSize = teleFont + 'px'; });
+    teleEl.querySelector('#tele-big').addEventListener('click', function(){ teleFont = Math.min(84, teleFont + 6); inner.style.fontSize = teleFont + 'px'; });
+    teleEl.querySelector('#tele-mir').addEventListener('click', function(){ inner.classList.toggle('mir'); });
+    teleEl.querySelector('#tele-close').addEventListener('click', function(){ telePlay = false; teleEl.classList.remove('on'); });
+    (function step(){
+      if(telePlay){ telePos += teleSpeed; inner.style.top = (-telePos) + 'px'; }
+      requestAnimationFrame(step);
+    })();
+  }
+  var inn = teleEl.querySelector('#tele-inner');
+  inn.textContent = txt;
+  telePos = 0; telePlay = false;
+  inn.style.top = '0px';
+  teleEl.querySelector('#tele-play').textContent = '▶ Start';
+  teleEl.classList.add('on');
+}
+/* ---- ⚡ next open slots ---- */
+function loadSlots(){
+  fetch(ENDPOINT + '?slots=dynamic-shoot').then(function(r){ return r.json(); }).then(function(j){
+    if(!j.ok || !(j.slots || []).length) return;
+    var row = document.getElementById('slotrow');
+    if(!row) return;
+    var seen = {}, picks = [];
+    (j.slots || []).forEach(function(sl){
+      var d2 = new Date(sl.s);
+      if(isNaN(d2) || picks.length >= 3) return;
+      var day = d2.toDateString();
+      if(seen[day]) return;
+      seen[day] = 1;
+      picks.push({d: d2, u: sl.u || j.url || ''});
+    });
+    if(!picks.length) return;
+    var today = new Date().toDateString();
+    var tom = new Date(Date.now() + 86400000).toDateString();
+    row.innerHTML = '<span class="slotlbl">⚡ Next openings</span>' + picks.map(function(pk){
+      var day = pk.d.toDateString() === today ? 'Today' : pk.d.toDateString() === tom ? 'Tomorrow' : pk.d.toLocaleDateString('en-CA', {weekday: 'short', month: 'short', day: 'numeric'});
+      var tm = pk.d.toLocaleTimeString('en-CA', {hour: 'numeric', minute: '2-digit'});
+      var href = pk.u ? pk.u + (pk.u.indexOf('?') > -1 ? '&' : '?') + 'name=' + encodeURIComponent(AGENTNAME || '') : CAL_BASE;
+      return '<a class="slotchip" href="' + esc(href) + '" target="_blank" rel="noopener"><b>' + esc(day) + '</b> · ' + esc(tm) + '</a>';
+    }).join('');
+    row.style.display = 'flex';
+  }).catch(function(){});
+}
+/* ---- 🎙 voice upload (briefs) ---- */
+function uploadVoice(vv){
+  return new Promise(function(res, rej){
+    var fr = new FileReader();
+    fr.onload = function(){ res(String(fr.result).split(',')[1] || ''); };
+    fr.onerror = rej;
+    fr.readAsDataURL(vv.blob);
+  }).then(function(b64){
+    var ext = (vv.blob.type || '').indexOf('mp4') > -1 ? 'm4a' : 'webm';
+    return fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'file', name: 'voice-brief-' + vv.sec + 's.' + ext, mime: vv.blob.type || 'audio/webm', data: b64})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(!j.ok || !j.id) throw new Error('up'); return {k: 'audio', id: j.id, n: 'Voice brief', sec: vv.sec, m: vv.blob.type || 'audio/webm'}; });
+  });
+}
 var briefModal = null, BRIEF_CTX = null;
 function ensureBriefModal(){
   if(briefModal) return briefModal;
@@ -1010,50 +1200,109 @@ function ensureBriefModal(){
     '<label>Must-shoot features</label><input id="bf-feats" type="text" maxlength="200" placeholder="Ravine lot, wine cellar, new kitchen — the 2–3 things buyers should fall for">' +
     '<label>Anything to avoid</label><input id="bf-avoid" type="text" maxlength="140" placeholder="Skip the unfinished basement · neighbour\'s house · family photos">' +
     '<label>Notes for the crew</label><textarea id="bf-notes" maxlength="400" placeholder="Parking, gate codes, staging arriving at noon — anything else we should know."></textarea>' +
+    '<div class="bfmicrow"><button class="mini" id="bf-mic">🎙 Add a voice note</button><span id="bf-micst"></span></div>' +
     '<div class="bact"><button class="mini" id="bf-cancel">Cancel</button><button class="go" id="bf-send">Send brief <span class="ar">→</span></button></div>' +
     '</div>';
   document.body.appendChild(briefModal);
   briefModal.addEventListener('click', function(e){ if(e.target === briefModal) briefModal.classList.remove('on'); });
   briefModal.querySelector('#bf-cancel').addEventListener('click', function(){ briefModal.classList.remove('on'); });
+  var bfRec = null, bfChunks = [], bfT0 = 0, bfTimer = 0;
+  var micBtn = briefModal.querySelector('#bf-mic'), micSt = briefModal.querySelector('#bf-micst');
+  if(!navigator.mediaDevices || !window.MediaRecorder) micBtn.style.display = 'none';
+  micBtn.addEventListener('click', function(){
+    if(bfRec && bfRec.state === 'recording'){ bfRec.stop(); return; }
+    if(BF_VOICE){ BF_VOICE = null; micBtn.textContent = '🎙 Add a voice note'; micSt.textContent = ''; return; }
+    navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream){
+      var mime = MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      bfRec = mime ? new MediaRecorder(stream, {mimeType: mime}) : new MediaRecorder(stream);
+      bfChunks = [];
+      bfRec.ondataavailable = function(ev){ if(ev.data && ev.data.size) bfChunks.push(ev.data); };
+      bfRec.onstop = function(){
+        stream.getTracks().forEach(function(t2){ t2.stop(); });
+        clearInterval(bfTimer);
+        micBtn.classList.remove('rec');
+        var secs = Math.round((Date.now() - bfT0) / 1000);
+        var blob = new Blob(bfChunks, {type: (bfRec && bfRec.mimeType) || 'audio/webm'});
+        bfRec = null;
+        if(blob.size < 1200 || secs < 1){ toast('Too short — hold the thought and try again.'); micBtn.textContent = '🎙 Add a voice note'; micSt.textContent = ''; return; }
+        BF_VOICE = {blob: blob, sec: secs};
+        micBtn.textContent = '✕ Remove voice note';
+        micSt.textContent = '🎙 ' + secs + 's attached — sends with the brief';
+      };
+      bfRec.start();
+      bfT0 = Date.now();
+      micBtn.classList.add('rec');
+      micBtn.textContent = '⏹ Tap to finish';
+      bfTimer = setInterval(function(){ micSt.textContent = 'Recording ' + Math.round((Date.now() - bfT0) / 1000) + 's…'; }, 500);
+    }).catch(function(){ toast('Microphone unavailable — check your browser permissions.'); });
+  });
   briefModal.querySelector('#bf-send').addEventListener('click', function(){
     var v = function(id){ return (briefModal.querySelector(id).value || '').trim(); };
     var brief = { when: BRIEF_CTX ? (BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' — ' + BRIEF_CTX.bw : '')) : '',
       addr: v('#bf-addr'), access: v('#bf-access'), seller: v('#bf-seller'),
       feats: v('#bf-feats'), avoid: v('#bf-avoid'), notes: v('#bf-notes') };
-    if(!brief.addr && !brief.access && !brief.seller && !brief.feats && !brief.avoid && !brief.notes){
+    if(bfRec && bfRec.state === 'recording'){ toast('Finish the voice note first — tap ⏹.'); return; }
+    if(!brief.addr && !brief.access && !brief.seller && !brief.feats && !brief.avoid && !brief.notes && !BF_VOICE){
       briefModal.querySelector('#bf-addr').focus();
-      toast('Give us at least one detail — even just the address or a note.');
+      toast('Give us at least one detail — even a voice note works.');
       return;
     }
     var thread = (BRIEF_CTX && BRIEF_CTX.bl) ? BRIEF_CTX.bl : (AGENTNAME || 'Agent') + ' — Content Hub';
-    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref:a, project: thread, dname:'',
-      who:AGENTNAME || 'Agent', from:'',
-      body: JSON.stringify({ __rc:1, t:'', brief: brief }) }) }).catch(function(){});
-    try{
-      var k2 = 'rem_hub_sbrief_v1:' + a;
-      var st = JSON.parse(localStorage.getItem(k2)) || {};
-      if(BRIEF_CTX) st[BRIEF_CTX.bid] = 1;
-      localStorage.setItem(k2, JSON.stringify(st));
-    }catch(eS){}
-    briefModal.classList.remove('on');
-    toast('📋 Brief sent — we\'ll walk in already knowing the plan. 🙌');
-    if(BRIEF_CTX){
-      document.querySelectorAll('.briefbtn[data-bid="' + (window.CSS && CSS.escape ? CSS.escape(BRIEF_CTX.bid) : BRIEF_CTX.bid) + '"]').forEach(function(b){
-        b.textContent = '✓ Brief sent · update';
-      });
-    }
-    loadBookings();
+    var sendBtn = briefModal.querySelector('#bf-send');
+    sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
+    var withAtt = BF_VOICE
+      ? uploadVoice(BF_VOICE).then(function(att){ return att ? [att] : []; }).catch(function(){ toast('Voice note didn&rsquo;t upload — the rest of the brief still sends.'); return []; })
+      : Promise.resolve([]);
+    withAtt.then(function(att){
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'msg', ref:a, project: thread, dname:'',
+        who: ASSIST ? ASSIST.n + ' (assistant)' : (AGENTNAME || 'Agent'), from:'',
+        body: JSON.stringify({ __rc:1, t:'', brief: brief, att: att }) }) }).catch(function(){});
+      try{
+        var k2 = 'rem_hub_sbrief_v1:' + a;
+        var st = JSON.parse(localStorage.getItem(k2)) || {};
+        if(BRIEF_CTX) st[BRIEF_CTX.bid] = 1;
+        localStorage.setItem(k2, JSON.stringify(st));
+      }catch(eS){}
+      briefModal.classList.remove('on');
+      toast('📋 Brief sent — we\'ll walk in already knowing the plan. 🙌');
+      if(BRIEF_CTX){
+        document.querySelectorAll('.briefbtn[data-bid="' + (window.CSS && CSS.escape ? CSS.escape(BRIEF_CTX.bid) : BRIEF_CTX.bid) + '"]').forEach(function(b){
+          b.textContent = '✓ Brief sent · update';
+        });
+      }
+      sendBtn.disabled = false; sendBtn.innerHTML = 'Send brief <span class="ar">→</span>';
+      BF_VOICE = null; micBtn.textContent = '🎙 Add a voice note'; micSt.textContent = '';
+      loadBookings();
+    });
   });
   return briefModal;
 }
 document.addEventListener('click', function(e){
+  var sb = e.target.closest ? e.target.closest('.scriptbtn') : null;
+  if(sb){
+    e.preventDefault();
+    SC_CTX = {p: sb.getAttribute('data-sp') || '', d: sb.getAttribute('data-sd') || ''};
+    var sm = ensureScModal();
+    var cur = SCRIPTS[SC_CTX.p + '|' + SC_CTX.d];
+    sm.querySelector('#sc-text').value = cur && cur.t ? cur.t : '';
+    sm.querySelector('#sc-sub').textContent = SC_CTX.d + (SC_CTX.p ? ' · ' + SC_CTX.p : '');
+    sm.querySelector('#sc-state').textContent = cur && cur.t
+      ? (cur.st === 'Approved' ? '✅ Approved' + (cur.by === 'studio' ? ' · last edit by the studio' : '') : (cur.by === 'studio' ? '📝 Draft from the studio — tweak it, then approve' : '📝 Your draft — approve when it sounds like you'))
+      : 'No script yet — write it here, or ask us to draft one in chat.';
+    sm.classList.add('on');
+    return;
+  }
   var bb = e.target.closest ? e.target.closest('.briefbtn') : null;
   if(bb){
     e.preventDefault();
     BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '' };
     var mdl = ensureBriefModal();
     ['#bf-addr','#bf-access','#bf-seller','#bf-feats','#bf-avoid','#bf-notes'].forEach(function(id){ mdl.querySelector(id).value = ''; });
+    BF_VOICE = null;
+    var mB = mdl.querySelector('#bf-mic'); if(mB){ mB.textContent = '🎙 Add a voice note'; mB.classList.remove('rec'); }
+    var mS = mdl.querySelector('#bf-micst'); if(mS) mS.textContent = '';
     mdl.querySelector('#bf-sub').textContent = (BRIEF_CTX.bn ? BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' · ' + BRIEF_CTX.bw : '') + ' — ' : '') +
       'two minutes now = a smoother shoot day. Fill what you know, skip the rest — you can update it anytime.';
     mdl.classList.add('on');
@@ -1064,6 +1313,97 @@ document.addEventListener('click', function(e){
   if(sv){ openCalendly(sv.getAttribute('data-cal') || undefined); return; }
 });
 
+/* ---- 🔗 link-in-bio editor ---- */
+var BIO = {links: []};
+function bioUrl(){ return location.href.split('?')[0].replace(/hub\.html?$/, 'bio.html') + '?a=' + encodeURIComponent(a); }
+function paintBioLinks(){
+  var box = document.getElementById('bio-links');
+  box.innerHTML = (BIO.links || []).map(function(l, i2){
+    return '<div class="biolink"><span class="bt">🔗 ' + esc(l.t || l.u) + '</span><span class="bu">' + esc(l.u) + '</span><button class="bkdel" data-bdel="' + i2 + '" title="Remove this button">✕</button></div>';
+  }).join('') || '<div class="psub" style="margin:0 0 8px">No buttons yet — add your listings page, YouTube, Google reviews, anything.</div>';
+}
+function loadBio(){
+  fetch(ENDPOINT + '?bio=' + encodeURIComponent(a)).then(function(r){ return r.json(); }).then(function(j){
+    if(j.bio){ BIO = j.bio; BIO.links = BIO.links || []; }
+    document.getElementById('bio-blurb').value = BIO.blurb || '';
+    document.getElementById('bio-phone').value = BIO.phone || '';
+    paintBioLinks();
+  }).catch(function(){ paintBioLinks(); });
+  var vw = document.getElementById('bio-view');
+  if(vw) vw.href = bioUrl();
+}
+document.getElementById('bio-add').addEventListener('click', function(){
+  var t2 = (document.getElementById('bio-lt').value || '').trim();
+  var u2 = (document.getElementById('bio-lu').value || '').trim();
+  if(!u2){ toast('Paste the link first.'); return; }
+  if(!/^https?:\/\//i.test(u2)) u2 = 'https://' + u2;
+  BIO.links = BIO.links || [];
+  if(BIO.links.length >= 8){ toast('Eight buttons is the sweet spot — remove one first.'); return; }
+  BIO.links.push({t: t2 || u2.replace(/^https?:\/\/(www\.)?/, '').split('/')[0], u: u2});
+  document.getElementById('bio-lt').value = '';
+  document.getElementById('bio-lu').value = '';
+  paintBioLinks();
+});
+document.getElementById('bio-links').addEventListener('click', function(e){
+  var d2 = e.target.getAttribute ? e.target.getAttribute('data-bdel') : null;
+  if(d2 === null || d2 === undefined) return;
+  BIO.links.splice(+d2, 1);
+  paintBioLinks();
+});
+document.getElementById('bio-save').addEventListener('click', function(){
+  BIO.blurb = (document.getElementById('bio-blurb').value || '').trim();
+  BIO.phone = (document.getElementById('bio-phone').value || '').trim();
+  var st2 = document.getElementById('bio-stat');
+  st2.textContent = 'Saving…';
+  fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'bio', ref: a, project: 'Bio page', dname: '', who: AGENTNAME || 'Agent', from: '', body: JSON.stringify(BIO)})})
+    .then(function(){ st2.textContent = '✓ Live at your bio link'; setTimeout(function(){ st2.textContent = ''; }, 3000); })
+    .catch(function(){ st2.textContent = 'Couldn&rsquo;t save — try again'; });
+});
+document.getElementById('bio-copy').addEventListener('click', function(){
+  var b2 = this;
+  (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(bioUrl()) : Promise.reject())
+    .then(function(){ b2.textContent = '✓ Copied'; setTimeout(function(){ b2.textContent = '🔗 Copy my bio link'; }, 1600); })
+    .catch(function(){ prompt('Copy your bio link:', bioUrl()); });
+});
+/* ---- 👥 assistant access ---- */
+function assistUrl(k2){ return location.href.split('?')[0] + '?a=' + encodeURIComponent(k2) + '&t=' + (pin ? 'pin' : 'rem'); }
+function loadAssists(){
+  fetch(ENDPOINT + '?assists=' + encodeURIComponent(a)).then(function(r){ return r.json(); }).then(function(j){
+    var box = document.getElementById('asst-list');
+    box.innerHTML = (j.items || []).map(function(it){
+      return '<div class="asstrow"><span style="flex:1">👤 ' + esc(it.n) + '</span>' +
+        '<button class="upbtn" data-acopy="' + esc(it.key) + '">Copy link</button>' +
+        '<button class="bkdel" data-arev="' + esc(it.key) + '" data-an="' + esc(it.n) + '" title="Turn off this link">✕</button></div>';
+    }).join('');
+  }).catch(function(){});
+}
+document.getElementById('asst-add').addEventListener('click', function(){
+  var nm = (document.getElementById('asst-name').value || '').trim();
+  if(!nm){ toast('What&rsquo;s their name?'); return; }
+  var k2 = Math.random().toString(36).slice(2, 10);
+  fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'assist', ref: k2, project: 'Assistant access', dname: '', who: AGENTNAME || 'Agent', from: '', body: JSON.stringify({k: a, name: nm, on: true})})})
+    .then(function(){
+      document.getElementById('asst-name').value = '';
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(assistUrl(k2)) : Promise.reject())
+        .then(function(){ toast('👥 ' + nm + '&rsquo;s link is copied — text it to them.'); })
+        .catch(function(){ prompt('Their link — copy and send it:', assistUrl(k2)); });
+      setTimeout(loadAssists, 900);
+    })
+    .catch(function(){ toast('Couldn&rsquo;t create the link — try again.'); });
+});
+document.getElementById('asst-list').addEventListener('click', function(e){
+  var cp = e.target.getAttribute ? e.target.getAttribute('data-acopy') : null;
+  if(cp){
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(assistUrl(cp)) : Promise.reject())
+      .then(function(){ toast('Link copied.'); }).catch(function(){ prompt('Copy their link:', assistUrl(cp)); });
+    return;
+  }
+  var rv = e.target.getAttribute ? e.target.getAttribute('data-arev') : null;
+  if(rv){
+    fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'assist', ref: rv, project: 'Assistant access', dname: '', who: AGENTNAME || 'Agent', from: '', body: JSON.stringify({k: a, name: e.target.getAttribute('data-an') || '', on: false})})})
+      .then(function(){ toast('Access turned off.'); setTimeout(loadAssists, 900); }).catch(function(){});
+  }
+});
 /* ---- referral link ---- */
 document.getElementById('refshare').addEventListener('click', function(){
   var link = CAL_BASE + '?utm_source=ref&utm_content=' + encodeURIComponent(a);
@@ -1316,7 +1656,14 @@ function startMessages(h){
 if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
 else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   .then(r => r.json())
-  .then(j => { if(j.ok && j.hub) render(j.hub); else fail('We couldn’t find your page.', 'Ask us for a fresh link — it takes ten seconds.'); })
+  .then(j => {
+    if(j.ok && j.hub){
+      if(j.assist && j.assist.k){ ASSIST = {n: String(j.assist.n || 'Assistant')}; a = String(j.assist.k); document.body.classList.add('assist'); }
+      render(j.hub);
+      loadScripts(); loadSlots();
+      if(!ASSIST){ loadBio(); loadAssists(); }
+    } else fail('We couldn’t find your page.', 'Ask us for a fresh link — it takes ten seconds.');
+  })
   .catch(() => fail('Couldn’t load your content.', 'Check your connection and pull to refresh.'));
 
 /* ---- ☀️/🌙 theme: light by day (7am–7pm), dark by night, or your pick ---- */
