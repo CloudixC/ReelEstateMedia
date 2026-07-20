@@ -357,7 +357,37 @@ body.haspreview{padding-top:44px}
 .ideacard p{color:var(--dim);font-size:14px;margin-bottom:10px}
 .ideaact{display:flex;gap:8px;flex-wrap:wrap}
 .ideaact .mini{cursor:pointer}
-.idearefresh{border:1px solid var(--line2);background:var(--panel2);color:var(--dim);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;margin-top:2px}
+.idearefresh{border:1px solid var(--line2);background:var(--panel2);color:var(--dim);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer}
+.ideabar{display:flex;gap:8px;margin-top:2px;flex-wrap:wrap}
+.idearefresh.on{border-color:rgba(232,184,74,.5);color:#e8b84a}
+.savedwrap{margin-top:10px;flex-direction:column;gap:6px}
+.savedempty{color:var(--faint);font-size:13px}
+.savedrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px}
+.savedt{flex:1;font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ideacard{position:relative}
+.ideacard h4{padding-right:28px}
+.ideak{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.ideastar{position:absolute;top:12px;right:12px;background:none;border:0;color:var(--faint);font-size:19px;cursor:pointer;line-height:1;padding:0}
+.ideastar.on{color:#e8b84a}
+.ideastar.savedx{position:static;font-size:13px;color:var(--faint)}
+/* ---- compact "in the works" rows ---- */
+.wexpand{margin-left:auto;font-size:12px;color:var(--dim);background:none;border:1px solid var(--line2);border-radius:14px;padding:4px 11px;cursor:pointer}
+.wlist{display:flex;flex-direction:column;gap:8px}
+.wrow{border:1px solid var(--line);background:var(--panel);border-radius:14px;overflow:hidden}
+.wrow-head{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;user-select:none}
+.wrow-head:hover{background:rgba(255,255,255,.02)}
+.wtt{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+.wname{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wproj{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wstage{font-size:11.5px;color:var(--dim);white-space:nowrap;flex-shrink:0;max-width:38%;overflow:hidden;text-overflow:ellipsis}
+.wbar{width:56px;height:5px;border-radius:3px;background:var(--line2);overflow:hidden;flex-shrink:0}
+.wbar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:3px}
+.wchev{color:var(--faint);flex-shrink:0;transition:transform .18s ease;font-size:12px}
+.wrow.open .wchev{transform:rotate(90deg)}
+.wrow-mini{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 12px}
+.wrow-body{display:none;padding:0 14px 8px}
+.wrow.open .wrow-body{display:block}
+.wrow-body .card{margin:0;border:none;background:transparent;box-shadow:none;padding:2px 0 2px;animation:none}
 /* ---- caption + post buttons ---- */
 .tbtn.postbtn{background:linear-gradient(135deg,#ff3d46,#c4141e 75%);color:#fff;border-color:transparent}
 /* ---- 🔳 QR modal ---- */
@@ -673,21 +703,44 @@ function normalize(h){
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
     pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : []};
 }
-function tracker(x){
+// Round-aware label — movement instead of a generic "Review & polish" for weeks.
+function stageLabel(x){
   const ph = phaseOf(x);
-  let segs = '';
-  for(let i = 0; i < PHASES.length; i++)
-    segs += '<span class="seg' + (i < ph ? ' on' : i === ph ? (ph === 5 ? ' on' : ' cur') : '') + '"></span>';
-  // Round-aware labels inside the review phase — so every hand-off shows
-  // movement instead of a generic "Review & polish" for weeks.
   const stL = String(x.st || '').toLowerCase();
-  const lbl = x.dv ? 'Delivered — enjoy 🎉'
+  return x.dv ? 'Delivered — enjoy 🎉'
     : x.rs ? (stL === 'review 2' ? 'Round 2 is ready — take a look'
             : stL === 'review 3' ? 'Final cut is ready — take a look'
             : 'Ready for your review — take a look')
     : stL === 'changes' ? 'Working on your notes — round 2 coming'
     : stL === 'changes 2' ? 'Working on your notes — final cut coming'
     : PHASES[ph];
+}
+// Compact row for "In the works" — the bulky tracker collapses; the shoot
+// brief + script buttons stay one tap away.
+function workRow(x, wi){
+  const ph = phaseOf(x);
+  const pct = x.dv ? 100 : Math.round((ph / 5) * 100);
+  // The bulky part — the 6-step tracker + shoot line + Open link — collapses
+  // into the body. The shoot-brief + script buttons stay on the row so they're
+  // always one tap away, no matter how long the package.
+  const mini = briefBtn(x) + scriptBtn(x);
+  const body = card(x, 0, 'work nested', '', 'Open', true, shootLine(x), '');
+  return '<div class="wrow" data-wrow="' + wi + '">' +
+    '<div class="wrow-head" data-wtoggle="' + wi + '">' +
+      '<span class="wtt"><span class="wname">' + esc(x.t) + '</span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
+      '<span class="wstage">' + esc(stageLabel(x)) + '</span>' +
+      '<span class="wbar"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="wchev">▸</span>' +
+    '</div>' +
+    (mini.trim() ? '<div class="wrow-mini">' + mini + '</div>' : '') +
+    '<div class="wrow-body">' + body + '</div></div>';
+}
+function tracker(x){
+  const ph = phaseOf(x);
+  let segs = '';
+  for(let i = 0; i < PHASES.length; i++)
+    segs += '<span class="seg' + (i < ph ? ' on' : i === ph ? (ph === 5 ? ' on' : ' cur') : '') + '"></span>';
+  const lbl = stageLabel(x);
   return '<div class="track">' + segs + '</div>' +
     '<div class="stageline"><span class="stagelbl"><b>' + esc(lbl) + '</b></span>' +
     '<span class="stepno">Step ' + (ph + 1) + ' / 6</span></div>';
@@ -1017,8 +1070,12 @@ function render(raw){
     rev.forEach(x => html += card(x, i++, 'rev', '<span class="pill rev"><i></i>In review</span>', 'Review now'));
   }
   if(work.length){
-    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span></div>';
-    work.forEach(x => html += card(x, i++, 'work', '', 'Open', true, shootLine(x), briefBtn(x) + scriptBtn(x)));
+    html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span>' +
+      (work.length > 2 ? '<button class="wexpand" id="wexpandall">Expand all</button>' : '') + '</div>';
+    html += '<div class="wlist" id="wlist">';
+    let wi = 0;
+    work.forEach(x => { html += workRow(x, wi++); i++; });
+    html += '</div>';
   }
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
@@ -1851,10 +1908,33 @@ document.addEventListener('click', function(e){
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){ ic.textContent = '✓ Copied'; setTimeout(function(){ ic.textContent = '📋 Copy idea'; }, 1400); }).catch(function(){});
     return;
   }
-  if(e.target && e.target.id === 'idearefresh'){
+  var wh = e.target.closest ? e.target.closest('.wrow-head') : null;
+  if(wh){ var wrow = wh.closest('.wrow'); if(wrow) wrow.classList.toggle('open'); return; }
+  if(e.target && e.target.id === 'wexpandall'){
+    var wrows = document.querySelectorAll('#wlist .wrow');
+    var anyClosed = Array.prototype.some.call(wrows, function(r){ return !r.classList.contains('open'); });
+    Array.prototype.forEach.call(wrows, function(r){ r.classList.toggle('open', anyClosed); });
+    e.target.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+    return;
+  }
+  var rf = e.target.closest ? e.target.closest('#idearefresh') : null;
+  if(rf){
     try{ var k = 'rem_hub_ideaseed_v1:' + a; localStorage.setItem(k, String((+localStorage.getItem(k) || 0) + 3)); }catch(e2){}
     var slot = document.getElementById('ideaslot');
     if(slot) slot.innerHTML = ideaSection();
+    return;
+  }
+  var stg = e.target.closest ? e.target.closest('#savedtoggle') : null;
+  if(stg){ var sw = document.getElementById('savedwrap'); if(sw){ var open = sw.style.display !== 'none'; sw.style.display = open ? 'none' : 'flex'; stg.classList.toggle('on', !open); } return; }
+  var star = e.target.closest ? e.target.closest('.ideastar') : null;
+  if(star){
+    var t = star.getAttribute('data-save');
+    var saved = savedIdeas();
+    if(saved.some(function(sv){ return sv.t === t; })) saved = saved.filter(function(sv){ return sv.t !== t; });
+    else { var id = null; for(var ii = 0; ii < IDEAS.length; ii++) if(IDEAS[ii].t === t) id = IDEAS[ii]; if(id) saved.push({k: id.k, t: id.t, a: id.a}); }
+    setSavedIdeas(saved);
+    var slot2 = document.getElementById('ideaslot');
+    if(slot2){ slot2.innerHTML = ideaSection(); var sw2 = document.getElementById('savedwrap'); if(sw2) sw2.style.display = 'flex'; var stg2 = document.getElementById('savedtoggle'); if(stg2) stg2.classList.add('on'); }
     return;
   }
   var cb = e.target.closest ? e.target.closest('.capbtn') : null;
@@ -1880,21 +1960,41 @@ var IDEAS = [
   {k:'FAQ', t:'The question every buyer asks me', a:'Answer one real client FAQ on camera. Endless supply, always relevant.'},
   {k:'Behind', t:'A day in the life of your agent', a:'Showings, coffee, paperwork — humanising content builds trust.'}
 ];
+function savedIdeas(){ try{ return JSON.parse(localStorage.getItem('rem_hub_savedideas_v1:' + a)) || []; }catch(e){ return []; } }
+function setSavedIdeas(list){ try{ localStorage.setItem('rem_hub_savedideas_v1:' + a, JSON.stringify(list)); }catch(e){} }
+function ideaCardHTML(id, saved){
+  var isS = saved.some(function(sv){ return sv.t === id.t; });
+  return '<div class="ideacard">' +
+    '<button class="ideastar' + (isS ? ' on' : '') + '" data-save="' + esc(id.t) + '" title="' + (isS ? 'Saved — tap to remove' : 'Save this idea') + '">' + (isS ? '★' : '☆') + '</button>' +
+    '<div class="ideak">' + esc(id.k) + '</div><h4>' + esc(id.t) + '</h4><p>' + esc(id.a) + '</p>' +
+    '<div class="ideaact">' +
+    '<button class="mini svcbook" data-cal="' + esc(CAL_BASE + '/dynamic-shoot') + '" title="Book a shoot to film this">📅 Book a shoot</button>' +
+    '<button class="mini ideacopy" data-idea="' + esc(id.t) + ' — ' + esc(id.a) + '">📋 Copy</button>' +
+    '</div></div>';
+}
 function ideaSection(){
-  var seedKey = 'rem_hub_ideaseed_v1:' + a;
   var seed = 0;
-  try{ seed = +localStorage.getItem(seedKey) || 0; }catch(e){}
+  try{ seed = +localStorage.getItem('rem_hub_ideaseed_v1:' + a) || 0; }catch(e){}
+  var saved = savedIdeas();
   var pick = [];
   for(var i = 0; i < 3; i++) pick.push(IDEAS[(seed + i) % IDEAS.length]);
-  var html = '<div class="ideawrap">';
-  pick.forEach(function(id){
-    html += '<div class="ideacard"><div class="ик">' + esc(id.k) + '</div><h4>' + esc(id.t) + '</h4><p>' + esc(id.a) + '</p>' +
-      '<div class="ideaact">' +
-      '<button class="mini svcbook" data-cal="' + esc(CAL_BASE + '/dynamic-shoot') + '" title="Book a shoot to film this">📅 Book a shoot</button>' +
-      '<button class="mini ideacopy" data-idea="' + esc(id.t) + ' — ' + esc(id.a) + '">📋 Copy idea</button>' +
-      '</div></div>';
-  });
-  html += '</div><button class="idearefresh" id="idearefresh">↻ More ideas</button>';
+  var html = '<div class="ideabar">' +
+    '<button class="idearefresh" id="idearefresh">↻ More ideas</button>' +
+    '<button class="idearefresh" id="savedtoggle">⭐ Saved (' + saved.length + ')</button></div>';
+  html += '<div class="savedwrap" id="savedwrap" style="display:none">';
+  if(!saved.length){
+    html += '<div class="savedempty">No saved ideas yet — tap the ☆ on any idea to keep it here for later.</div>';
+  } else {
+    saved.forEach(function(sv){
+      html += '<div class="savedrow"><span class="savedt">' + esc(sv.t) + '</span>' +
+        '<button class="mini svcbook" data-cal="' + esc(CAL_BASE + '/dynamic-shoot') + '" title="Book a shoot to film this">📅 Book</button>' +
+        '<button class="mini ideacopy" data-idea="' + esc(sv.t) + ' — ' + esc(sv.a) + '" title="Copy">📋</button>' +
+        '<button class="ideastar on savedx" data-save="' + esc(sv.t) + '" title="Remove">✕</button></div>';
+    });
+  }
+  html += '</div><div class="ideawrap">';
+  pick.forEach(function(id){ html += ideaCardHTML(id, saved); });
+  html += '</div>';
   return html;
 }
 /* ---- 🌐 captions: bilingual post templates ---- */
