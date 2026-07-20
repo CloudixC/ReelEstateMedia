@@ -1171,7 +1171,11 @@ function App(){
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
-            url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || '')}; })
+            url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
+            ...(d.status === 'Delivered' ? (() => { const bb = getBrief(d); return {
+              ...(bb.caption ? {cp: bb.caption} : {}),
+              ...(bb.caption2 ? {cp2: bb.caption2} : {}),
+              ...(bb.lang2 ? {lg: bb.lang2} : {})}; })() : {})}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal' ||
         (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
@@ -3143,6 +3147,27 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'script', ref: hk, project: order ? order.project : (d.group || ''), dname: dlTitle(d), who: 'Reel Estate Media', from: 'jag', body: JSON.stringify({t: txt, st: b.script === 'Approved' ? 'Approved' : 'Drafted', by: 'studio'})})}).catch(() => {});
               (window.showToast || alert)('📤 Script sent to their hub — they can read, tweak or approve it there.');
             }}>📤 Send to their hub</button>
+          </div>
+        </div>
+        <div style={{gridColumn:'1 / -1'}}>
+          <label className="f">📣 Ready-to-post caption — rides to their hub on delivery</label>
+          <textarea rows="3" placeholder="Write the caption you'd want them to post with this piece — hook, a line of value, hashtags. Appears on their hub with a one-tap 'Post to Instagram'. Leave blank and they get smart templates instead." value={b.caption || ''} onChange={e => setBrief({caption: e.target.value})}/>
+          <div className="frow" style={{marginTop:6}}>
+            <div>
+              <label className="f">🌐 Second-language caption (optional)</label>
+              <textarea rows="2" placeholder="Same caption in Punjabi / Urdu / Hindi — offered alongside the English one on their hub." value={b.caption2 || ''} onChange={e => setBrief({caption2: e.target.value})}/>
+            </div>
+            <div>
+              <label className="f">Language</label>
+              <select value={b.lang2 || ''} onChange={e => setBrief({lang2: e.target.value})}>
+                <option value="">— none —</option>
+                <option value="Punjabi">Punjabi</option>
+                <option value="Urdu">Urdu</option>
+                <option value="Hindi">Hindi</option>
+                <option value="French">French</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
         </div>
         <div>

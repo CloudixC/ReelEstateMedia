@@ -67,19 +67,27 @@ function render(hub, kit, bio){
   h += '<div class="links">';
   (bio.links || []).forEach(function(l, i){
     if(!l || !l.u) return;
-    h += '<a class="lbtn' + (i === 0 ? ' hot' : '') + '" href="' + esc(l.u) + '" target="_blank" rel="noopener">' + esc(l.t || l.u) + '</a>';
+    h += '<a class="lbtn biolink' + (i === 0 ? ' hot' : '') + '" data-bl="' + esc(l.t || l.u) + '" href="' + esc(l.u) + '" target="_blank" rel="noopener">' + esc(l.t || l.u) + '</a>';
   });
   const tel = String(bio.phone || '').replace(/[^+0-9]/g, '');
   const contact = [];
-  if(tel){ contact.push('<a class="lbtn" href="tel:' + esc(tel) + '">📞 Call</a>'); contact.push('<a class="lbtn" href="sms:' + esc(tel) + '">💬 Text</a>'); }
-  if(hub.email) contact.push('<a class="lbtn" href="mailto:' + esc(hub.email) + '">✉️ Email</a>');
+  if(tel){ contact.push('<a class="lbtn biolink" data-bl="Call" href="tel:' + esc(tel) + '">📞 Call</a>'); contact.push('<a class="lbtn biolink" data-bl="Text" href="sms:' + esc(tel) + '">💬 Text</a>'); }
+  if(hub.email) contact.push('<a class="lbtn biolink" data-bl="Email" href="mailto:' + esc(hub.email) + '">✉️ Email</a>');
   if(contact.length) h += '<div class="crow">' + contact.join('') + '</div>';
   h += '</div>';
   const ig = String(kit.ig || bio.ig || '').replace(/^@/, '');
-  if(ig) h += '<a class="ig" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener">📸 @' + esc(ig) + '</a>';
+  if(ig) h += '<a class="ig biolink" data-bl="Instagram" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener">📸 @' + esc(ig) + '</a>';
   h += '<div class="credit">🎬 Content by <a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Reel Estate Media</a></div>';
   document.getElementById('wrap').innerHTML = h;
+  try{ if(!sessionStorage.getItem('rem_biohit_v:' + a)){ sessionStorage.setItem('rem_biohit_v:' + a, '1'); logHit({t: 'view'}); } }catch(eV){ logHit({t: 'view'}); }
 }
+function logHit(o){
+  try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: a, project: '', dname: '', who: '', body: JSON.stringify(o)})}); }catch(e){}
+}
+document.addEventListener('click', function(e){
+  var b = e.target.closest ? e.target.closest('.biolink') : null;
+  if(b) logHit({t: 'link', l: b.getAttribute('data-bl') || 'link'});
+}, true);
 if(!a){ fail('This link is missing its key.'); }
 else Promise.all([
   fetch(ENDPOINT + '?hub=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
