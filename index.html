@@ -896,6 +896,9 @@ async function hashText(t){
 }
 /* ---------------- ⛅ Cloud backups (your own Drive, via the inbox script) ---------------- */
 const bakMeta = () => { try{ return JSON.parse(localStorage.getItem('rem_ccbak_v1') || '{}'); }catch(e){ return {}; } };
+// backups are stored in UTC (ISO) — show them in the studio's local time
+const fmtTs = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); };
+const fmtClock = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}); };
 
 function CloudModal({db, onClose, cloud, adoptRemote, doBackup}){
   const [items, setItems] = useState(null);
@@ -926,10 +929,10 @@ function CloudModal({db, onClose, cloud, adoptRemote, doBackup}){
            items.length === 0 ? <p className="small faint">No cloud backups yet — tap "Back up now" for your first.</p> :
            items.map(it => (
             <div key={it.id + it.ts} className="flex" style={{gap:8, padding:'7px 0', borderBottom:'1px solid var(--line)'}}>
-              <span className="small" style={{flex:1}}>{String(it.ts).slice(0, 16).replace('T', ' ')}
+              <span className="small" style={{flex:1}}>{fmtTs(it.ts)}
                 <span className="faint"> · {(it.meta && it.meta.c) || 0} clients · {(it.meta && it.meta.o) || 0} orders · {Math.round(((it.meta && it.meta.b) || 0) / 1024)} KB</span></span>
               <button className="btn ghost sm" disabled={busy} onClick={async () => {
-                if(!confirm('Replace everything in this Command Centre with the backup from ' + String(it.ts).slice(0, 16).replace('T', ' ') + '?\n\nA fresh backup of the current state is taken first, so you can always come back.')) return;
+                if(!confirm('Replace everything in this Command Centre with the backup from ' + fmtTs(it.ts) + '?\n\nA fresh backup of the current state is taken first, so you can always come back.')) return;
                 setBusy(true); setErr('');
                 try{
                   await doBackup(true);   // safety net: snapshot current state before replacing it
@@ -1046,7 +1049,7 @@ function App(){
   };
 
   const [staleVersion, setStaleVersion] = useState(false);
-  const [cloud, setCloud] = useState(() => ({status: 'idle', last: (String(bakMeta().t || '').slice(11, 19)) || null}));
+  const [cloud, setCloud] = useState(() => ({status: 'idle', last: bakMeta().t ? fmtClock(bakMeta().t) : null}));
   const [showCloud, setShowCloud] = useState(false);
   const cloudSkip = React.useRef(false);
   const bakBusy = React.useRef(false);
@@ -1073,7 +1076,7 @@ function App(){
         body: JSON.stringify({b: json.length, c: db.clients.length, o: db.orders.length, d: db.deliverables.length})})}).then(r => r.json());
       if(!ok2.ok) throw new Error('pointer failed');
       try{ localStorage.setItem('rem_ccbak_v1', JSON.stringify({h, t: stamp})); }catch(e){}
-      setCloud({status: 'idle', last: stamp.slice(11, 19)});
+      setCloud({status: 'idle', last: fmtClock(stamp)});
       bakBusy.current = false;
       return true;
     }catch(e){
@@ -1087,7 +1090,7 @@ function App(){
     if(!md){ alert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
     cloudSkip.current = true;
     setDb(md);
-    setCloud({status:'idle', last: String(row.updated_at).slice(11, 19)});
+    setCloud({status:'idle', last: fmtClock(row.updated_at)});
     showToast('⬇ Loaded cloud copy');
   };
   // auto-backup: ~90s after the last change settles (hash-guarded, so quiet
