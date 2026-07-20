@@ -373,7 +373,7 @@ body.haspreview{padding-top:44px}
 /* ---- compact "in the works" rows ---- */
 .wexpand{margin-left:auto;font-size:12px;color:var(--dim);background:none;border:1px solid var(--line2);border-radius:14px;padding:4px 11px;cursor:pointer}
 .wlist{display:flex;flex-direction:column;gap:8px}
-.wrow{border:1px solid var(--line);background:var(--panel);border-radius:14px;overflow:hidden}
+.wkrow{border:1px solid var(--line);background:var(--panel);border-radius:14px;overflow:hidden}
 .wrow-head{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;user-select:none}
 .wrow-head:hover{background:rgba(255,255,255,.02)}
 .wtt{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
@@ -383,10 +383,10 @@ body.haspreview{padding-top:44px}
 .wbar{width:56px;height:5px;border-radius:3px;background:var(--line2);overflow:hidden;flex-shrink:0}
 .wbar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:3px}
 .wchev{color:var(--faint);flex-shrink:0;transition:transform .18s ease;font-size:12px}
-.wrow.open .wchev{transform:rotate(90deg)}
+.wkrow.open .wchev{transform:rotate(90deg)}
 .wrow-mini{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 12px}
 .wrow-body{display:none;padding:0 14px 8px}
-.wrow.open .wrow-body{display:block}
+.wkrow.open .wrow-body{display:block}
 .wrow-body .card{margin:0;border:none;background:transparent;box-shadow:none;padding:2px 0 2px;animation:none}
 /* ---- caption + post buttons ---- */
 .tbtn.postbtn{background:linear-gradient(135deg,#ff3d46,#c4141e 75%);color:#fff;border-color:transparent}
@@ -720,12 +720,15 @@ function stageLabel(x){
 function workRow(x, wi){
   const ph = phaseOf(x);
   const pct = x.dv ? 100 : Math.round((ph / 5) * 100);
-  // The bulky part — the 6-step tracker + shoot line + Open link — collapses
-  // into the body. The shoot-brief + script buttons stay on the row so they're
-  // always one tap away, no matter how long the package.
-  const mini = briefBtn(x) + scriptBtn(x);
-  const body = card(x, 0, 'work nested', '', 'Open', true, shootLine(x), '');
-  return '<div class="wrow" data-wrow="' + wi + '">' +
+  // Upcoming shoots (booked / scheduled) keep the brief + script buttons right
+  // on the row — that's the moment they matter. Once a piece is filming or in
+  // edits, the row collapses to a slim line and tucks every action + the full
+  // tracker one tap away, so a 10-piece package stays scannable.
+  const upcoming = ph <= 1;
+  const acts = briefBtn(x) + scriptBtn(x);
+  const mini = upcoming ? acts : '';
+  const body = card(x, 0, 'work nested', '', 'Open', true, shootLine(x), upcoming ? '' : acts);
+  return '<div class="wkrow" data-wrow="' + wi + '">' +
     '<div class="wrow-head" data-wtoggle="' + wi + '">' +
       '<span class="wtt"><span class="wname">' + esc(x.t) + '</span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
       '<span class="wstage">' + esc(stageLabel(x)) + '</span>' +
@@ -1909,9 +1912,9 @@ document.addEventListener('click', function(e){
     return;
   }
   var wh = e.target.closest ? e.target.closest('.wrow-head') : null;
-  if(wh){ var wrow = wh.closest('.wrow'); if(wrow) wrow.classList.toggle('open'); return; }
+  if(wh){ var wrow = wh.closest('.wkrow'); if(wrow) wrow.classList.toggle('open'); return; }
   if(e.target && e.target.id === 'wexpandall'){
-    var wrows = document.querySelectorAll('#wlist .wrow');
+    var wrows = document.querySelectorAll('#wlist .wkrow');
     var anyClosed = Array.prototype.some.call(wrows, function(r){ return !r.classList.contains('open'); });
     Array.prototype.forEach.call(wrows, function(r){ r.classList.toggle('open', anyClosed); });
     e.target.textContent = anyClosed ? 'Collapse all' : 'Expand all';
