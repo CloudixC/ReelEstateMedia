@@ -521,8 +521,16 @@ function tracker(x){
   let segs = '';
   for(let i = 0; i < PHASES.length; i++)
     segs += '<span class="seg' + (i < ph ? ' on' : i === ph ? (ph === 5 ? ' on' : ' cur') : '') + '"></span>';
+  // Round-aware labels inside the review phase — so every hand-off shows
+  // movement instead of a generic "Review & polish" for weeks.
+  const stL = String(x.st || '').toLowerCase();
   const lbl = x.dv ? 'Delivered — enjoy 🎉'
-    : (x.rs ? 'Waiting on you — take a look' : PHASES[ph]);
+    : x.rs ? (stL === 'review 2' ? 'Round 2 is ready — take a look'
+            : stL === 'review 3' ? 'Final cut is ready — take a look'
+            : 'Ready for your review — take a look')
+    : stL === 'changes' ? 'Working on your notes — round 2 coming'
+    : stL === 'changes 2' ? 'Working on your notes — final cut coming'
+    : PHASES[ph];
   return '<div class="track">' + segs + '</div>' +
     '<div class="stageline"><span class="stagelbl"><b>' + esc(lbl) + '</b></span>' +
     '<span class="stepno">Step ' + (ph + 1) + ' / 6</span></div>';
