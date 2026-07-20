@@ -468,6 +468,11 @@ var PREVIEW = false;
   var _fetch = window.fetch;
   window.fetch = function(u, o){
     if(o && String(o.method || '').toUpperCase() === 'POST'){
+      // Deliberate editor saves still count in preview — bio pages, assistant
+      // links and scripts are things the studio legitimately sets up for agents.
+      var pKind = '';
+      try{ pKind = String((JSON.parse(String(o.body || '{}')) || {}).kind || ''); }catch(eK){}
+      if(pKind === 'bio' || pKind === 'assist' || pKind === 'script') return _fetch.apply(this, arguments);
       try{ if(typeof toast === 'function') toast('👁 Preview — nothing was saved'); }catch(e1){}
       return Promise.resolve(new Response('{"ok":true,"id":"preview"}', {status: 200, headers: {'Content-Type': 'application/json'}}));
     }
