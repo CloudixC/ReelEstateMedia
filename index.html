@@ -3086,6 +3086,32 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
   const [open, setOpen] = useState(!!defaultOpen);
   const rowRef = React.useRef(null);
   useEffect(() => { if(defaultOpen && rowRef.current) setTimeout(() => rowRef.current.scrollIntoView({behavior:'smooth', block:'center'}), 60); }, []);
+  // 🔄 script auto-sync: opening the brief pulls the agent's latest hub script.
+  // Fills the text only when yours is blank (never clobbers local edits);
+  // otherwise flips the state and tells you a newer version is waiting.
+  useEffect(() => {
+    if(!open) return;
+    const hk = client && (client.hubKey || client.hubId);
+    if(!hk || !db.settings.inboxUrl || mediaOf(d) === 'photo') return;
+    fetch(db.settings.inboxUrl + '?scripts=' + encodeURIComponent(hk)).then(r => r.json()).then(j => {
+      const items = j.items || [];
+      const hit = items.find(x => x.p === (order ? order.project : '') && x.d === dlTitle(d)) || items.find(x => x.d === dlTitle(d));
+      if(!hit || hit.by !== 'agent' || !hit.t) return;
+      const b2 = getBrief(d);
+      if(b2.script === 'N/A') return;
+      const stNew = hit.st === 'Approved' ? 'Approved' : 'Drafted';
+      if(!(b2.scriptText || '').trim()){
+        updateDeliverable(d.id, {brief: {...b2, scriptText: hit.t, script: stNew}});
+        (window.showToast || (() => {}))('🔄 Script synced from their hub — ' + stNew.toLowerCase() + ' by the agent');
+      } else if(hit.t !== b2.scriptText){
+        if(stNew === 'Approved' && b2.script !== 'Approved')
+          updateDeliverable(d.id, {brief: {...b2, script: 'Approved'}});
+        (window.showToast || (() => {}))('🔄 Their hub has a newer script version — tap ⟳ Pull to load it');
+      } else if(b2.script !== stNew){
+        updateDeliverable(d.id, {brief: {...b2, script: stNew}});
+      }
+    }).catch(() => {});
+  }, [open]);
   const b = getBrief(d);
   const prep = prepScore(d);
   const setBrief = patch => updateDeliverable(d.id, {brief: {...b, ...patch}});
