@@ -335,6 +335,9 @@ body.haspreview{padding-top:44px}
 #tele-bar #tele-flip{display:none}
 #teleo.camon #tele-bar #tele-flip{display:inline-block}
 #tele-voice.live{background:var(--red);border-color:transparent;animation:bfpulse 1.3s ease-in-out infinite}
+#tele-loopbtn.live{background:var(--red);border-color:transparent;font-weight:700}
+#tele-loopmark{position:absolute;left:0;right:0;border-top:2px dashed rgba(255,74,82,.6);z-index:2;pointer-events:none}
+#tele-loopmark span{position:absolute;top:-20px;left:2px;font-size:11px;font-weight:700;color:var(--red2);letter-spacing:.09em}
 #tele-take{flex-direction:column}
 .takerow{display:flex;gap:9px;align-items:center;width:min(94vw,560px)}
 .takerow .tklbl{flex:1;color:#ddd;font-size:14px;text-align:left}
@@ -1158,6 +1161,7 @@ var teleCamS = null, teleRec = null, teleChunks = [], teleRecT0 = 0, teleRecTime
 var teleTakes = [], teleFacing = 'user', teleVoice = false, teleRecog = null;
 var teleWords = [], teleWPtr = 0, teleVTarget = 0;
 var telePlayMs = 0, telePlayPos0 = 0, teleWordsTotal = 0, telePxTotal = 1, teleRunNote = '';
+var teleLoop = null;
 function teleSaveSet(){ try{ localStorage.setItem('rem_tele_v1', JSON.stringify({sp: teleSpeed, f: teleFont})); }catch(e){} }
 function teleEyeY(){ return window.innerHeight * 0.26; }
 function teleStat(){
@@ -1249,6 +1253,7 @@ function openTele(txt){
       '<button id="tele-slow" title="Scroll slower">🐢</button><button id="tele-fast" title="Scroll faster">🐇</button>' +
       '<button id="tele-small">A−</button><button id="tele-big">A+</button>' +
       '<button id="tele-back" title="Jump back three lines">↩ 3 lines</button>' +
+      '<button id="tele-loopbtn" title="Loop point — every pause snaps back here for another take">📍 Loop</button>' +
       '<button id="tele-mir" title="Flip for teleprompter glass">🪞</button>' +
       '<button id="tele-cambtn" title="Camera on — record yourself right here">🎥</button>' +
       '<button id="tele-flip" title="Switch front / rear camera">🔄</button>' +
@@ -1306,6 +1311,16 @@ function openTele(txt){
           teleStat();
         }
       }
+      // ⟲ loop point: pausing rewinds to the marked spot, primed to go again
+      if(teleLoop !== null){
+        telePos = teleLoop;
+        teleVTarget = teleLoop;
+        inner.style.top = (-telePos) + 'px';
+        teleBeats.forEach(function(b){ if(b.y - telePos > teleEyeY()) b.done = false; });
+        var ly = teleLoop + teleEyeY();
+        teleWPtr = 0;
+        while(teleWPtr < teleWords.length && teleWords[teleWPtr].y < ly - 4) teleWPtr++;
+      }
     };
     var tv = teleEl.querySelector('#tele-view');
     var teleRearm = function(){
@@ -1357,6 +1372,28 @@ function openTele(txt){
       inner.style.top = (-telePos) + 'px';
     };
     teleEl.querySelector('#tele-back').addEventListener('click', teleBack3);
+    teleEl.querySelector('#tele-loopbtn').addEventListener('click', function(){
+      var mk = inner.querySelector('#tele-loopmark');
+      if(teleLoop !== null){
+        teleLoop = null;
+        this.classList.remove('live');
+        this.textContent = '📍 Loop';
+        if(mk) mk.remove();
+        toast('Loop point cleared — pausing stays put again.');
+        return;
+      }
+      teleLoop = telePos;
+      this.classList.add('live');
+      this.textContent = '⟲ Looping';
+      if(!mk){
+        mk = document.createElement('div');
+        mk.id = 'tele-loopmark';
+        mk.innerHTML = '<span>⟲ TAKE STARTS HERE</span>';
+        inner.appendChild(mk);
+      }
+      mk.style.top = (teleLoop + teleEyeY()) + 'px';
+      toast('📍 Loop set — every pause snaps back here, ready for the next take.');
+    });
     teleEl.querySelector('#tele-mir').addEventListener('click', function(){ inner.classList.toggle('mir'); });
     teleEl.querySelector('#tele-cambtn').addEventListener('click', function(){
       if(teleCamS){ teleStopCam(); return; }
@@ -1561,6 +1598,11 @@ function openTele(txt){
   inn.style.fontSize = teleFont + 'px';
   telePos = 0; telePlay = false; teleBeatUntil = 0;
   teleVTarget = 0; teleWPtr = 0; teleRunNote = '';
+  teleLoop = null;
+  var lb0 = teleEl.querySelector('#tele-loopbtn');
+  if(lb0){ lb0.classList.remove('live'); lb0.textContent = '📍 Loop'; }
+  var lm0 = teleEl.querySelector('#tele-loopmark');
+  if(lm0) lm0.remove();
   inn.style.top = '0px';
   teleEl.querySelector('#tele-play').textContent = '▶ Start';
   teleEl.classList.add('on');
