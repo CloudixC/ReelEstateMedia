@@ -307,12 +307,30 @@ body.haspreview{padding-top:44px}
 #teleo{position:fixed;inset:0;background:#000;z-index:300;display:none;flex-direction:column}
 #teleo.on{display:flex}
 #tele-view{flex:1;overflow:hidden;position:relative;cursor:pointer}
-#tele-inner{position:absolute;top:0;left:50%;transform:translateX(-50%);width:min(92vw,860px);font-size:46px;line-height:1.55;font-weight:600;color:#fff;padding:42vh 0 65vh;white-space:pre-wrap}
+#tele-inner{position:absolute;top:0;left:50%;transform:translateX(-50%);width:min(92vw,860px);font-size:46px;line-height:1.55;font-weight:600;color:#fff;padding:26vh 0 70vh;white-space:pre-wrap;z-index:1}
 #tele-inner.mir{transform:translateX(-50%) scaleX(-1)}
-#tele-bar{display:flex;gap:9px;align-items:center;justify-content:center;padding:12px;background:#0a0a0c;border-top:1px solid #222;flex-wrap:wrap}
+#tele-inner .tl{min-height:1em}
+#tele-inner .tl.beat{color:var(--red2);letter-spacing:.45em;text-align:center;font-size:.7em;opacity:.9}
+#tele-cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:none;z-index:0}
+#teleo.camon #tele-cam{display:block}
+#teleo.camon #tele-inner{text-shadow:0 1px 4px rgba(0,0,0,.95), 0 0 22px rgba(0,0,0,.6)}
+#tele-shade{position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(180deg, rgba(0,0,0,.82) 0%, rgba(0,0,0,.82) 17vh, transparent 22vh, transparent 32vh, rgba(0,0,0,.5) 42vh, rgba(0,0,0,.72) 100%)}
+#teleo.camon #tele-shade{opacity:.6}
+#tele-eye{position:absolute;left:6px;top:26vh;transform:translateY(-50%);color:var(--red2);font-size:18px;z-index:3;pointer-events:none;opacity:.85}
+#tele-count{position:absolute;inset:0;display:none;place-items:center;font-size:min(34vw,150px);font-weight:800;color:#fff;background:rgba(0,0,0,.55);z-index:6}
+#tele-stat{text-align:center;color:#9a978c;font-size:13px;padding:8px 12px 0;background:#0a0a0c;border-top:1px solid #222}
+#tele-bar{display:flex;gap:9px;align-items:center;justify-content:center;padding:10px 12px 12px;background:#0a0a0c;flex-wrap:wrap}
 #tele-bar button{background:#17171b;border:1px solid #2c2c33;color:#fff;border-radius:10px;padding:9px 14px;font-size:14px;cursor:pointer}
 #tele-bar .tp{background:var(--red);border-color:transparent;font-weight:700}
-#tele-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);color:#777;font-size:12.5px;z-index:2}
+#tele-bar #tele-rec{display:none}
+#teleo.camon #tele-bar #tele-rec{display:inline-block}
+#tele-rec.live{background:var(--red);border-color:transparent;animation:bfpulse 1.3s ease-in-out infinite}
+#tele-take{display:none;gap:9px;align-items:center;justify-content:center;padding:10px 12px;background:#141216;border-top:1px solid #2c2c33}
+#tele-take.on{display:flex}
+#tele-take .go2{background:var(--red);border:0;color:#fff;border-radius:10px;padding:10px 16px;font-size:14.5px;font-weight:700;cursor:pointer}
+#tele-take .ghost2{background:#17171b;border:1px solid #2c2c33;color:#aaa;border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer}
+#tele-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);color:#777;font-size:12.5px;z-index:3}
 /* ---- 🎙 brief voice note ---- */
 #bf-mic.rec{background:var(--red) !important;color:#fff !important;animation:bfpulse 1.3s ease-in-out infinite}
 @keyframes bfpulse{0%,100%{box-shadow:0 0 0 0 rgba(227,34,44,.5)}50%{box-shadow:0 0 0 9px rgba(227,34,44,0)}}
@@ -1116,39 +1134,219 @@ function ensureScModal(){
   return scModal;
 }
 var teleEl = null, telePos = 0, teleSpeed = 1, telePlay = false, teleFont = 46;
+var teleBeats = [], teleBeatUntil = 0, teleCounting = false, teleWake = null;
+var teleCamS = null, teleRec = null, teleChunks = [], teleRecT0 = 0, teleRecTimer = 0, teleTake = null;
+function teleSaveSet(){ try{ localStorage.setItem('rem_tele_v1', JSON.stringify({sp: teleSpeed, f: teleFont})); }catch(e){} }
+function teleEyeY(){ return window.innerHeight * 0.26; }
+function teleStat(){
+  var inner = teleEl.querySelector('#tele-inner');
+  var words = (inner.textContent || '').replace(/•/g, '').split(/\s+/).filter(Boolean).length;
+  var px = Math.max(0, inner.scrollHeight - window.innerHeight);
+  var secs = Math.round(px / (teleSpeed * 60)) + Math.round(teleBeats.length * 1.6);
+  teleEl.querySelector('#tele-stat').textContent =
+    '≈ ' + (secs >= 60 ? Math.floor(secs / 60) + 'm ' + (secs % 60) + 's' : secs + 's') +
+    ' at this pace · ' + words + ' words' +
+    (secs > 70 ? ' — long for a 60s reel, trim or speed up' : '');
+}
+function teleMeasureBeats(){
+  var inner = teleEl.querySelector('#tele-inner');
+  teleBeats = [];
+  inner.querySelectorAll('.tl.beat').forEach(function(el){ teleBeats.push({y: el.offsetTop, done: false}); });
+}
+function teleWakeOn(){
+  try{
+    if(navigator.wakeLock && navigator.wakeLock.request){
+      navigator.wakeLock.request('screen').then(function(w){ teleWake = w; }).catch(function(){});
+    }
+  }catch(e){}
+}
+function teleStopCam(){
+  if(teleRec && teleRec.state === 'recording'){ try{ teleRec.stop(); }catch(e){} }
+  if(teleCamS){ teleCamS.getTracks().forEach(function(t){ t.stop(); }); teleCamS = null; }
+  if(teleEl){
+    teleEl.classList.remove('camon');
+    var rb = teleEl.querySelector('#tele-rec');
+    rb.classList.remove('live'); rb.textContent = '⏺ Record';
+    teleEl.querySelector('#tele-cambtn').textContent = '🎥';
+  }
+}
 function openTele(txt){
+  try{ var tp = JSON.parse(localStorage.getItem('rem_tele_v1')); if(tp){ teleSpeed = Math.min(4, Math.max(.35, +tp.sp || 1)); teleFont = Math.min(84, Math.max(24, +tp.f || 46)); } }catch(e){}
   if(!teleEl){
     teleEl = document.createElement('div');
     teleEl.id = 'teleo';
-    teleEl.innerHTML = '<div id="tele-view"><div id="tele-hint">tap the text to start &amp; pause</div><div id="tele-inner"></div></div>' +
+    teleEl.innerHTML = '<div id="tele-view"><div id="tele-hint">tap the text to start &amp; pause · "..." on its own line = a beat pause</div>' +
+      '<video id="tele-cam" playsinline muted></video><div id="tele-shade"></div><span id="tele-eye">▶</span>' +
+      '<div id="tele-count"></div><div id="tele-inner"></div></div>' +
+      '<div id="tele-take"><span id="tele-takelbl" style="color:#ddd;font-size:14px"></span><button class="go2" id="tele-send">📤 Send take to the studio</button><button class="ghost2" id="tele-trash">🗑 Discard</button></div>' +
+      '<div id="tele-stat"></div>' +
       '<div id="tele-bar">' +
       '<button class="tp" id="tele-play">▶ Start</button>' +
-      '<button id="tele-slow">🐢 Slower</button><button id="tele-fast">🐇 Faster</button>' +
+      '<button id="tele-slow" title="Scroll slower">🐢</button><button id="tele-fast" title="Scroll faster">🐇</button>' +
       '<button id="tele-small">A−</button><button id="tele-big">A+</button>' +
+      '<button id="tele-back" title="Jump back three lines">↩ 3 lines</button>' +
       '<button id="tele-mir" title="Flip for teleprompter glass">🪞</button>' +
+      '<button id="tele-cambtn" title="Camera on — record yourself right here">🎥</button>' +
+      '<button id="tele-rec">⏺ Record</button>' +
       '<button id="tele-close">✕ Close</button></div>';
     document.body.appendChild(teleEl);
     var inner = teleEl.querySelector('#tele-inner');
-    var setPlay = function(pl){ telePlay = pl; teleEl.querySelector('#tele-play').textContent = pl ? '⏸ Pause' : '▶ Start'; };
+    var playBtn = teleEl.querySelector('#tele-play');
+    var setPlay = function(pl){
+      if(teleCounting) return;
+      if(pl && telePos <= 2){
+        // fresh start → 3·2·1 so they can settle before the first line moves
+        teleCounting = true;
+        var ov = teleEl.querySelector('#tele-count');
+        var n = 3;
+        ov.style.display = 'grid';
+        ov.textContent = '3';
+        var iv = setInterval(function(){
+          n--;
+          if(n <= 0){
+            clearInterval(iv);
+            ov.style.display = 'none';
+            teleCounting = false;
+            telePlay = true;
+            playBtn.textContent = '⏸ Pause';
+            return;
+          }
+          ov.textContent = String(n);
+        }, 700);
+        return;
+      }
+      telePlay = pl;
+      playBtn.textContent = pl ? '⏸ Pause' : '▶ Start';
+    };
     teleEl.querySelector('#tele-view').addEventListener('click', function(){ setPlay(!telePlay); });
-    teleEl.querySelector('#tele-play').addEventListener('click', function(){ setPlay(!telePlay); });
-    teleEl.querySelector('#tele-slow').addEventListener('click', function(){ teleSpeed = Math.max(.35, teleSpeed - .25); });
-    teleEl.querySelector('#tele-fast').addEventListener('click', function(){ teleSpeed = Math.min(4, teleSpeed + .25); });
-    teleEl.querySelector('#tele-small').addEventListener('click', function(){ teleFont = Math.max(24, teleFont - 6); inner.style.fontSize = teleFont + 'px'; });
-    teleEl.querySelector('#tele-big').addEventListener('click', function(){ teleFont = Math.min(84, teleFont + 6); inner.style.fontSize = teleFont + 'px'; });
+    playBtn.addEventListener('click', function(){ setPlay(!telePlay); });
+    teleEl.querySelector('#tele-slow').addEventListener('click', function(){ teleSpeed = Math.max(.35, teleSpeed - .25); teleSaveSet(); teleStat(); });
+    teleEl.querySelector('#tele-fast').addEventListener('click', function(){ teleSpeed = Math.min(4, teleSpeed + .25); teleSaveSet(); teleStat(); });
+    teleEl.querySelector('#tele-small').addEventListener('click', function(){ teleFont = Math.max(24, teleFont - 6); inner.style.fontSize = teleFont + 'px'; teleSaveSet(); requestAnimationFrame(function(){ teleMeasureBeats(); teleStat(); }); });
+    teleEl.querySelector('#tele-big').addEventListener('click', function(){ teleFont = Math.min(84, teleFont + 6); inner.style.fontSize = teleFont + 'px'; teleSaveSet(); requestAnimationFrame(function(){ teleMeasureBeats(); teleStat(); }); });
+    teleEl.querySelector('#tele-back').addEventListener('click', function(){
+      telePos = Math.max(0, telePos - teleFont * 1.55 * 3);
+      teleBeats.forEach(function(b){ if(b.y - telePos > teleEyeY()) b.done = false; });
+      inner.style.top = (-telePos) + 'px';
+    });
     teleEl.querySelector('#tele-mir').addEventListener('click', function(){ inner.classList.toggle('mir'); });
-    teleEl.querySelector('#tele-close').addEventListener('click', function(){ telePlay = false; teleEl.classList.remove('on'); });
+    teleEl.querySelector('#tele-cambtn').addEventListener('click', function(){
+      if(teleCamS){ teleStopCam(); return; }
+      if(!navigator.mediaDevices || !window.MediaRecorder){ toast('Camera unavailable on this browser.'); return; }
+      navigator.mediaDevices.getUserMedia({video: {facingMode: 'user'}, audio: true}).then(function(stream){
+        teleCamS = stream;
+        var v = teleEl.querySelector('#tele-cam');
+        v.srcObject = stream;
+        v.play().catch(function(){});
+        teleEl.classList.add('camon');
+        teleEl.querySelector('#tele-cambtn').textContent = '🎥 ✓';
+        toast('🎥 Camera on — hit ⏺, then Start the scroll. Your take sends straight to us.');
+      }).catch(function(){ toast('Camera unavailable — check your browser permissions.'); });
+    });
+    teleEl.querySelector('#tele-rec').addEventListener('click', function(){
+      var rb = this;
+      if(teleRec && teleRec.state === 'recording'){ teleRec.stop(); return; }
+      if(!teleCamS) return;
+      var mime = MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus'
+        : MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : '';
+      try{
+        teleRec = mime ? new MediaRecorder(teleCamS, {mimeType: mime, videoBitsPerSecond: 2000000, audioBitsPerSecond: 96000}) : new MediaRecorder(teleCamS);
+      }catch(eR){ toast('Recording not supported here.'); return; }
+      teleChunks = [];
+      teleRec.ondataavailable = function(ev){ if(ev.data && ev.data.size) teleChunks.push(ev.data); };
+      teleRec.onstop = function(){
+        clearInterval(teleRecTimer);
+        rb.classList.remove('live');
+        rb.textContent = '⏺ Record';
+        var secs = Math.round((Date.now() - teleRecT0) / 1000);
+        var blob = new Blob(teleChunks, {type: (teleRec && teleRec.mimeType) || 'video/webm'});
+        teleRec = null;
+        if(blob.size < 20000 || secs < 2){ toast('That take was too short — go again.'); return; }
+        if(blob.size > 24 * 1024 * 1024){ toast('Over the 24 MB limit — try a shorter take or two parts.'); return; }
+        teleTake = {blob: blob, sec: secs};
+        teleEl.querySelector('#tele-takelbl').textContent = '🎬 ' + secs + 's take ready';
+        teleEl.querySelector('#tele-take').classList.add('on');
+      };
+      teleRec.start();
+      teleRecT0 = Date.now();
+      rb.classList.add('live');
+      teleEl.querySelector('#tele-take').classList.remove('on');
+      teleRecTimer = setInterval(function(){
+        var el = Math.round((Date.now() - teleRecT0) / 1000);
+        rb.textContent = '⏹ ' + el + 's';
+        if(el >= 110){ if(teleRec && teleRec.state === 'recording') teleRec.stop(); }
+      }, 500);
+    });
+    teleEl.querySelector('#tele-trash').addEventListener('click', function(){ teleTake = null; teleEl.querySelector('#tele-take').classList.remove('on'); });
+    teleEl.querySelector('#tele-send').addEventListener('click', function(){
+      if(!teleTake) return;
+      var sb = this;
+      sb.disabled = true; sb.textContent = '⏳ Uploading…';
+      new Promise(function(res, rej){
+        var fr = new FileReader();
+        fr.onload = function(){ var rr = String(fr.result); var bi = rr.indexOf('base64,'); res(bi > -1 ? rr.slice(bi + 7) : (rr.split(',')[1] || '')); };
+        fr.onerror = rej;
+        fr.readAsDataURL(teleTake.blob);
+      }).then(function(b64){
+        var ext = (teleTake.blob.type || '').indexOf('mp4') > -1 ? 'mp4' : 'webm';
+        var nm = 'Teleprompter take (' + teleTake.sec + 's).' + ext;
+        return fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'file', name: nm, mime: teleTake.blob.type || 'video/webm', data: b64})})
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if(!j.ok || !j.id) throw new Error('up');
+            var thread = (AGENTNAME || 'Agent') + ' — ' + (SC_CTX && SC_CTX.d ? SC_CTX.d : 'Content Hub');
+            return fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({
+              kind: 'msg', ref: a, project: thread, dname: '',
+              who: ASSIST ? ASSIST.n + ' (assistant)' : (AGENTNAME || 'Agent'), from: '',
+              body: JSON.stringify({__rc: 1, t: '🎬 Teleprompter take — fresh from the script studio', att: [{id: j.id, n: nm, s: teleTake.blob.size, m: teleTake.blob.type || 'video/webm', sec: teleTake.sec}]}) })});
+          });
+      }).then(function(){
+        toast('🎬 Take sent — it&rsquo;s in your chat thread with us.');
+        teleTake = null;
+        teleEl.querySelector('#tele-take').classList.remove('on');
+        sb.disabled = false; sb.textContent = '📤 Send take to the studio';
+      }).catch(function(){
+        toast('Upload didn&rsquo;t go through — check your connection and tap send again.');
+        sb.disabled = false; sb.textContent = '📤 Send take to the studio';
+      });
+    });
+    teleEl.querySelector('#tele-close').addEventListener('click', function(){
+      telePlay = false;
+      teleStopCam();
+      teleTake = null;
+      teleEl.querySelector('#tele-take').classList.remove('on');
+      teleEl.classList.remove('on');
+      if(teleWake){ try{ teleWake.release(); }catch(e){} teleWake = null; }
+    });
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible' && teleEl.classList.contains('on')) teleWakeOn();
+    });
     (function step(){
-      if(telePlay){ telePos += teleSpeed; inner.style.top = (-telePos) + 'px'; }
+      if(telePlay && performance.now() >= teleBeatUntil){
+        telePos += teleSpeed;
+        var eye = teleEyeY();
+        for(var bi = 0; bi < teleBeats.length; bi++){
+          var b = teleBeats[bi];
+          if(!b.done && (b.y - telePos) <= eye){ b.done = true; teleBeatUntil = performance.now() + 1600; break; }
+        }
+        inner.style.top = (-telePos) + 'px';
+      }
       requestAnimationFrame(step);
     })();
   }
   var inn = teleEl.querySelector('#tele-inner');
-  inn.textContent = txt;
-  telePos = 0; telePlay = false;
+  inn.innerHTML = String(txt).split('\n').map(function(ln){
+    if(/^\s*(\.{3,}|…+)\s*$/.test(ln)) return '<div class="tl beat">• • •</div>';
+    return '<div class="tl">' + esc(ln) + '</div>';
+  }).join('');
+  inn.style.fontSize = teleFont + 'px';
+  telePos = 0; telePlay = false; teleBeatUntil = 0;
   inn.style.top = '0px';
   teleEl.querySelector('#tele-play').textContent = '▶ Start';
+  teleEl.querySelector('#tele-take').classList.remove('on');
   teleEl.classList.add('on');
+  teleWakeOn();
+  requestAnimationFrame(function(){ teleMeasureBeats(); teleStat(); });
 }
 /* ---- ⚡ next open slots ---- */
 function loadSlots(){
@@ -1181,7 +1379,7 @@ function loadSlots(){
 function uploadVoice(vv){
   return new Promise(function(res, rej){
     var fr = new FileReader();
-    fr.onload = function(){ res(String(fr.result).split(',')[1] || ''); };
+    fr.onload = function(){ var rr = String(fr.result); var bi = rr.indexOf('base64,'); res(bi > -1 ? rr.slice(bi + 7) : (rr.split(',')[1] || '')); };
     fr.onerror = rej;
     fr.readAsDataURL(vv.blob);
   }).then(function(b64){

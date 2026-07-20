@@ -809,7 +809,7 @@ function recNote(){
       try{
         const b64 = await new Promise((res, rej) => {
           const fr = new FileReader();
-          fr.onload = () => res(String(fr.result).split(',')[1] || '');
+          fr.onload = () => { const rr = String(fr.result); const bi = rr.indexOf('base64,'); res(bi > -1 ? rr.slice(bi + 7) : (rr.split(',')[1] || '')); };
           fr.onerror = rej;
           fr.readAsDataURL(blob);
         });
