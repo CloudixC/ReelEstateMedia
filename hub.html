@@ -1175,7 +1175,7 @@ function openTele(txt){
   if(!teleEl){
     teleEl = document.createElement('div');
     teleEl.id = 'teleo';
-    teleEl.innerHTML = '<div id="tele-view"><div id="tele-hint">tap the text to start &amp; pause · "..." on its own line = a beat pause</div>' +
+    teleEl.innerHTML = '<div id="tele-view"><div id="tele-hint">tap: start &amp; pause · drag or scroll to move · "..." line = beat pause</div>' +
       '<video id="tele-cam" playsinline muted></video><div id="tele-shade"></div><span id="tele-eye">▶</span>' +
       '<div id="tele-count"></div><div id="tele-inner"></div></div>' +
       '<div id="tele-take"><span id="tele-takelbl" style="color:#ddd;font-size:14px"></span><button class="go2" id="tele-send">📤 Send take to the studio</button><button class="ghost2" id="tele-trash">🗑 Discard</button></div>' +
@@ -1192,19 +1192,27 @@ function openTele(txt){
     document.body.appendChild(teleEl);
     var inner = teleEl.querySelector('#tele-inner');
     var playBtn = teleEl.querySelector('#tele-play');
+    var teleCountIv = 0;
+    var cancelCount = function(){
+      if(!teleCounting) return;
+      clearInterval(teleCountIv);
+      teleEl.querySelector('#tele-count').style.display = 'none';
+      teleCounting = false;
+      playBtn.textContent = '▶ Start';
+    };
     var setPlay = function(pl){
-      if(teleCounting) return;
-      if(pl && telePos <= 2){
-        // fresh start → 3·2·1 so they can settle before the first line moves
+      if(teleCounting){ cancelCount(); return; }   // tap mid-count = never mind
+      if(pl){
+        // every start — first play AND every resume — gets a 3·2·1 to settle
         teleCounting = true;
         var ov = teleEl.querySelector('#tele-count');
         var n = 3;
         ov.style.display = 'grid';
         ov.textContent = '3';
-        var iv = setInterval(function(){
+        teleCountIv = setInterval(function(){
           n--;
           if(n <= 0){
-            clearInterval(iv);
+            clearInterval(teleCountIv);
             ov.style.display = 'none';
             teleCounting = false;
             telePlay = true;
@@ -1215,10 +1223,46 @@ function openTele(txt){
         }, 700);
         return;
       }
-      telePlay = pl;
-      playBtn.textContent = pl ? '⏸ Pause' : '▶ Start';
+      telePlay = false;
+      playBtn.textContent = '▶ Start';
     };
-    teleEl.querySelector('#tele-view').addEventListener('click', function(){ setPlay(!telePlay); });
+    var tv = teleEl.querySelector('#tele-view');
+    var teleRearm = function(){
+      teleBeatUntil = 0;
+      teleBeats.forEach(function(b){ if(b.y - telePos > teleEyeY()) b.done = false; });
+    };
+    var teleNudge = function(dy){
+      telePos = Math.max(0, telePos + dy);
+      inner.style.top = (-telePos) + 'px';
+      teleRearm();
+    };
+    // drag to scrub — finger or mouse; a real drag never counts as a tap
+    var dragY = null, dragPos0 = 0, dragMoved = false;
+    var dStart = function(y){ dragY = y; dragPos0 = telePos; dragMoved = false; };
+    var dMove = function(y){
+      if(dragY === null) return;
+      var dy = y - dragY;
+      if(Math.abs(dy) > 8) dragMoved = true;
+      if(dragMoved){
+        telePos = Math.max(0, dragPos0 - dy);
+        inner.style.top = (-telePos) + 'px';
+      }
+    };
+    var dEnd = function(){
+      if(dragY === null) return;
+      if(dragMoved) teleRearm();
+      dragY = null;
+      setTimeout(function(){ dragMoved = false; }, 60);
+    };
+    tv.addEventListener('touchstart', function(e){ dStart(e.touches[0].clientY); }, {passive: true});
+    tv.addEventListener('touchmove', function(e){ dMove(e.touches[0].clientY); }, {passive: true});
+    tv.addEventListener('touchend', dEnd);
+    tv.addEventListener('mousedown', function(e){ dStart(e.clientY); });
+    tv.addEventListener('mousemove', function(e){ if(e.buttons) dMove(e.clientY); });
+    tv.addEventListener('mouseup', dEnd);
+    tv.addEventListener('mouseleave', dEnd);
+    tv.addEventListener('wheel', function(e){ e.preventDefault(); teleNudge(e.deltaY); }, {passive: false});
+    tv.addEventListener('click', function(){ if(dragMoved) return; setPlay(!telePlay); });
     playBtn.addEventListener('click', function(){ setPlay(!telePlay); });
     teleEl.querySelector('#tele-slow').addEventListener('click', function(){ teleSpeed = Math.max(.35, teleSpeed - .25); teleSaveSet(); teleStat(); });
     teleEl.querySelector('#tele-fast').addEventListener('click', function(){ teleSpeed = Math.min(4, teleSpeed + .25); teleSaveSet(); teleStat(); });
