@@ -894,113 +894,55 @@ async function hashText(t){
     return 'djb2:' + h.toString(16);
   }
 }
-/* ---------------- Cloud sync (Supabase) ---------------- */
-const supaCfg = () => { try{ return JSON.parse(localStorage.getItem('rem_supa') || 'null'); }catch(e){ return null; } };
-const supaSess = () => { try{ return JSON.parse(localStorage.getItem('rem_supa_sess') || 'null'); }catch(e){ return null; } };
-const setSupaSess = s => { try{ s ? localStorage.setItem('rem_supa_sess', JSON.stringify(s)) : localStorage.removeItem('rem_supa_sess'); }catch(e){} };
+/* ---------------- ⛅ Cloud backups (your own Drive, via the inbox script) ---------------- */
+const bakMeta = () => { try{ return JSON.parse(localStorage.getItem('rem_ccbak_v1') || '{}'); }catch(e){ return {}; } };
 
-async function supaSignIn(url, key, email, pw){
-  const r = await fetch(url + '/auth/v1/token?grant_type=password', {
-    method: 'POST', headers: {apikey: key, 'Content-Type': 'application/json'},
-    body: JSON.stringify({email, password: pw})});
-  const j = await r.json();
-  if(!r.ok) throw new Error(j.error_description || j.msg || 'sign-in failed');
-  localStorage.setItem('rem_supa', JSON.stringify({url, key}));
-  setSupaSess({access: j.access_token, refresh: j.refresh_token, uid: j.user.id});
-  return j.user.id;
-}
-async function supaRefresh(){
-  const cfg = supaCfg(), sess = supaSess();
-  if(!cfg || !sess) throw new Error('no session');
-  const r = await fetch(cfg.url + '/auth/v1/token?grant_type=refresh_token', {
-    method: 'POST', headers: {apikey: cfg.key, 'Content-Type': 'application/json'},
-    body: JSON.stringify({refresh_token: sess.refresh})});
-  const j = await r.json();
-  if(!r.ok){ setSupaSess(null); throw new Error('session expired — sign in again'); }
-  setSupaSess({access: j.access_token, refresh: j.refresh_token, uid: j.user.id});
-}
-async function supaRest(path, opts, retried){
-  const cfg = supaCfg(), sess = supaSess();
-  if(!cfg || !sess) throw new Error('not connected');
-  const r = await fetch(cfg.url + path, {...(opts || {}), headers: {
-    apikey: cfg.key, Authorization: 'Bearer ' + sess.access,
-    'Content-Type': 'application/json', ...((opts || {}).headers || {})}});
-  if(r.status === 401 && !retried){ await supaRefresh(); return supaRest(path, opts, true); }
-  return r;
-}
-async function supaPull(){
-  const r = await supaRest('/rest/v1/app_state?select=data,updated_at&limit=1');
-  if(!r.ok) throw new Error('pull failed ' + r.status);
-  const rows = await r.json();
-  return rows[0] || null;
-}
-async function supaPush(data, stamp){
-  const sess = supaSess();
-  const r = await supaRest('/rest/v1/app_state?on_conflict=owner', {
-    method: 'POST',
-    headers: {Prefer: 'resolution=merge-duplicates'},
-    body: JSON.stringify([{owner: sess.uid, data, updated_at: stamp}])});
-  if(!r.ok) throw new Error('push failed ' + r.status);
-}
-
-function CloudModal({db, onClose, cloud, setCloud, adoptRemote, seedCloud}){
-  const cfg = supaCfg();
-  const [url, setUrl] = useState((cfg && cfg.url) || '');
-  const [key, setKey] = useState((cfg && cfg.key) || '');
-  const [email, setEmail] = useState('');
-  const [pw, setPw] = useState('');
+function CloudModal({db, onClose, cloud, adoptRemote, doBackup}){
+  const [items, setItems] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const connected = !!supaSess();
+  const wired = !!(db.settings.inboxUrl && db.settings.inboxToken);
+  const load = () => {
+    if(!wired) return;
+    fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken) + '&ccbak=1')
+      .then(r => r.json()).then(j => setItems(j.items || []))
+      .catch(() => setErr("Couldn't load the backup list — check your connection."));
+  };
+  useEffect(load, []);
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:480}}>
-        <div className="flex"><h3>☁ Cloud Sync</h3><span className="spacer"></span><button title="Close" className="x" onClick={onClose}>✕</button></div>
-        {connected ? <>
-          <p className="small muted" style={{marginTop:8}}>Connected — your data syncs to Supabase and follows you to any device that signs in.
-            {cloud.last ? ' Last sync: ' + cloud.last : ''}</p>
-          <div className="flex" style={{marginTop:14}}>
-            <button className="btn ghost sm" onClick={async () => {
-              setBusy(true); setErr('');
-              try{ const row = await supaPull(); if(row) adoptRemote(row); else setErr('No cloud copy yet — it saves automatically after your next change.'); }
-              catch(e){ setErr(String(e.message || e)); }
-              setBusy(false);
-            }}>{busy ? '…' : '⬇ Pull latest from cloud'}</button>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:540}}>
+        <div className="flex"><h3>⛅ Backups</h3><span className="spacer"></span><button title="Close" className="x" onClick={onClose}>✕</button></div>
+        {!wired ? <p className="small muted" style={{marginTop:8}}>Backups ride on your inbox connection — set the inbox URL + token in Settings first. They save to <strong>your</strong> Google Drive; no extra accounts, nothing that pauses.</p>
+        : <>
+          <p className="small muted" style={{marginTop:8}}>Auto-backup is on: about 90 seconds after you stop making changes, a full copy of this Command Centre lands in your Google Drive (private, in the REM uploads folder). {cloud.last ? 'Last backup: ' + cloud.last + '.' : 'First one lands after your next change.'}</p>
+          <div className="flex" style={{marginTop:12}}>
+            <button className="btn ghost sm" disabled={busy} onClick={async () => { setBusy(true); await doBackup(true); setBusy(false); load(); }}>{busy ? '…' : '⛅ Back up now'}</button>
             <span className="spacer"></span>
-            <button className="btn ghost sm" onClick={() => { setSupaSess(null); setCloud({status:'off', last:null}); onClose(); }}>Sign out</button>
+            <button className="btn ghost sm" onClick={load}>⟳ Refresh list</button>
           </div>
-        </> : <>
-          <p className="small muted" style={{marginTop:8}}>One-time per device — see <strong>supabase-setup.txt</strong> for the 10-minute project setup, then paste here:</p>
-          <label className="f" style={{marginTop:10}}>Project URL</label>
-          <input placeholder="https://xxxx.supabase.co (just the domain — any extra path is fine, I'll trim it)" value={url} onChange={e => setUrl(e.target.value)}/>
-          <label className="f" style={{marginTop:8}}>Anon public key</label>
-          <input placeholder="eyJ…" value={key} onChange={e => setKey(e.target.value)}/>
-          <div className="frow" style={{marginTop:8}}>
-            <div><label className="f">Email</label><input value={email} onChange={e => setEmail(e.target.value)}/></div>
-            <div><label className="f">Cloud password</label><input type="password" value={pw} onChange={e => setPw(e.target.value)}/></div>
-          </div>
-          <button className="btn" style={{width:'100%', marginTop:14}} disabled={busy || !url.trim() || !key.trim() || !email.trim() || !pw}
-            onClick={async () => {
-              setBusy(true); setErr('');
-              try{
-                let nu = url.trim();
-                try{ nu = new URL(nu).origin; }catch(e){ nu = nu.replace(/\/.*$/, m => '').replace(/\/+$/, ''); }
-                await supaSignIn(nu, key.trim(), email.trim(), pw);
-                setCloud({status:'idle', last:null});
-                const row = await supaPull();
-                if(row && row.data && (row.data.orders || []).length + (row.data.clients || []).length > 0){
-                  if(confirm('A cloud copy exists (saved ' + String(row.updated_at).slice(0, 16).replace('T', ' ') + '). Load it onto this device?\n\nOK = use cloud copy · Cancel = keep this device\u2019s data (it will overwrite the cloud on next save)')){
-                    adoptRemote(row);
-                  }
-                } else {
-                  await seedCloud();
-                }
-                onClose();
-              }catch(e){ setErr(String(e.message || e)); }
-              setBusy(false);
-            }}>{busy ? 'Connecting…' : 'Sign in & Sync'}</button>
+          <label className="f" style={{marginTop:16}}>Restore points</label>
+          {items === null ? <p className="small faint">Loading…</p> :
+           items.length === 0 ? <p className="small faint">No cloud backups yet — tap "Back up now" for your first.</p> :
+           items.map(it => (
+            <div key={it.id + it.ts} className="flex" style={{gap:8, padding:'7px 0', borderBottom:'1px solid var(--line)'}}>
+              <span className="small" style={{flex:1}}>{String(it.ts).slice(0, 16).replace('T', ' ')}
+                <span className="faint"> · {(it.meta && it.meta.c) || 0} clients · {(it.meta && it.meta.o) || 0} orders · {Math.round(((it.meta && it.meta.b) || 0) / 1024)} KB</span></span>
+              <button className="btn ghost sm" disabled={busy} onClick={async () => {
+                if(!confirm('Replace everything in this Command Centre with the backup from ' + String(it.ts).slice(0, 16).replace('T', ' ') + '?\n\nA fresh backup of the current state is taken first, so you can always come back.')) return;
+                setBusy(true); setErr('');
+                try{
+                  await doBackup(true);   // safety net: snapshot current state before replacing it
+                  const j = await fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken) + '&ccrestore=' + encodeURIComponent(it.id)).then(r => r.json());
+                  if(!j.ok || !j.data) throw new Error(j.error || 'restore failed');
+                  adoptRemote({data: JSON.parse(j.data), updated_at: it.ts});
+                  onClose();
+                }catch(e){ setErr(String(e.message || e)); }
+                setBusy(false);
+              }}>⬇ Restore</button>
+            </div>))}
+          {err && <p className="small" style={{color:'var(--red)', marginTop:10}}>{err}</p>}
         </>}
-        {err && <p className="small" style={{color:'var(--red)', marginTop:10}}>{err}</p>}
       </div>
     </div>);
 }
@@ -1104,15 +1046,41 @@ function App(){
   };
 
   const [staleVersion, setStaleVersion] = useState(false);
-  const [cloud, setCloud] = useState({status: supaSess() ? 'idle' : 'off', last: null});
+  const [cloud, setCloud] = useState(() => ({status: 'idle', last: (String(bakMeta().t || '').slice(11, 19)) || null}));
   const [showCloud, setShowCloud] = useState(false);
   const cloudSkip = React.useRef(false);
-  const seedCloud = async () => {
-    const stamp = new Date().toISOString();
-    await supaPush({...db, cloudStamp: stamp}, stamp);
-    cloudSkip.current = true;
-    setDb(p => ({...p, cloudStamp: stamp}));
-    setCloud({status:'idle', last: stamp.slice(11, 19)});
+  const bakBusy = React.useRef(false);
+  // ⛅ full snapshot → private JSON in your Drive (kind:'file' priv) + a tiny
+  // token-gated pointer row (kind:'ccbak') so the restore list can find it.
+  const doBackup = async (manual) => {
+    const inboxUrl = db.settings.inboxUrl, inboxToken = db.settings.inboxToken;
+    if(!inboxUrl || !inboxToken || bakBusy.current) return false;
+    const json = JSON.stringify(db);
+    let h = 5381;
+    for(let i = 0; i < json.length; i++) h = ((h << 5) + h + json.charCodeAt(i)) >>> 0;
+    if(!manual && bakMeta().h === h) return false;   // nothing new since last backup
+    bakBusy.current = true;
+    setCloud(c => ({...c, status: 'saving'}));
+    try{
+      const stamp = new Date().toISOString();
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      const j = await fetch(inboxUrl, {method:'POST', body: JSON.stringify({kind:'file', priv: 1,
+        name: 'REM Command Centre backup ' + stamp.slice(0, 16).replace('T', ' ') + '.json',
+        mime: 'application/json', data: b64})}).then(r => r.json());
+      if(!j.ok || !j.id) throw new Error('upload failed');
+      const ok2 = await fetch(inboxUrl, {method:'POST', body: JSON.stringify({kind:'ccbak', token: inboxToken,
+        ref: j.id, project: '', dname: '', who: 'cc',
+        body: JSON.stringify({b: json.length, c: db.clients.length, o: db.orders.length, d: db.deliverables.length})})}).then(r => r.json());
+      if(!ok2.ok) throw new Error('pointer failed');
+      try{ localStorage.setItem('rem_ccbak_v1', JSON.stringify({h, t: stamp})); }catch(e){}
+      setCloud({status: 'idle', last: stamp.slice(11, 19)});
+      bakBusy.current = false;
+      return true;
+    }catch(e){
+      setCloud(c => ({...c, status: 'err'}));
+      bakBusy.current = false;
+      return false;
+    }
   };
   const adoptRemote = (row) => {
     const md = migrate(row.data);
@@ -1122,29 +1090,11 @@ function App(){
     setCloud({status:'idle', last: String(row.updated_at).slice(11, 19)});
     showToast('⬇ Loaded cloud copy');
   };
-  // pull-on-open: adopt cloud if it's newer than what this device last saw
+  // auto-backup: ~90s after the last change settles (hash-guarded, so quiet
+  // periods and no-op reloads never re-upload)
   useEffect(() => {
-    if(!supaSess()) return;
-    supaPull().then(row => {
-      if(row && String(row.updated_at) > String(db.cloudStamp || '') && (row.data.cloudStamp || '') !== (db.cloudStamp || '')){
-        adoptRemote(row);
-      }
-    }).catch(() => setCloud(c => ({...c, status:'err'})));
-  }, []);
-  // debounced push on every change
-  useEffect(() => {
-    if(!supaSess()) return;
-    if(cloudSkip.current){ cloudSkip.current = false; return; }
-    setCloud(c => ({...c, status:'saving'}));
-    const t = setTimeout(() => {
-      const stamp = new Date().toISOString();
-      const payload = {...db, cloudStamp: stamp};
-      supaPush(payload, stamp).then(() => {
-        cloudSkip.current = true;
-        setDb(p => ({...p, cloudStamp: stamp}));
-        setCloud({status:'idle', last: stamp.slice(11, 19)});
-      }).catch(() => setCloud(c => ({...c, status:'err'})));
-    }, 4000);
+    if(!db.settings.inboxUrl || !db.settings.inboxToken) return;
+    const t = setTimeout(() => { doBackup(false); }, window.__BAK_MS || 90000);
     return () => clearTimeout(t);
   }, [db]);
   useEffect(() => {
@@ -1626,9 +1576,9 @@ function App(){
             window.open('studio-chat.html', '_blank');
           }}>💬 Chat</button>
         <button className="btn ghost sm" title="Your public testimonial wall — what visitors see" onClick={() => window.open('wall.html', '_blank')}>⭐ Wall</button>
-        <button className="btn ghost sm" title="Cloud sync" onClick={() => setShowCloud(true)}
+        <button className="btn ghost sm" title="Cloud backups — auto-saved to your own Google Drive" onClick={() => setShowCloud(true)}
           style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
-          {supaSess() ? (cloud.status === 'saving' ? '☁ …' : cloud.status === 'err' ? '☁ ⚠' : cloud.last ? '☁ ✓' : '☁ ·') : '☁'}</button>
+          {(db.settings.inboxUrl && db.settings.inboxToken) ? (cloud.status === 'saving' ? '⛅ …' : cloud.status === 'err' ? '⛅ ⚠' : cloud.last ? '⛅ ✓' : '⛅ ·') : '⛅'}</button>
         <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
         <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
         <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
@@ -1636,7 +1586,7 @@ function App(){
       </div>
     </header>
 
-    {showCloud && <CloudModal db={db} onClose={() => setShowCloud(false)} cloud={cloud} setCloud={setCloud} adoptRemote={adoptRemote} seedCloud={seedCloud}/>}
+    {showCloud && <CloudModal db={db} onClose={() => setShowCloud(false)} cloud={cloud} adoptRemote={adoptRemote} doBackup={doBackup}/>}
     {staleVersion &&
     <div className="card" style={{border:'1px solid var(--amber)', padding:'11px 16px', marginBottom:12}}>
       <div className="flex">
