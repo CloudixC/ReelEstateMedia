@@ -344,6 +344,8 @@ let sentIds = [];
 try{ sentIds = JSON.parse(localStorage.getItem(SENTKEY) || '[]'); }catch(e){}
 function unsentCount(){ return cmts.filter(c => !sentIds.includes(c.id)).length; }
 function markAllSent(){ sentIds = cmts.map(c => c.id); try{ localStorage.setItem(SENTKEY, JSON.stringify(sentIds)); }catch(e){} updateSendBtn(); }
+// A version that's already approved is finished — never auto-resend feedback for it.
+function curApproved(){ return cmts.some(function(c){ return c.ver === cur && String(c.txt || '').indexOf('✓ APPROVED') === 0; }); }
 function updateSendBtn(){
   const a = document.getElementById('sendlink');
   if(!a || a.dataset.done) return;
@@ -353,12 +355,12 @@ function updateSendBtn(){
 }
 let autoT = null;
 function scheduleAutoSend(){
-  if(!endpoint) return;
+  if(!endpoint || curApproved()) return;
   clearTimeout(autoT);
-  autoT = setTimeout(() => { if(unsentCount() > 0) postFeedback().catch(() => {}); }, 45000);
+  autoT = setTimeout(() => { if(unsentCount() > 0 && !curApproved()) postFeedback().catch(() => {}); }, 45000);
 }
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'hidden' && endpoint && unsentCount() > 0){
+  if(document.visibilityState === 'hidden' && endpoint && !curApproved() && unsentCount() > 0){
     try{ fetch(endpoint, {method:'POST', keepalive: true,
       body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})}); }catch(e){}
   }
@@ -1331,6 +1333,11 @@ function mergeReview(remote){
     (rsel[vi] || []).forEach(function(nm){ if(a.indexOf(nm) === -1) a.push(nm); });
   });
   try{ localStorage.setItem(KEY, JSON.stringify(cmts)); localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){}
+  // Comments that came from the server are already on file with the studio —
+  // treat them as sent so reopening the link never re-emails "review feedback".
+  var addedSent = false;
+  (remote.cmts || []).forEach(function(rc){ if(rc && rc.id != null && sentIds.indexOf(rc.id) === -1){ sentIds.push(rc.id); addedSent = true; } });
+  if(addedSent){ try{ localStorage.setItem(SENTKEY, JSON.stringify(sentIds)); }catch(e){} }
   return JSON.stringify({cmts: cmts, sels: sels}) !== before;
 }
 function loadReview(){
