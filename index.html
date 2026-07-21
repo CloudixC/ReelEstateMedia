@@ -781,11 +781,18 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         if(o && o.__rc){
           if(o.brief){
             const b = o.brief;
-            return '📋 SHOOT BRIEF' + (b.when ? ' · ' + b.when : '') + '\n' + [
-              b.addr ? '📍 ' + b.addr : '', b.access ? '🔑 ' + b.access : '',
-              b.seller ? '🏠 ' + b.seller : '', b.feats ? '⭐ ' + b.feats : '',
-              b.avoid ? '🚫 ' + b.avoid : '', b.notes ? '📝 ' + b.notes : ''
-            ].filter(Boolean).join('\n');
+            let lines;
+            if(Array.isArray(b.fields) && b.fields.length){
+              lines = b.fields.map(f => (f.i ? f.i + ' ' : '') + (f.l ? f.l + ': ' : '') + (f.v || ''));
+            } else {
+              lines = [
+                b.addr ? '📍 ' + b.addr : '', b.access ? '🔑 ' + b.access : '',
+                b.seller ? '🏠 ' + b.seller : '', b.feats ? '⭐ ' + b.feats : '',
+                b.avoid ? '🚫 ' + b.avoid : '', b.notes ? '📝 ' + b.notes : ''
+              ];
+            }
+            return '📋 SHOOT BRIEF' + (b.typeLabel ? ' · ' + b.typeLabel : '') + (b.when ? ' · ' + b.when : '') +
+              '\n' + lines.filter(Boolean).join('\n');
           }
           if(o.poll) return '🗳 Poll: ' + (o.poll.q || '') + ' — ' + ((o.poll.o || []).join(' / '));
           return (o.t || '') + (o.att && o.att.length ? (o.t ? ' ' : '') + '📎 [attachment — open the chat]' : '');
