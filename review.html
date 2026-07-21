@@ -167,6 +167,13 @@ textarea{flex:1;min-width:200px}
 .ok:hover{color:var(--teal);border-color:var(--teal);background:rgba(76,195,138,.06)}
 /* ---------- thread ---------- */
 .thread{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:16px}
+.fbpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-top:16px}
+.fbpanel h2{font-family:var(--mono);font-weight:700;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.fbrow{border-top:1px solid var(--line);padding:11px 0}
+.fbrow:first-child{border-top:none;padding-top:2px}
+.fbhead{font-size:.72rem;color:var(--dim);margin-bottom:4px;font-weight:700}
+.fbbody{font-size:.9rem;line-height:1.5;white-space:pre-wrap;color:var(--txt)}
+.fbmine{color:var(--red2)}
 .thread h2{font-family:var(--mono);font-weight:700;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
 .bubs{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:10px}
 .bub{max-width:82%;padding:9px 13px;border-radius:14px;font-size:.86rem;white-space:pre-wrap;line-height:1.45;color:var(--mist)}
@@ -242,6 +249,10 @@ textarea{flex:1;min-width:200px}
   <a class="send" id="sendlink" href="#">📧 Send feedback</a>
 </div>
 
+<div class="fbpanel" id="fbpanel" style="display:none">
+  <h2>📋 Feedback on file</h2>
+  <div id="fblist"></div>
+</div>
 <div class="thread" id="thread" style="display:none">
   <h2>💬 Messages</h2>
   <div class="bubs" id="tmsgs"><div class="tempty">Loading…</div></div>
@@ -301,7 +312,7 @@ document.addEventListener('visibilitychange', () => {
 function postFeedback(){
   if(!endpoint) return Promise.reject();
   return fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})})
-    .then(x => x.json()).then(j => { if(!j.ok) throw new Error(j.error || 'failed'); markAllSent(); });
+    .then(x => x.json()).then(j => { if(!j.ok) throw new Error(j.error || 'failed'); markAllSent(); setTimeout(loadFeedback, 900); });
 }
 window.addEventListener('beforeunload', function(e){
   if(endpoint && unsentCount() > 0){ e.preventDefault(); e.returnValue = ''; }
@@ -1117,6 +1128,39 @@ if(endpoint) document.getElementById('sendlink').textContent = '✅ Submit feedb
 renderTabs(); renderMedia(); renderList();
 
 function escT(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function relTime(ts){
+  var ms = Date.now() - new Date(ts).getTime();
+  if(isNaN(ms)) return '';
+  var m = Math.floor(ms / 60000);
+  if(m < 1) return 'just now';
+  if(m < 60) return m + 'm ago';
+  var h = Math.floor(m / 60);
+  if(h < 24) return h + 'h ago';
+  var dd = new Date(ts);
+  return dd.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' ' + dd.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+}
+function loadFeedback(){
+  if(!endpoint || !ref) return;
+  fetch(endpoint + '?feedback=' + encodeURIComponent(ref)).then(function(x){ return x.json(); }).then(function(j){
+    if(!j.ok) return;
+    var raw = (j.items || []);
+    var panel = document.getElementById('fbpanel'), list = document.getElementById('fblist');
+    if(!panel || !list) return;
+    // Each submission is cumulative, and auto-save can post it a few times —
+    // keep only the newest submission per reviewer so it reads clean.
+    var byWho = {};
+    raw.forEach(function(it){ byWho[String(it.who || 'Reviewer')] = it; });
+    var items = Object.keys(byWho).map(function(k){ return byWho[k]; });
+    if(!items.length){ panel.style.display = 'none'; return; }
+    list.innerHTML = items.map(function(it){
+      var notes = String(it.body || '').split('\n').filter(function(l){ var t = l.trim(); return t && t.indexOf('===') !== 0 && t.indexOf('From:') !== 0; }).join('\n').trim();
+      if(!notes) return '';
+      var mine = String(it.who || '') === String(identity);
+      return '<div class="fbrow"><div class="fbhead' + (mine ? ' fbmine' : '') + '">' + escT(it.who || 'Reviewer') + (mine ? ' (you)' : '') + ' · ' + relTime(it.ts) + '</div><div class="fbbody">' + escT(notes) + '</div></div>';
+    }).join('');
+    panel.style.display = 'block';
+  }).catch(function(){});
+}
 function loadThread(){
   if(!endpoint || !ref) return;
   fetch(endpoint + '?thread=' + encodeURIComponent(ref))
@@ -1144,6 +1188,8 @@ function sendMsg(){
 if(endpoint && ref){
   document.getElementById('thread').style.display = 'block';
   loadThread();
+  loadFeedback();
   setInterval(loadThread, 60000);
+  setInterval(loadFeedback, 60000);
 }
 </script></div></body></html>
