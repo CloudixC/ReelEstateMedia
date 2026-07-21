@@ -607,10 +607,13 @@ var PREVIEW = false;
     }
     return _fetch.apply(this, arguments);
   };
-  // 2) no local traces — hub state keys are neither read nor written
+  // 2) no local traces — hub state keys are neither read nor written, EXCEPT
+  //    harmless local prefs (idea shuffle seed + saved ideas) which the studio
+  //    legitimately wants to use while previewing.
   var _set = Storage.prototype.setItem, _get = Storage.prototype.getItem;
-  Storage.prototype.setItem = function(k, v){ if(/^rem_hub_/.test(String(k))) return; return _set.apply(this, arguments); };
-  Storage.prototype.getItem = function(k){ if(/^rem_hub_/.test(String(k))) return null; return _get.apply(this, arguments); };
+  var PREV_OK = /^rem_hub_(ideaseed|savedideas)_/;
+  Storage.prototype.setItem = function(k, v){ if(/^rem_hub_/.test(String(k)) && !PREV_OK.test(String(k))) return; return _set.apply(this, arguments); };
+  Storage.prototype.getItem = function(k){ if(/^rem_hub_/.test(String(k)) && !PREV_OK.test(String(k))) return null; return _get.apply(this, arguments); };
   // 3) the ribbon
   document.addEventListener('DOMContentLoaded', function(){
     var bar = document.createElement('div');
