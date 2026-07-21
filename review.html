@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#1A1A1A">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20120%20120%27%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20rx%3D%2726%27%20fill%3D%27%23EA002A%27/%3E%3Cpath%20d%3D%27M%2082%2041%20A%2033%2033%200%201%200%2082%2079%27%20fill%3D%27none%27%20stroke%3D%27%23FAF8F5%27%20stroke-width%3D%2712%27%20stroke-linecap%3D%27round%27/%3E%3Cpolygon%20points%3D%2758%2C48%2058%2C72%2080%2C60%27%20fill%3D%27%23F2A900%27/%3E%3Cline%20x1%3D%2758%27%20y1%3D%2755%27%20x2%3D%2772%27%20y2%3D%2755%27%20stroke%3D%27%23EA002A%27%20stroke-width%3D%273.6%27/%3E%3Cline%20x1%3D%2758%27%20y1%3D%2765%27%20x2%3D%2772%27%20y2%3D%2765%27%20stroke%3D%27%23EA002A%27%20stroke-width%3D%273.6%27/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20120%20120%27%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20rx%3D%2726%27%20fill%3D%27%23EA002A%27/%3E%3Cg%20transform%3D%27translate%286%2C0%29%27%3E%3Cpath%20d%3D%27M%2083%2036%20A%2037%2037%200%201%200%2083%2084%27%20fill%3D%27none%27%20stroke%3D%27%23FAF8F5%27%20stroke-width%3D%2712%27%20stroke-linecap%3D%27round%27/%3E%3Cg%20fill%3D%27%23F2A900%27%3E%3Cpolygon%20points%3D%2755%2C44%2064%2C49%2064%2C71%2055%2C76%27/%3E%3Cpolygon%20points%3D%2766%2C50.5%2073%2C55%2073%2C65%2066%2C69.5%27/%3E%3Cpolygon%20points%3D%2775%2C56%2082%2C60%2075%2C64%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="ch-app-icon-180.png">
 <style>
 :root{
@@ -256,7 +256,7 @@ textarea{flex:1;min-width:200px}
 h1#brand em{font-style:normal;color:var(--amber)}
 </style></head><body><div class="wrap">
 <div class="topbar">
-  <div class="lock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 55,78 80,60"/><line class="slice" x1="55" y1="52.5" x2="73" y2="52.5" stroke-width="4.5"/><line class="slice" x1="55" y1="67.5" x2="73" y2="67.5" stroke-width="4.5"/></svg><div><h1 id="brand"></h1><div class="sub" id="subline"></div></div></div>
+  <div class="lock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div><h1 id="brand"></h1><div class="sub" id="subline"></div></div></div>
   <div class="crumbs"><a href="#" class="wholine" id="wholine" onclick="changeWho();return false;"></a></div>
 </div>
 <div class="proj" id="proj"></div>
@@ -1150,7 +1150,7 @@ function renderDl(){
   renderPostReady();
 }
 /* ---- realtor-experience features ---- */
-function resetPtBtn(){ const b = document.getElementById('ptbtn'); if(b){ b.classList.remove('on'); b.textContent = '\U0001f4cd'; } const m = document.getElementById('ptmark'); if(m) m.style.display = 'none'; }
+function resetPtBtn(){ const b = document.getElementById('ptbtn'); if(b){ b.classList.remove('on'); b.textContent = '📍'; } const m = document.getElementById('ptmark'); if(m) m.style.display = 'none'; }
 function ensurePtLayer(){
   const p = document.getElementById('player');
   let l = document.getElementById('ptlayer');
@@ -1163,7 +1163,7 @@ function ensurePtLayer(){
       pendingPoint = {ax: ax, ay: ay};
       showPtMark(pendingPoint, true);
       pointArmed = false; l.style.pointerEvents = 'none'; l.classList.remove('arm');
-      const b = document.getElementById('ptbtn'); if(b){ b.classList.remove('on'); b.textContent = '\U0001f4cd ✓'; }
+      const b = document.getElementById('ptbtn'); if(b){ b.classList.remove('on'); b.textContent = '📍 ✓'; }
       const h = document.getElementById('chint'); if(h) h.textContent = 'Spot pinned — type your note and it attaches right there.';
     });
   }
@@ -1172,7 +1172,7 @@ function ensurePtLayer(){
 function armPoint(){
   pointArmed = !pointArmed;
   const b = document.getElementById('ptbtn');
-  if(pointArmed){ if(b) b.classList.add('on'); ensurePtLayer(); const h = document.getElementById('chint'); if(h) h.textContent = '\U0001f4cd Tap the exact spot on the media.'; }
+  if(pointArmed){ if(b) b.classList.add('on'); ensurePtLayer(); const h = document.getElementById('chint'); if(h) h.textContent = '📍 Tap the exact spot on the media.'; }
   else { if(b) b.classList.remove('on'); const l = document.getElementById('ptlayer'); if(l){ l.style.pointerEvents = 'none'; l.classList.remove('arm'); } }
 }
 function showPtMark(pt, pending){
@@ -1182,7 +1182,7 @@ function showPtMark(pt, pending){
   m.style.left = (pt.ax * 100) + '%'; m.style.top = (pt.ay * 100) + '%'; m.style.display = 'block';
   if(!pending){ clearTimeout(window.__ptT); window.__ptT = setTimeout(function(){ m.style.display = 'none'; }, 4200); }
 }
-function voiceUrl(txt){ const m = String(txt || '').match(/drive\.google\.com\/file\/d\/([^\/?#]+)/); if(m && /\U0001f399|voice note/i.test(txt)) return 'https://drive.google.com/uc?export=download&id=' + m[1]; return null; }
+function voiceUrl(txt){ const m = String(txt || '').match(/drive\.google\.com\/file\/d\/([^\/?#]+)/); if(m && /🎙|voice note/i.test(txt)) return 'https://drive.google.com/uc?export=download&id=' + m[1]; return null; }
 function updatePicksBtn(){ const pb = document.getElementById('picksbtn'); if(!pb) return; const n = (sels[cur] || []).length; pb.style.display = n ? 'inline-block' : 'none'; pb.textContent = '⭐ My picks (' + n + ')'; }
 function updateRevTrack(){
   const el = document.getElementById('revtrack'); if(!el) return;
@@ -1222,10 +1222,10 @@ function notifyMe(){
   const em = window.prompt('Email you’d like the heads-up sent to when your next version is ready:', '');
   if(em === null) return;
   const addr = String(em).trim();
-  if(addr && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)){ if(btn){ btn.textContent = 'Hmm, check that email…'; setTimeout(function(){ btn.textContent = '\U0001f514 Email me when the next cut is ready'; }, 2000); } return; }
+  if(addr && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)){ if(btn){ btn.textContent = 'Hmm, check that email…'; setTimeout(function(){ btn.textContent = '🔔 Email me when the next cut is ready'; }, 2000); } return; }
   notified = true;
   if(btn){ btn.classList.add('done'); btn.textContent = '✅ You’re on the list — we’ll email you'; }
-  if(endpoint){ fetch(endpoint, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'msg', ref: ref, project: project, dname: dname, who: identity, from: 'agent', body: '\U0001f514 ' + (identity || 'The client') + ' asked to be emailed when the next version is ready' + (addr ? ' — ' + addr : '')})}).catch(function(){}); }
+  if(endpoint){ fetch(endpoint, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'msg', ref: ref, project: project, dname: dname, who: identity, from: 'agent', body: '🔔 ' + (identity || 'The client') + ' asked to be emailed when the next version is ready' + (addr ? ' — ' + addr : '')})}).catch(function(){}); }
 }
 function copyText(t, btn, orig){ const done = function(){ if(btn){ btn.textContent = '✓ Copied'; setTimeout(function(){ btn.textContent = orig; }, 1500); } }; if(navigator.clipboard) navigator.clipboard.writeText(t).then(done).catch(done); else done(); }
 function defaultCaption(){ return 'New content just dropped ✨\n\n' + (project ? project + '\n\n' : '') + 'Shot by Reel Estate Media'; }
@@ -1247,13 +1247,13 @@ function renderPostReady(){
   const cap = capParam ? decodeURIComponent(capParam) : defaultCaption();
   const tags = hashtagList();
   pr.innerHTML = '';
-  const h = document.createElement('div'); h.className = 'dlh'; h.style.marginTop = '4px'; h.textContent = '\U0001f680 Post it now'; pr.appendChild(h);
+  const h = document.createElement('div'); h.className = 'dlh'; h.style.marginTop = '4px'; h.textContent = '🚀 Post it now'; pr.appendChild(h);
   const ta = document.createElement('textarea'); ta.className = 'pr-cap'; ta.value = cap; pr.appendChild(ta);
   const tw = document.createElement('div'); tw.className = 'pr-tags'; tags.forEach(function(t){ const s = document.createElement('span'); s.className = 'pr-tag'; s.textContent = t; tw.appendChild(s); }); pr.appendChild(tw);
   const rw = document.createElement('div'); rw.className = 'pr-row';
-  const cb = document.createElement('button'); cb.className = 'pr-btn'; cb.textContent = '\U0001f4cb Copy caption'; cb.onclick = function(){ copyText(ta.value + '\n\n' + tags.join(' '), cb, '\U0001f4cb Copy caption'); }; rw.appendChild(cb);
+  const cb = document.createElement('button'); cb.className = 'pr-btn'; cb.textContent = '📋 Copy caption'; cb.onclick = function(){ copyText(ta.value + '\n\n' + tags.join(' '), cb, '📋 Copy caption'); }; rw.appendChild(cb);
   const hb = document.createElement('button'); hb.className = 'pr-btn'; hb.textContent = '#️⃣ Copy hashtags'; hb.onclick = function(){ copyText(tags.join(' '), hb, '#️⃣ Copy hashtags'); }; rw.appendChild(hb);
-  const bk = document.createElement('a'); bk.className = 'pr-btn gold'; bk.textContent = '\U0001f4c5 Book your next shoot'; bk.href = bookUrl(); bk.target = '_blank'; bk.rel = 'noreferrer'; rw.appendChild(bk);
+  const bk = document.createElement('a'); bk.className = 'pr-btn gold'; bk.textContent = '📅 Book your next shoot'; bk.href = bookUrl(); bk.target = '_blank'; bk.rel = 'noreferrer'; rw.appendChild(bk);
   pr.appendChild(rw);
 }
 function blob(){
