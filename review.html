@@ -180,6 +180,15 @@ textarea{flex:1;min-width:200px}
 .bub .bwho{display:block;font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;opacity:.65;margin-bottom:3px;font-weight:700}
 .bub.them{align-self:flex-start;background:var(--ink3);border:1px solid var(--line)}
 .bub.me{align-self:flex-end;background:rgba(230,18,31,.12);border:1px solid rgba(230,18,31,.34)}
+/* ---------- chat: floating icon + drawer ---------- */
+.autosaved{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);opacity:.85}
+.revfab{position:fixed;right:16px;bottom:16px;z-index:70;width:56px;height:56px;border-radius:50%;background:var(--red);color:#fff;display:none;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:1px solid rgba(255,255,255,.15);box-shadow:0 12px 30px -8px var(--glow);transition:transform .18s ease}
+.revfab:hover{transform:translateY(-2px) scale(1.04)}
+.revfab .fbadge{position:absolute;top:-4px;right:-4px;background:#fff;color:var(--red);font-size:11px;font-weight:800;border-radius:20px;min-width:20px;height:20px;display:none;place-items:center;padding:0 6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.chatdrawer{position:fixed;right:16px;bottom:82px;z-index:70;width:min(370px,92vw);max-height:72vh;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;display:none;flex-direction:column;box-shadow:0 22px 60px -12px rgba(0,0,0,.75)}
+.chatdrawer.open{display:flex}
+.chathead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:var(--mono);font-weight:700;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.chatx{background:none;border:none;color:var(--dim);font-size:1.05rem;cursor:pointer;line-height:1}
 .tempty{color:var(--dim);font-size:.82rem}
 .thread .trow{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
 .tsend{background:var(--red);border:1px solid var(--red);color:#fff;font-family:var(--sans);font-weight:600;font-size:.86rem;padding:11px 20px;border-radius:10px;cursor:pointer;transition:transform .2s,box-shadow .2s;white-space:nowrap}
@@ -241,26 +250,27 @@ textarea{flex:1;min-width:200px}
     <button title="One-tap note on the current photo or moment" onclick="quick('🗑 Cut this')">🗑 Cut</button>
   </div>
   <div class="hint" id="chint"></div>
-  <div class="hint" style="opacity:.75">Your notes save &amp; send automatically — Approve or Submit just sends them instantly.</div>
+  <div class="hint" style="opacity:.75">Your notes save automatically as you go — Approve when you're happy with this cut.</div>
 </div>
 <div class="clist" id="clist"></div>
 <div class="actions">
-  <button class="ok" onclick="approve()" title="Approve — sends all your notes and unlocks downloads">✓ Approve this version</button>
-  <a class="send" id="sendlink" href="#">📧 Send feedback</a>
+  <button class="ok" onclick="approve()" title="Approve — locks in this version and unlocks your downloads">✓ Approve this version</button>
+  <span class="autosaved">✓ Your notes save automatically — we see them live</span>
 </div>
 
 <div class="fbpanel" id="fbpanel" style="display:none">
   <h2>📋 Feedback on file</h2>
   <div id="fblist"></div>
 </div>
-<div class="thread" id="thread" style="display:none">
-  <h2>💬 Messages</h2>
+<div class="chatdrawer" id="thread">
+  <div class="chathead"><span>💬 Messages</span><button class="chatx" id="chatx" title="Close">✕</button></div>
   <div class="bubs" id="tmsgs"><div class="tempty">Loading…</div></div>
   <div class="trow">
     <textarea id="tmsg" rows="2" placeholder="Message us here — we'll reply right in this page…"></textarea>
     <button class="tsend" onclick="sendMsg()" title="Message goes straight to Reel Estate Media">Send</button>
   </div>
 </div>
+<button class="revfab" id="revfab" title="Messages">💬<span class="fbadge" id="revbadge">0</span></button>
 <div class="dl" id="dlpanel">
   <div class="dlh">✓ Approved — your finals are ready to download</div>
   <div id="dllinks"></div>
@@ -314,9 +324,7 @@ function postFeedback(){
   return fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref, project, dname, who: identity, body: blob()})})
     .then(x => x.json()).then(j => { if(!j.ok) throw new Error(j.error || 'failed'); markAllSent(); setTimeout(loadFeedback, 900); });
 }
-window.addEventListener('beforeunload', function(e){
-  if(endpoint && unsentCount() > 0){ e.preventDefault(); e.returnValue = ''; }
-});
+// (comments autosave live now — no unsaved-changes warning needed)
 const SEENKEY = 'rem_seen_' + project + '_' + dname;
 let seen = {};
 try{ seen = JSON.parse(localStorage.getItem(SEENKEY) || '{}'); }catch(e){}
@@ -717,6 +725,7 @@ function toggleSel(){
   const i = a.indexOf(g.name);
   if(i >= 0) a.splice(i, 1); else a.push(g.name);
   try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){}
+  pushReview();
   syncGallery();
 }
 function quick(txt){
@@ -995,15 +1004,10 @@ function approve(){
   if(openRes) m += openRes + ' note' + (openRes > 1 ? 's' : '') + ' from the last version marked STILL OPEN. ';
   if(m && !confirm(m + 'Approve anyway?')) return;
   cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); save(); renderList();
-  if(endpoint){
-    postFeedback().then(() => {
-      const a = document.getElementById('sendlink');
-      a.textContent = '✓ Sent — approval & notes delivered'; a.style.background = '#2f9e64'; a.dataset.done = '1'; a.classList.remove('pulse');
-    }).catch(() => {});
-  }
+  if(endpoint){ postFeedback().catch(() => {}); }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} scheduleAutoSend(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} scheduleAutoSend(); pushReview(); }
 function setRes(id, val){
   const c = cmts.find(x => x.id === id);
   if(!c) return;
@@ -1102,7 +1106,7 @@ function blob(){
   lines.push('', '=== END ===');
   return lines.join('\n');
 }
-document.getElementById('sendlink').addEventListener('click', function(ev){
+var _sendlinkEl = document.getElementById('sendlink'); if(_sendlinkEl) _sendlinkEl.addEventListener('click', function(ev){
   if(endpoint){
     ev.preventDefault();
     const a = this; a.textContent = 'Sending…';
@@ -1124,10 +1128,57 @@ document.getElementById('sendlink').addEventListener('click', function(ev){
   const b = document.getElementById('blob'); b.value = blob();
   if(navigator.clipboard) navigator.clipboard.writeText(b.value).catch(function(){});
 });
-if(endpoint) document.getElementById('sendlink').textContent = '✅ Submit feedback';
 renderTabs(); renderMedia(); renderList();
 
 function escT(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+/* ---- 🔄 shared review state: comments + selects sync to the server so both
+   parties (and any device) see the same live review, not a browser-local copy ---- */
+var revPushT = null, revLastSent = '';
+function reviewState(){ return {cmts: cmts, sels: sels, v: versions.length, at: new Date().toISOString()}; }
+function revDirty(){ return JSON.stringify({cmts: cmts, sels: sels}) !== revLastSent; }
+function pushReview(){
+  if(!endpoint || !ref) return;
+  clearTimeout(revPushT);
+  revPushT = setTimeout(function(){
+    var core = JSON.stringify({cmts: cmts, sels: sels});
+    if(core === revLastSent) return;
+    revLastSent = core;
+    fetch(endpoint, {method:'POST', keepalive:true, body: JSON.stringify({kind:'review', ref: ref, project: project, dname: dname, who: identity, body: JSON.stringify(reviewState())})}).catch(function(){});
+  }, 1500);
+}
+// union by comment id; while I have unsynced edits, keep mine for shared ids,
+// otherwise take the server's — local-only comments are always preserved.
+function mergeReview(remote){
+  if(!remote) return false;
+  var before = JSON.stringify({cmts: cmts, sels: sels});
+  var dirty = revDirty();
+  var localById = {}; cmts.forEach(function(c){ localById[c.id] = c; });
+  var seen = {}, out = [];
+  (remote.cmts || []).forEach(function(rc){
+    if(rc == null || rc.id == null) return;
+    seen[rc.id] = 1;
+    out.push((dirty && localById[rc.id]) ? localById[rc.id] : rc);
+  });
+  cmts.forEach(function(lc){ if(lc && lc.id != null && !seen[lc.id]) out.push(lc); });
+  cmts = out;
+  var rsel = remote.sels || {};
+  Object.keys(rsel).forEach(function(vi){
+    var a = sels[vi] = sels[vi] || [];
+    (rsel[vi] || []).forEach(function(nm){ if(a.indexOf(nm) === -1) a.push(nm); });
+  });
+  try{ localStorage.setItem(KEY, JSON.stringify(cmts)); localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){}
+  return JSON.stringify({cmts: cmts, sels: sels}) !== before;
+}
+function loadReview(){
+  if(!endpoint || !ref) return;
+  fetch(endpoint + '?review=' + encodeURIComponent(ref)).then(function(x){ return x.json(); }).then(function(j){
+    if(!j.ok || !j.state) return;
+    var changed = mergeReview(j.state);
+    if(changed){ try{ renderList(); }catch(e){} try{ if(gallery.length) syncGallery(); }catch(e2){} }
+    // if we hold comments the server doesn't, push so it converges
+    if(revDirty()) pushReview();
+  }).catch(function(){});
+}
 function relTime(ts){
   var ms = Date.now() - new Date(ts).getTime();
   if(isNaN(ms)) return '';
@@ -1174,6 +1225,8 @@ function loadThread(){
           (m.from === 'jag' ? 'Reel Estate Media' : escT(m.who || 'You')) + ' · ' + (m.ts || '').slice(5, 16).replace('T', ' ') +
           '</span>' + escT(m.body || '') + '</div>';
       }).join('');
+      studioMsgCount = rows.filter(m => m.from === 'jag').length;
+      if(typeof paintChatBadge === 'function') paintChatBadge();
       box.scrollTop = box.scrollHeight;
     }).catch(() => {});
 }
@@ -1185,10 +1238,36 @@ function sendMsg(){
   fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'msg', ref, project, dname: (typeof dname !== 'undefined' ? dname : ''), who: identity, from: 'agent', body})})
     .then(() => setTimeout(loadThread, 800));
 }
+var CHATSEEN_KEY = 'rem_revchat_' + ref;
+var studioMsgCount = 0;
+function chatSeen(){ try{ return +localStorage.getItem(CHATSEEN_KEY) || 0; }catch(e){ return 0; } }
+function paintChatBadge(){
+  var badge = document.getElementById('revbadge');
+  if(!badge) return;
+  var drawer = document.getElementById('thread');
+  var open = drawer && drawer.classList.contains('open');
+  var unread = open ? 0 : Math.max(0, studioMsgCount - chatSeen());
+  badge.textContent = unread > 9 ? '9+' : unread;
+  badge.style.display = unread ? 'grid' : 'none';
+}
+function toggleChat(){
+  var drawer = document.getElementById('thread');
+  var open = drawer.classList.toggle('open');
+  if(open){
+    try{ localStorage.setItem(CHATSEEN_KEY, String(studioMsgCount)); }catch(e){}
+    loadThread();
+    var box = document.getElementById('tmsgs'); if(box) box.scrollTop = box.scrollHeight;
+  }
+  paintChatBadge();
+}
 if(endpoint && ref){
-  document.getElementById('thread').style.display = 'block';
+  var fab = document.getElementById('revfab');
+  if(fab){ fab.style.display = 'flex'; fab.addEventListener('click', toggleChat); }
+  var cx = document.getElementById('chatx'); if(cx) cx.addEventListener('click', toggleChat);
+  loadReview();
   loadThread();
   loadFeedback();
+  setInterval(loadReview, 15000);
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
