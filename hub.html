@@ -114,6 +114,21 @@ h1 .p{color:var(--red)}
 .vback:hover{border-color:var(--red);background:var(--red-soft)}
 .vnow b{color:var(--txt);font-weight:600}
 .vempty{color:var(--dim);font-style:italic}
+/* section chips (Brand kit / Billing / Team & referrals) */
+.schips{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 2px}
+.schip{appearance:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:rgba(245,242,233,.03);color:var(--dim);border-radius:999px;padding:9px 15px;font-size:12.5px;font-weight:600;font-family:var(--sans);cursor:pointer;letter-spacing:.01em;transition:border-color .18s ease,background .18s ease,color .18s ease;-webkit-tap-highlight-color:transparent}
+.schip:hover{border-color:var(--red);color:var(--txt)}
+.schip.on{background:var(--red);border-color:var(--red);color:#fff}
+body.assist #sectionchips{display:none}
+body.assist #billingwrap{display:none !important}
+/* billing */
+.billtot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:2px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.billtot .n{font-family:var(--serif);font-size:26px;color:var(--txt);white-space:nowrap}
+.billtot .n.owed{color:var(--red)}
+.billpaid{color:var(--teal)}
+.billrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(245,242,233,.06);font-size:13.5px}
+.billrow:last-child{border-bottom:none}
+.billamt{font-family:var(--serif);font-size:14px;color:var(--txt);white-space:nowrap}
 /* ---- sections ---- */
 .sec{display:flex;align-items:baseline;gap:12px;margin:40px 0 14px}
 .sec .no{font-family:var(--serif);font-style:italic;color:var(--red);font-size:15px}
@@ -539,6 +554,11 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
     <span class="msgbadge" id="msgbadge" style="display:none">0</span>
     <span class="mar">→</span>
   </a>
+</div>
+<div class="pcard" id="billingwrap" style="display:none">
+  <h3>💳 Billing &amp; receipts</h3>
+  <div class="psub">Any balance owing and how to settle it — receipts for completed work land in your chat.</div>
+  <div id="billing-body"></div>
 </div>
 <div class="pcard" id="refwrap" style="display:none">
   <h3>🎁 Know an agent who needs content?</h3>
@@ -985,7 +1005,7 @@ document.getElementById('body').addEventListener('click', function(ev){
     var act = wa.getAttribute('data-wact');
     if(act === 'wdismiss') wSet({dismissed: true});
     else if(act === 'wsave') wSet({save: true});
-    else if(act === 'wbrand'){ var bw = document.getElementById('brandwrap'); if(bw) bw.scrollIntoView({behavior: 'smooth', block: 'center'}); return; }
+    else if(act === 'wbrand'){ applyView('brand'); return; }
     else if(act === 'wchat'){ var ml = document.getElementById('msglink'); if(ml) location.href = ml.href; return; }
     else if(act === 'wbook'){ openCalendly(); return; }
     updateWelcome();
@@ -1122,9 +1142,13 @@ function render(raw){
     html += '<div class="stats">' +
       '<div class="stat rev" data-jump="review" role="button" tabindex="0"><b>' + rev.length + '</b><span>Your review</span><span class="taphint">TAP TO FILTER</span></div>' +
       '<div class="stat" data-jump="production" role="button" tabindex="0"><b>' + work.length + '</b><span>In production</span><span class="taphint">TAP TO FILTER</span></div>' +
-      '<div class="stat done" data-jump="delivered" role="button" tabindex="0"><b>' + done.length + '</b><span>Delivered</span><span class="taphint">TAP TO FILTER</span></div></div>' +
-      '<div class="viewbar" id="viewbar" style="display:none"></div>';
+      '<div class="stat done" data-jump="delivered" role="button" tabindex="0"><b>' + done.length + '</b><span>Delivered</span><span class="taphint">TAP TO FILTER</span></div></div>';
   }
+  html += '<div class="viewbar" id="viewbar" style="display:none"></div>';
+  if(!ASSIST) html += '<div class="schips" id="sectionchips">' +
+    '<button class="schip" data-jump="brand" type="button">🎨 Brand kit</button>' +
+    '<button class="schip" data-jump="billing" type="button">💳 Billing</button>' +
+    '<button class="schip" data-jump="team" type="button">👥 Team &amp; referrals</button></div>';
   let n = 0, i = 0;
   const secNo = () => String(++n).padStart(2, '0');
   if(rev.length){
@@ -1201,10 +1225,10 @@ function render(raw){
   tickStats();
   if(justDelivered) setTimeout(confetti, 450);
   startMessages(h);
-  document.getElementById('refwrap').style.display = '';
-  document.getElementById('brandwrap').style.display = '';
-  document.getElementById('biowrap').style.display = '';
-  document.getElementById('asstwrap').style.display = '';
+  // Brand kit / Billing / Team & referrals now live behind the section chips —
+  // kept hidden by default so the page opens clean; applyView() reveals them on tap.
+  var bb = document.getElementById('billing-body');
+  if(bb) bb.innerHTML = billingHtml(items);
   document.getElementById('featwrap').style.display = '';
   var ib = document.getElementById('installbtn');
   if(ib && !window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone){
@@ -2549,20 +2573,31 @@ document.getElementById('body').addEventListener('input', function(ev){
     });
   }
 });
-/* ---- 📍 pipeline filter: tap a stat tile (or Book a shoot) to focus one section ---- */
-var VIEW_LABELS = { review:'Waiting on your review', production:'In the works', delivered:'Your delivered content', ideas:'Content ideas', pricing:'Services & pricing' };
+/* ---- 📍 focus filter: tap a stat tile, Book a shoot, or a section chip to focus one area ---- */
+var VIEW_LABELS = { review:'Waiting on your review', production:'In the works', delivered:'Your delivered content', ideas:'Content ideas', pricing:'Services & pricing', brand:'Brand kit', billing:'Billing & receipts', team:'Team & referrals' };
+// utility sections live OUTSIDE #body (they'd be wiped by re-render) — applyView toggles them by id
+var UTIL_VIEWS = { brand:['brandwrap','biowrap'], billing:['billingwrap'], team:['asstwrap','refwrap'] };
+var UTIL_IDS = ['brandwrap','biowrap','billingwrap','asstwrap','refwrap'];
 var curView = null;
 function applyView(view){
-  if(view === curView) view = null;                 // tapping the active tile clears the filter
+  if(view === curView) view = null;                 // tapping the active one clears the filter
   curView = view;
-  var showSet = null;                               // null = show everything
-  if(view === 'pricing') showSet = { pricing:true, ideas:true };   // pricing keeps content ideas underneath
+  var isUtil = !!(view && UTIL_VIEWS[view]);
+  var showSet = null;                               // null = show everything (pipeline)
+  if(isUtil) showSet = {};                          // util view → hide every pipeline block
+  else if(view === 'pricing') showSet = { pricing:true, ideas:true };   // pricing keeps content ideas underneath
   else if(view){ showSet = {}; showSet[view] = true; }
   document.querySelectorAll('#body .viewblk').forEach(function(bl){
     var v = bl.getAttribute('data-view');
     bl.style.display = (!showSet || showSet[v]) ? '' : 'none';
   });
-  document.querySelectorAll('.stat[data-jump]').forEach(function(s){
+  // utility wraps: hide all, then reveal only the active group
+  UTIL_IDS.forEach(function(id){ var el = document.getElementById(id); if(el) el.style.display = 'none'; });
+  if(isUtil) UTIL_VIEWS[view].forEach(function(id){ var el = document.getElementById(id); if(el) el.style.display = ''; });
+  // the long "everything in your hub" block only clutters a focused view
+  var fw = document.getElementById('featwrap'); if(fw) fw.style.display = view ? 'none' : '';
+  // active states on tiles + chips + Book a shoot
+  document.querySelectorAll('.stat[data-jump], .schip[data-jump]').forEach(function(s){
     s.classList.toggle('on', !!view && s.getAttribute('data-jump') === view);
   });
   var hb = document.querySelector('.heroact .go');
@@ -2571,7 +2606,8 @@ function applyView(view){
   if(bar){
     if(view){
       var lbl = VIEW_LABELS[view] || 'this';
-      var target = document.querySelector('#body .viewblk[data-view="' + view + '"]');
+      var target = isUtil ? document.getElementById(UTIL_VIEWS[view][0])
+                          : document.querySelector('#body .viewblk[data-view="' + view + '"]');
       bar.innerHTML = '<button class="vback" data-jump="__all">← Show everything</button>' +
         '<span class="vnow">Showing <b>' + lbl + '</b></span>' +
         (target ? '' : '<span class="vempty">— nothing here just yet</span>');
@@ -2582,9 +2618,27 @@ function applyView(view){
     }
   }
   if(view){
-    var anchor = document.querySelector('.stats');
+    // scroll to the chips/stats so the "Show everything" bar stays in view; focused content sits just below
+    var anchor = document.getElementById('sectionchips') || document.querySelector('.stats');
     if(anchor && anchor.scrollIntoView) anchor.scrollIntoView({ behavior:'smooth', block:'start' });
   }
+}
+// 💳 billing summary — outstanding balances + how to pay, built fresh each render
+function billingHtml(items){
+  var owed = (items || []).filter(function(x){ return x.du; });
+  var total = owed.reduce(function(s, x){ return s + (+x.amt || 0); }, 0);
+  var money = function(n){ return '$' + (+n || 0).toLocaleString('en-CA', { minimumFractionDigits:2 }); };
+  if(!owed.length){
+    return '<div class="billtot"><span>Balance owing</span><span class="n"><span class="billpaid">' + money(0) + ' ✓</span></span></div>' +
+      '<div class="psub" style="margin:0">You’re all paid up — thank you! Receipts for completed payments land in your chat.</div>';
+  }
+  var h = '<div class="billtot"><span>Balance owing</span><span class="n owed">' + money(total) + '</span></div>';
+  owed.forEach(function(x){
+    h += '<div class="billrow"><span>' + esc(x.t || 'Project') + '</span><span class="billamt">' + (x.amt ? money(x.amt) : 'Due') + '</span></div>';
+  });
+  if(PAYURL) h += '<div style="margin-top:14px"><a class="go" href="' + esc(PAYURL) + '" target="_blank" rel="noopener" style="width:auto;display:inline-flex;padding:12px 20px">💳 Pay now <span class="ar">→</span></a></div>';
+  h += '<div class="psub" style="margin:12px 0 0">Prefer e-transfer? Send to hello@reelestatemedia.com — your receipt lands in your chat.</div>';
+  return h;
 }
 // count-up on the stat numbers
 function tickStats(){
