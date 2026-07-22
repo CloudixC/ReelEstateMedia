@@ -97,6 +97,23 @@ h1 .p{color:var(--red)}
 .stat span{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600}
 .stat.rev b{color:var(--amber);text-shadow:0 0 22px rgba(242,169,0,.35)}
 .stat.done b{color:var(--teal);text-shadow:0 0 22px rgba(76,195,138,.3)}
+/* tiles are tappable filters */
+.stat[data-jump]{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.stat[data-jump]:active{transform:scale(.985)}
+.stat[data-jump]::after{content:'';position:absolute;left:14px;right:14px;bottom:0;height:2px;border-radius:2px 2px 0 0;background:var(--red);transform:scaleX(0);transform-origin:center;transition:transform .22s ease}
+.stat.rev[data-jump]::after{background:var(--amber)}
+.stat.done[data-jump]::after{background:var(--teal)}
+.stat[data-jump].on{background:rgba(245,242,233,.05)}
+.stat[data-jump].on::after{transform:scaleX(1)}
+.stat .taphint{display:block;margin-top:5px;font-size:8px;letter-spacing:.16em;color:var(--faint);opacity:.72;transition:opacity .2s ease}
+.stat[data-jump]:hover .taphint{opacity:1;color:var(--dim)}
+.stat[data-jump].on .taphint{opacity:0}
+/* filter view bar (only visible when a filter is on) */
+.viewbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:16px 0 4px;font-size:12.5px;color:var(--faint)}
+.vback{appearance:none;border:1px solid var(--line2);background:rgba(245,242,233,.04);color:var(--txt);border-radius:999px;padding:7px 15px;font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;letter-spacing:.01em;transition:border-color .18s ease,background .18s ease}
+.vback:hover{border-color:var(--red);background:var(--red-soft)}
+.vnow b{color:var(--txt);font-weight:600}
+.vempty{color:var(--dim);font-style:italic}
 /* ---- sections ---- */
 .sec{display:flex;align-items:baseline;gap:12px;margin:40px 0 14px}
 .sec .no{font-family:var(--serif);font-style:italic;color:var(--red);font-size:15px}
@@ -954,8 +971,15 @@ function sendTesti(tid){
 }
 document.getElementById('body').addEventListener('click', function(ev){
   var t = ev.target;
+  var jj = t.closest ? t.closest('[data-jump]') : null;
+  if(jj){ ev.preventDefault(); var jv = jj.getAttribute('data-jump'); applyView(jv === '__all' ? null : jv); return; }
   var bk = t.closest ? t.closest('.heroact .go') : null;
-  if(bk){ ev.preventDefault(); openCalendly(); return; }
+  if(bk){ ev.preventDefault();
+    // Book a shoot → open the pricing view (packages + Book buttons), content ideas underneath.
+    // If no services are configured, fall back to the calendar popup.
+    if(document.querySelector('#body .viewblk[data-view="pricing"]')) applyView('pricing');
+    else openCalendly();
+    return; }
   var wa = t.closest ? t.closest('[data-wact]') : null;
   if(wa){
     var act = wa.getAttribute('data-wact');
@@ -979,6 +1003,11 @@ document.getElementById('body').addEventListener('click', function(ev){
   if(b){ openTesti(b.getAttribute('data-testi'), b); return; }
   if(t.classList && t.classList.contains('tcancel')){ closeTesti(t.getAttribute('data-tid')); return; }
   if(t.classList && t.classList.contains('tsend')){ sendTesti(t.getAttribute('data-tid')); return; }
+});
+document.getElementById('body').addEventListener('keydown', function(ev){
+  if(ev.key !== 'Enter' && ev.key !== ' ' && ev.key !== 'Spacebar') return;
+  var jj = ev.target && ev.target.closest ? ev.target.closest('.stat[data-jump]') : null;
+  if(jj){ ev.preventDefault(); applyView(jj.getAttribute('data-jump')); }
 });
 function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
   return '<div class="card ' + cls + '"' + (lib ? ' data-lib="' + esc(lib) + '"' : '') + ' style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
@@ -1041,6 +1070,7 @@ window.addEventListener('message', function(e){
   if(e.data && e.data.event === 'calendly.event_scheduled') onCalendlyBooked();
 });
 function render(raw){
+  curView = null;   // every fresh render starts unfiltered (all sections shown)
   const h = normalize(raw);
   const items = h.items;
   AGENTNAME = h.agent || '';
@@ -1090,26 +1120,32 @@ function render(raw){
   html += '<div id="welcomeslot"></div><div id="shootsslot"></div>';
   if(items.length){
     html += '<div class="stats">' +
-      '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
-      '<div class="stat"><b>' + work.length + '</b><span>In production</span></div>' +
-      '<div class="stat done"><b>' + done.length + '</b><span>Delivered</span></div></div>';
+      '<div class="stat rev" data-jump="review" role="button" tabindex="0"><b>' + rev.length + '</b><span>Your review</span><span class="taphint">TAP TO FILTER</span></div>' +
+      '<div class="stat" data-jump="production" role="button" tabindex="0"><b>' + work.length + '</b><span>In production</span><span class="taphint">TAP TO FILTER</span></div>' +
+      '<div class="stat done" data-jump="delivered" role="button" tabindex="0"><b>' + done.length + '</b><span>Delivered</span><span class="taphint">TAP TO FILTER</span></div></div>' +
+      '<div class="viewbar" id="viewbar" style="display:none"></div>';
   }
   let n = 0, i = 0;
   const secNo = () => String(++n).padStart(2, '0');
   if(rev.length){
+    html += '<div class="viewblk" data-view="review">';
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Waiting on your review</span><span class="cnt">' + rev.length + '</span></div>';
     rev.forEach(x => html += card(x, i++, 'rev', '<span class="pill rev"><i></i>In review</span>', 'Review now'));
+    html += '</div>';
   }
   if(work.length){
+    html += '<div class="viewblk" data-view="production">';
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">In the works</span><span class="cnt">' + work.length + '</span>' +
       (work.length > 2 ? '<button class="wexpand" id="wexpandall">Expand all</button>' : '') + '</div>';
     html += '<div class="wlist" id="wlist">';
     let wi = 0;
     work.forEach(x => { html += workRow(x, wi++); i++; });
     html += '</div>';
+    html += '</div>';
   }
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
+    html += '<div class="viewblk" data-view="delivered">';
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">' + (done.length > 4 ? 'Your library' : 'Delivered') + '</span><span class="cnt">' + done.length + '</span></div>';
     html += '<div class="fileguide"><b>Which file goes where?</b> &nbsp;📱 Vertical reel → Instagram · TikTok · FB/IG Story &nbsp;·&nbsp; 🖥 Horizontal video → YouTube · MLS · listing sites &nbsp;·&nbsp; 📷 Photos → MLS &amp; print &nbsp;·&nbsp; 🔇 Need a music-free (MLS-safe) cut? Ask in chat.</div>';
     if(done.length > 5) html += '<div class="libsearch"><input id="libsearch" type="search" placeholder="🔎 Search your library…"></div>';
@@ -1133,13 +1169,17 @@ function render(raw){
         html += librow(x, di, sid);
       }
     });
+    html += '</div>';
   }
   if(items.length === 0)
     html += '<div class="center"><div class="big">A fresh start<span style="color:var(--red)">.</span></div>' +
       '<div class="sm">Your first project will appear here the moment we kick it off — and you’ll watch it move through the pipeline, step by step. 🎥</div></div>';
+  html += '<div class="viewblk" data-view="ideas">';
   html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Content ideas</span><span class="cnt">💡</span></div>';
   html += '<div id="ideaslot">' + ideaSection() + '</div>';
+  html += '</div>';
   if(SVC.length){
+    html += '<div class="viewblk" data-view="pricing">';
     html += '<div class="sec"><span class="no">' + secNo() + '</span><span class="lbl">Services & pricing</span><span class="cnt">' + SVC.length + '</span></div>';
     html += '<div class="svcwrap">';
     const svcCats = [];
@@ -1151,6 +1191,7 @@ function render(raw){
       });
     });
     html += '<div class="svcnote">Prices in CAD before tax. Not sure what fits the listing? Ask in chat — we\'ll point you to the right package.</div></div>';
+    html += '</div>';
   }
   document.getElementById('body').innerHTML = html;
   document.getElementById('foot').style.display = '';
@@ -2508,6 +2549,43 @@ document.getElementById('body').addEventListener('input', function(ev){
     });
   }
 });
+/* ---- 📍 pipeline filter: tap a stat tile (or Book a shoot) to focus one section ---- */
+var VIEW_LABELS = { review:'Waiting on your review', production:'In the works', delivered:'Your delivered content', ideas:'Content ideas', pricing:'Services & pricing' };
+var curView = null;
+function applyView(view){
+  if(view === curView) view = null;                 // tapping the active tile clears the filter
+  curView = view;
+  var showSet = null;                               // null = show everything
+  if(view === 'pricing') showSet = { pricing:true, ideas:true };   // pricing keeps content ideas underneath
+  else if(view){ showSet = {}; showSet[view] = true; }
+  document.querySelectorAll('#body .viewblk').forEach(function(bl){
+    var v = bl.getAttribute('data-view');
+    bl.style.display = (!showSet || showSet[v]) ? '' : 'none';
+  });
+  document.querySelectorAll('.stat[data-jump]').forEach(function(s){
+    s.classList.toggle('on', !!view && s.getAttribute('data-jump') === view);
+  });
+  var hb = document.querySelector('.heroact .go');
+  if(hb) hb.classList.toggle('on', view === 'pricing');
+  var bar = document.getElementById('viewbar');
+  if(bar){
+    if(view){
+      var lbl = VIEW_LABELS[view] || 'this';
+      var target = document.querySelector('#body .viewblk[data-view="' + view + '"]');
+      bar.innerHTML = '<button class="vback" data-jump="__all">← Show everything</button>' +
+        '<span class="vnow">Showing <b>' + lbl + '</b></span>' +
+        (target ? '' : '<span class="vempty">— nothing here just yet</span>');
+      bar.style.display = 'flex';
+    } else {
+      bar.style.display = 'none';
+      bar.innerHTML = '';
+    }
+  }
+  if(view){
+    var anchor = document.querySelector('.stats');
+    if(anchor && anchor.scrollIntoView) anchor.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+}
 // count-up on the stat numbers
 function tickStats(){
   document.querySelectorAll('.stat b').forEach(function(b){
