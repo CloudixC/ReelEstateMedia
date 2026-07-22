@@ -15,6 +15,7 @@ var qrcode=(function(){var P=function(x,w){var g=236,l=17,n=x,s=O[w],t=null,r=0,
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <style>
 :root{
   --red:#EA002A; --red2:#ff4a52; --red-soft:rgba(234,0,42,.14);
@@ -425,6 +426,12 @@ body.haspreview{padding-top:44px}
 .biotaps{font-size:12.5px;color:var(--dim);margin-top:8px}
 .biotaps b{color:var(--txt)}
 #installbtn{border:1px solid var(--line2);background:var(--panel2);color:var(--txt)}
+#notifywrap{text-align:center;margin:4px 0 12px}
+body.assist #notifywrap{display:none !important}
+.notifybtn{background:var(--panel2);border:1px solid var(--line2);color:var(--txt);border-radius:999px;padding:9px 17px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.notifybtn:hover{border-color:var(--red);color:#fff}
+.notifybtn.on{background:rgba(47,158,100,.16);border-color:#2f9e64;color:#7ee0a6;cursor:default}
+.notifybtn.hint{border-color:var(--amber);color:#f4ba2e}
 #a2hs{position:fixed;inset:0;background:rgba(5,5,7,.82);z-index:320;display:none;place-items:center;padding:20px}
 #a2hs.on{display:grid}
 #a2hscard{background:var(--panel2);border:1px solid var(--line2);border-radius:20px;padding:24px;max-width:380px;width:100%}
@@ -502,6 +509,7 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
   <div class="brandlock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div class="mark" id="brandmark"></div></div>
   <div class="badge" id="brandbadge"></div>
 </header>
+<div id="notifywrap" style="display:none"><button id="notifybtn" class="notifybtn" type="button">🔔 Turn on notifications</button></div>
 <div id="body"><div class="center"><div class="sm">Loading your content…</div></div></div>
 <div id="msgwrap" style="display:none">
   <div class="sec"><span class="no">✉</span><span class="lbl">Messages</span></div>
@@ -2642,4 +2650,54 @@ else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   apply();
   setInterval(apply, 10 * 60 * 1000);   // auto mode flips at sunset even if the tab stays open
 })();
+
+/* ---- 🔔 web push notifications (OneSignal) ---- */
+function osIsIOS(){ return /iP(hone|ad|od)/.test(navigator.userAgent); }
+function osStandalone(){ return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); }
+function paintNotifyBtn(){
+  var wrap = document.getElementById('notifywrap'), btn = document.getElementById('notifybtn');
+  if(!wrap || !btn) return;
+  var OS = window.__OS;
+  if(PREVIEW || document.body.classList.contains('assist') || !OS){ wrap.style.display = 'none'; return; }
+  var supported = true; try{ supported = OS.Notifications.isPushSupported(); }catch(e){}
+  if(!supported){
+    if(osIsIOS() && !osStandalone()){
+      wrap.style.display = 'block'; btn.className = 'notifybtn hint'; btn.textContent = '🔔 Add to Home Screen for alerts';
+      btn.onclick = function(){ toast('On iPhone: tap the Share icon → “Add to Home Screen”, then open your hub from the home screen and turn on notifications.'); };
+    } else { wrap.style.display = 'none'; }
+    return;
+  }
+  var on = false; try{ on = OS.Notifications.permission === true || OS.User.PushSubscription.optedIn === true; }catch(e){}
+  wrap.style.display = 'block';
+  if(on){ btn.className = 'notifybtn on'; btn.textContent = '✓ Notifications on'; btn.onclick = null; return; }
+  btn.className = 'notifybtn'; btn.textContent = '🔔 Turn on notifications';
+  btn.onclick = function(){
+    btn.textContent = '…';
+    Promise.resolve(OS.Notifications.requestPermission()).then(function(){
+      try{ if(a) OS.login(String(a)); }catch(e){}
+      var ok = false; try{ ok = OS.Notifications.permission === true; }catch(e){}
+      paintNotifyBtn();
+      if(ok && typeof toast === 'function') toast('🔔 You’re set — we’ll ping this device when your content moves.');
+    }).catch(function(){ paintNotifyBtn(); });
+  };
+}
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+window.OneSignalDeferred.push(async function(OneSignal){
+  try{
+    if(PREVIEW || document.body.classList.contains('assist')) return;   // never register the studio/assistant browser as the agent
+    await OneSignal.init({
+      appId: '5e807c9c-b2b4-450c-99ef-fb78b3b3c3e8',
+      serviceWorkerPath: 'ReelEstateMedia/OneSignalSDKWorker.js',
+      serviceWorkerParam: { scope: '/ReelEstateMedia/' },
+      autoResubscribe: true
+    });
+    window.__OS = OneSignal;
+    try{ if(a) await OneSignal.login(String(a)); }catch(e){}         // link this device to the agent so pushes reach them anywhere
+    try{ if(a) OneSignal.User.addTag('hub', String(a)); if(AGENTNAME) OneSignal.User.addTag('agent', String(AGENTNAME)); }catch(e){}
+    paintNotifyBtn();
+    try{ OneSignal.Notifications.addEventListener('permissionChange', paintNotifyBtn); }catch(e){}
+    try{ OneSignal.User.PushSubscription.addEventListener('change', paintNotifyBtn); }catch(e){}
+  }catch(e){}
+});
+
 </script></div></body></html>
