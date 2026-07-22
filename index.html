@@ -1326,6 +1326,20 @@ function App(){
     })}));
     if(cur && patch.shootDate && cur.status === 'Booked' && !patch.status)
       logActivity(`${dlTitle(cur)} scheduled for ${fmtDate(patch.shootDate)}`);
+    // scheduling / moving a shoot: sync the hub AND ping the agent (the msg fires a push server-side)
+    if(cur && patch.shootDate && patch.shootDate !== (cur.shootDate || '')){
+      const oS = db.orders.find(x => x.id === cur.orderId) || {};
+      const cS = db.clients.find(x => x.id === oS.clientId) || {};
+      const hkS = cS.hubKey || cS.hubId;
+      if(cS && cS.id && hkS && db.settings.inboxUrl){
+        setTimeout(() => pushHub(cS.id), 900);
+        const tS = (patch.shootTime !== undefined ? patch.shootTime : cur.shootTime) || '';
+        const whenS = fmtDate(patch.shootDate) + (tS ? ' at ' + tS : '');
+        fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hkS,
+          project: (cS.name || 'Agent') + ' — ' + dlTitle(cur), dname: '', who: 'Jag', from: 'jag',
+          body: '📅 Your shoot for “' + dlTitle(cur) + '” is booked for ' + whenS + '. Tap “Shoot brief” on your hub to tell us about it!'})}).catch(() => {});
+      }
+    }
     if(cur && patch.status && patch.status !== cur.status){
       const prevStatus = cur.status, prevDD = cur.deliveredDate || '';
       const o = db.orders.find(x => x.id === cur.orderId) || {};
