@@ -395,7 +395,7 @@ function prepScore(d){
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 const money = n => '$' + (n||0).toLocaleString('en-CA', {minimumFractionDigits:2, maximumFractionDigits:2});
 const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-CA', {month:'short', day:'numeric', year:'numeric'}) : '—';
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 const svc = id => CATALOG.find(s => s.id === id);
 
 const LS_KEY = 'rem_pipeline_v1';
