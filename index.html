@@ -512,6 +512,13 @@ function reviewMsg(d, o, c){
     `\n\nTake a look and reply with any tweaks (timestamps or notes work great) — I'll turn revisions around quickly. If it's all good, just say the word and I'll send the finals.\n\n— Reel Estate Media`;
 }
 
+// Concise share text so a pasted review link names the property (the preview card can't — crawlers don't run the page's JS)
+function reviewShareText(d, o, url){
+  const ttl = dlTitle(d);
+  const proj = (o && o.project && o.project !== ttl) ? ' · ' + o.project : '';
+  return `🎬 ${ttl}${proj} — ready for your review 👀` + (url ? `\n${url}` : '');
+}
+
 function deliveryMsg(d, o, c){
   const first = ((c && c.name) || 'there').split(' ')[0];
   const b = getBrief(d);
@@ -2114,7 +2121,7 @@ function ReviewTab({db, clientName, pushHub, openOrderDetail, showToast}){
           <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
           {approvedOf(d) && <span className="pill delivered">✓ Approved</span>}
           <span className="spacer"></span>
-          {d.reviewUrl && <CopyBtn text={d.reviewUrl} label="📋 Link"/>}
+          {d.reviewUrl && <CopyBtn text={reviewShareText(d, o, d.reviewUrl)} label="📋 Share link"/>}
           {d.reviewUrl && <button className="btn ghost sm" onClick={() => window.open(d.reviewUrl, '_blank')}>Room ↗</button>}
           <button className="btn ghost sm" onClick={() => openOrderDetail(d.orderId, d.id)}>Order →</button>
         </div>
@@ -3291,9 +3298,9 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               }
               const entry = srcs.join(',');
               if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry){
-                copyText(d.reviewUrl);
+                copyText(reviewShareText(d, order, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
-                showToast('🔗 Same versions — existing short link copied: ' + d.reviewUrl);
+                showToast('🔗 Same versions — link copied with the project name, ready to paste');
                 return;
               }
               const vers = [...(d.reviewVersions || [])];
@@ -3320,20 +3327,20 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
                 updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry});
-                copyText(shortU);
+                copyText(reviewShareText(d, order, shortU));
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
                 if(client) setTimeout(() => pushHub(client.id), 1200);
                 fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code, project: order.project || d.group, who: 'app', body: qs})})
                   .then(r => r.json()).then(j => { if(!j.ok) throw new Error(j.error || 'save failed');
                     if(w) w.location = shortU;
-                    showToast('✅ Short link copied & opened: ' + shortU); })
+                    showToast('✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u}); copyText(u);
+                    updateDeliverable(d.id, {reviewUrl: u}); copyText(reviewShareText(d, order, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
-                copyText(u);
+                copyText(reviewShareText(d, order, u));
                 window.open(u, '_blank');
               }
             }}>🎬 Review room{d.reviewVersions && d.reviewVersions.length > 1 ? ' · V' + d.reviewVersions.length : ''}</button>
