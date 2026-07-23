@@ -364,6 +364,20 @@ const ORIENTATIONS = ['Vertical','Horizontal','Both'];
 const EDIT_STYLES = ['Cinematic','Fast-Paced Social','Clean & Minimal','Luxury','Documentary','Talking Head','Custom'];
 const HST = 0.13;
 
+// ---- reels: 30s per credit; combine credits for a longer reel ----
+const SEC_PER_CREDIT = 30;
+const REEL_TYPES = ['Podcast / Teleprompter', 'Dynamic Shoot', 'You Shoot We Edit'];
+const dlCredits = d => Math.max(1, (d && +d.credits) || 1);
+const reelSeconds = d => dlCredits(d) * SEC_PER_CREDIT;
+const isReelDl = d => /\breel\b|podcast|teleprompter|dynamic|you\s*shoot/i.test(((d && d.name) || '') + ' ' + ((d && d.group) || ''));
+const reelTypeOf = d => {
+  const t = (((d && d.name) || '') + ' ' + ((d && d.group) || '')).toLowerCase();
+  if(/dynamic/.test(t)) return 'Dynamic Shoot';
+  if(/you\s*shoot/.test(t)) return 'You Shoot We Edit';
+  if(/podcast|teleprompter/.test(t)) return 'Podcast / Teleprompter';
+  return '';
+};
+
 const DEFAULT_BRIEF = {topic:'', script:'Needed', scriptLink:'', song:'', orientation:'', style:'', location:'', post:'', delivery:''};
 const dlTitle = d => ((getBrief(d).topic || '').trim()) || d.name;
 /* Media type: photo / video / both. Explicit field wins; otherwise inferred from the service name. */
@@ -1048,6 +1062,29 @@ function App(){
     showToast('Split into Photos + Video — each now has its own status & clock', [{label: 'Undo',
       fn: () => setDb(p => { const arr = p.deliverables.filter(x => x.id !== photo.id && x.id !== video.id); arr.splice(Math.min(origIdx, arr.length), 0, d); return {...p, deliverables: arr}; })}]);
   };
+  // ⊕ Combine: fold a spare reel slot into this reel → one longer reel that records the credits it used
+  const combineDeliverable = (id) => {
+    const d = db.deliverables.find(x => x.id === id);
+    if(!d || !isReelDl(d)) return;
+    const cands = db.deliverables.filter(x => x.orderId === d.orderId && x.id !== id && isReelDl(x) && x.status !== 'Delivered');
+    if(!cands.length){ alert('No spare reel slot to fold in — add another reel credit to this order (＋ Add item below), then combine.'); return; }
+    const sameGroup = cands.filter(x => x.group === d.group);
+    const pool = sameGroup.length ? sameGroup : cands;   // prefer a slot from the same package
+    const sib = pool[pool.length - 1];
+    const newCredits = dlCredits(d) + dlCredits(sib);
+    const looksDefault = /\bof\b|^\s*(reel|video|clip)\b/i.test(d.name || '') || !d.name;
+    const newName = looksDefault ? `Reel · ${newCredits} credits (up to ${newCredits * SEC_PER_CREDIT}s)` : d.name;
+    const prevName = d.name, prevCredits = dlCredits(d);
+    const sibIdx = db.deliverables.findIndex(x => x.id === sib.id);
+    setDb(p => ({...p, deliverables: p.deliverables
+      .filter(x => x.id !== sib.id)
+      .map(x => x.id === id ? {...x, credits: newCredits, name: newName} : x)}));
+    logActivity(`⊕ Combined a credit into ${dlTitle(d)} — now ${newCredits} credits (up to ${newCredits * SEC_PER_CREDIT}s)`);
+    const c = db.clients.find(cc => cc.id === (db.orders.find(o => o.id === d.orderId) || {}).clientId);
+    if(c && c.id && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
+    showToast(`⊕ ${newCredits} credits → one reel (up to ${newCredits * SEC_PER_CREDIT}s)`, [{label: 'Undo',
+      fn: () => setDb(p => { const arr = p.deliverables.map(x => x.id === id ? {...x, credits: prevCredits, name: prevName} : x); arr.splice(Math.min(sibIdx, arr.length), 0, sib); return {...p, deliverables: arr}; })}]);
+  };
 
   const deleteClient = (id) => {
     const c = db.clients.find(x => x.id === id); if(!c) return;
@@ -1637,7 +1674,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -2936,7 +2973,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -2944,6 +2981,9 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
   const t = orderTotals(o);
   const ds = orderDeliverables(id);
   const groups = [...new Set(ds.map(d => d.group))];
+  // 🎬 reel-credit tally: slots booked vs credits currently allocated (combining changes the count, not the total)
+  const reelBooked = (o.items || []).reduce((a, i) => { const s = svc(i.serviceId); return a + (s && s.unit === 'Reel' ? (s.credits > 1 ? s.credits : 1) * (i.qty || 1) : 0); }, 0);
+  const reelUsed = ds.filter(isReelDl).reduce((a, d) => a + dlCredits(d), 0);
   const changeClient = (newId) => {
     if(newId === o.clientId) return;
     const newTier = clientTier(newId);
@@ -3053,19 +3093,30 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
       </>);})()}
     </div>}
 
+    {reelBooked > 0 &&
+    <div className="card" style={{padding:'9px 16px', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap'}}>
+      <span className="small" style={{fontWeight:700}}>🎬 Reel credits</span>
+      <span className={'pill ' + (reelUsed === reelBooked ? 'delivered' : 'booked')}>{reelUsed} of {reelBooked} allocated</span>
+      <span className="small faint">
+        {reelUsed === reelBooked ? 'all credits placed ✓'
+          : reelUsed < reelBooked ? `${reelBooked - reelUsed} credit${reelBooked - reelUsed > 1 ? 's' : ''} unused — combine into a longer reel, or leave as separate reels`
+          : `over by ${reelUsed - reelBooked} — this order is showing more reel credits than were booked`}
+        {' · 1 credit = up to 30s'}
+      </span>
+    </div>}
     {groups.map(g => (
       <div className="card" key={g}>
         <h3 style={{fontSize:16}}>{g}</h3>
         <div className="dl-row small faint" style={{borderBottom:'1px solid var(--line)'}}>
           <span>Deliverable</span><span>Status</span><span>Shoot date</span><span>Prep / Brief</span>
         </div>
-        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} db={db} updateSettings={updateSettings} />)}
+        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} db={db} updateSettings={updateSettings} />)}
       </div>))}
   </>);
 }
 
 /* ---------------- Deliverable row + production brief ---------------- */
-function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, db, updateSettings}){
+function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, db, updateSettings}){
   const [showImport, setShowImport] = useState(false);
   const [importTxt, setImportTxt] = useState('');
   const [open, setOpen] = useState(!!defaultOpen);
@@ -3104,6 +3155,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
     <div className="dl-row" ref={rowRef}>
       <span style={{fontWeight:600, fontSize:14}}>{b.topic ? b.topic : d.name}{b.topic && <span className="faint small"> · {d.name}</span>}
         <span className="faint small"> · {MEDIA_LABEL[mediaOf(d)]}</span>{b.orientation && <span className="faint small"> · {b.orientation === 'Vertical' ? '9:16 Vertical' : b.orientation === 'Horizontal' ? '16:9 Horizontal' : '9:16 + 16:9'}</span>}
+        {isReelDl(d) && <span className={'pill ' + (dlCredits(d) > 1 ? 'editing' : 'booked')} style={{marginLeft:6}} title={dlCredits(d) > 1 ? `Combined ${dlCredits(d)} credits into one longer reel` : 'One credit · up to 30s'}>{dlCredits(d) > 1 ? `${dlCredits(d)} credits · up to ${reelSeconds(d)}s` : 'up to 30s'}</span>}
         <button className="btn ghost sm" title="Rename this deliverable" style={{padding:'0 7px', marginLeft:6, fontSize:12}}
           onClick={() => { const n = prompt('Rename this deliverable', d.name); if(n !== null && n.trim() && n.trim() !== d.name) updateDeliverable(d.id, {name: n.trim()}); }}>✎</button>
       </span>
@@ -3116,6 +3168,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
         {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
+        {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
         {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
       </span>
@@ -3133,6 +3186,14 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           {mediaOf(d) === 'both' && d.status !== 'Delivered' &&
             <button className="btn ghost sm" style={{marginTop:6}} onClick={() => splitDeliverable(d.id)} title="Split into separate Photos + Video deliverables">⑂ Split into Photos + Video (separate status & clocks)</button>}
         </div>
+        {isReelDl(d) &&
+        <div>
+          <label className="f">Reel type <span className="faint">· up to {reelSeconds(d)}s{dlCredits(d) > 1 ? ` · ${dlCredits(d)} credits` : ''}</span></label>
+          <select value={reelTypeOf(d)} onChange={e => { if(e.target.value && e.target.value !== reelTypeOf(d)) updateDeliverable(d.id, {group: e.target.value}); }}>
+            {!reelTypeOf(d) && <option value="">— set type —</option>}
+            {REEL_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>}
         <div>
           <label className="f">Topic / Title</label>
           <input placeholder='e.g. "3 staging mistakes" — names this reel everywhere' value={b.topic} onChange={e => setBrief({topic: e.target.value})}/>
