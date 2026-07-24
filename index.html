@@ -3383,13 +3383,24 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
-                (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
+                (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') +
+                // hub code + agent name so the review page can route comments back into this project's chat
+                ((client && (client.hubKey || client.hubId)) ? '&hk=' + encodeURIComponent(client.hubKey || client.hubId) + '&an=' + encodeURIComponent(client.name || '') : '');
               const qs = u.split('?').slice(1).join('?');
+              // drop the review link into the agent's project chat so everything stays in one thread
+              const postReviewLinkToChat = (link) => {
+                const hk = client && (client.hubKey || client.hubId);
+                if(!hk || !db.settings.inboxUrl) return;
+                fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hk,
+                  project: (client.name || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
+                  body:'🎬 Your review for “' + dlTitle(d) + '” is ready — tap to watch & leave your notes:\n' + link})}).catch(() => {});
+              };
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
                 updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry});
                 copyText(reviewShareText(d, order, client, shortU));
+                postReviewLinkToChat(shortU);
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
                 if(client) setTimeout(() => pushHub(client.id), 1200);

@@ -797,7 +797,7 @@ function quick(txt){
   if(vid){ ref = {t: vid.currentTime}; }
   else if(gallery.length){ const g = gallery[curImg]; ref = {img: g.name, idx: curImg}; }
   if(pendingPoint){ ref = Object.assign({}, ref, pendingPoint); pendingPoint = null; resetPtBtn(); }
-  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref));
+  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref)); chatMirror(cmts[cmts.length - 1]);
   save(); renderList();
 }
 function nav(d){ window.__navDir = d; curImg = (curImg + d + gallery.length) % gallery.length; syncGallery(); }
@@ -1050,7 +1050,7 @@ function addCmt(){
   else { const man = document.getElementById('tman').value.trim();
     if(man){ const t = parseT(man); ref = t !== null ? {t} : {img: man}; } }
   if(pendingPoint){ ref = Object.assign({}, ref, pendingPoint); pendingPoint = null; resetPtBtn(); }
-  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref));
+  cmts.push(Object.assign({id: Date.now(), ver: cur, txt, who: identity}, ref)); chatMirror(cmts[cmts.length - 1]);
   stamped = null;
   document.getElementById('ctext').value = ''; document.getElementById('tman').value = '';
   if(gallery.length) syncGallery(); else if(vid) document.getElementById('refbtn').textContent = '⏱ ' + fmt(vid.currentTime);
@@ -1069,7 +1069,7 @@ function approve(){
   const openRes = cmts.filter(c => c.ver === cur - 1 && c.res === 'open').length;
   if(openRes) m += openRes + ' note' + (openRes > 1 ? 's' : '') + ' from the last version marked STILL OPEN. ';
   if(m && !confirm(m + 'Approve anyway?')) return;
-  cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); save(); renderList();
+  cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); chatMirror(cmts[cmts.length - 1]); save(); renderList();
   if(endpoint){ postFeedback().catch(() => {}); }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
@@ -1111,6 +1111,23 @@ function renderResolve(){
   });
 }
 function refLabel(c){ return c.t !== undefined && c.t !== null ? fmt(c.t) : (c.img || null); }
+// Mirror each review note into the agent's project chat (hub) so feedback stays aligned in one thread.
+// Routes on the hub code (hk) + agent name (an) the Command Centre baked into this link.
+function chatMirror(c){
+  try{
+    var hk = q.get('hk') || '';
+    var an = q.get('an') ? decodeURIComponent(q.get('an')) : '';
+    if(!endpoint || !hk || !an || !dname || !c) return;
+    var approved = String(c.txt || '').indexOf('✓ APPROVED') === 0;
+    var lbl = refLabel(c);
+    var body = approved
+      ? '✅ Approved ' + (versions.length > 1 ? 'V' + (cur + 1) + ' ' : '') + '— good to finalize this cut.'
+      : '📝 Review note' + (lbl ? ' [' + lbl + ']' : '') + ': ' + String(c.txt || '');
+    fetch(endpoint, {method:'POST', keepalive:true, body: JSON.stringify({
+      kind:'msg', ref: hk, project: an + ' — ' + dname, dname:'', who: identity, from:'agent', body: body
+    })}).catch(function(){});
+  }catch(e){}
+}
 function renderList(){
   const el = document.getElementById('clist'); el.innerHTML = '';
   const mine = cmts.filter(c => c.ver === cur);
