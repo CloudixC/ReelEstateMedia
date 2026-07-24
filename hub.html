@@ -265,9 +265,10 @@ body.assist #billingwrap{display:none !important}
 .btype button:hover{border-color:var(--red);color:var(--txt)}
 .btype button.on{background:var(--red);border-color:var(--red);color:#fff}
 .bcard label{display:block;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:13px 0 5px;font-weight:700}
-.bcard input,.bcard textarea{width:100%;background:rgba(5,5,6,.6);border:1px solid var(--line2);border-radius:11px;color:var(--txt);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;box-sizing:border-box}
-.bcard input:focus,.bcard textarea:focus{border-color:rgba(234,0,42,.5)}
+.bcard input,.bcard textarea,.bcard select{width:100%;background:rgba(5,5,6,.6);border:1px solid var(--line2);border-radius:11px;color:var(--txt);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;box-sizing:border-box}
+.bcard input:focus,.bcard textarea:focus,.bcard select:focus{border-color:rgba(234,0,42,.5)}
 .bcard textarea{resize:vertical;min-height:58px}
+.bcard .bfsec{font-family:var(--mono,var(--sans));font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);font-weight:700;margin:6px 0 2px}
 .bact{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 .bact .mini{padding:10px 16px}
 .bact .go{width:auto;padding:11px 20px;display:inline-flex}
@@ -757,6 +758,7 @@ function normalize(h){
   // and the legacy one {n, t, items:[{ttl,proj,st,url,dt}]}
   const raw = h.projects || h.items || [];
   const items = raw.map(x => ({
+    id: x.id || '',
     t: x.t != null ? x.t : (x.ttl || ''),
     p: x.p != null ? x.p : (x.proj || ''),
     st: x.st || '', si: (typeof x.si === 'number' ? x.si : -1),
@@ -819,7 +821,7 @@ function briefBtn(x){
   var sent = {};
   try{ sent = JSON.parse(localStorage.getItem('rem_hub_sbrief_v1:' + a)) || {}; }catch(eB){}
   var bid = 'proj|' + x.t;
-  return '<button class="tbtn briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(x.t) + '" data-bw="" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + x.t) + '">' +
+  return '<button class="tbtn briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(x.t) + '" data-bw="" data-dref="' + esc(x.id || '') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + x.t) + '">' +
     (sent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</button>';
 }
 function shootLine(x){
@@ -1288,7 +1290,7 @@ function loadBookings(){
           var bid = it.id || (it.n + '|' + it.s);
           return '<span class="shootchip">🎬 ' + esc(it.n) + (when ? ' <span class="when">' + esc(when) + '</span>' : '') +
             ' <a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a>' +
-            ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '">' + (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</a>' +
+            ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '" data-dref="' + esc(it.dref || it.id || '') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + it.n) + '">' + (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</a>' +
             (it.rs ? ' <a href="' + esc(it.rs) + '" target="_blank" rel="noopener" title="Something came up? Move it — no guilt.">↔ Reschedule</a>' : '') +
             '</span>';
         }).join('') + '</div>' +
@@ -1919,18 +1921,43 @@ function guessType(name){
   if(/listing|property|tour|\bhome\b|house|condo|address|walkthrough|\bunit\b/.test(n)) return 'listing';
   return 'listing';
 }
+// Content fields (common to every shoot type) — these flow straight into the studio's brief for the project.
+var BRIEF_CONTENT = [
+  {k:'c_topic', l:'Topic / title', i:'🎯', ph:'e.g. “3 staging mistakes buyers make” — names this reel'},
+  {k:'c_orient', l:'Orientation', i:'📐', sel:['', 'Vertical', 'Horizontal', 'Both'], ph:''},
+  {k:'c_style', l:'Editing style', i:'🎨', sel:['', 'Cinematic', 'Fast-Paced Social', 'Clean & Minimal', 'Luxury', 'Documentary', 'Talking Head'], ph:''},
+  {k:'c_song', l:'Song / music (optional)', i:'🎵', ph:'Artist – Title, or a link to the track you want'},
+  {k:'c_script', l:'Script', i:'🎬', ta:true, ph:'Paste your script here — or write “need one” and we’ll draft it for you'}
+];
+function briefFieldEl(f, cur){
+  var el;
+  if(f.sel){
+    el = document.createElement('select');
+    f.sel.forEach(function(opt){ var o = document.createElement('option'); o.value = opt; o.textContent = opt || '— pick —'; el.appendChild(o); });
+  } else {
+    el = document.createElement(f.ta ? 'textarea' : 'input');
+    if(!f.ta) el.type = 'text';
+    el.setAttribute('maxlength', f.ta ? '2000' : '200'); el.placeholder = f.ph || '';
+  }
+  el.setAttribute('data-bk', f.k);
+  if(cur[f.k] != null && cur[f.k] !== '') el.value = cur[f.k];
+  return el;
+}
 function renderBriefFields(type){
   var box = briefModal && briefModal.querySelector('#bf-fields'); if(!box) return;
   var cfg = BRIEF_TYPES[type] || BRIEF_TYPES.general;
   var cur = {}; box.querySelectorAll('[data-bk]').forEach(function(el){ cur[el.getAttribute('data-bk')] = el.value; });
   box.innerHTML = '';
+  var h1 = document.createElement('div'); h1.className = 'bfsec'; h1.textContent = '🎬 The content'; box.appendChild(h1);
+  BRIEF_CONTENT.forEach(function(f){
+    var lab = document.createElement('label'); lab.textContent = f.l; box.appendChild(lab);
+    box.appendChild(briefFieldEl(f, cur));
+  });
+  var h2 = document.createElement('div'); h2.className = 'bfsec'; h2.textContent = '📍 Shoot day';
+  h2.style.marginTop = '14px'; box.appendChild(h2);
   cfg.fields.forEach(function(f){
     var lab = document.createElement('label'); lab.textContent = f.l + (f.req ? ' *' : ''); box.appendChild(lab);
-    var el = document.createElement(f.ta ? 'textarea' : 'input');
-    if(!f.ta) el.type = 'text';
-    el.setAttribute('data-bk', f.k); el.setAttribute('maxlength', f.ta ? '500' : '200'); el.placeholder = f.ph;
-    if(cur[f.k] != null) el.value = cur[f.k];
-    box.appendChild(el);
+    box.appendChild(briefFieldEl(f, cur));
   });
 }
 function setBriefType(type){
@@ -1994,14 +2021,28 @@ function ensureBriefModal(){
     var cfg = BRIEF_TYPES[BF_TYPE] || BRIEF_TYPES.general;
     var vals = {};
     briefModal.querySelectorAll('#bf-fields [data-bk]').forEach(function(el){ var val = (el.value || '').trim(); if(val) vals[el.getAttribute('data-bk')] = val; });
-    var fields = cfg.fields.filter(function(f){ return vals[f.k]; }).map(function(f){ return {i: f.i, l: f.l, v: vals[f.k]}; });
+    var mapDisp = function(list){ return list.filter(function(f){ return vals[f.k]; }).map(function(f){ return {i: f.i, l: f.l, v: vals[f.k]}; }); };
+    var fields = mapDisp(BRIEF_CONTENT).concat(mapDisp(cfg.fields));
     if(fields.length === 0 && !BF_VOICE){
       var first0 = briefModal.querySelector('#bf-fields [data-bk]'); if(first0) first0.focus();
       toast('Give us at least one detail — even a voice note works.');
       return;
     }
+    // cc = the studio's brief fields, mapped so this drops straight into their Command Centre for the project
+    var cc = {};
+    if(vals.c_topic) cc.topic = vals.c_topic;
+    if(vals.c_orient) cc.orientation = vals.c_orient;
+    if(vals.c_style) cc.style = vals.c_style;
+    if(vals.c_song) cc.song = vals.c_song;
+    if(vals.c_script){
+      if(/^\s*(need|write|draft|you (write|do)|no script|make (me )?one|help)/i.test(vals.c_script) || vals.c_script.length < 22){ cc.script = 'Needed'; }
+      else { cc.script = 'Drafted'; cc.scriptText = vals.c_script; }
+    }
+    var loc = vals.addr || vals.loc || vals.venue || '';
+    if(loc) cc.location = loc;
     var brief = Object.assign({ type: BF_TYPE, typeLabel: cfg.label,
-      when: BRIEF_CTX ? (BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' — ' + BRIEF_CTX.bw : '')) : '', fields: fields }, vals);
+      when: BRIEF_CTX ? (BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' — ' + BRIEF_CTX.bw : '')) : '', fields: fields,
+      cc: cc, dref: (BRIEF_CTX && BRIEF_CTX.dref) || '' }, vals);
     var thread = (BRIEF_CTX && BRIEF_CTX.bl) ? BRIEF_CTX.bl : (AGENTNAME || 'Agent') + ' — Content Hub';
     var sendBtn = briefModal.querySelector('#bf-send');
     sendBtn.disabled = true; sendBtn.textContent = 'Sending…';
@@ -2051,7 +2092,7 @@ document.addEventListener('click', function(e){
   var bb = e.target.closest ? e.target.closest('.briefbtn') : null;
   if(bb){
     e.preventDefault();
-    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '' };
+    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '', dref: bb.getAttribute('data-dref') || '' };
     var mdl = ensureBriefModal();
     mdl.querySelector('#bf-fields').innerHTML = '';
     setBriefType(guessType(BRIEF_CTX.bn));

@@ -762,7 +762,7 @@ function ThreadPanelButton({db, d, order, client}){
 }
 
 /* ---------------- Client Submissions Inbox ---------------- */
-function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled}){
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief}){
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
@@ -775,6 +775,12 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || 'fetch failed');
       setSubs(j.rows || []); setErr('');
+      // auto-apply any agent shoot briefs straight into the matching deliverable's brief
+      (j.rows || []).forEach(r2 => {
+        if(r2.kind !== 'msg' && r2.kind !== 'brief') return;
+        let o; try { o = JSON.parse(r2.body); } catch(e){ return; }
+        if(o && o.__rc && o.brief && o.brief.dref && o.brief.cc && applyAgentBrief) applyAgentBrief(o.brief.dref, o.brief.cc, r2.ts, r2.who);
+      });
     } catch(e){ setErr('Inbox unreachable: ' + (e.message || e)); }
   };
   useEffect(() => { if(!cfg) return; load(); const t = setInterval(load, 5 * 60 * 1000); return () => clearInterval(t); }, [cfg]);
@@ -1222,7 +1228,7 @@ function App(){
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
           const owing = showBal && d.status === 'Delivered' && o.payment && o.payment !== 'paid';
-          return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
+          return {id: d.id, t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
@@ -1411,6 +1417,24 @@ function App(){
       const c2 = db.clients.find(x => x.id === o2.clientId) || {};
       logActivity(`Renamed "${cur.name}" → "${patch.name}"${o2.project ? ' · ' + o2.project : ''}`);
       if(c2 && c2.id && (c2.hubKey || c2.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c2.id), 900);
+    }
+  };
+  // 📝 Agent filled the shoot brief → drop it straight into this deliverable's brief (idempotent per submission time).
+  const applyAgentBrief = (dref, cc, ts, who) => {
+    if(!dref || !cc || !ts) return;
+    const d = db.deliverables.find(x => x.id === dref);
+    if(!d) return;
+    const b = getBrief(d);
+    if(b._briefTs && !(String(ts) > String(b._briefTs))) return;   // already applied this one (or a newer one)
+    const merged = {...b, _briefTs: String(ts)};
+    let changed = 0;
+    ['topic', 'orientation', 'style', 'song', 'script', 'scriptText', 'location'].forEach(k => {
+      if(cc[k] != null && cc[k] !== '' && cc[k] !== merged[k]){ merged[k] = cc[k]; changed++; }
+    });
+    updateDeliverable(dref, {brief: merged});
+    if(changed){
+      logActivity('📝 ' + (who || 'Agent') + ' filled the brief for ' + dlTitle(d));
+      showToast('📝 Brief from ' + (who || 'the agent') + ' → applied to ' + dlTitle(d) + ' ✓');
     }
   };
   const updateOrder = (id, patch) => {
@@ -2468,7 +2492,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
-      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled}/>
+      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
