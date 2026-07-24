@@ -127,7 +127,7 @@
         <p id="input-label" class="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-2 ml-1"></p>
         <div class="flex items-center gap-2 sm:gap-3">
           <input id="file-input" type="file" multiple class="hidden" />
-          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach a file" title="Attach photos, videos or files (up to 24 MB)">
+          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach a file" title="Attach photos, videos or files — large videos welcome">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
           </button>
           <button id="mic-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Record a voice note" title="Record a voice note — tap again to send">
@@ -559,6 +559,16 @@
       if (at.k === 'image' && (at.d || at.id)){
         return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"${at.id ? ` data-view="https://drive.google.com/file/d/${esc(at.id)}/view"` : ''}><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
       }
+      const isVid = at.k === 'video' || /^video\//i.test(at.m || '') || /\.(mp4|mov|m4v|webm|avi|mkv|3gp|quicktime)$/i.test(at.n || '');
+      if (at.id && isVid){
+        // Plays inline right here — no trip out to Google Drive. Falls back to Drive's
+        // embedded player (still on-page) only if the direct stream can't load.
+        const cap = inSide ? 'text-[#8a8a8a] bg-[#111]' : 'text-white/80 bg-black/30';
+        return `<div class="rounded-xl overflow-hidden bg-black min-w-[210px] max-w-[300px]">
+          <video controls playsinline preload="metadata" data-drivevid="${esc(at.id)}" class="w-full max-h-72 bg-black block" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></video>
+          ${at.n ? `<div class="px-2.5 py-1.5 text-[11px] ${cap} truncate">\u{1F3AC} ${esc(at.n)}</div>` : ''}
+        </div>`;
+      }
       if (at.id){
         const pill = inSide ? 'bg-[#111] border-[#2a2a2a]' : 'bg-black/15 border-white/25';
         const icon = inSide ? 'bg-[#1c1c1c] text-[#e11d2a]' : 'bg-black/25 text-white';
@@ -611,7 +621,39 @@
     </div>`;
   }
 
+  // A live "uploading…" bubble that sits in the thread with a progress bar while a
+  // file (esp. a big video from a phone) is still going up.
+  function uploadingBubble(m){
+    const ic = m.upVid ? '\u{1F3AC}' : (m.upImg ? '\u{1F5BC}️' : '\u{1F4CE}');
+    const pct = Math.max(0, Math.min(100, m.upPct || 0));
+    return `<div class="group flex flex-col items-end ml-auto max-w-[80%] msg-enter">
+      <div class="bg-[#e11d2a] text-white rounded-2xl rounded-tr-md shadow-[0_6px_20px_-6px_rgba(225,29,42,0.5)] px-3.5 py-3 min-w-[200px] max-w-[280px]">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-[16px] shrink-0">${ic}</span>
+          <span class="min-w-0 flex-1 text-[13px] truncate">${esc(m.upName || 'file')}</span>
+          <span class="text-[11px] text-white/90 shrink-0 tabular-nums" data-uppct="${esc(m.upKey)}">${pct < 100 ? pct + '%' : '…'}</span>
+        </div>
+        <div class="h-1.5 rounded-full bg-white/25 overflow-hidden">
+          <div class="h-full bg-white rounded-full transition-[width] duration-200" style="width:${Math.max(5, pct)}%" data-upbar="${esc(m.upKey)}"></div>
+        </div>
+        <div class="text-[10px] text-white/70 mt-1.5">${pct < 100 ? 'Uploading…' : 'Finishing up…'}</div>
+      </div>
+    </div>`;
+  }
+  function setUpProgress(key, pct){
+    const bar = document.querySelector('[data-upbar="' + key + '"]');
+    if (bar) bar.style.width = Math.max(5, pct) + '%';
+    const t = document.querySelector('[data-uppct="' + key + '"]');
+    if (t) t.textContent = pct < 100 ? pct + '%' : '…';
+  }
+  function removePlaceholder(c, key){
+    if (!c) return;
+    c.messages = c.messages.filter(mm => mm.upKey !== key);
+    renderThread(); renderSidebar();
+  }
+
   function buildMessage(m, seen){
+    if (m.uploading) return uploadingBubble(m);
     const inSide = m.side === 'in';
     const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
     const rowDir = inSide ? '' : 'flex-row-reverse';
@@ -731,6 +773,19 @@
       </div></div>`;
     }
     thread.innerHTML = pinBanner + html;
+    // If a direct video stream can't load, swap to Drive's embedded player — still inline,
+    // never navigates the agent out to Google Drive.
+    thread.querySelectorAll('video[data-drivevid]').forEach(v => {
+      v.addEventListener('error', () => {
+        const id = v.getAttribute('data-drivevid'); if (!id) return;
+        const fr = document.createElement('iframe');
+        fr.className = 'w-full aspect-video block bg-black';
+        fr.src = 'https://drive.google.com/file/d/' + id + '/preview';
+        fr.allow = 'autoplay; fullscreen';
+        fr.setAttribute('allowfullscreen', '');
+        if (v.parentNode) v.parentNode.replaceChild(fr, v);
+      }, { once: true });
+    });
     thread.scrollTop = thread.scrollHeight;
   }
 
@@ -871,18 +926,67 @@
       img.src = url;
     });
   }
-  async function uploadToDrive(f){
-    const b64 = await new Promise((res, rej) => {
+  const ONESHOT_MAX = 20 * 1024 * 1024;       // ≤20 MB → single POST; larger → resumable chunks
+  const CHUNK_SIZE = 5 * 1024 * 1024;         // 5 MB (a multiple of 256 KB, as Drive requires)
+  // read a Blob slice as base64 (no data: prefix)
+  function sliceB64(blob){
+    return new Promise((resolve, reject) => {
       const r = new FileReader();
-      r.onload = () => res(String(r.result).split(',')[1] || '');
-      r.onerror = () => rej(new Error('read failed'));
+      r.onerror = () => reject(new Error('read failed'));
+      r.onload = () => resolve(String(r.result).split(',')[1] || '');
+      r.readAsDataURL(blob);
+    });
+  }
+  function uploadToDrive(f, onProgress){
+    if (f.size > ONESHOT_MAX) return resumableUpload(f, onProgress);
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(new Error('read failed'));
+      r.onload = () => {
+        const b64 = String(r.result).split(',')[1] || '';
+        // XHR (not fetch) so we get real upload progress on slow / mobile connections
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', ENDPOINT, true);
+        if (xhr.upload && onProgress){
+          xhr.upload.onprogress = e => {
+            if (e.lengthComputable) onProgress(Math.min(99, Math.round(e.loaded / e.total * 100)));
+          };
+        }
+        xhr.onload = () => {
+          let j = null;
+          try { j = JSON.parse(xhr.responseText || '{}'); } catch(err){ return reject(new Error('bad response')); }
+          if (!j || !j.ok || !j.id) return reject(new Error((j && j.error) || 'upload failed'));
+          if (onProgress) onProgress(100);
+          resolve(j.id);
+        };
+        xhr.onerror = () => reject(new Error('network error'));
+        // plain string body → text/plain (simple request, no CORS preflight), same as the old fetch
+        xhr.send(JSON.stringify({ kind:'file', name: f.name, mime: f.type || 'application/octet-stream', data: b64 }));
+      };
       r.readAsDataURL(f);
     });
-    const j = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'file', name: f.name, mime: f.type || 'application/octet-stream', data: b64
-    })}).then(r => r.json());
-    if (!j.ok || !j.id) throw new Error(j.error || 'upload failed');
-    return j.id;
+  }
+  // Large files: open a Drive resumable session on the backend, then stream 5 MB slices through it.
+  // The browser only ever talks to our Apps Script — Google is reached server-side, so there's no CORS.
+  async function resumableUpload(f, onProgress){
+    const mime = f.type || 'application/octet-stream';
+    const sess = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'resumable', name: f.name, mime, size: f.size })}).then(r => r.json());
+    if (!sess || !sess.ok || !sess.session) throw new Error((sess && sess.error) || 'could not start upload');
+    let start = 0, id = '';
+    while (start < f.size){
+      const end = Math.min(start + CHUNK_SIZE, f.size);
+      const data = await sliceB64(f.slice(start, end));
+      const resp = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'chunk', session: sess.session, start, total: f.size, mime, data })}).then(r => r.json());
+      if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'upload interrupted');
+      start = end;
+      if (onProgress) onProgress(Math.min(99, Math.round(start / f.size * 100)));
+      if (resp.done){ id = resp.id || ''; break; }
+    }
+    if (!id) throw new Error('upload finished without a file id');
+    if (onProgress) onProgress(100);
+    return id;
   }
 
   // ---------- 👥 group settings (any member can rename / change the photo) ----------
@@ -1004,7 +1108,7 @@
     setTimeout(loadThread, 1200);
   }
 
-  const MAX_UPLOAD = 24 * 1024 * 1024;
+  const MAX_UPLOAD = 2 * 1024 * 1024 * 1024;   // 2 GB sanity cap — large files stream to Drive in chunks
   const fileInput = $('#file-input');
   $('#attach-btn').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
@@ -1019,23 +1123,33 @@
     const q = (mode && mode.type === 'quote') ? { m: mode.m, t: mode.t, w: mode.w } : null;
     let first = true;
     for (const f of files){
-      if (f.size > MAX_UPLOAD){ showToast(f.name + ' is over 24 MB — share it via a Drive link instead.'); continue; }
+      if (f.size > MAX_UPLOAD){ showToast(f.name + ' is over 2 GB — that’s a lot! Send it as a Drive link instead.'); continue; }
       const isImg = (f.type || '').startsWith('image/');
+      const isVid = (f.type || '').startsWith('video/') || /\.(mp4|mov|m4v|webm|avi|mkv|3gp)$/i.test(f.name || '');
+      // Drop a live placeholder into the thread right away so there's visible progress
+      // while the file uploads (big phone videos used to just hang with no feedback).
+      const upKey = 'up_' + Math.random().toString(36).slice(2);
+      const now0 = new Date().toISOString();
+      const ph = { id:'', ts: now0, side:'out', who: AGENT || 'You', uploading:true, upKey, upName: f.name, upVid: isVid, upImg: isImg, upPct: 0 };
+      c.messages.push(ph);
+      c.lastTs = now0;
+      renderThread(); renderSidebar();
       let att = null;
       try {
-        showToast('Uploading ' + f.name + '…');
-        const id = await uploadToDrive(f);
-        att = { k: isImg ? 'image' : 'file', id, n: f.name, s: f.size, m: f.type || '' };
+        const id = await uploadToDrive(f, pct => { ph.upPct = pct; setUpProgress(upKey, pct); });
+        att = { k: isImg ? 'image' : (isVid ? 'video' : 'file'), id, n: f.name, s: f.size, m: f.type || '' };
       } catch(e){
         if (isImg){
           try { att = { k:'image', n: f.name, d: await compressImage(f) }; showToast('Sent a compressed copy of ' + f.name + '.'); }
-          catch(e2){ showToast("Couldn't send " + f.name + '.'); continue; }
-        } else { showToast("Couldn't upload " + f.name + ' — try again in a moment.'); continue; }
+          catch(e2){ removePlaceholder(c, upKey); showToast("Couldn't send " + f.name + '.'); continue; }
+        } else { removePlaceholder(c, upKey); showToast("Couldn't upload " + f.name + ' — try again in a moment.'); continue; }
       }
+      // swap the placeholder in-place for the real, sent message
+      delete ph.uploading; delete ph.upKey; delete ph.upPct;
+      ph.text = first ? caption : '';
+      ph.atts = [att];
+      ph.q = first ? q : null;
       const body = JSON.stringify({ __rc:1, t: first ? caption : '', att: [att], q: first ? q : null });
-      const now = new Date().toISOString();
-      c.messages.push({ id:'', ts: now, side:'out', who: AGENT || 'You', text: first ? caption : '', atts: [att], q: first ? q : null });
-      c.lastTs = now;
       first = false;
       renderThread(); renderSidebar();
       await postMsg(c, body);
