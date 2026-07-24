@@ -269,6 +269,8 @@ body.assist #billingwrap{display:none !important}
 .bcard input:focus,.bcard textarea:focus,.bcard select:focus{border-color:rgba(234,0,42,.5)}
 .bcard textarea{resize:vertical;min-height:58px}
 .bcard .bfsec{font-family:var(--mono,var(--sans));font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);font-weight:700;margin:6px 0 2px}
+.bcard input:disabled,.bcard textarea:disabled,.bcard select:disabled{opacity:.85;color:var(--txt);cursor:default;background:rgba(5,5,6,.4);border-style:dashed;border-color:var(--line);-webkit-text-fill-color:var(--txt)}
+.bcard .bflock{background:rgba(212,160,80,.12);border:1px solid rgba(212,160,80,.4);border-radius:11px;padding:11px 13px;margin:2px 0 12px;font-size:13px;line-height:1.5;color:var(--txt)}
 .bact{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 .bact .mini{padding:10px 16px}
 .bact .go{width:auto;padding:11px 20px;display:inline-flex}
@@ -765,7 +767,8 @@ function normalize(h){
     rs: x.rs != null ? !!x.rs : ['client review','review 2','review 3','in review'].some(r => String(x.st || '').toLowerCase() === r),
     dv: x.dv != null ? !!x.dv : String(x.st || '').toLowerCase() === 'delivered',
     url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0, amt: +x.amt || 0,
-    cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || ''
+    cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '',
+    br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
     pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : []};
@@ -821,8 +824,8 @@ function briefBtn(x){
   var sent = {};
   try{ sent = JSON.parse(localStorage.getItem('rem_hub_sbrief_v1:' + a)) || {}; }catch(eB){}
   var bid = 'proj|' + x.t;
-  return '<button class="tbtn briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(x.t) + '" data-bw="" data-dref="' + esc(x.id || '') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + x.t) + '">' +
-    (sent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</button>';
+  return '<button class="tbtn briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(x.t) + '" data-bw="" data-dref="' + esc(x.id || '') + '" data-br="' + (x.br ? encodeURIComponent(JSON.stringify(x.br)) : '') + '" data-lk="' + (x.lk ? '1' : '0') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + x.t) + '">' +
+    (x.lk ? '🔒 View brief' : (sent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief')) + '</button>';
 }
 function shootLine(x){
   if(phaseOf(x) > 1 || !x.dt) return '';
@@ -1095,6 +1098,8 @@ function render(raw){
   curView = null;   // every fresh render starts unfiltered (all sections shown)
   const h = normalize(raw);
   const items = h.items;
+  // 🪞 index brief content + lock by deliverable id so the shoot-day chips (from ?slots) can pre-fill + lock too
+  try{ window.BRIEFMETA = {}; items.forEach(function(x){ if(x.id) window.BRIEFMETA[x.id] = {br: x.br || null, lk: x.lk ? 1 : 0}; }); }catch(eM){}
   AGENTNAME = h.agent || '';
   PAYURL = h.pay || '';
   SVC = h.svc || [];
@@ -1288,9 +1293,10 @@ function loadBookings(){
             d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) + ' · ' +
             d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
           var bid = it.id || (it.n + '|' + it.s);
+          var bm = (window.BRIEFMETA && (window.BRIEFMETA[it.dref] || window.BRIEFMETA[it.id])) || null;
           return '<span class="shootchip">🎬 ' + esc(it.n) + (when ? ' <span class="when">' + esc(when) + '</span>' : '') +
             ' <a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a>' +
-            ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '" data-dref="' + esc(it.dref || it.id || '') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + it.n) + '">' + (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief') + '</a>' +
+            ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '" data-dref="' + esc(it.dref || it.id || '') + '" data-br="' + (bm && bm.br ? encodeURIComponent(JSON.stringify(bm.br)) : '') + '" data-lk="' + (bm && bm.lk ? '1' : '0') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + it.n) + '">' + ((bm && bm.lk) ? '🔒 View brief' : (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief')) + '</a>' +
             (it.rs ? ' <a href="' + esc(it.rs) + '" target="_blank" rel="noopener" title="Something came up? Move it — no guilt.">↔ Reschedule</a>' : '') +
             '</span>';
         }).join('') + '</div>' +
@@ -1966,6 +1972,30 @@ function setBriefType(type){
   if(briefModal){ briefModal.querySelectorAll('#bf-type button[data-bt]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-bt') === type); }); }
   renderBriefFields(type);
 }
+// Pre-fill the modal with whatever the studio has already entered on their side (br from the manifest),
+// so the agent sees the plan and only tops up what's missing.
+function prefillBrief(br){
+  if(!br || !briefModal) return;
+  var box = briefModal.querySelector('#bf-fields'); if(!box) return;
+  var setVal = function(k, v){ if(v == null || v === '') return; var el = box.querySelector('[data-bk="' + k + '"]'); if(el && !(el.value || '').trim()) el.value = v; };
+  setVal('c_topic', br.topic); setVal('c_orient', br.orientation); setVal('c_style', br.style);
+  setVal('c_song', br.song); setVal('c_script', br.scriptText);
+  if(br.location){ ['addr', 'loc', 'venue'].forEach(function(k){ setVal(k, br.location); }); }
+}
+// Lock the brief read-only once the shoot's done — the agent can view but not change it (studio unlocks from their end).
+function applyBriefLock(locked){
+  if(!briefModal) return;
+  var box = briefModal.querySelector('#bf-fields');
+  var send = briefModal.querySelector('#bf-send');
+  var microw = briefModal.querySelector('.bfmicrow');
+  var typeBox = briefModal.querySelector('#bf-type');
+  var note = briefModal.querySelector('#bf-lockmsg');
+  if(box) box.querySelectorAll('input, textarea, select').forEach(function(el){ if(locked) el.setAttribute('disabled', 'disabled'); else el.removeAttribute('disabled'); });
+  if(send) send.style.display = locked ? 'none' : '';
+  if(microw) microw.style.display = locked ? 'none' : '';
+  if(typeBox) typeBox.style.display = locked ? 'none' : '';
+  if(note){ note.style.display = locked ? '' : 'none'; if(locked) note.textContent = '🔒 The shoot’s done, so this brief is locked in. Need a change? Message us in chat and we’ll open it back up.'; }
+}
 var briefModal = null, BRIEF_CTX = null;
 function ensureBriefModal(){
   if(briefModal) return briefModal;
@@ -1974,6 +2004,7 @@ function ensureBriefModal(){
   briefModal.innerHTML = '<div class="bcard">' +
     '<h3>Shoot <em>brief</em></h3>' +
     '<div class="bsub" id="bf-sub">Two minutes now = a smoother shoot day. Fill what you know, skip the rest.</div>' +
+    '<div class="bflock" id="bf-lockmsg" style="display:none"></div>' +
     '<div class="btype" id="bf-type"></div>' +
     '<div id="bf-fields"></div>' +
     '<div class="bfmicrow"><button class="mini" id="bf-mic">🎙 Add a voice note</button><span id="bf-micst"></span></div>' +
@@ -2092,17 +2123,22 @@ document.addEventListener('click', function(e){
   var bb = e.target.closest ? e.target.closest('.briefbtn') : null;
   if(bb){
     e.preventDefault();
-    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '', dref: bb.getAttribute('data-dref') || '' };
+    var _br = null; try{ var _braw = bb.getAttribute('data-br') || ''; _br = _braw ? JSON.parse(decodeURIComponent(_braw)) : null; }catch(eBr){ _br = null; }
+    BRIEF_CTX = { bid: bb.getAttribute('data-bid'), bn: bb.getAttribute('data-bn'), bw: bb.getAttribute('data-bw'), bl: bb.getAttribute('data-bl') || '', dref: bb.getAttribute('data-dref') || '', br: _br, lk: bb.getAttribute('data-lk') === '1' };
     var mdl = ensureBriefModal();
     mdl.querySelector('#bf-fields').innerHTML = '';
     setBriefType(guessType(BRIEF_CTX.bn));
+    prefillBrief(BRIEF_CTX.br);
+    applyBriefLock(!!BRIEF_CTX.lk);
     BF_VOICE = null;
     var mB = mdl.querySelector('#bf-mic'); if(mB){ mB.textContent = '🎙 Add a voice note'; mB.classList.remove('rec'); }
     var mS = mdl.querySelector('#bf-micst'); if(mS) mS.textContent = '';
-    mdl.querySelector('#bf-sub').textContent = (BRIEF_CTX.bn ? BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' · ' + BRIEF_CTX.bw : '') + ' — ' : '') +
-      'two minutes now = a smoother shoot day. Fill what you know, skip the rest — you can update it anytime.';
+    mdl.querySelector('#bf-sub').textContent = BRIEF_CTX.lk
+      ? ((BRIEF_CTX.bn ? BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' · ' + BRIEF_CTX.bw : '') + ' — ' : '') + 'here’s everything on file for this shoot.')
+      : ((BRIEF_CTX.bn ? BRIEF_CTX.bn + (BRIEF_CTX.bw ? ' · ' + BRIEF_CTX.bw : '') + ' — ' : '') +
+        'two minutes now = a smoother shoot day. Fill what you know, skip the rest — you can update it anytime.');
     mdl.classList.add('on');
-    var f1 = mdl.querySelector('#bf-fields [data-bk]'); if(f1) f1.focus();
+    if(!BRIEF_CTX.lk){ var f1 = mdl.querySelector('#bf-fields [data-bk]'); if(f1) f1.focus(); }
     return;
   }
   var sv = e.target.closest ? e.target.closest('.svcbook') : null;

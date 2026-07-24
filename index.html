@@ -1228,15 +1228,23 @@ function App(){
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
           const owing = showBal && d.status === 'Delivered' && o.payment && o.payment !== 'paid';
+          // 🪞 mirror the brief content Jag has entered so the agent sees it pre-filled on their hub
+          const bb = getBrief(d);
+          const br = {};
+          ['topic','orientation','style','song','scriptText','location'].forEach(k => { if(bb[k] && bb[k] !== 'Needed' && bb[k] !== 'N/A') br[k] = bb[k]; });
+          // 🔒 lock: 'auto' (default) locks once the shoot is done (status index >= 2 = 'Shot'); 'open'/'locked' override
+          const briefLock = d.briefLock || 'auto';
+          const brLocked = briefLock === 'locked' || (briefLock !== 'open' && STATUSES.indexOf(d.status) >= 2);
           return {id: d.id, t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
-            ...(d.status === 'Delivered' ? (() => { const bb = getBrief(d); return {
+            br: br, lk: brLocked ? 1 : 0,
+            ...(d.status === 'Delivered' ? {
               ...(bb.caption ? {cp: bb.caption} : {}),
               ...(bb.caption2 ? {cp2: bb.caption2} : {}),
-              ...(bb.lang2 ? {lg: bb.lang2} : {})}; })() : {})}; })
+              ...(bb.lang2 ? {lg: bb.lang2} : {})} : {})}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = c.tier === 'partner' || c.tier === 'internal' ||
         (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
@@ -1418,12 +1426,24 @@ function App(){
       logActivity(`Renamed "${cur.name}" → "${patch.name}"${o2.project ? ' · ' + o2.project : ''}`);
       if(c2 && c2.id && (c2.hubKey || c2.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c2.id), 900);
     }
+    // 🔒 lock state changed → refresh the agent's hub so their brief locks/unlocks right away
+    if(cur && patch.briefLock !== undefined && patch.briefLock !== (cur.briefLock || 'auto')){
+      const o3 = db.orders.find(x => x.id === cur.orderId) || {};
+      const c3 = db.clients.find(x => x.id === o3.clientId) || {};
+      if(c3 && c3.id && (c3.hubKey || c3.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c3.id), 700);
+    }
   };
   // 📝 Agent filled the shoot brief → drop it straight into this deliverable's brief (idempotent per submission time).
   const applyAgentBrief = (dref, cc, ts, who) => {
     if(!dref || !cc || !ts) return;
     const d = db.deliverables.find(x => x.id === dref);
     if(!d) return;
+    // 🔒 brief locked (shoot's done, or manually locked)? Don't accept agent-side changes.
+    const _lk = d.briefLock || 'auto';
+    if(_lk === 'locked' || (_lk !== 'open' && STATUSES.indexOf(d.status) >= 2)){
+      showToast('🔒 ' + (who || 'The agent') + ' tried to update the brief for ' + dlTitle(d) + ", but it's locked — unlock it to accept changes.");
+      return;
+    }
     const b = getBrief(d);
     if(b._briefTs && !(String(ts) > String(b._briefTs))) return;   // already applied this one (or a newer one)
     const merged = {...b, _briefTs: String(ts)};
@@ -3200,6 +3220,22 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
     </div>
     {open &&
     <div className="brief">
+      {(() => {
+        const lk = d.briefLock || 'auto';
+        const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
+        return <div className="lockbar" style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'8px 10px', marginBottom:10, borderRadius:8, background: locked ? 'rgba(212,160,80,.10)' : 'rgba(255,255,255,.04)', border:'1px solid ' + (locked ? 'rgba(212,160,80,.35)' : 'rgba(255,255,255,.08)')}}>
+          <span className="small" style={{flex:1, minWidth:160}}>
+            {locked
+              ? '🔒 Locked on the agent’s hub — they can see this brief but can’t change it.'
+              : '🔓 Open on the agent’s hub — the agent can still edit and re-send this brief.'}
+            {lk === 'auto' && <span className="faint"> · auto-locks once the shoot’s done</span>}
+          </span>
+          <button className="btn ghost sm" onClick={() => updateDeliverable(d.id, {briefLock: locked ? 'open' : 'locked'})}>
+            {locked ? '🔓 Unlock for agent' : '🔒 Lock now'}
+          </button>
+          {lk !== 'auto' && <button className="btn ghost sm" title="Back to automatic — open before the shoot, locked once it’s shot" onClick={() => updateDeliverable(d.id, {briefLock: 'auto'})}>↺ Auto</button>}
+        </div>;
+      })()}
       <div className="bgrid">
         <div>
           <label className="f">Media Type</label>
