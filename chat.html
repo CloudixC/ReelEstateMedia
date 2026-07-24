@@ -927,7 +927,7 @@
     });
   }
   const ONESHOT_MAX = 20 * 1024 * 1024;       // ≤20 MB → single POST; larger → resumable chunks
-  const CHUNK_SIZE = 5 * 1024 * 1024;         // 5 MB (a multiple of 256 KB, as Drive requires)
+  const CHUNK_SIZE = 20 * 1024 * 1024;        // 20 MB (multiple of 256 KB; ~27 MB base64 on the wire — the safe max under the backend's request limit)
   // read a Blob slice as base64 (no data: prefix)
   function sliceB64(blob){
     return new Promise((resolve, reject) => {
