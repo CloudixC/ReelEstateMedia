@@ -1366,7 +1366,7 @@ function App(){
         const base2 = db.settings.reviewPageUrl;
         if(srcs2.length && base2 && db.settings.inboxUrl){
           const entry2 = srcs2.join(',');
-          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2)){
+          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (!isHeadshotDl(cur) || cur.reviewPick))){
             const o2 = db.orders.find(x => x.id === cur.orderId) || {};
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
             const vers2 = [...(cur.reviewVersions || [])];
@@ -1385,7 +1385,7 @@ function App(){
               pickParams(cur) +
               (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
             const code2 = Math.random().toString(36).slice(2, 9);
-            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2};
+            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewPick: isHeadshotDl(cur)};
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
             if(c2 && c2.id) setTimeout(() => pushHub(c2.id), 1500);
           }
@@ -3484,7 +3484,9 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 updateSettings({reviewPageUrl: base.trim()});
               }
               const entry = srcs.join(',');
-              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry){
+              // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
+              // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
+              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick)){
                 copyText(reviewShareText(d, order, client, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
@@ -3524,7 +3526,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry});
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewPick: isHeadshotDl(d)});
                 copyText(reviewShareText(d, order, client, shortU));
                 postReviewLinkToChat(shortU);
                 const w = window.open('', '_blank');
@@ -3535,7 +3537,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     if(w) w.location = shortU;
                     showToast('✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u}); copyText(reviewShareText(d, order, client, u));
+                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewPick: isHeadshotDl(d)}); copyText(reviewShareText(d, order, client, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});

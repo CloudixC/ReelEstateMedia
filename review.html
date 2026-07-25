@@ -651,6 +651,7 @@ function renderSingle(url){
     attachVid(p.querySelector('video'));
   } else if(r.kind === 'img'){
     p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
+    if(pickMode) p.appendChild(makeWM(260));
     composer('none', '', 'Type your note and Add — it attaches to this image.');
   } else if(r.kind === 'dfolder'){
     if(gkey){
@@ -710,8 +711,11 @@ function renderSingleWithNote(url, note){
 }
 function folderFallback(r, reason){
   const p = document.getElementById('player');
-  p.innerHTML = (reason ? '<div style="background:rgba(234,0,42,.14);border-bottom:1px solid var(--line);padding:10px 14px;font-size:12.5px;color:var(--dim)">📷 Plain folder view — ' + reason + '</div>' : '') +
+  // In headshot proofing mode the picker needs the branded gallery — flag it clearly so proofs are never shown clean by accident.
+  const pickWarn = pickMode ? '<div style="background:rgba(242,169,0,.16);border-bottom:1px solid rgba(242,169,0,.4);padding:10px 14px;font-size:12.5px;color:#f4ba2e">🔒 To star favourites & keep these proofs watermarked, this needs the branded gallery — ask us to re-send the link with the gallery key.</div>' : '';
+  p.innerHTML = pickWarn + (reason ? '<div style="background:rgba(234,0,42,.14);border-bottom:1px solid var(--line);padding:10px 14px;font-size:12.5px;color:var(--dim)">📷 Plain folder view — ' + reason + '</div>' : '') +
     '<iframe class="tall" src="' + r.src + '"></iframe>';
+  if(pickMode) p.appendChild(makeWM(200));
   composer('manual', 'Photo # / filename', 'Browse the folder above. To comment on a photo, type its number or filename (like IMG_2041), your note, then Add.');
 }
 
