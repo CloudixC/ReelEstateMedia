@@ -3209,6 +3209,10 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
       </select>
       <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
       <span className="flex" style={{gap:8}}>
+        {(() => { const lk = d.briefLock || 'auto'; const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
+          return locked
+            ? <span className="pill" style={{background:'rgba(212,160,80,.16)', color:'#e6c079', border:'1px solid rgba(212,160,80,.4)'}} title={lk === 'locked' ? "Brief locked for the agent (manual) — open the brief to unlock" : "Brief auto-locked — the shoot's done. Open the brief to unlock for the agent"}>🔒 Brief locked</span>
+            : (lk === 'open' ? <span className="pill booked" title="You've kept this brief open for the agent to edit">🔓 Brief open</span> : null); })()}
         {(() => { const cd = countdownFor(d); return cd && <span className={'pill ' + cd.tone}>{cd.label}</span>; })()}
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
