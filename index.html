@@ -697,6 +697,8 @@ function orderTotals(o){
 }
 
 const companyOf = c => (c && c.company && c.company.trim()) ? c.company.trim() : 'Independent / Direct';
+// "Content Hub" branding applies to anyone under Royal LePage Pinnacle — by brokerage OR partner/internal tier.
+const isPinnacle = c => !!c && (c.tier === 'partner' || c.tier === 'internal' || /pinnacle/i.test(companyOf(c)));
 const TIER_RANK = {internal: 0, partner: 1, direct: 2};
 const sortClients = list => [...list].sort((a, b) =>
   ((TIER_RANK[a.tier] !== undefined ? TIER_RANK[a.tier] : 3) - (TIER_RANK[b.tier] !== undefined ? TIER_RANK[b.tier] : 3)) ||
@@ -1267,8 +1269,7 @@ function App(){
               ...(bb.caption2 ? {cp2: bb.caption2} : {}),
               ...(bb.lang2 ? {lg: bb.lang2} : {})} : {})}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
-      const pin = c.tier === 'partner' || c.tier === 'internal' ||
-        (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
+      const pin = isPinnacle(c);
       const co = companyOf(c);
       // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
       const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail,
@@ -1371,7 +1372,7 @@ function App(){
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
             const vers2 = [...(cur.reviewVersions || [])];
             if(!vers2.includes(entry2)) vers2.push(entry2);
-            const pin2 = c2.tier === 'partner' || c2.tier === 'internal';
+            const pin2 = isPinnacle(c2);
             const full2 = base2 + '?p=' + encodeURIComponent(o2.project || cur.group) +
               '&d=' + encodeURIComponent(dlTitle(cur)) +
               '&n=' + encodeURIComponent((c2.name || '').split(' ')[0]) +
@@ -2416,7 +2417,7 @@ function ActionQueue({db, openOrderDetail, goCalendar}){
       btn: db.settings.briefFormUrl ? '📋 Form link' : 'Open →',
       act: () => {
         if(!db.settings.briefFormUrl){ openOrderDetail(d.orderId, d.id); return; }
-        const pin = c.tier === 'partner' || c.tier === 'internal';
+        const pin = isPinnacle(c);
         const u = db.settings.briefFormUrl + '?p=' + encodeURIComponent(o.project || d.group) +
           '&n=' + encodeURIComponent((c.name || '').split(' ')[0]) + '&t=' + (pin ? 'pin' : 'rem') +
           '&r=' + encodeURIComponent(d.id) +
@@ -2679,7 +2680,7 @@ function buildBriefForm(d, o, c){
   const SC = '<scr' + 'ipt>';
   const SCE = '</scr' + 'ipt>';
   const b = getBrief(d);
-  const pin = c && (c.tier === 'partner' || c.tier === 'internal');
+  const pin = isPinnacle(c);
   const brandH1 = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
   const subline = pin ? 'Royal LePage Pinnacle \u00B7 Agent Pre-Shoot Brief' : 'Pre-Shoot Brief';
   const briefEmail = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
@@ -3444,7 +3445,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 if(!base || base === 'https://') return;
                 updateSettings({briefFormUrl: base.trim()});
               }
-              const pin = client && (client.tier === 'partner' || client.tier === 'internal');
+              const pin = isPinnacle(client);
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pin ? 'pin' : 'rem') +
@@ -3486,7 +3487,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               const entry = srcs.join(',');
               // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
               // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
-              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick)){
+              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
                 copyText(reviewShareText(d, order, client, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
@@ -3499,7 +3500,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 if(k && k.trim()) updateSettings({driveApiKey: k.trim()});
               }
               updateDeliverable(d.id, {reviewVersions: vers});
-              const pinC = client && (client.tier === 'partner' || client.tier === 'internal');
+              const pinC = isPinnacle(client);
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&d=' + encodeURIComponent(dlTitle(d)) +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
@@ -3526,7 +3527,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewPick: isHeadshotDl(d)});
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC});
                 copyText(reviewShareText(d, order, client, shortU));
                 postReviewLinkToChat(shortU);
                 const w = window.open('', '_blank');
@@ -3537,7 +3538,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     if(w) w.location = shortU;
                     showToast('✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewPick: isHeadshotDl(d)}); copyText(reviewShareText(d, order, client, u));
+                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC}); copyText(reviewShareText(d, order, client, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
