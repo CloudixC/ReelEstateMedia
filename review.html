@@ -266,6 +266,29 @@ textarea{flex:1;min-width:200px}
 .cmark{width:46px;height:46px;flex:none}
 @media(max-width:600px){.cmark{width:40px;height:40px}}
 h1#brand em{font-style:normal;color:var(--amber)}
+/* ---------- 🖼 headshot favourites bar ---------- */
+#pickbar.pickbar{background:linear-gradient(180deg,rgba(242,169,0,.13),rgba(242,169,0,.05));border:1px solid rgba(242,169,0,.42);border-radius:14px;padding:14px 16px;margin:0 0 16px;display:flex;flex-wrap:wrap;align-items:center;gap:14px}
+.pickbar .pb-info{flex:1;min-width:210px}
+.pickbar .pb-title{font-family:var(--serif);font-weight:600;font-size:1rem;color:var(--txt)}
+.pickbar .pb-sub{font-size:.82rem;color:var(--mist);margin-top:3px}
+.pickbar .pb-sub b{color:#f4ba2e;font-weight:700}
+.pickbar .pb-meter{height:7px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:10px;max-width:300px}
+.pickbar .pb-meter i{display:block;height:100%;background:var(--amber);transition:width .3s}
+.pickbar .pb-meter i.over{background:var(--red)}
+.pickbar .pb-confirm{background:var(--amber);color:#1a1205;border:none;border-radius:999px;padding:11px 18px;font-family:var(--mono);font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;transition:transform .2s}
+.pickbar .pb-confirm:hover{transform:translateY(-1px)}
+.pickbar .pb-confirm.done{background:rgba(76,195,138,.16);border:1px solid var(--teal);color:var(--teal);cursor:default}
+#pktoast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#232323;border:1px solid var(--line2);color:var(--txt);padding:12px 18px;border-radius:12px;font-size:.86rem;z-index:95;box-shadow:0 12px 34px rgba(0,0,0,.6);max-width:88vw;text-align:center;display:none}
+/* watermark overlay containers */
+#bigwrap{position:relative}
+.lbimg{position:relative;display:inline-block;line-height:0}
+.wmk{border-radius:inherit}
+/* picks overlay: per-image unlock / download */
+.picksgrid figure figcaption{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:6px}
+.pk-dl{background:var(--teal);color:#08130d;border:none;border-radius:999px;padding:6px 12px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.pk-lock{background:rgba(0,0,0,.72);color:#f4ba2e;border:1px solid rgba(242,169,0,.5);border-radius:999px;padding:6px 11px;font-family:var(--mono);font-size:.58rem;font-weight:700;letter-spacing:.05em}
+.picksov .pnote{color:var(--mist);font-size:.82rem;margin:0 4px 12px;line-height:1.5}
+.picksov .pnote b{color:#f4ba2e}
 </style></head><body><div class="wrap">
 <div class="topbar">
   <div class="lock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div><h1 id="brand"></h1><div class="sub" id="subline"></div></div></div>
@@ -274,6 +297,7 @@ h1#brand em{font-style:normal;color:var(--amber)}
 <div class="proj" id="proj"></div>
 <p class="reviewing">Star the shots you love — <b>pause any video to pin a note at that exact second.</b></p>
 <div id="duebanner"></div>
+<div id="pickbar" style="display:none"></div>
 <div class="vtabs" id="vtabs"><button class="cmpbtn" id="cmpbtn" style="display:none" onclick="cmpToggle()">⇄ Compare</button><span class="revtrack" id="revtrack" style="display:none"></span></div>
 <div class="player" id="player"></div>
 <div class="thumbs" id="thumbs"></div>
@@ -347,7 +371,30 @@ const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComp
 const capParam = q.get('cap') || '';
 const bookParam = q.get('book') || '';
 const incParam = parseInt(q.get('inc') || '', 10);
+// 🖼 Headshot favourites: pick=<included count>, xp=<price per extra>. When set, the gallery
+// caps the free favourites and bills extras beyond it (client's request is flagged to the studio).
+const pickCap = parseInt(q.get('pick') || '', 10);
+const xPrice = parseInt(q.get('xp') || '', 10) || 10;
+const pickMode = !isNaN(pickCap) && pickCap > 0;
 const KEY = 'rem_rev_' + project + '_' + dname;
+const PICKOK_KEY = 'rem_pickok_' + project + '_' + dname;
+const RELKEY = 'rem_rel_' + project + '_' + dname;
+const REL_MARK = '[[REL]]';           // studio release signal, carried on a chat msg from jag
+let extrasReleased = false;
+try{ extrasReleased = localStorage.getItem(RELKEY) === '1'; }catch(e){}
+// proofing watermark tile (SVG, tinted white) — built once, applied as an overlay in pickMode
+const WM_SVG = 'data:image/svg+xml,' + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='168'>" +
+  "<text x='150' y='92' font-family='Arial,Helvetica,sans-serif' font-size='19' font-weight='700' fill='rgba(255,255,255,0.34)' text-anchor='middle' transform='rotate(-27 150 86)'>REEL ESTATE MEDIA</text></svg>");
+function makeWM(size){
+  const d = document.createElement('div'); d.className = 'wmk';
+  d.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;background-image:url("' + WM_SVG + '");background-repeat:repeat;background-size:' + (size || 230) + 'px auto;background-position:center';
+  return d;
+}
+// A pick is "unlocked" (clean download) if it's within the included count, or the studio released the extras.
+function pickRank(name){ return photoPicks().indexOf(name); }
+function isUnlocked(name){ const r = pickRank(name); return r > -1 && (r < pickCap || extrasReleased); }
+function dlHref(g){ return g.fileId ? 'https://drive.google.com/uc?export=download&id=' + g.fileId : g.big; }
 const SKEY = 'rem_sel_' + project + '_' + dname;
 let sels = {};
 try{ sels = JSON.parse(localStorage.getItem(SKEY) || '{}'); }catch(e){}
@@ -689,12 +736,14 @@ function buildGallery(items){
       else { const d = document.createElement('div'); d.className = 'thumbph'; d.textContent = '🎬'; w.appendChild(d); }
       w.onclick = () => { curImg = idx; syncGallery(); openLightbox(); };
       if(g.isVid && g.thumb){ const pb = document.createElement('span'); pb.className = 'pb'; pb.textContent = '▶'; w.appendChild(pb); }
+      if(pickMode && !g.isVid) w.appendChild(makeWM(96));
       const ncEl = document.createElement('span'); ncEl.className = 'ncount'; ncEl.style.display = 'none'; w.appendChild(ncEl);
       th.appendChild(w);
     });
   };
   addSection('📷 Photos', ph, 0);
   addSection('🎬 Video', vd, ph.length);
+  if(pickMode){ const _ps = document.getElementById('presbtn'); if(_ps) _ps.style.display = 'none'; }   // no clean slideshow while proofing
   const gname = q.get('goto');
   if(gname && !window.__gotoDone){
     const gi2 = gallery.findIndex(x => x.name === gname);
@@ -746,6 +795,9 @@ function syncGallery(){
     else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
   }
   window.__navDir = 0;
+  // 🖼 proofing watermark over the big image (headshot pick mode)
+  if(pickMode && !g.isVid){ if(!bw.querySelector('.wmk')) bw.appendChild(makeWM(260)); }
+  else { const w0 = bw.querySelector('.wmk'); if(w0) w0.remove(); }
   preloadAround();
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
   document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
@@ -765,7 +817,14 @@ function syncGallery(){
   const sb = document.getElementById('selbtn');
   if(sb){ const on = picks.includes(g.name); sb.textContent = on ? '⭐' : '☆'; sb.classList.toggle('on', on); }
   const sc = document.getElementById('selcount');
-  if(sc) sc.textContent = picks.length ? '⭐ ' + picks.length + ' picked' : '';
+  if(sc){
+    if(pickMode){
+      const np = picks.filter(nm => gallery.some(x => !x.isVid && x.name === nm)).length;
+      const ex = Math.max(0, np - pickCap);
+      sc.textContent = np ? ('⭐ ' + Math.min(np, pickCap) + '/' + pickCap + (ex ? ' +' + ex + ' extra' : '')) : '';
+    } else sc.textContent = picks.length ? '⭐ ' + picks.length + ' picked' : '';
+  }
+  renderPickBar();
   document.getElementById('chips').style.display = '';
   // highlight current thumb + picks (account for section headers)
   let gi = 0;
@@ -786,7 +845,14 @@ function toggleSel(){
   const g = gallery[curImg]; if(!g) return;
   const a = sels[cur] = sels[cur] || [];
   const i = a.indexOf(g.name);
-  if(i >= 0) a.splice(i, 1); else a.push(g.name);
+  if(i >= 0) a.splice(i, 1);
+  else {
+    a.push(g.name);
+    if(pickMode && !g.isVid){
+      const np = a.filter(nm => gallery.some(x => !x.isVid && x.name === nm)).length;
+      if(np === pickCap + 1) toastPick("That's 1 past your " + pickCap + ' included — extra shots are $' + xPrice + ' each. Confirm below when you’re happy.');
+    }
+  }
   try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){}
   pushReview();
   syncGallery();
@@ -808,7 +874,7 @@ function openLightbox(){
   if(document.getElementById('lbov')) return;
   const ov = document.createElement('div');
   ov.id = 'lbov';
-  ov.innerHTML = '<img>' +
+  ov.innerHTML = (pickMode ? '<div class="lbimg"><img></div>' : '<img>') +
     '<div class="lbbar">' +
     '<button class="lbb" id="lbprev" title="Previous photo">‹</button>' +
     '<span class="lbcap" id="lbcap"></span>' +
@@ -819,6 +885,7 @@ function openLightbox(){
     '</div>';
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
+  if(pickMode){ const lw = ov.querySelector('.lbimg'); if(lw && !lw.querySelector('.wmk')) lw.appendChild(makeWM(230)); }
   const draw = (dir) => {
     const g = gallery[curImg];
     swapImg(img, g.big, dir || 0);
@@ -1215,6 +1282,63 @@ function showPtMark(pt, pending){
 }
 function voiceUrl(txt){ const m = String(txt || '').match(/drive\.google\.com\/file\/d\/([^\/?#]+)/); if(m && /🎙|voice note/i.test(txt)) return 'https://drive.google.com/uc?export=download&id=' + m[1]; return null; }
 function updatePicksBtn(){ const pb = document.getElementById('picksbtn'); if(!pb) return; const n = (sels[cur] || []).length; pb.style.display = n ? 'inline-block' : 'none'; pb.textContent = '⭐ My picks (' + n + ')'; }
+function toastPick(msg){
+  let t = document.getElementById('pktoast');
+  if(!t){ t = document.createElement('div'); t.id = 'pktoast'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(window.__pkT); window.__pkT = setTimeout(function(){ t.style.display = 'none'; }, 3800);
+}
+function photoPicks(){ return (sels[cur] || []).filter(function(nm){ return gallery.some(function(x){ return !x.isVid && x.name === nm; }); }); }
+function renderPickBar(){
+  const el = document.getElementById('pickbar'); if(!el) return;
+  const photos = gallery.filter(function(g){ return !g.isVid; });
+  if(!pickMode || photos.length === 0){ el.style.display = 'none'; return; }
+  el.className = 'pickbar';
+  const picks = photoPicks();
+  const n = picks.length, extra = Math.max(0, n - pickCap), cost = extra * xPrice;
+  const pct = Math.min(100, Math.round(n / pickCap * 100));
+  let confirmed = false; try{ confirmed = localStorage.getItem(PICKOK_KEY) === String(n) && n > 0; }catch(e){}
+  const sub = extra > 0
+    ? (extrasReleased
+        ? '<b>' + pickCap + ' included</b> + <b>' + extra + ' extra ✓ unlocked</b> — open ⭐ My picks to download them all.'
+        : '<b>' + pickCap + ' included</b> + <b>' + extra + ' extra</b> × $' + xPrice + ' = <b>$' + cost + '</b>. Your ' + pickCap + ' are ready now; the extras unlock once payment’s received.')
+    : (n >= pickCap ? '<b>' + n + ' / ' + pickCap + '</b> favourites — you’re all set. Want more? Extras are $' + xPrice + ' each.'
+                    : '<b>' + n + ' / ' + pickCap + '</b> favourites picked' + (n ? ' — ' + (pickCap - n) + ' to go.' : '. Tap the ☆ on each shot you love.'));
+  const btnLabel = confirmed
+    ? '✓ Sent — we’ve got your picks'
+    : (extra > 0 ? 'Confirm + ' + extra + ' extra ($' + cost + ')' : 'Confirm my ' + n + ' pick' + (n !== 1 ? 's' : ''));
+  el.innerHTML =
+    '<div class="pb-info">' +
+      '<div class="pb-title">⭐ Pick your ' + pickCap + ' favourite headshots</div>' +
+      '<div class="pb-sub">' + sub + '</div>' +
+      '<div class="pb-meter"><i class="' + (extra > 0 ? 'over' : '') + '" style="width:' + pct + '%"></i></div>' +
+    '</div>' +
+    '<button class="pb-confirm' + (confirmed ? ' done' : '') + '" onclick="confirmPicks()">' + btnLabel + '</button>';
+  el.style.display = '';
+}
+function confirmPicks(){
+  const picks = photoPicks();
+  const n = picks.length;
+  if(n === 0){ toastPick('Star your favourite shots first — tap the ☆ on each one.'); return; }
+  const extra = Math.max(0, n - pickCap), cost = extra * xPrice;
+  const body = '⭐ HEADSHOT PICKS — ' + identity + '\n' +
+    n + ' selected · ' + Math.min(n, pickCap) + ' included' + (extra ? ' + ' + extra + ' extra' : '') + '\n' +
+    (extra ? '💳 Extra images to invoice: ' + extra + ' × $' + xPrice + ' = $' + cost + '\n' : '') +
+    'Chosen: ' + picks.join(', ');
+  if(endpoint){
+    fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref: ref, project: project, dname: dname, who: identity, body: body})}).catch(function(){});
+    try{
+      const hk = q.get('hk') || '', an = q.get('an') ? decodeURIComponent(q.get('an')) : '';
+      if(hk && an) fetch(endpoint, {method:'POST', keepalive:true, body: JSON.stringify({kind:'msg', ref: hk, project: an + ' — ' + dname, dname:'', who: identity, from:'agent',
+        body: '⭐ Picked ' + n + ' headshot' + (n !== 1 ? 's' : '') + (extra ? ' (' + pickCap + ' included + ' + extra + ' extra · $' + cost + ')' : '') + '.'})}).catch(function(){});
+    }catch(e){}
+  }
+  try{ localStorage.setItem(PICKOK_KEY, String(n)); }catch(e){}
+  renderPickBar();
+  toastPick(extra
+    ? '✓ Sent! We’ll confirm your ' + extra + ' extra image' + (extra !== 1 ? 's' : '') + ' ($' + cost + ') and get everything ready.'
+    : '✓ Your ' + n + ' favourite' + (n !== 1 ? 's' : '') + ' are in — thank you!');
+}
 function updateRevTrack(){
   const el = document.getElementById('revtrack'); if(!el) return;
   if(!isNaN(incParam) && incParam > 0){ const left = Math.max(0, incParam - cur); el.textContent = 'V' + (cur + 1) + ' · ' + left + ' of ' + incParam + ' revisions left'; el.style.display = 'inline-flex'; }
@@ -1222,24 +1346,59 @@ function updateRevTrack(){
   else { el.style.display = 'none'; }
 }
 function showPicks(){
-  const picks = (sels[cur] || []);
   const photos = gallery.filter(g => !g.isVid);
-  const items = photos.filter(g => picks.includes(g.name));
+  // In pick mode, order by pick order so the first `pickCap` read as the included favourites.
+  const items = pickMode
+    ? photoPicks().map(nm => photos.find(g => g.name === nm)).filter(Boolean)
+    : photos.filter(g => (sels[cur] || []).includes(g.name));
   const ov = document.createElement('div'); ov.className = 'picksov'; ov.id = 'picksov';
   const close = document.createElement('button'); close.className = 'pclose'; close.textContent = '✕ Close'; close.onclick = () => ov.remove(); ov.appendChild(close);
   const h = document.createElement('h3'); ov.appendChild(h);
-  const grid = document.createElement('div'); grid.className = 'picksgrid';
-  const setH = () => { h.textContent = '⭐ My picks · ' + (sels[cur] || []).length + ' of ' + photos.length + ' photos'; };
+  const setH = () => {
+    const np = pickMode ? photoPicks().length : (sels[cur] || []).length;
+    h.textContent = pickMode
+      ? '⭐ My picks · ' + Math.min(np, pickCap) + ' included' + (np > pickCap ? ' + ' + (np - pickCap) + ' extra' : '')
+      : '⭐ My picks · ' + np + ' of ' + photos.length + ' photos';
+  };
   setH();
+  if(pickMode){
+    const np = photoPicks().length, ex = Math.max(0, np - pickCap);
+    const note = document.createElement('div'); note.className = 'pnote';
+    note.innerHTML = ex > 0
+      ? (extrasReleased
+          ? 'Your <b>' + pickCap + ' included</b> and <b>' + ex + ' extra</b> images are all unlocked — tap ⬇ on each to download the clean, watermark-free file.'
+          : 'Your <b>' + pickCap + ' included</b> images are ready to download. The <b>' + ex + ' extra</b> stay locked until payment is received — we’ll unlock them the moment it’s in.')
+      : 'Tap ⬇ on any pick to download the clean, watermark-free file. Your first <b>' + pickCap + '</b> are included; extras beyond that are $' + xPrice + ' each.';
+    ov.appendChild(note);
+  }
+  const grid = document.createElement('div'); grid.className = 'picksgrid';
   if(items.length === 0) grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center;padding:32px">No picks yet — tap ☆ on the shots you love.</div>';
   items.forEach(g => {
     const fig = document.createElement('figure');
     const im = document.createElement('img'); im.src = g.thumb || g.big; im.loading = 'lazy'; fig.appendChild(im);
     const un = document.createElement('button'); un.className = 'un'; un.textContent = '✕'; un.title = 'Remove from picks';
-    un.onclick = () => { const a = sels[cur] || []; const i = a.indexOf(g.name); if(i >= 0) a.splice(i, 1); try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){} pushReview(); fig.remove(); setH(); updatePicksBtn(); syncGallery(); };
-    fig.appendChild(un); grid.appendChild(fig);
+    un.onclick = () => { const a = sels[cur] || []; const i = a.indexOf(g.name); if(i >= 0) a.splice(i, 1); try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){} pushReview(); ov.remove(); showPicks(); updatePicksBtn(); renderPickBar(); syncGallery(); };
+    fig.appendChild(un);
+    if(pickMode){
+      const unlocked = isUnlocked(g.name);
+      if(!unlocked) fig.appendChild(makeWM(110));   // extras stay watermarked until released
+      const cap = document.createElement('figcaption');
+      if(unlocked){ const a = document.createElement('a'); a.className = 'pk-dl'; a.href = dlHref(g); a.target = '_blank'; a.rel = 'noreferrer'; a.setAttribute('download', ''); a.textContent = '⬇ Download'; cap.appendChild(a); }
+      else { const l = document.createElement('span'); l.className = 'pk-lock'; l.textContent = '🔒 after payment'; cap.appendChild(l); }
+      fig.appendChild(cap);
+    }
+    grid.appendChild(fig);
   });
   ov.appendChild(grid); document.body.appendChild(ov);
+}
+// Studio released the extras (after payment) → unlock downloads live.
+function applyRelease(){
+  extrasReleased = true;
+  try{ localStorage.setItem(RELKEY, '1'); }catch(e){}
+  renderPickBar();
+  const ov = document.getElementById('picksov'); if(ov){ ov.remove(); showPicks(); }
+  if(gallery.length) syncGallery();
+  toastPick('🔓 Your extra images are unlocked — open ⭐ My picks to download them all!');
 }
 function forwardReview(){
   const url = location.href; const btn = document.getElementById('fwdbtn');
@@ -1418,12 +1577,15 @@ function loadThread(){
     .then(x => x.json()).then(j => {
       const box = document.getElementById('tmsgs');
       const rows = (j.rows || []);
+      // 🔓 studio released the paid extras? (marker msg from jag) — unlock live
+      if(pickMode && !extrasReleased && rows.some(m => m.from === 'jag' && String(m.body || '').indexOf(REL_MARK) === 0)) applyRelease();
       if(rows.length === 0){ box.innerHTML = '<div class="tempty">No messages yet — say hi, it lands directly with us.</div>'; return; }
       box.innerHTML = rows.map(m => {
         const mine = m.from !== 'jag';
+        const bodyTxt = String(m.body || '').indexOf(REL_MARK) === 0 ? String(m.body).slice(REL_MARK.length).trim() : String(m.body || '');
         return '<div class="bub ' + (mine ? 'me' : 'them') + '"><span class="bwho">' +
           (m.from === 'jag' ? 'Reel Estate Media' : escT(m.who || 'You')) + ' · ' + (m.ts || '').slice(5, 16).replace('T', ' ') +
-          '</span>' + escT(m.body || '') + '</div>';
+          '</span>' + escT(bodyTxt) + '</div>';
       }).join('');
       studioMsgCount = rows.filter(m => m.from === 'jag').length;
       if(typeof paintChatBadge === 'function') paintChatBadge();

@@ -390,6 +390,10 @@ function inferMedia(txt){
   return 'video';
 }
 const mediaOf = d => d.mediaType || inferMedia((d.name || '') + ' ' + (d.group || ''));
+/* Headshots get the "pick your 10 favourites, extras billed" review flow */
+const HEADSHOT_PICKS = 10, HEADSHOT_XPRICE = 10;
+const isHeadshotDl = d => /head\s?shot|portrait/i.test((d.name || '') + ' ' + (d.group || ''));
+const pickParams = d => isHeadshotDl(d) ? ('&pick=' + HEADSHOT_PICKS + '&xp=' + HEADSHOT_XPRICE) : '';
 const MEDIA_LABEL = {photo:'📷 Photo', video:'🎬 Video', both:'📷+🎬 Photo & Video'};
 /* Video-type items (video or both) need script/song/orientation and get the 5-business-day window */
 const isVideoDl = d => mediaOf(d) !== 'photo';
@@ -852,7 +856,8 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     return s.body;
   };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
-    !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
+    !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id) &&
+    !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0)).reverse();
   const testis = subs.filter(s => s.kind === 'testimonial').reverse();
   const wallState = {};
   subs.forEach(s => { if(s.kind === 'wall'){ try{ wallState[s.ref] = !!JSON.parse(s.body).on; }catch(e){} } });
@@ -1377,6 +1382,7 @@ function App(){
               '&r=' + encodeURIComponent(cur.id) +
               '&e=' + encodeURIComponent(db.settings.inboxUrl) +
               '&v=' + vers2.map(encodeURIComponent).join('|') +
+              pickParams(cur) +
               (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
             const code2 = Math.random().toString(36).slice(2, 9);
             patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2};
@@ -3276,6 +3282,25 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           {lk !== 'auto' && <button className="btn ghost sm" title="Back to automatic — open before the shoot, locked once it’s shot" onClick={() => updateDeliverable(d.id, {briefLock: 'auto'})}>↺ Auto</button>}
         </div>;
       })()}
+      {isHeadshotDl(d) && (() => {
+        const released = !!d.extrasReleased;
+        return <div className="lockbar" style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'8px 10px', marginBottom:10, borderRadius:8, background:'rgba(76,195,138,.08)', border:'1px solid rgba(76,195,138,.3)'}}>
+          <span className="small" style={{flex:1, minWidth:160}}>
+            🖼 Headshot proofs are watermarked — their {HEADSHOT_PICKS} picks unlock free.
+            {released ? ' ✓ Extras released.' : ' Extras (' + '$' + HEADSHOT_XPRICE + ' each) unlock when you release them after payment.'}
+          </span>
+          <button className="btn sm" title="Once you've received payment for the extra images, this unlocks them on the client's review page" onClick={() => {
+            const hk = client && (client.hubKey || client.hubId);
+            if(!db.settings.inboxUrl){ alert('Connect the inbox first (Settings) so the release can reach their review page.'); return; }
+            if(!confirm((released ? 'Send the unlock again' : 'Release the extra images') + ' for ' + dlTitle(d) + '?\nThis unlocks the paid extras on ' + ((client && client.name) || 'the client') + "'s review page for download.")) return;
+            fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id,
+              project: ((client && client.name) || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
+              body: '[[REL]]🔓 Payment received — your extra headshots are unlocked! Open “⭐ My picks” on your review page to download them.'})}).catch(() => {});
+            updateDeliverable(d.id, {extrasReleased: true});
+            showToast('🔓 Extra images released for ' + dlTitle(d) + ' — they can download them now.');
+          }}>{released ? '↻ Re-send unlock' : '🔓 Release extra images'}</button>
+        </div>;
+      })()}
       <div className="bgrid">
         <div>
           <label className="f">Media Type</label>
@@ -3483,6 +3508,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
+                pickParams(d) +
                 (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') +
                 // hub code + agent name so the review page can route comments back into this project's chat
                 ((client && (client.hubKey || client.hubId)) ? '&hk=' + encodeURIComponent(client.hubKey || client.hubId) + '&an=' + encodeURIComponent(client.name || '') : '');
