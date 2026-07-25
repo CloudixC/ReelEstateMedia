@@ -271,6 +271,18 @@ body.assist #billingwrap{display:none !important}
 .bcard .bfsec{font-family:var(--mono,var(--sans));font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);font-weight:700;margin:6px 0 2px}
 .bcard input:disabled,.bcard textarea:disabled,.bcard select:disabled{opacity:.85;color:var(--txt);cursor:default;background:rgba(5,5,6,.4);border-style:dashed;border-color:var(--line);-webkit-text-fill-color:var(--txt)}
 .bcard .bflock{background:rgba(212,160,80,.12);border:1px solid rgba(212,160,80,.4);border-radius:11px;padding:11px 13px;margin:2px 0 12px;font-size:13px;line-height:1.5;color:var(--txt)}
+/* ---- ⭐ rating prompt ---- */
+.rcard{text-align:center;max-width:420px}
+.rcard h3{margin-bottom:4px}
+.rcard .bsub{text-align:center}
+.rstars{display:flex;gap:9px;justify-content:center;margin:16px 0 4px;font-size:40px;line-height:1;cursor:pointer;user-select:none}
+.rstar{color:rgba(255,255,255,.16);transition:color .12s,transform .12s}
+body.light .rstar{color:rgba(0,0,0,.14)}
+.rstar.on{color:#f0c04a;text-shadow:0 2px 14px rgba(240,192,74,.4)}
+.rstar:hover{transform:scale(1.13)}
+.rword{min-height:19px;font-size:13px;font-weight:700;color:#f0c04a;margin-bottom:12px}
+.rcard textarea{margin-top:2px;text-align:left}
+.rcard .bact{justify-content:space-between;margin-top:16px}
 .bact{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
 .bact .mini{padding:10px 16px}
 .bact .go{width:auto;padding:11px 20px;display:inline-flex}
@@ -1245,6 +1257,94 @@ function render(raw){
   updateWelcome();
   loadBookings();
   loadBrand();
+  maybeAskRating(items);
+}
+/* ---- ⭐ Post-shoot + post-edit ratings — two chances to hear how we did ---- */
+var RATE_Q = [], RATE_CUR = null, ratingModal = null, RATE_STARS = 0;
+function ratedState(){ try{ return JSON.parse(localStorage.getItem('rem_hub_rated_v1:' + a)) || {}; }catch(e){ return {}; } }
+function ratedSet(key, val){ var s = ratedState(); s[key] = val; try{ localStorage.setItem('rem_hub_rated_v1:' + a, JSON.stringify(s)); }catch(e){} }
+function ratedSkipSession(key){ try{ sessionStorage.setItem('rem_hub_rskip_v1:' + a + ':' + key, '1'); }catch(e){} }
+function ratedSkippedSession(key){ try{ return sessionStorage.getItem('rem_hub_rskip_v1:' + a + ':' + key) === '1'; }catch(e){ return false; } }
+function rDaysSince(dt){ if(!dt) return 0; var d = new Date(String(dt) + 'T12:00:00'); if(isNaN(d.getTime())) return 999; var t = new Date(); t.setHours(12, 0, 0, 0); return Math.round((t - d) / 86400000); }
+function maybeAskRating(items){
+  var done = ratedState(), q = [];
+  (items || []).forEach(function(x){
+    if(!x.id || !x.t) return;
+    var recent = !x.dt || rDaysSince(x.dt) <= 60;   // don't suddenly nag about ancient projects
+    if(!recent) return;
+    if(x.si >= 2 || x.dv){                            // shoot done (status ≥ 'Shot') → rate the shoot
+      var ks = x.id + ':shoot';
+      if(done[ks] !== 'done' && !ratedSkippedSession(ks)) q.push({dref: x.id, phase: 'shoot', title: x.t, dt: x.dt || ''});
+    }
+    if(x.dv){                                          // delivered → rate the edit
+      var ke = x.id + ':edit';
+      if(done[ke] !== 'done' && !ratedSkippedSession(ke)) q.push({dref: x.id, phase: 'edit', title: x.t, dt: x.dt || ''});
+    }
+  });
+  // most recent milestone first; within a project ask the shoot before the edit (chronological)
+  q.sort(function(a2, b2){ if(String(b2.dt) !== String(a2.dt)) return String(b2.dt).localeCompare(String(a2.dt)); return (a2.phase === 'shoot' ? 0 : 1) - (b2.phase === 'shoot' ? 0 : 1); });
+  RATE_Q = q.slice(0, 3);                              // cap per visit — gentle, never a wall of prompts
+  if(RATE_Q.length) setTimeout(nextRating, 1300);
+}
+function nextRating(){
+  if(!RATE_Q.length){ if(ratingModal) ratingModal.classList.remove('on'); return; }
+  RATE_CUR = RATE_Q.shift();
+  openRatingModal(RATE_CUR);
+}
+function ensureRatingModal(){
+  if(ratingModal) return ratingModal;
+  ratingModal = document.createElement('div');
+  ratingModal.className = 'bmodal rmodal';
+  ratingModal.innerHTML = '<div class="bcard rcard">' +
+    '<h3 id="rt-title">How did we do?</h3>' +
+    '<div class="bsub" id="rt-sub"></div>' +
+    '<div class="rstars" id="rt-stars">' + [1, 2, 3, 4, 5].map(function(n){ return '<span class="rstar" data-n="' + n + '">★</span>'; }).join('') + '</div>' +
+    '<div class="rword" id="rt-word"></div>' +
+    '<textarea id="rt-comment" rows="3" maxlength="600" placeholder="Anything you want to add? (optional)"></textarea>' +
+    '<div class="bact"><button class="mini" id="rt-skip">Maybe later</button><button class="go" id="rt-send">Send rating <span class="ar">→</span></button></div>' +
+    '</div>';
+  document.body.appendChild(ratingModal);
+  var starBox = ratingModal.querySelector('#rt-stars');
+  var word = ratingModal.querySelector('#rt-word');
+  var WORDS = {1: 'Sorry to hear — tell us what missed', 2: 'Below par', 3: 'Solid', 4: 'Really good', 5: 'Loved it! 🌟'};
+  function paint(nSel){
+    starBox.querySelectorAll('.rstar').forEach(function(s){ s.classList.toggle('on', (+s.getAttribute('data-n')) <= nSel); });
+    word.textContent = nSel ? (WORDS[nSel] || '') : '';
+  }
+  starBox.addEventListener('click', function(e){ var s = e.target.closest ? e.target.closest('.rstar') : null; if(!s) return; RATE_STARS = +s.getAttribute('data-n'); paint(RATE_STARS); });
+  starBox.addEventListener('mousemove', function(e){ var s = e.target.closest ? e.target.closest('.rstar') : null; if(s) paint(+s.getAttribute('data-n')); });
+  starBox.addEventListener('mouseleave', function(){ paint(RATE_STARS); });
+  var skip = function(){ if(RATE_CUR) ratedSkipSession(RATE_CUR.dref + ':' + RATE_CUR.phase); ratingModal.classList.remove('on'); setTimeout(nextRating, 260); };
+  ratingModal.querySelector('#rt-skip').addEventListener('click', skip);
+  ratingModal.addEventListener('click', function(e){ if(e.target === ratingModal) skip(); });
+  ratingModal.querySelector('#rt-send').addEventListener('click', function(){
+    if(!RATE_CUR) return;
+    if(!RATE_STARS){ word.textContent = 'Tap a star to rate 👆'; return; }
+    var comment = (ratingModal.querySelector('#rt-comment').value || '').trim();
+    var cur = RATE_CUR, stars = RATE_STARS;
+    var btn = ratingModal.querySelector('#rt-send'); btn.disabled = true; btn.textContent = 'Sending…';
+    fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({
+      kind: 'rating', ref: cur.dref, project: (AGENTNAME || 'Agent') + ' — ' + cur.title,
+      dname: cur.phase + ':' + stars, who: AGENTNAME || 'Agent', from: '', body: comment })}).catch(function(){});
+    ratedSet(cur.dref + ':' + cur.phase, 'done');
+    ratingModal.classList.remove('on');
+    toast(stars >= 4 ? '🌟 Thank you — that means a lot!' : '🙏 Thanks for the honest feedback — we’ll use it.');
+    btn.disabled = false; btn.innerHTML = 'Send rating <span class="ar">→</span>';
+    setTimeout(nextRating, 420);
+  });
+  return ratingModal;
+}
+function openRatingModal(item){
+  var m = ensureRatingModal();
+  RATE_STARS = 0;
+  m.querySelectorAll('#rt-stars .rstar').forEach(function(s){ s.classList.remove('on'); });
+  m.querySelector('#rt-word').textContent = '';
+  m.querySelector('#rt-comment').value = '';
+  var isShoot = item.phase === 'shoot';
+  m.querySelector('#rt-title').textContent = isShoot ? 'How was your shoot? 🎥' : 'How did the final edit land? ✂';
+  m.querySelector('#rt-sub').textContent = item.title + ' — ' + (isShoot ? 'rate the shoot-day experience with the crew.' : 'rate the final edit we delivered.');
+  var send = m.querySelector('#rt-send'); send.disabled = false; send.innerHTML = 'Send rating <span class="ar">→</span>';
+  m.classList.add('on');
 }
 /* ---- 👋 welcome checklist (first visits, checks itself off) ---- */
 var WELCOME = {brand: false, chat: false, book: false};

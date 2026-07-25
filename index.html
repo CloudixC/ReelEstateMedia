@@ -762,7 +762,7 @@ function ThreadPanelButton({db, d, order, client}){
 }
 
 /* ---------------- Client Submissions Inbox ---------------- */
-function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief}){
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating}){
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
@@ -777,9 +777,16 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       setSubs(j.rows || []); setErr('');
       // auto-apply any agent shoot briefs straight into the matching deliverable's brief
       (j.rows || []).forEach(r2 => {
-        if(r2.kind !== 'msg' && r2.kind !== 'brief') return;
-        let o; try { o = JSON.parse(r2.body); } catch(e){ return; }
-        if(o && o.__rc && o.brief && o.brief.dref && o.brief.cc && applyAgentBrief) applyAgentBrief(o.brief.dref, o.brief.cc, r2.ts, r2.who);
+        if(r2.kind === 'msg' || r2.kind === 'brief'){
+          let o; try { o = JSON.parse(r2.body); } catch(e){ return; }
+          if(o && o.__rc && o.brief && o.brief.dref && o.brief.cc && applyAgentBrief) applyAgentBrief(o.brief.dref, o.brief.cc, r2.ts, r2.who);
+          return;
+        }
+        // ⭐ ratings: dname carries "<phase>:<stars>", body is the comment
+        if(r2.kind === 'rating' && r2.ref && applyRating){
+          const parts = String(r2.dname || '').split(':');
+          if(parts.length === 2) applyRating(r2.ref, parts[0], +parts[1], r2.body, r2.ts, r2.who);
+        }
       });
     } catch(e){ setErr('Inbox unreachable: ' + (e.message || e)); }
   };
@@ -798,8 +805,15 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     </div>);
   const latestFb = {};
   subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
-  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1, brand: 1, perf: 1};
+  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1, brand: 1, perf: 1, rating: 1};
   const prettyBody = s => {
+    if(s.kind === 'rating'){
+      const parts = String(s.dname || '').split(':');
+      const stars = Math.max(0, Math.min(5, +parts[1] || 0));
+      const phase = parts[0] === 'edit' ? 'the edit' : 'the shoot';
+      return '★'.repeat(stars) + '☆'.repeat(5 - stars) + '  ' + stars + '/5 · rated ' + phase +
+        (s.body ? '\n“' + s.body + '”' : '\n(no comment left)');
+    }
     if(s.kind === 'perf'){
       try{ const o = JSON.parse(s.body); return (o.mood === 'up' ? '📈 Crushing it' : o.mood === 'mid' ? '😐 Doing okay' : '📉 Quiet so far') + (o.t ? ' — ' + o.t : ''); }catch(e){ return s.body; }
     }
@@ -878,7 +892,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
           <div className="flex">
-            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : '💬 Feedback'}</span>
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : s.kind === 'rating' ? 'editing' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : s.kind === 'rating' ? (String(s.dname || '').split(':')[0] === 'edit' ? '✂ Edit rating' : '🎥 Shoot rating') : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
           </div>
@@ -906,6 +920,8 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
                 updateDeliverable(dl.id, {notes: ((dl.notes || '') + '\n\n— Client feedback ' + (s.ts || '').slice(0,10) + ' —\n' + s.body).trim()});
                 markHandled(s.id);
               }}>✓ Save to deliverable notes</button>}
+            {s.kind === 'rating' && (+String(s.dname || '').split(':')[1] >= 4) && (s.body || '').trim() &&
+              <button className={'btn sm' + (wallState[s.id] ? '' : ' ghost')} title="Put this comment on your public testimonial wall (wall.html)" onClick={() => toggleWall(s)}>{wallState[s.id] ? '🌟 On the wall · remove' : '🌟 Use as testimonial'}</button>}
             {dl && <button className="btn ghost sm" onClick={() => openOrderDetail(dl.orderId, dl.id)}>Open →</button>}
             <CopyBtn text={s.body} label="📋 Copy"/>
             <button className="btn ghost sm" onClick={() => markHandled(s.id)}>✕ Done</button>
@@ -1457,6 +1473,19 @@ function App(){
       showToast('📝 Brief from ' + (who || 'the agent') + ' → applied to ' + dlTitle(d) + ' ✓');
     }
   };
+  // ⭐ Agent rated us — a shoot rating (post-shoot) or an edit rating (post-delivery). Idempotent per submission time.
+  const applyRating = (dref, phase, stars, comment, ts, who) => {
+    if(!dref || (phase !== 'shoot' && phase !== 'edit') || !(+stars >= 1)) return;
+    const d = db.deliverables.find(x => x.id === dref);
+    if(!d) return;
+    const cur = d.rating || {};
+    const slot = cur[phase];
+    if(slot && slot.ts && !(String(ts) > String(slot.ts))) return;   // already have this rating (or a newer one)
+    const next = {...cur, [phase]: {stars: +stars, comment: String(comment || ''), ts: String(ts || ''), who: String(who || '')}};
+    updateDeliverable(dref, {rating: next});
+    logActivity('⭐ ' + (who || 'Agent') + ' rated the ' + phase + ' ' + (+stars) + '/5 — ' + dlTitle(d) + (comment ? ' · “' + String(comment).slice(0, 60) + '”' : ''));
+    showToast('⭐ ' + (+stars) + '/5 ' + (phase === 'shoot' ? 'shoot' : 'edit') + ' rating from ' + (who || 'the agent') + ' — ' + dlTitle(d));
+  };
   const updateOrder = (id, patch) => {
     const cur = db.orders.find(o => o.id === id);
     setDb(p => ({...p, orders: p.orders.map(o => o.id === id ? {...o, ...patch} : o)}));
@@ -1713,7 +1742,7 @@ function App(){
       </div>
     </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} />}
+        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
@@ -2457,7 +2486,7 @@ function WinBack({db}){
     </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar}){
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -2512,7 +2541,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
-      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief}/>
+      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
@@ -3213,6 +3242,13 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           return locked
             ? <span className="pill" style={{background:'rgba(212,160,80,.16)', color:'#e6c079', border:'1px solid rgba(212,160,80,.4)'}} title={lk === 'locked' ? "Brief locked for the agent (manual) — open the brief to unlock" : "Brief auto-locked — the shoot's done. Open the brief to unlock for the agent"}>🔒 Brief locked</span>
             : (lk === 'open' ? <span className="pill booked" title="You've kept this brief open for the agent to edit">🔓 Brief open</span> : null); })()}
+        {d.rating && (d.rating.shoot || d.rating.edit) && (() => {
+          const r = d.rating; const parts = [];
+          if(r.shoot) parts.push('🎥 ' + r.shoot.stars + '★');
+          if(r.edit) parts.push('✂ ' + r.edit.stars + '★');
+          const title = ['shoot','edit'].filter(k => r[k]).map(k => (k === 'shoot' ? 'Shoot' : 'Edit') + ': ' + r[k].stars + '/5' + (r[k].comment ? ' — “' + r[k].comment + '”' : '') + (r[k].who ? ' (' + r[k].who + ')' : '')).join('\n');
+          return <span className="pill" style={{background:'rgba(240,192,74,.15)', color:'#e6c079', border:'1px solid rgba(240,192,74,.4)'}} title={title}>{parts.join(' · ')}</span>;
+        })()}
         {(() => { const cd = countdownFor(d); return cd && <span className={'pill ' + cd.tone}>{cd.label}</span>; })()}
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
