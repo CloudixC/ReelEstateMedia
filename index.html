@@ -390,10 +390,6 @@ function inferMedia(txt){
   return 'video';
 }
 const mediaOf = d => d.mediaType || inferMedia((d.name || '') + ' ' + (d.group || ''));
-/* Headshots get the "pick your 10 favourites, extras billed" review flow */
-const HEADSHOT_PICKS = 10, HEADSHOT_XPRICE = 10;
-const isHeadshotDl = d => /head\s?shot|portrait/i.test((d.name || '') + ' ' + (d.group || ''));
-const pickParams = d => isHeadshotDl(d) ? ('&pick=' + HEADSHOT_PICKS + '&xp=' + HEADSHOT_XPRICE) : '';
 const MEDIA_LABEL = {photo:'📷 Photo', video:'🎬 Video', both:'📷+🎬 Photo & Video'};
 /* Video-type items (video or both) need script/song/orientation and get the 5-business-day window */
 const isVideoDl = d => mediaOf(d) !== 'photo';
@@ -418,10 +414,11 @@ const svc = id => CATALOG.find(s => s.id === id);
 
 const LS_KEY = 'rem_pipeline_v1';
 /* Client tiers:
-   partner  = agent booking via Pinnacle Command Centre → bills REM rate, Pinnacle earns the retail spread
-   internal = house work for Pinnacle itself → bills REM rate, NO margin (nobody pays retail)
-   direct   = REM's own client → bills retail rate */
-const TIER_LABEL = {partner:'Agent · via Pinnacle', internal:'Pinnacle Internal', direct:'Direct · retail', unlimited:'Unlimited Plan · monthly'};
+   partner  = "Royal LePage" pricing — booking via the Content Hub → bills REM rate, Pinnacle earns the retail spread as margin.
+              (This now also covers what used to be "Pinnacle Internal" house work, so that work earns margin too.)
+   direct   = REM's own retail client → bills retail rate (retail-to-the-world, launching later)
+   unlimited= flat monthly retainer, services included */
+const TIER_LABEL = {partner:'Royal LePage', internal:'Royal LePage', direct:'Direct · retail', unlimited:'Unlimited Plan · monthly'};
 const rateFor = (tier, s) => tier === 'unlimited' ? 0 : tier === 'direct' ? s.retail : s.partner;
 /* Each bookable service's Calendly event — powers the hub's deep-linked Book buttons */
 const CAL_EVENT_SLUG = {
@@ -437,13 +434,15 @@ const CAL_EVENT_SLUG = {
   t1:'virtual-tour', t2:'floor-plans-virtual-tour', t4:'dedicated-twilight-shoot'
 };
 const seed = {
-  clients: [{id:'pinnacle', name:'Pinnacle (Internal)', tier:'internal', company:'Pinnacle', contact:'Command Centre', notes:'House work for the brokerage itself — no margin'}],
+  clients: [{id:'pinnacle', name:'Pinnacle', tier:'partner', company:'Royal LePage Pinnacle', contact:'Command Centre', notes:'Royal LePage Pinnacle house work — billed at Royal LePage pricing so it earns margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
-  settings: {pinnacleGoal: 1000, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''}
+  settings: {pinnacleGoal: 1500, emailMap: {}, eventMap: {}, reviewLink: '', briefFormUrl: '', calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''}
 };
 function migrate(d){
   if(d && d.clients){
-    if(!d.settings) d.settings = {pinnacleGoal:1000};
+    if(!d.settings) d.settings = {pinnacleGoal:1500};
+    // Pinnacle margin target bumped to $1,500/mo (was $1,000) now that house work counts toward it
+    if(!d.settings.pinnacleGoal || d.settings.pinnacleGoal === 1000) d.settings.pinnacleGoal = 1500;
     if(!d.settings.emailMap) d.settings.emailMap = {};
     if(!d.settings.eventMap) d.settings.eventMap = {};
     if(d.settings.briefFormUrl === 'https://cloudixc.github.io/brief-form.html')
@@ -464,7 +463,8 @@ function migrate(d){
     d.clients = d.clients.map(c => {
       const c2 = {...c};
       if(c2.company === undefined) c2.company = (c2.tier === 'partner' || c2.tier === 'internal') ? 'Pinnacle' : '';
-      if(c2.id === 'pinnacle' && c2.tier === 'partner'){ c2.tier = 'internal'; if(c2.name === 'Pinnacle') c2.name = 'Pinnacle (Internal)'; }
+      // 🏷 "Pinnacle Internal" retired → house work now bills at Royal LePage pricing so it earns margin toward the goal
+      if(c2.tier === 'internal'){ c2.tier = 'partner'; if(c2.name === 'Pinnacle (Internal)') c2.name = 'Pinnacle'; }
       return c2;
     });
     return d;
@@ -531,11 +531,10 @@ function reviewMsg(d, o, c){
 }
 
 // Concise share text so a pasted review link names the property (the preview card can't — crawlers don't run the page's JS)
-function reviewShareText(d, o, c, url){
-  const agent = (c && c.name) ? String(c.name).trim() : '';
-  const proj = dlTitle(d);                                  // the reel/project name, e.g. "Before Real Estate Reel Part 1"
-  const head = agent ? agent + ' · ' + proj : proj;         // agent name, then project name
-  return `🎬 ${head} — ready for your review 👀` + (url ? `\n${url}` : '');
+function reviewShareText(d, o, url){
+  const ttl = dlTitle(d);
+  const proj = (o && o.project && o.project !== ttl) ? ' · ' + o.project : '';
+  return `🎬 ${ttl}${proj} — ready for your review 👀` + (url ? `\n${url}` : '');
 }
 
 function deliveryMsg(d, o, c){
@@ -697,8 +696,6 @@ function orderTotals(o){
 }
 
 const companyOf = c => (c && c.company && c.company.trim()) ? c.company.trim() : 'Independent / Direct';
-// "Content Hub" branding applies to anyone under Royal LePage Pinnacle — by brokerage OR partner/internal tier.
-const isPinnacle = c => !!c && (c.tier === 'partner' || c.tier === 'internal' || /pinnacle/i.test(companyOf(c)));
 const TIER_RANK = {internal: 0, partner: 1, direct: 2};
 const sortClients = list => [...list].sort((a, b) =>
   ((TIER_RANK[a.tier] !== undefined ? TIER_RANK[a.tier] : 3) - (TIER_RANK[b.tier] !== undefined ? TIER_RANK[b.tier] : 3)) ||
@@ -768,7 +765,7 @@ function ThreadPanelButton({db, d, order, client}){
 }
 
 /* ---------------- Client Submissions Inbox ---------------- */
-function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating}){
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled}){
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
@@ -781,19 +778,6 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || 'fetch failed');
       setSubs(j.rows || []); setErr('');
-      // auto-apply any agent shoot briefs straight into the matching deliverable's brief
-      (j.rows || []).forEach(r2 => {
-        if(r2.kind === 'msg' || r2.kind === 'brief'){
-          let o; try { o = JSON.parse(r2.body); } catch(e){ return; }
-          if(o && o.__rc && o.brief && o.brief.dref && o.brief.cc && applyAgentBrief) applyAgentBrief(o.brief.dref, o.brief.cc, r2.ts, r2.who);
-          return;
-        }
-        // ⭐ ratings: dname carries "<phase>:<stars>", body is the comment
-        if(r2.kind === 'rating' && r2.ref && applyRating){
-          const parts = String(r2.dname || '').split(':');
-          if(parts.length === 2) applyRating(r2.ref, parts[0], +parts[1], r2.body, r2.ts, r2.who);
-        }
-      });
     } catch(e){ setErr('Inbox unreachable: ' + (e.message || e)); }
   };
   useEffect(() => { if(!cfg) return; load(); const t = setInterval(load, 5 * 60 * 1000); return () => clearInterval(t); }, [cfg]);
@@ -811,15 +795,8 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     </div>);
   const latestFb = {};
   subs.forEach(s => { if(s.kind === 'feedback' && s.ref) latestFb[s.ref] = s.id; });
-  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1, brand: 1, perf: 1, rating: 1};
+  const FEED_KINDS = {brief: 1, msg: 1, feedback: 1, testimonial: 1, brand: 1, perf: 1};
   const prettyBody = s => {
-    if(s.kind === 'rating'){
-      const parts = String(s.dname || '').split(':');
-      const stars = Math.max(0, Math.min(5, +parts[1] || 0));
-      const phase = parts[0] === 'edit' ? 'the edit' : 'the shoot';
-      return '★'.repeat(stars) + '☆'.repeat(5 - stars) + '  ' + stars + '/5 · rated ' + phase +
-        (s.body ? '\n“' + s.body + '”' : '\n(no comment left)');
-    }
     if(s.kind === 'perf'){
       try{ const o = JSON.parse(s.body); return (o.mood === 'up' ? '📈 Crushing it' : o.mood === 'mid' ? '😐 Doing okay' : '📉 Quiet so far') + (o.t ? ' — ' + o.t : ''); }catch(e){ return s.body; }
     }
@@ -858,8 +835,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
     return s.body;
   };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
-    !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id) &&
-    !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0)).reverse();
+    !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id)).reverse();
   const testis = subs.filter(s => s.kind === 'testimonial').reverse();
   const wallState = {};
   subs.forEach(s => { if(s.kind === 'wall'){ try{ wallState[s.ref] = !!JSON.parse(s.body).on; }catch(e){} } });
@@ -899,7 +875,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
           <div className="flex">
-            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : s.kind === 'rating' ? 'editing' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : s.kind === 'rating' ? (String(s.dname || '').split(':')[0] === 'edit' ? '✂ Edit rating' : '🎥 Shoot rating') : '💬 Feedback'}</span>
+            <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
           </div>
@@ -927,8 +903,6 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
                 updateDeliverable(dl.id, {notes: ((dl.notes || '') + '\n\n— Client feedback ' + (s.ts || '').slice(0,10) + ' —\n' + s.body).trim()});
                 markHandled(s.id);
               }}>✓ Save to deliverable notes</button>}
-            {s.kind === 'rating' && (+String(s.dname || '').split(':')[1] >= 4) && (s.body || '').trim() &&
-              <button className={'btn sm' + (wallState[s.id] ? '' : ' ghost')} title="Put this comment on your public testimonial wall (wall.html)" onClick={() => toggleWall(s)}>{wallState[s.id] ? '🌟 On the wall · remove' : '🌟 Use as testimonial'}</button>}
             {dl && <button className="btn ghost sm" onClick={() => openOrderDetail(dl.orderId, dl.id)}>Open →</button>}
             <CopyBtn text={s.body} label="📋 Copy"/>
             <button className="btn ghost sm" onClick={() => markHandled(s.id)}>✕ Done</button>
@@ -1251,25 +1225,18 @@ function App(){
         .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
           const owing = showBal && d.status === 'Delivered' && o.payment && o.payment !== 'paid';
-          // 🪞 mirror the brief content Jag has entered so the agent sees it pre-filled on their hub
-          const bb = getBrief(d);
-          const br = {};
-          ['topic','orientation','style','song','scriptText','location'].forEach(k => { if(bb[k] && bb[k] !== 'Needed' && bb[k] !== 'N/A') br[k] = bb[k]; });
-          // 🔒 lock: 'auto' (default) locks once the shoot is done (status index >= 2 = 'Shot'); 'open'/'locked' override
-          const briefLock = d.briefLock || 'auto';
-          const brLocked = briefLock === 'locked' || (briefLock !== 'open' && STATUSES.indexOf(d.status) >= 2);
-          return {id: d.id, t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
+          return {t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
-            br: br, lk: brLocked ? 1 : 0,
-            ...(d.status === 'Delivered' ? {
+            ...(d.status === 'Delivered' ? (() => { const bb = getBrief(d); return {
               ...(bb.caption ? {cp: bb.caption} : {}),
               ...(bb.caption2 ? {cp2: bb.caption2} : {}),
-              ...(bb.lang2 ? {lg: bb.lang2} : {})} : {})}; })
+              ...(bb.lang2 ? {lg: bb.lang2} : {})}; })() : {})}; })
         .sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
-      const pin = isPinnacle(c);
+      const pin = c.tier === 'partner' || c.tier === 'internal' ||
+        (c.tier === 'unlimited' && /pinnacle/i.test(companyOf(c)));
       const co = companyOf(c);
       // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
       const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail,
@@ -1367,12 +1334,12 @@ function App(){
         const base2 = db.settings.reviewPageUrl;
         if(srcs2.length && base2 && db.settings.inboxUrl){
           const entry2 = srcs2.join(',');
-          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (!isHeadshotDl(cur) || cur.reviewPick))){
+          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2)){
             const o2 = db.orders.find(x => x.id === cur.orderId) || {};
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
             const vers2 = [...(cur.reviewVersions || [])];
             if(!vers2.includes(entry2)) vers2.push(entry2);
-            const pin2 = isPinnacle(c2);
+            const pin2 = c2.tier === 'partner' || c2.tier === 'internal';
             const full2 = base2 + '?p=' + encodeURIComponent(o2.project || cur.group) +
               '&d=' + encodeURIComponent(dlTitle(cur)) +
               '&n=' + encodeURIComponent((c2.name || '').split(' ')[0]) +
@@ -1383,10 +1350,9 @@ function App(){
               '&r=' + encodeURIComponent(cur.id) +
               '&e=' + encodeURIComponent(db.settings.inboxUrl) +
               '&v=' + vers2.map(encodeURIComponent).join('|') +
-              pickParams(cur) +
               (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
             const code2 = Math.random().toString(36).slice(2, 9);
-            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewPick: isHeadshotDl(cur)};
+            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2};
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
             if(c2 && c2.id) setTimeout(() => pushHub(c2.id), 1500);
           }
@@ -1449,49 +1415,6 @@ function App(){
       logActivity(`Renamed "${cur.name}" → "${patch.name}"${o2.project ? ' · ' + o2.project : ''}`);
       if(c2 && c2.id && (c2.hubKey || c2.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c2.id), 900);
     }
-    // 🔒 lock state changed → refresh the agent's hub so their brief locks/unlocks right away
-    if(cur && patch.briefLock !== undefined && patch.briefLock !== (cur.briefLock || 'auto')){
-      const o3 = db.orders.find(x => x.id === cur.orderId) || {};
-      const c3 = db.clients.find(x => x.id === o3.clientId) || {};
-      if(c3 && c3.id && (c3.hubKey || c3.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c3.id), 700);
-    }
-  };
-  // 📝 Agent filled the shoot brief → drop it straight into this deliverable's brief (idempotent per submission time).
-  const applyAgentBrief = (dref, cc, ts, who) => {
-    if(!dref || !cc || !ts) return;
-    const d = db.deliverables.find(x => x.id === dref);
-    if(!d) return;
-    // 🔒 brief locked (shoot's done, or manually locked)? Don't accept agent-side changes.
-    const _lk = d.briefLock || 'auto';
-    if(_lk === 'locked' || (_lk !== 'open' && STATUSES.indexOf(d.status) >= 2)){
-      showToast('🔒 ' + (who || 'The agent') + ' tried to update the brief for ' + dlTitle(d) + ", but it's locked — unlock it to accept changes.");
-      return;
-    }
-    const b = getBrief(d);
-    if(b._briefTs && !(String(ts) > String(b._briefTs))) return;   // already applied this one (or a newer one)
-    const merged = {...b, _briefTs: String(ts)};
-    let changed = 0;
-    ['topic', 'orientation', 'style', 'song', 'script', 'scriptText', 'location'].forEach(k => {
-      if(cc[k] != null && cc[k] !== '' && cc[k] !== merged[k]){ merged[k] = cc[k]; changed++; }
-    });
-    updateDeliverable(dref, {brief: merged});
-    if(changed){
-      logActivity('📝 ' + (who || 'Agent') + ' filled the brief for ' + dlTitle(d));
-      showToast('📝 Brief from ' + (who || 'the agent') + ' → applied to ' + dlTitle(d) + ' ✓');
-    }
-  };
-  // ⭐ Agent rated us — a shoot rating (post-shoot) or an edit rating (post-delivery). Idempotent per submission time.
-  const applyRating = (dref, phase, stars, comment, ts, who) => {
-    if(!dref || (phase !== 'shoot' && phase !== 'edit') || !(+stars >= 1)) return;
-    const d = db.deliverables.find(x => x.id === dref);
-    if(!d) return;
-    const cur = d.rating || {};
-    const slot = cur[phase];
-    if(slot && slot.ts && !(String(ts) > String(slot.ts))) return;   // already have this rating (or a newer one)
-    const next = {...cur, [phase]: {stars: +stars, comment: String(comment || ''), ts: String(ts || ''), who: String(who || '')}};
-    updateDeliverable(dref, {rating: next});
-    logActivity('⭐ ' + (who || 'Agent') + ' rated the ' + phase + ' ' + (+stars) + '/5 — ' + dlTitle(d) + (comment ? ' · “' + String(comment).slice(0, 60) + '”' : ''));
-    showToast('⭐ ' + (+stars) + '/5 ' + (phase === 'shoot' ? 'shoot' : 'edit') + ' rating from ' + (who || 'the agent') + ' — ' + dlTitle(d));
   };
   const updateOrder = (id, patch) => {
     const cur = db.orders.find(o => o.id === id);
@@ -1749,7 +1672,7 @@ function App(){
       </div>
     </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} />}
+        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
@@ -2239,7 +2162,7 @@ function ReviewTab({db, clientName, pushHub, openOrderDetail, showToast}){
           <span className={'pill ' + stClass(d.status)}>{STATUS_LABEL(d.status)}</span>
           {approvedOf(d) && <span className="pill delivered">✓ Approved</span>}
           <span className="spacer"></span>
-          {d.reviewUrl && <CopyBtn text={reviewShareText(d, o, c, d.reviewUrl)} label="📋 Share link"/>}
+          {d.reviewUrl && <CopyBtn text={reviewShareText(d, o, d.reviewUrl)} label="📋 Share link"/>}
           {d.reviewUrl && <button className="btn ghost sm" onClick={() => window.open(d.reviewUrl, '_blank')}>Room ↗</button>}
           <button className="btn ghost sm" onClick={() => openOrderDetail(d.orderId, d.id)}>Order →</button>
         </div>
@@ -2417,7 +2340,7 @@ function ActionQueue({db, openOrderDetail, goCalendar}){
       btn: db.settings.briefFormUrl ? '📋 Form link' : 'Open →',
       act: () => {
         if(!db.settings.briefFormUrl){ openOrderDetail(d.orderId, d.id); return; }
-        const pin = isPinnacle(c);
+        const pin = c.tier === 'partner' || c.tier === 'internal';
         const u = db.settings.briefFormUrl + '?p=' + encodeURIComponent(o.project || d.group) +
           '&n=' + encodeURIComponent((c.name || '').split(' ')[0]) + '&t=' + (pin ? 'pin' : 'rem') +
           '&r=' + encodeURIComponent(d.id) +
@@ -2493,7 +2416,7 @@ function WinBack({db}){
     </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating}){
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -2548,7 +2471,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
-      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating}/>
+      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
@@ -2680,7 +2603,7 @@ function buildBriefForm(d, o, c){
   const SC = '<scr' + 'ipt>';
   const SCE = '</scr' + 'ipt>';
   const b = getBrief(d);
-  const pin = isPinnacle(c);
+  const pin = c && (c.tier === 'partner' || c.tier === 'internal');
   const brandH1 = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
   const subline = pin ? 'Royal LePage Pinnacle \u00B7 Agent Pre-Shoot Brief' : 'Pre-Shoot Brief';
   const briefEmail = pin ? 'contenthub@rlppinnacle.ca' : 'hello@reelestatemedia.com';
@@ -3245,17 +3168,6 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
       </select>
       <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
       <span className="flex" style={{gap:8}}>
-        {(() => { const lk = d.briefLock || 'auto'; const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
-          return locked
-            ? <span className="pill" style={{background:'rgba(212,160,80,.16)', color:'#e6c079', border:'1px solid rgba(212,160,80,.4)'}} title={lk === 'locked' ? "Brief locked for the agent (manual) — open the brief to unlock" : "Brief auto-locked — the shoot's done. Open the brief to unlock for the agent"}>🔒 Brief locked</span>
-            : (lk === 'open' ? <span className="pill booked" title="You've kept this brief open for the agent to edit">🔓 Brief open</span> : null); })()}
-        {d.rating && (d.rating.shoot || d.rating.edit) && (() => {
-          const r = d.rating; const parts = [];
-          if(r.shoot) parts.push('🎥 ' + r.shoot.stars + '★');
-          if(r.edit) parts.push('✂ ' + r.edit.stars + '★');
-          const title = ['shoot','edit'].filter(k => r[k]).map(k => (k === 'shoot' ? 'Shoot' : 'Edit') + ': ' + r[k].stars + '/5' + (r[k].comment ? ' — “' + r[k].comment + '”' : '') + (r[k].who ? ' (' + r[k].who + ')' : '')).join('\n');
-          return <span className="pill" style={{background:'rgba(240,192,74,.15)', color:'#e6c079', border:'1px solid rgba(240,192,74,.4)'}} title={title}>{parts.join(' · ')}</span>;
-        })()}
         {(() => { const cd = countdownFor(d); return cd && <span className={'pill ' + cd.tone}>{cd.label}</span>; })()}
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
@@ -3267,41 +3179,6 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
     </div>
     {open &&
     <div className="brief">
-      {(() => {
-        const lk = d.briefLock || 'auto';
-        const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
-        return <div className="lockbar" style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'8px 10px', marginBottom:10, borderRadius:8, background: locked ? 'rgba(212,160,80,.10)' : 'rgba(255,255,255,.04)', border:'1px solid ' + (locked ? 'rgba(212,160,80,.35)' : 'rgba(255,255,255,.08)')}}>
-          <span className="small" style={{flex:1, minWidth:160}}>
-            {locked
-              ? '🔒 Locked on the agent’s hub — they can see this brief but can’t change it.'
-              : '🔓 Open on the agent’s hub — the agent can still edit and re-send this brief.'}
-            {lk === 'auto' && <span className="faint"> · auto-locks once the shoot’s done</span>}
-          </span>
-          <button className="btn ghost sm" onClick={() => updateDeliverable(d.id, {briefLock: locked ? 'open' : 'locked'})}>
-            {locked ? '🔓 Unlock for agent' : '🔒 Lock now'}
-          </button>
-          {lk !== 'auto' && <button className="btn ghost sm" title="Back to automatic — open before the shoot, locked once it’s shot" onClick={() => updateDeliverable(d.id, {briefLock: 'auto'})}>↺ Auto</button>}
-        </div>;
-      })()}
-      {isHeadshotDl(d) && (() => {
-        const released = !!d.extrasReleased;
-        return <div className="lockbar" style={{display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'8px 10px', marginBottom:10, borderRadius:8, background:'rgba(76,195,138,.08)', border:'1px solid rgba(76,195,138,.3)'}}>
-          <span className="small" style={{flex:1, minWidth:160}}>
-            🖼 Headshot proofs are watermarked — their {HEADSHOT_PICKS} picks unlock free.
-            {released ? ' ✓ Extras released.' : ' Extras (' + '$' + HEADSHOT_XPRICE + ' each) unlock when you release them after payment.'}
-          </span>
-          <button className="btn sm" title="Once you've received payment for the extra images, this unlocks them on the client's review page" onClick={() => {
-            const hk = client && (client.hubKey || client.hubId);
-            if(!db.settings.inboxUrl){ alert('Connect the inbox first (Settings) so the release can reach their review page.'); return; }
-            if(!confirm((released ? 'Send the unlock again' : 'Release the extra images') + ' for ' + dlTitle(d) + '?\nThis unlocks the paid extras on ' + ((client && client.name) || 'the client') + "'s review page for download.")) return;
-            fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id,
-              project: ((client && client.name) || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
-              body: '[[REL]]🔓 Payment received — your extra headshots are unlocked! Open “⭐ My picks” on your review page to download them.'})}).catch(() => {});
-            updateDeliverable(d.id, {extrasReleased: true});
-            showToast('🔓 Extra images released for ' + dlTitle(d) + ' — they can download them now.');
-          }}>{released ? '↻ Re-send unlock' : '🔓 Release extra images'}</button>
-        </div>;
-      })()}
       <div className="bgrid">
         <div>
           <label className="f">Media Type</label>
@@ -3445,7 +3322,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 if(!base || base === 'https://') return;
                 updateSettings({briefFormUrl: base.trim()});
               }
-              const pin = isPinnacle(client);
+              const pin = client && (client.tier === 'partner' || client.tier === 'internal');
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pin ? 'pin' : 'rem') +
@@ -3485,10 +3362,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 updateSettings({reviewPageUrl: base.trim()});
               }
               const entry = srcs.join(',');
-              // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
-              // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
-              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
-                copyText(reviewShareText(d, order, client, d.reviewUrl));
+              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry){
+                copyText(reviewShareText(d, order, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
                 return;
@@ -3500,7 +3375,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 if(k && k.trim()) updateSettings({driveApiKey: k.trim()});
               }
               updateDeliverable(d.id, {reviewVersions: vers});
-              const pinC = isPinnacle(client);
+              const pinC = client && (client.tier === 'partner' || client.tier === 'internal');
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&d=' + encodeURIComponent(dlTitle(d)) +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
@@ -3511,25 +3386,13 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
-                pickParams(d) +
-                (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') +
-                // hub code + agent name so the review page can route comments back into this project's chat
-                ((client && (client.hubKey || client.hubId)) ? '&hk=' + encodeURIComponent(client.hubKey || client.hubId) + '&an=' + encodeURIComponent(client.name || '') : '');
+                (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
               const qs = u.split('?').slice(1).join('?');
-              // drop the review link into the agent's project chat so everything stays in one thread
-              const postReviewLinkToChat = (link) => {
-                const hk = client && (client.hubKey || client.hubId);
-                if(!hk || !db.settings.inboxUrl) return;
-                fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hk,
-                  project: (client.name || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
-                  body:'🎬 Your review for “' + dlTitle(d) + '” is ready — tap to watch & leave your notes:\n' + link})}).catch(() => {});
-              };
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC});
-                copyText(reviewShareText(d, order, client, shortU));
-                postReviewLinkToChat(shortU);
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry});
+                copyText(reviewShareText(d, order, shortU));
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
                 if(client) setTimeout(() => pushHub(client.id), 1200);
@@ -3538,11 +3401,11 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     if(w) w.location = shortU;
                     showToast('✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC}); copyText(reviewShareText(d, order, client, u));
+                    updateDeliverable(d.id, {reviewUrl: u}); copyText(reviewShareText(d, order, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
-                copyText(reviewShareText(d, order, client, u));
+                copyText(reviewShareText(d, order, u));
                 window.open(u, '_blank');
               }
             }}>🎬 Review room{d.reviewVersions && d.reviewVersions.length > 1 ? ' · V' + d.reviewVersions.length : ''}</button>
@@ -3785,8 +3648,7 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
     <div style={{marginTop:14}}>
       <ClientPicker db={db} value={clientId} onChange={setClientId} />
       {!learned && <div className="flex" style={{marginTop:6, gap:14}}>
-        <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('partner')}>+ add "{bk.invitee_name}" as Pinnacle agent</button>
-        <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('internal')}>+ add as Pinnacle internal (no margin)</button>
+        <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('partner')}>+ add "{bk.invitee_name}" as a Royal LePage agent</button>
       </div>}
     </div>
     {bkBlocked &&
@@ -4340,8 +4202,7 @@ function NewOrderModal({db, onClose, onSave, addClient}){
           <div>
             <label className="f">Type</label>
             <select value={qTier} onChange={e => { setQTier(e.target.value); if(e.target.value === 'direct') setQCo(''); else if(!qCo) setQCo('Pinnacle'); }}>
-              <option value="partner">Pinnacle Agent</option>
-              <option value="internal">Pinnacle Internal</option>
+              <option value="partner">Royal LePage</option>
               <option value="direct">Direct Client</option>
             </select>
           </div>
@@ -4463,8 +4324,7 @@ function NewClientModal({onClose, onSave}){
         <div>
           <label className="f">Type</label>
           <select value={tier} onChange={e => setTier(e.target.value)}>
-            <option value="partner">Pinnacle Agent — REM rate, Pinnacle earns the retail spread</option>
-            <option value="internal">Pinnacle Internal — REM rate, house work, no margin</option>
+            <option value="partner">Royal LePage — Pinnacle pricing, Pinnacle earns the retail spread</option>
             <option value="direct">Direct Client — retail rate, no Pinnacle involvement</option>
             <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
@@ -4525,8 +4385,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <div>
           <label className="f">Type</label>
           <select value={tier} onChange={e => setTier(e.target.value)}>
-            <option value="partner">Pinnacle Agent — REM rate, Pinnacle earns the retail spread</option>
-            <option value="internal">Pinnacle Internal — REM rate, house work, no margin</option>
+            <option value="partner">Royal LePage — Pinnacle pricing, Pinnacle earns the retail spread</option>
             <option value="direct">Direct Client — retail rate, no Pinnacle involvement</option>
             <option value="unlimited">Unlimited Plan — flat monthly retainer, services included</option>
           </select>
