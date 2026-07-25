@@ -382,10 +382,12 @@ const RELKEY = 'rem_rel_' + project + '_' + dname;
 const REL_MARK = '[[REL]]';           // studio release signal, carried on a chat msg from jag
 let extrasReleased = false;
 try{ extrasReleased = localStorage.getItem(RELKEY) === '1'; }catch(e){}
-// proofing watermark tile (SVG, tinted white) — built once, applied as an overlay in pickMode
+// proofing watermark tile (SVG, tinted white) — built once, applied as an overlay in pickMode.
+// Pinnacle agents are branded "The Content Hub"; everyone else is "Reel Estate Media".
+const WM_TEXT = pin ? 'THE CONTENT HUB' : 'REEL ESTATE MEDIA';
 const WM_SVG = 'data:image/svg+xml,' + encodeURIComponent(
   "<svg xmlns='http://www.w3.org/2000/svg' width='300' height='168'>" +
-  "<text x='150' y='92' font-family='Arial,Helvetica,sans-serif' font-size='19' font-weight='700' fill='rgba(255,255,255,0.34)' text-anchor='middle' transform='rotate(-27 150 86)'>REEL ESTATE MEDIA</text></svg>");
+  "<text x='150' y='92' font-family='Arial,Helvetica,sans-serif' font-size='19' font-weight='700' fill='rgba(255,255,255,0.34)' text-anchor='middle' transform='rotate(-27 150 86)'>" + WM_TEXT + "</text></svg>");
 function makeWM(size){
   const d = document.createElement('div'); d.className = 'wmk';
   d.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;background-image:url("' + WM_SVG + '");background-repeat:repeat;background-size:' + (size || 230) + 'px auto;background-position:center';
