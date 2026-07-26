@@ -1679,6 +1679,8 @@ function App(){
     }
     finishBooking(bk, null);
   };
+  // Mark a Calendly event id as already handled so the auto-sync never turns it into a duplicate order.
+  const markImported = (evId) => { if(evId) setDb(p => ({...p, importedIds: p.importedIds.includes(evId) ? p.importedIds : [...p.importedIds, evId]})); };
 
   const applyBookingNew = (bk, clientId, serviceId) => {
     const s = svc(serviceId);
@@ -1797,7 +1799,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -3101,7 +3103,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -3238,16 +3240,62 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
         <div className="dl-row small faint" style={{borderBottom:'1px solid var(--line)'}}>
           <span>Deliverable</span><span>Status</span><span>Shoot date</span><span>Prep / Brief</span>
         </div>
-        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} db={db} updateSettings={updateSettings} />)}
+        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} db={db} updateSettings={updateSettings} />)}
       </div>))}
   </>);
 }
 
 /* ---------------- Deliverable row + production brief ---------------- */
-function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, uncombineDeliverable, db, updateSettings}){
+function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, db, updateSettings}){
   const [showImport, setShowImport] = useState(false);
   const [importTxt, setImportTxt] = useState('');
   const [open, setOpen] = useState(!!defaultOpen);
+  const [calBusy, setCalBusy] = useState(false);
+  const [calMsg, setCalMsg] = useState('');
+  // 📅 Push this shoot straight to Calendly at its set date/time — books the agent + blocks the slot.
+  const bookThisShoot = async () => {
+    const tok = db.settings.calendlyToken;
+    const email = ((client && (client.email || client.contact)) || '').trim();
+    if(!tok){ setCalMsg('Connect Calendly first (Calendar tab).'); return; }
+    if(!email){ setCalMsg('This agent has no email on file — add one in their profile.'); return; }
+    if(!d.shootDate || !d.shootTime){ setCalMsg('Set a shoot date AND a Shoot Start time first.'); return; }
+    const item = ((order && order.items) || []).find(it => it.name === d.group) || ((order && order.items) || [])[0];
+    const slug = item && item.serviceId && CAL_EVENT_SLUG[item.serviceId];
+    if(!slug){ setCalMsg("This shoot type isn't linked to a Calendly event type."); return; }
+    setCalBusy(true); setCalMsg('');
+    try{
+      const H = {Authorization: 'Bearer ' + tok};
+      const jget = async u => { const r = await fetch(u, {headers: H}); if(!r.ok) throw new Error(r.status === 403 ? 'Your Calendly token is read-only — paste a booking-capable one in the Calendar tab.' : 'Calendly ' + r.status); return r.json(); };
+      let user = db.settings.calendlyUser;
+      if(!user){ const me = await jget('https://api.calendly.com/users/me'); user = me.resource.uri; }
+      const ets = await jget('https://api.calendly.com/event_types?user=' + encodeURIComponent(user) + '&count=100&active=true');
+      const T = (ets.collection || []).find(e => e.slug === slug);
+      if(!T){ throw new Error("Couldn't find this shoot type in your Calendly event types."); }
+      const startUTC = new Date(d.shootDate + 'T' + d.shootTime + ':00').toISOString();
+      const body = {event_type: T.uri, start_time: startUTC, invitee: {name: client.name, email: email, timezone: 'America/New_York'}};
+      const loc = (T.locations || []).filter(Boolean)[0];
+      if(loc){ const k = String(loc.kind || '');
+        if(k === 'physical') body.location = {kind: 'physical', location: String(loc.location || 'TBD')};
+        else if(k === 'custom') body.location = {kind: 'custom', location: String(loc.location || '')};
+        else if(k === 'outbound_call') body.location = {kind: 'outbound_call', location: String(loc.phone_number || loc.location || '')};
+        else if(k) body.location = {kind: k}; }
+      const reqQ = (T.custom_questions || []).filter(q => q.enabled && q.required);
+      if(reqQ.length){ const note = (getBrief(d).topic || d.group || 'Shoot').trim() || 'Shoot'; body.questions_and_answers = reqQ.map(q => ({question: q.name, answer: note, position: q.position})); }
+      const r = await fetch('https://api.calendly.com/invitees', {method: 'POST', headers: {...H, 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      if(!r.ok){
+        let dd = ''; try{ const j = await r.json(); dd = j.message || j.title || (j.details && j.details[0] && j.details[0].message) || ''; }catch(e){}
+        if(r.status === 403) throw new Error("This token can't create bookings — paste a booking-capable Calendly token in the Calendar tab.");
+        if(r.status === 422) throw new Error("That exact time isn't open in your Calendly availability — adjust the Shoot Start, or use 📅 Book for an agent to pick an open slot.");
+        throw new Error('Calendly ' + r.status + (dd ? ': ' + dd : ''));
+      }
+      const j = await r.json();
+      const evId = String((j.resource && j.resource.event) || '').split('/').pop();
+      if(markImported) markImported(evId);
+      updateDeliverable(d.id, {status: d.status === 'Booked' ? 'Scheduled' : d.status, calBooked: evId || '1'});
+      (window.showToast || function(){})('📅 Booked in Calendly — ' + ((client && client.name) || 'the agent') + ' invited, slot blocked.');
+    }catch(e){ setCalMsg((e && e.message) || 'Booking failed — check your connection.'); }
+    setCalBusy(false);
+  };
   const rowRef = React.useRef(null);
   useEffect(() => { if(defaultOpen && rowRef.current) setTimeout(() => rowRef.current.scrollIntoView({behavior:'smooth', block:'center'}), 60); }, []);
   // 🔄 script auto-sync: opening the brief pulls the agent's latest hub script.
@@ -3381,6 +3429,21 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           <label className="f">Shoot End</label>
           <input type="time" value={d.shootEnd || ''} onChange={e => updateDeliverable(d.id, {shootEnd: e.target.value})}/>
         </div>
+        {(() => {
+          const item = ((order && order.items) || []).find(it => it.name === d.group) || ((order && order.items) || [])[0];
+          const slug = item && item.serviceId && CAL_EVENT_SLUG[item.serviceId];
+          if(!slug || !db.settings.calendlyToken || d.status === 'Delivered') return null;
+          return <div style={{gridColumn:'1/-1'}}>
+            <label className="f">📅 Calendly</label>
+            {d.calBooked
+              ? <span className="pill delivered" title="This shoot is booked in your Calendly and the slot is blocked">✓ In your Calendly — slot blocked</span>
+              : <>
+                  <button className="btn sm" disabled={calBusy} onClick={bookThisShoot}>{calBusy ? 'Booking…' : '📅 Book this shoot in Calendly'}</button>
+                  <div className="small faint" style={{marginTop:4}}>Sends this shoot’s date &amp; time to Calendly, blocks the slot, and invites {(client && client.name) || 'the agent'}. Needs a Shoot Start time above.</div>
+                </>}
+            {calMsg && <div className="small" style={{color:'var(--red)', marginTop:4}}>{calMsg}</div>}
+          </div>;
+        })()}
         <div>
           <label className="f">Script</label>
           <select value={b.script} onChange={e => setBrief({script: e.target.value})}>
