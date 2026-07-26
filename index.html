@@ -1817,20 +1817,25 @@ function Collapse({title, count, defaultOpen, children}){
 
 function InboxSection(props){
   const [open, setOpen] = useState(false);
+  const [showBook, setShowBook] = useState(false);
   const last = props.db.settings.lastCalendlyCheck;
   const staleDays = last ? daysSince(last) : null;
-  if(props.db.pendingBookings.length > 0) return <Inbox {...props}/>;
+  const connected = !!props.db.settings.calendlyToken;
+  const hasPending = props.db.pendingBookings.length > 0;
   return (<>
+    {showBook && <BookForAgentModal db={props.db} applyBookingNew={props.applyBookingNew} onClose={() => setShowBook(false)}/>}
+    {connected &&
     <div className="card">
       <div className="flex">
-        <strong>Calendly</strong>
-        <span className="small faint">No bookings waiting.{last ? ` Last checked ${staleDays === 0 ? 'today' : staleDays + 'd ago'}.` : ''}</span>
-        {staleDays !== null && staleDays > 3 && <span className="pill editing">time to check</span>}
+        <strong>📅 Calendly</strong>
+        <span className="small faint">{hasPending ? `${props.db.pendingBookings.length} booking${props.db.pendingBookings.length !== 1 ? 's' : ''} waiting for review below.` : `No bookings waiting.${last ? ` Last checked ${staleDays === 0 ? 'today' : staleDays + 'd ago'}.` : ''}`}</span>
+        {!hasPending && staleDays !== null && staleDays > 3 && <span className="pill editing">time to check</span>}
         <span className="spacer"></span>
-        <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Check / Import'}</button>
+        <button className="btn sm" onClick={() => setShowBook(true)}>📅 Book for an agent</button>
+        {!hasPending && <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Hide' : 'Check / Import'}</button>}
       </div>
-    </div>
-    {open && <Inbox {...props}/>}
+    </div>}
+    {(hasPending || open || !connected) && <Inbox {...props}/>}
   </>);
 }
 
@@ -3703,6 +3708,156 @@ function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient, pus
 }
 
 /* ---------------- Calendly Inbox ---------------- */
+function BookForAgentModal({db, applyBookingNew, onClose}){
+  const tok = db.settings.calendlyToken;
+  const bookable = CATALOG.filter(s => CAL_EVENT_SLUG[s.id] && s.retail);
+  const agents = db.clients.filter(c => c.id !== 'pinnacle');
+  const [clientId, setClientId] = useState((agents[0] || {}).id || '');
+  const [serviceId, setServiceId] = useState((bookable[0] || {}).id || '');
+  const [date, setDate] = useState('');
+  const [slots, setSlots] = useState(null);
+  const [slot, setSlot] = useState('');
+  const [note, setNote] = useState('');
+  const [types, setTypes] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const client = db.clients.find(c => c.id === clientId) || {};
+  const email = (client.email || client.contact || '').trim();
+  const slug = CAL_EVENT_SLUG[serviceId];
+  const H = {Authorization: 'Bearer ' + tok};
+  const jget = async (url) => {
+    const r = await fetch(url, {headers: H});
+    if(r.status === 401) throw new Error("Calendly rejected the token (401) — reconnect it in the card above.");
+    if(r.status === 403){ let d = ""; try{ const j = await r.json(); d = j.message || j.title || ""; }catch(e){} throw new Error("Token is missing a needed scope (403)" + (d ? ": " + d : "") + "."); }
+    if(!r.ok) throw new Error("Calendly " + r.status);
+    return r.json();
+  };
+
+  // Load the live event types once (slug -> uri, duration, locations, questions)
+  useEffect(() => {
+    if(!tok){ setMsg("Connect Calendly in the card above first."); return; }
+    let live = true;
+    (async () => {
+      try{
+        let user = db.settings.calendlyUser;
+        if(!user){ const me = await jget("https://api.calendly.com/users/me"); user = me.resource.uri; }
+        const ets = await jget("https://api.calendly.com/event_types?user=" + encodeURIComponent(user) + "&count=100&active=true");
+        const map = {};
+        (ets.collection || []).forEach(e => { map[e.slug] = {uri: e.uri, name: e.name, duration: e.duration || 60, locations: e.locations, questions: e.custom_questions || []}; });
+        if(live) setTypes(map);
+      }catch(e){ if(live) setMsg((e && e.message) || String(e)); }
+    })();
+    return () => { live = false; };
+  }, []);
+
+  // When the date or shoot type changes, pull that day's open slots
+  useEffect(() => {
+    setSlot(''); setSlots(null);
+    if(!date || !types || !types[slug]) return;
+    let live = true;
+    (async () => {
+      setLoadingSlots(true); setMsg('');
+      try{
+        const dayStart = new Date(date + 'T00:00:00');
+        const now = new Date();
+        const start = dayStart > now ? dayStart : new Date(now.getTime() + 120000);
+        const end = new Date(dayStart.getTime() + 24 * 3600 * 1000);
+        const iso = x => x.toISOString().replace(/\.\d{3}Z$/, 'Z');
+        const j = await jget("https://api.calendly.com/event_type_available_times?event_type=" + encodeURIComponent(types[slug].uri) + "&start_time=" + encodeURIComponent(iso(start)) + "&end_time=" + encodeURIComponent(iso(end)));
+        if(live) setSlots((j.collection || []).filter(x => x.status === 'available').map(x => x.start_time));
+      }catch(e){ if(live){ setMsg((e && e.message) || String(e)); setSlots([]); } }
+      if(live) setLoadingSlots(false);
+    })();
+    return () => { live = false; };
+  }, [date, serviceId, types]);
+
+  const fmtSlot = s => { try{ return new Date(s).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York'}); }catch(e){ return s; } };
+
+  const book = async () => {
+    if(!clientId){ setMsg("Pick an agent."); return; }
+    if(!email){ setMsg("This agent has no email on file — add one in their profile first."); return; }
+    if(!slot){ setMsg("Pick a time."); return; }
+    const T = types && types[slug];
+    if(!T){ setMsg("Couldn't match this shoot to a Calendly event type."); return; }
+    const reqQ = (T.questions || []).filter(q => q.enabled && q.required);
+    if(reqQ.length && !note.trim()){ setMsg("This shoot type needs a note (e.g. the property address) — fill it in below."); return; }
+    setBusy(true); setMsg('');
+    try{
+      const body = {event_type: T.uri, start_time: slot, invitee: {name: client.name, email: email, timezone: 'America/New_York'}};
+      const loc = (T.locations || []).filter(Boolean)[0];
+      if(loc){ const k = String(loc.kind || '');
+        if(k === 'physical') body.location = {kind: 'physical', location: String(loc.location || 'TBD')};
+        else if(k === 'custom') body.location = {kind: 'custom', location: String(loc.location || '')};
+        else if(k === 'outbound_call') body.location = {kind: 'outbound_call', location: String(loc.phone_number || loc.location || '')};
+        else if(k) body.location = {kind: k}; }
+      const qa = [];
+      (T.questions || []).forEach(q => { if(q.enabled && (q.required || (note.trim() && q.position === 0))) qa.push({question: q.name, answer: note.trim() || 'See Content Hub brief', position: q.position}); });
+      if(qa.length) body.questions_and_answers = qa;
+      const r = await fetch("https://api.calendly.com/invitees", {method: 'POST', headers: {...H, 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      if(!r.ok){
+        let d = ''; try{ const j = await r.json(); d = j.message || j.title || (j.details && j.details[0] && j.details[0].message) || ''; }catch(e){}
+        if(r.status === 401) throw new Error("Calendly rejected the token (401) — reconnect it in the card above.");
+        if(r.status === 403) throw new Error("This token can't create bookings (403" + (d ? ": " + d : "") + "). Generate a Calendly token with booking permission and paste it in the card above.");
+        if(r.status === 422) throw new Error("Calendly couldn't book that (422" + (d ? ": " + d : "") + ") — the slot may have just filled. Pick another time.");
+        throw new Error("Calendly " + r.status + (d ? ": " + d : ""));
+      }
+      const j = await r.json();
+      const res = j.resource || {};
+      const eventUri = String(res.event || '');
+      const bk = {id: (eventUri.split('/').pop()) || uid(), title: T.name, start: slot,
+        end: new Date(new Date(slot).getTime() + (T.duration || 60) * 60000).toISOString(),
+        location: (body.location && body.location.location) || '', invitee_name: client.name, invitee_email: email};
+      applyBookingNew(bk, clientId, serviceId);
+      if(window.showToast) window.showToast("📅 Booked " + (client.name || 'agent') + " — " + T.name + ". It's in your Calendly + the pipeline.");
+      onClose();
+    }catch(e){
+      setBusy(false);
+      setMsg((e && e.message) ? e.message : "Booking failed — this can happen if your browser can't reach Calendly. Try again, and if it keeps failing let Claude know.");
+    }
+  };
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{maxWidth:520}}>
+        <h3 style={{marginBottom:2}}>📅 Book a shoot for an agent</h3>
+        <p className="small muted" style={{marginBottom:12}}>Creates the booking in your Calendly, emails the agent the invite, and drops it straight into the pipeline.</p>
+        <div className="frow">
+          <div><label className="f">Agent</label>
+            <select value={clientId} onChange={e => setClientId(e.target.value)}>
+              {agents.map(c => <option key={c.id} value={c.id}>{c.name}{c.company ? ' — ' + c.company : ''}</option>)}
+            </select></div>
+          <div><label className="f">Shoot type</label>
+            <select value={serviceId} onChange={e => setServiceId(e.target.value)}>
+              {bookable.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select></div>
+        </div>
+        {clientId && !email && <p className="small" style={{color:'var(--red)', marginTop:2}}>⚠ This agent has no email on file — add one in their profile so Calendly can send the invite.</p>}
+        <div className="frow one" style={{marginTop:4}}>
+          <div><label className="f">Date</label>
+            <input type="date" value={date} min={today()} onChange={e => setDate(e.target.value)}/></div>
+        </div>
+        {date && <div style={{marginTop:8}}>
+          <label className="f">Open times{loadingSlots ? <span className="faint"> · checking…</span> : null}</label>
+          {!loadingSlots && slots && slots.length === 0 && <p className="small faint" style={{marginTop:4}}>No open slots that day for this shoot type — try another date.</p>}
+          <div className="flex" style={{flexWrap:'wrap', gap:6, marginTop:4}}>
+            {(slots || []).map(s => <button key={s} type="button" className={'btn sm' + (slot === s ? '' : ' ghost')} onClick={() => setSlot(s)}>{fmtSlot(s)}</button>)}
+          </div>
+        </div>}
+        <div className="frow one" style={{marginTop:10}}>
+          <div><label className="f">Notes / property address <span className="faint">(optional — sent with the booking)</span></label>
+            <input value={note} onChange={e => setNote(e.target.value)} placeholder="123 King St, or anything to help us prep"/></div>
+        </div>
+        {msg && <p className="small" style={{color:'var(--red)', marginTop:8}}>{msg}</p>}
+        <div className="modalfoot">
+          <button className="btn ghost" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="btn" onClick={book} disabled={busy || !slot || !email}>{busy ? 'Booking…' : '📅 Book it'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, applyBookingNew, applyBookingAttach, dismissBooking, orderProgress, addClient, updateSettings}){
   const [tok, setTok] = useState('');
   const [paste, setPaste] = useState('');
@@ -3736,7 +3891,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
       <div style={{marginTop:14, background:'var(--panel2)', border:'1px solid var(--line)', borderRadius:10, padding:14}}>
         <div className="small" style={{fontWeight:700, marginBottom:6}}>⚡ Connect Calendly — 2 minutes, once</div>
         <p className="small muted" style={{marginBottom:10}}>
-          In Calendly: <strong>Integrations → API &amp; Webhooks → Personal Access Tokens → Generate new token</strong>, copy it, paste it here.
+          In Calendly: <strong>Integrations → API &amp; Webhooks → Personal Access Tokens → Generate new token</strong> — tick <strong>every scope</strong> (booking an agent needs write access, not just read), copy it, paste it here.
           It's stored only in this browser — never in the site's code.</p>
         <div className="flex">
           <input type="password" placeholder="Paste your Calendly token…" value={tok} onChange={e => setTok(e.target.value)} style={{flex:1}}/>
