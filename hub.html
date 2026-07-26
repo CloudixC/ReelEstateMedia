@@ -449,6 +449,9 @@ body.haspreview{padding-top:44px}
 .wrow-head:hover{background:rgba(255,255,255,.02)}
 .wtt{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
 .wname{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pren{background:none;border:none;color:var(--faint);cursor:pointer;font-size:12.5px;padding:0 5px;line-height:1;vertical-align:middle;opacity:.65;transition:opacity .15s ease,color .15s ease;-webkit-tap-highlight-color:transparent}
+.pren:hover{color:var(--red2);opacity:1}
+.name .pren{font-size:14px}
 .wproj{font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wstage{font-size:11.5px;color:var(--dim);white-space:nowrap;flex-shrink:0;max-width:38%;overflow:hidden;text-overflow:ellipsis}
 .wbar{width:56px;height:5px;border-radius:3px;background:var(--line2);overflow:hidden;flex-shrink:0}
@@ -733,6 +736,13 @@ const pin = (q.get('t') || 'pin') === 'pin';
 document.getElementById('brandmark').innerHTML = pin ? 'Content <em>Hub</em><span class="dot">.</span>' : 'Reel Estate <em>Media</em><span class="dot">.</span>';
 document.getElementById('brandbadge').textContent = pin ? 'Royal LePage Pinnacle' : 'Client Portal';
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+/* ✏️ agent-named projects — a local override per project id (shows instantly on this
+   device) that also syncs to the studio through the brief pipeline (cc.topic). */
+function projNames(){ try{ return JSON.parse(localStorage.getItem('rem_hub_pname_v1:' + a)) || {}; }catch(e){ return {}; } }
+function setProjName(id, name){ var m = projNames(); if(name){ m[id] = name; } else { delete m[id]; } try{ localStorage.setItem('rem_hub_pname_v1:' + a, JSON.stringify(m)); }catch(e){} }
+function nameOf(x){ if(!x) return ''; var m = projNames(); return (x.id && m[x.id]) ? m[x.id] : (x.t || ''); }
+function renBtn(x){ return (x && x.id) ? '<button class="pren" data-ren="' + esc(x.id) + '" title="Name this reel">✎</button>' : ''; }
+function csse(s){ return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s); }
 function ago(ts){
   var ms = Date.now() - new Date(ts).getTime();
   if(isNaN(ms) || ms < 0) return '';
@@ -833,7 +843,7 @@ function workRow(x, wi){
   const body = card(x, 0, 'work nested', '', 'Open', true, shootLine(x), upcoming ? '' : acts);
   return '<div class="wkrow" data-wrow="' + wi + '">' +
     '<div class="wrow-head" data-wtoggle="' + wi + '">' +
-      '<span class="wtt"><span class="wname">' + esc(x.t) + '</span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
+      '<span class="wtt"><span class="wname"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span></span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
       '<span class="wstage">' + esc(stageLabel(x)) + '</span>' +
       '<span class="wbar"><i style="width:' + pct + '%"></i></span>' +
       '<span class="wchev">▸</span>' +
@@ -932,7 +942,7 @@ function libDate(d){
 function librow(x, di, sid){
   return '<div class="librow" data-lib="' + esc(String(x.t + ' ' + (x.p || '')).toLowerCase()) + '">' +
     '<span class="no">' + String(di + 1).padStart(2, '0') + '</span>' +
-    '<span class="lt"><b>' + esc(x.t) + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
+    '<span class="lt"><b><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span>' + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
     (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
     '<button class="mini postbtn2" data-post="' + sid + '" title="Copy caption &amp; open Instagram">📲 Post</button>' +
     '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></div>';
@@ -1029,6 +1039,8 @@ function sendTesti(tid){
 }
 document.getElementById('body').addEventListener('click', function(ev){
   var t = ev.target;
+  var pr = t.closest ? t.closest('.pren') : null;
+  if(pr){ ev.preventDefault(); ev.stopPropagation(); openRename(pr.getAttribute('data-ren')); return; }
   var jj = t.closest ? t.closest('[data-jump]') : null;
   if(jj){ ev.preventDefault(); var jv = jj.getAttribute('data-jump'); applyView(jv === '__all' ? null : jv); return; }
   var bk = t.closest ? t.closest('.heroact .go') : null;
@@ -1070,7 +1082,7 @@ document.getElementById('body').addEventListener('keydown', function(ev){
 function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
   return '<div class="card ' + cls + '"' + (lib ? ' data-lib="' + esc(lib) + '"' : '') + ' style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
     (cls === 'rev' ? '<span class="beam"></span>' : '') +
-    '<div class="chead"><div class="tt"><div class="name">' + esc(x.t) + '</div>' +
+    '<div class="chead"><div class="tt"><div class="name"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span> ' + renBtn(x) + '</div>' +
     '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
     tracker(x) +
     (extraLine || '') +
@@ -1437,6 +1449,52 @@ function loadBookings(){
     }).catch(function(){});
 }
 /* ---- 📋 shoot brief: tell us about the property before we roll up ---- */
+/* ✏️ rename a project from its card */
+var renModal = null, REN_ID = null;
+function ensureRenModal(){
+  if(renModal) return renModal;
+  renModal = document.createElement('div');
+  renModal.className = 'bmodal';
+  renModal.innerHTML = '<div class="bcard" style="max-width:420px">' +
+    '<h3>Name this <em>reel</em></h3>' +
+    '<div class="bsub">Give it a name you’ll recognise — it shows here on your hub and tells us what this one’s about.</div>' +
+    '<label>Name</label><input id="ren-input" maxlength="80" placeholder="e.g. Just Listed — 12 King St">' +
+    '<div class="bact"><button class="mini" id="ren-cancel">Cancel</button><button class="go" id="ren-save">Save name <span class="ar">→</span></button></div>' +
+    '</div>';
+  document.body.appendChild(renModal);
+  renModal.addEventListener('click', function(e){ if(e.target === renModal) renModal.classList.remove('on'); });
+  renModal.querySelector('#ren-cancel').addEventListener('click', function(){ renModal.classList.remove('on'); });
+  renModal.querySelector('#ren-save').addEventListener('click', saveRename);
+  renModal.querySelector('#ren-input').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); saveRename(); } });
+  return renModal;
+}
+function openRename(id){
+  if(!id) return;
+  REN_ID = id;
+  var span = document.querySelector('span[data-pid="' + csse(id) + '"]');
+  var cur = span ? span.textContent : '';
+  var m = ensureRenModal();
+  m.querySelector('#ren-input').value = cur || '';
+  m.classList.add('on');
+  setTimeout(function(){ var i = m.querySelector('#ren-input'); if(i){ i.focus(); i.select(); } }, 50);
+}
+function saveRename(){
+  if(!REN_ID) return;
+  var m = ensureRenModal();
+  var name = (m.querySelector('#ren-input').value || '').trim();
+  if(!name){ m.querySelector('#ren-input').focus(); return; }
+  setProjName(REN_ID, name);
+  document.querySelectorAll('span[data-pid="' + csse(REN_ID) + '"]').forEach(function(el){ el.textContent = name; });
+  // sync to the studio through the brief pipeline — applyAgentBrief picks up cc.topic and renames the deliverable
+  try{
+    fetch(ENDPOINT, { method: 'POST', body: JSON.stringify({
+      kind: 'msg', ref: a, project: (AGENTNAME || 'Agent') + ' — ' + name, dname: '',
+      who: ASSIST ? ASSIST.n + ' (assistant)' : (AGENTNAME || 'Agent'), from: '',
+      body: JSON.stringify({ __rc: 1, t: '✏️ Named this reel “' + name + '”', brief: { dref: REN_ID, cc: { topic: name } } }) }) }).catch(function(){});
+  }catch(eR){}
+  m.classList.remove('on');
+  toast('✏️ Renamed to “' + name + '”');
+}
 var toastEl = null, toastTimer = null;
 function toast(msg){
   if(!toastEl){
