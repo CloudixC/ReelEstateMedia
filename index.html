@@ -1669,6 +1669,16 @@ function App(){
     importedIds: [...p.importedIds, bk.id],
     settings: clientId && bk.invitee_email ? {...p.settings, emailMap: {...p.settings.emailMap, [bk.invitee_email.toLowerCase()]: clientId}} : p.settings
   }));
+  // Dismiss = don't turn this Calendly booking into a project AND take it off the agent's
+  // hub. We tell the backend to suppress this event id (kind:'bookoff'); ?bookings drops it.
+  const dismissBooking = (bk) => {
+    if(bk && bk.id && db.settings.inboxUrl && db.settings.inboxToken){
+      fetch(db.settings.inboxUrl, {method: 'POST', body: JSON.stringify({
+        kind: 'bookoff', ref: String(bk.id), token: db.settings.inboxToken,
+        project: String(bk.title || bk.invitee_name || 'Booking'), who: 'app', body: '', from: ''})}).catch(() => {});
+    }
+    finishBooking(bk, null);
+  };
 
   const applyBookingNew = (bk, clientId, serviceId) => {
     const s = svc(serviceId);
@@ -1795,7 +1805,7 @@ function App(){
       <div style={{marginTop:16}}>
         <InboxSection db={db} updateSettings={updateSettings} syncing={syncing} syncMsg={syncMsg} syncCalendly={syncCalendly} importBookings={importBookings}
           clientTier={clientTier} applyBookingNew={applyBookingNew} applyBookingAttach={applyBookingAttach}
-          dismissBooking={bk => finishBooking(bk, null)} orderProgress={orderProgress} addClient={addClient} />
+          dismissBooking={dismissBooking} orderProgress={orderProgress} addClient={addClient} />
       </div>
     </>}
     {view === 'money' && <Money db={db} clientName={clientName} updateOrder={updateOrder} updateSettings={updateSettings} stats={stats} setPrintDoc={setPrintDoc} addExpense={addExpense} deleteExpense={deleteExpense} />}
