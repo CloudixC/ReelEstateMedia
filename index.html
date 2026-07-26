@@ -1120,6 +1120,33 @@ function App(){
       fn: () => setDb(p => { const arr = p.deliverables.map(x => x.id === id ? {...x, credits: prevCredits, name: prevName} : x); arr.splice(Math.min(sibIdx, arr.length), 0, sib); return {...p, deliverables: arr}; })}]);
   };
 
+  // ⊟ Uncombine: peel one credit back out of a combined reel → a fresh 1-credit reel slot
+  const uncombineDeliverable = (id) => {
+    const d = db.deliverables.find(x => x.id === id);
+    if(!d || !isReelDl(d)) return;
+    const n = dlCredits(d);
+    if(n <= 1){ alert('This reel is a single credit — nothing to peel off.'); return; }
+    const newCredits = n - 1;
+    const looksDefault = /credits|up to \d+s|\bof\b|^\s*(reel|video|clip)\b/i.test(d.name || '') || !d.name;
+    const newName = looksDefault ? (newCredits > 1 ? `Reel · ${newCredits} credits (up to ${newCredits * SEC_PER_CREDIT}s)` : 'Reel') : d.name;
+    const prevName = d.name, prevCredits = n;
+    const fresh = {id: uid(), orderId: d.orderId, name: 'Reel (peeled off)', group: d.group, credits: 1,
+      status: (d.status === 'Delivered' ? 'Editing' : d.status) || 'Booked',
+      shootDate: d.shootDate || '', shootTime: d.shootTime || '', link: '', notes: '',
+      mediaType: d.mediaType || inferMedia((d.group || '') + ' reel'), brief: newBrief('Reel', d.group || '')};
+    setDb(p => {
+      const arr = p.deliverables.map(x => x.id === id ? {...x, credits: newCredits, name: newName} : x);
+      const at = arr.findIndex(x => x.id === id);
+      arr.splice(at + 1, 0, fresh);
+      return {...p, deliverables: arr};
+    });
+    logActivity(`⊟ Peeled a credit out of ${dlTitle(d)} — now ${newCredits} credit${newCredits !== 1 ? 's' : ''} + a fresh reel slot`);
+    const c = db.clients.find(cc => cc.id === (db.orders.find(o => o.id === d.orderId) || {}).clientId);
+    if(c && c.id && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
+    showToast(`⊟ Peeled off 1 credit — ${newCredits} credit${newCredits !== 1 ? 's' : ''} + a new reel slot`, [{label: 'Undo',
+      fn: () => setDb(p => ({...p, deliverables: p.deliverables.filter(x => x.id !== fresh.id).map(x => x.id === id ? {...x, credits: prevCredits, name: prevName} : x)}))}]);
+  };
+
   const deleteClient = (id) => {
     const c = db.clients.find(x => x.id === id); if(!c) return;
     const os = db.orders.filter(o => o.clientId === id);
@@ -1760,7 +1787,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -3064,7 +3091,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -3201,13 +3228,13 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
         <div className="dl-row small faint" style={{borderBottom:'1px solid var(--line)'}}>
           <span>Deliverable</span><span>Status</span><span>Shoot date</span><span>Prep / Brief</span>
         </div>
-        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} db={db} updateSettings={updateSettings} />)}
+        {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} db={db} updateSettings={updateSettings} />)}
       </div>))}
   </>);
 }
 
 /* ---------------- Deliverable row + production brief ---------------- */
-function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, db, updateSettings}){
+function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, uncombineDeliverable, db, updateSettings}){
   const [showImport, setShowImport] = useState(false);
   const [importTxt, setImportTxt] = useState('');
   const [open, setOpen] = useState(!!defaultOpen);
@@ -3271,6 +3298,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
         {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
         {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
+        {uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && <button className="btn ghost sm" title="Uncombine — peel one credit back out into its own reel slot" style={{padding:'0 8px'}} onClick={() => uncombineDeliverable(d.id)}>⊟ Uncombine</button>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
         {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
       </span>
