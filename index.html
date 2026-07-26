@@ -314,44 +314,44 @@ const {useState, useEffect, useMemo} = React;
 ----------------------------------------------------------------*/
 const CATALOG = [
   // Content Creation
-  {id:'pod1', cat:'Content Creation', name:'Podcast / Teleprompter (1 Reel)', retail:70, partner:55, credits:1, unit:'Reel'},
-  {id:'pod5', cat:'Content Creation', name:'Podcast / Teleprompter (5 Reels)', retail:250, partner:200, credits:5, unit:'Reel'},
-  {id:'pod10',cat:'Content Creation', name:'Podcast / Teleprompter (10 Reels)', retail:450, partner:350, credits:10, unit:'Reel'},
-  {id:'dyn1', cat:'Content Creation', name:'Dynamic Shoot (1 Reel)', retail:100, partner:80, credits:1, unit:'Reel'},
-  {id:'dyn5', cat:'Content Creation', name:'Dynamic Shoot (5 Reels)', retail:375, partner:325, credits:5, unit:'Reel'},
-  {id:'dyn10',cat:'Content Creation', name:'Dynamic Shoot (10 Reels)', retail:650, partner:550, credits:10, unit:'Reel'},
-  {id:'ysw1', cat:'Content Creation', name:'You Shoot We Edit (1 Reel)', retail:100, partner:80, credits:1, unit:'Reel'},
-  {id:'ysw5', cat:'Content Creation', name:'You Shoot We Edit (5 Reels)', retail:375, partner:325, credits:5, unit:'Reel'},
-  {id:'ysw10',cat:'Content Creation', name:'You Shoot We Edit (10 Reels)', retail:650, partner:550, credits:10, unit:'Reel'},
-  {id:'evt',  cat:'Content Creation', name:'Event Recap (Photo & Video – 2 Hrs)', retail:600, partner:450, credits:1, unit:'Event Recap'},
-  {id:'head', cat:'Content Creation', name:'Headshots', retail:100, partner:80, credits:1, unit:'Headshot Session'},
+  {id:'pod1', cat:'Content Creation', name:'Podcast / Teleprompter (1 Reel)', retail:70, pub:119, partner:55, credits:1, unit:'Reel'},
+  {id:'pod5', cat:'Content Creation', name:'Podcast / Teleprompter (5 Reels)', retail:250, pub:449, partner:200, credits:5, unit:'Reel'},
+  {id:'pod10',cat:'Content Creation', name:'Podcast / Teleprompter (10 Reels)', retail:450, pub:799, partner:350, credits:10, unit:'Reel'},
+  {id:'dyn1', cat:'Content Creation', name:'Dynamic Shoot (1 Reel)', retail:100, pub:179, partner:80, credits:1, unit:'Reel'},
+  {id:'dyn5', cat:'Content Creation', name:'Dynamic Shoot (5 Reels)', retail:375, pub:649, partner:325, credits:5, unit:'Reel'},
+  {id:'dyn10',cat:'Content Creation', name:'Dynamic Shoot (10 Reels)', retail:650, pub:1099, partner:550, credits:10, unit:'Reel'},
+  {id:'ysw1', cat:'Content Creation', name:'You Shoot We Edit (1 Reel)', retail:100, pub:149, partner:80, credits:1, unit:'Reel'},
+  {id:'ysw5', cat:'Content Creation', name:'You Shoot We Edit (5 Reels)', retail:375, pub:549, partner:325, credits:5, unit:'Reel'},
+  {id:'ysw10',cat:'Content Creation', name:'You Shoot We Edit (10 Reels)', retail:650, pub:899, partner:550, credits:10, unit:'Reel'},
+  {id:'evt',  cat:'Content Creation', name:'Event Recap (Photo & Video – 2 Hrs)', retail:600, pub:749, partner:450, credits:1, unit:'Event Recap'},
+  {id:'head', cat:'Content Creation', name:'Headshots', retail:100, pub:199, partner:80, credits:1, unit:'Headshot Session'},
   // Photography
-  {id:'p20', cat:'Photography', name:'Essential Listing Photos (20 HDR)', retail:150, partner:125, credits:1, unit:'Photo Set'},
-  {id:'p35', cat:'Photography', name:'Professional Listing Photos (35 HDR)', retail:200, partner:150, credits:1, unit:'Photo Set'},
-  {id:'p50', cat:'Photography', name:'Premium Listing Photos (50 HDR)', retail:250, partner:200, credits:1, unit:'Photo Set'},
-  {id:'p60', cat:'Photography', name:'Luxury Estate Photos (60+ HDR)', retail:300, partner:250, credits:1, unit:'Photo Set'},
+  {id:'p20', cat:'Photography', name:'Essential Listing Photos (20 HDR)', retail:150, pub:199, partner:125, credits:1, unit:'Photo Set'},
+  {id:'p35', cat:'Photography', name:'Professional Listing Photos (35 HDR)', retail:200, pub:329, partner:150, credits:1, unit:'Photo Set'},
+  {id:'p50', cat:'Photography', name:'Premium Listing Photos (50 HDR)', retail:250, pub:429, partner:200, credits:1, unit:'Photo Set'},
+  {id:'p60', cat:'Photography', name:'Luxury Estate Photos (60+ HDR)', retail:300, pub:549, partner:250, credits:1, unit:'Photo Set'},
   // Video
-  {id:'v1', cat:'Video', name:'Essential Walkthrough Video (30s vertical)', retail:225, partner:200, credits:1, unit:'Video'},
-  {id:'v2', cat:'Video', name:'Professional Listing Video (30s cinematic)', retail:300, partner:250, credits:1, unit:'Video'},
-  {id:'v3', cat:'Video', name:'Cinematic Listing Video (60s)', retail:400, partner:350, credits:1, unit:'Video'},
-  {id:'v4', cat:'Video', name:'Luxury Property Film', retail:500, partner:450, components:['60s+ Cinematic Reel (Horizontal)','30s Social Reel (Vertical)','Drone B-Roll','Neighbourhood B-Roll']},
+  {id:'v1', cat:'Video', name:'Essential Walkthrough Video (30s vertical)', retail:225, pub:299, partner:200, credits:1, unit:'Video'},
+  {id:'v2', cat:'Video', name:'Professional Listing Video (30s cinematic)', retail:300, pub:449, partner:250, credits:1, unit:'Video'},
+  {id:'v3', cat:'Video', name:'Cinematic Listing Video (60s)', retail:400, pub:649, partner:350, credits:1, unit:'Video'},
+  {id:'v4', cat:'Video', name:'Luxury Property Film', retail:500, pub:849, partner:450, components:['60s+ Cinematic Reel (Horizontal)','30s Social Reel (Vertical)','Drone B-Roll','Neighbourhood B-Roll']},
   // Bundles
-  {id:'b1', cat:'Bundles', name:'Essential Listing Bundle', retail:325, partner:300, components:['20 HDR Photos','Reel (up to 60s)']},
-  {id:'b2', cat:'Bundles', name:'Pro Listing Bundle', retail:500, partner:450, components:['35 HDR Photos','Cinematic Video','Drone']},
-  {id:'b3', cat:'Bundles', name:'Luxury Listing Bundle', retail:750, partner:700, components:['60 HDR Photos','Luxury Video','Floor Plans']},
+  {id:'b1', cat:'Bundles', name:'Essential Listing Bundle', retail:325, pub:449, partner:300, components:['20 HDR Photos','Reel (up to 60s)']},
+  {id:'b2', cat:'Bundles', name:'Pro Listing Bundle', retail:500, pub:799, partner:450, components:['35 HDR Photos','Cinematic Video','Drone']},
+  {id:'b3', cat:'Bundles', name:'Luxury Listing Bundle', retail:750, pub:1199, partner:700, components:['60 HDR Photos','Luxury Video','Floor Plans']},
   // Tours & Plans
-  {id:'t1', cat:'Tours & Plans', name:'Virtual Tour', retail:150, partner:100, credits:1, unit:'Virtual Tour'},
-  {id:'t2', cat:'Tours & Plans', name:'Floor Plans + Virtual Tour', retail:150, partner:100, credits:1, unit:'Plans + Tour'},
-  {id:'t3', cat:'Tours & Plans', name:'Twilight Add-On', retail:75, partner:50, credits:1, unit:'Twilight Add-On'},
-  {id:'t4', cat:'Tours & Plans', name:'Dedicated Twilight Shoot', retail:175, partner:150, credits:1, unit:'Twilight Shoot'},
+  {id:'t1', cat:'Tours & Plans', name:'Virtual Tour', retail:150, pub:299, partner:100, credits:1, unit:'Virtual Tour'},
+  {id:'t2', cat:'Tours & Plans', name:'Floor Plans + Virtual Tour', retail:150, pub:349, partner:100, credits:1, unit:'Plans + Tour'},
+  {id:'t3', cat:'Tours & Plans', name:'Twilight Add-On', retail:75, pub:199, partner:50, credits:1, unit:'Twilight Add-On'},
+  {id:'t4', cat:'Tours & Plans', name:'Dedicated Twilight Shoot', retail:175, pub:299, partner:150, credits:1, unit:'Twilight Shoot'},
   // Staging & Marketing
-  {id:'s1', cat:'Staging & Marketing', name:'Virtual Staging (3 Rooms)', retail:120, partner:90, credits:1, unit:'Staging Set'},
-  {id:'s2', cat:'Staging & Marketing', name:'Property Feature Sheet', retail:50, partner:35, credits:1, unit:'Feature Sheet'},
+  {id:'s1', cat:'Staging & Marketing', name:'Virtual Staging (3 Rooms)', retail:120, pub:149, partner:90, credits:1, unit:'Staging Set'},
+  {id:'s2', cat:'Staging & Marketing', name:'Property Feature Sheet', retail:50, pub:65, partner:35, credits:1, unit:'Feature Sheet'},
   // Add-Ons
-  {id:'a1', cat:'Add-Ons', name:'Neighbourhood B-Roll', retail:50, partner:35, credits:1, unit:'B-Roll'},
-  {id:'a2', cat:'Add-Ons', name:'Drone Photo / Video', retail:75, partner:60, credits:1, unit:'Drone'},
-  {id:'a3', cat:'Add-Ons', name:'Listing Reel Cut', retail:75, partner:60, credits:1, unit:'Reel Cut'},
-  {id:'a4', cat:'Add-Ons', name:'Social Media Package (TBD)', retail:0, partner:0, credits:1, unit:'Package', tbd:true},
+  {id:'a1', cat:'Add-Ons', name:'Neighbourhood B-Roll', retail:50, pub:79, partner:35, credits:1, unit:'B-Roll'},
+  {id:'a2', cat:'Add-Ons', name:'Drone Photo / Video', retail:75, pub:199, partner:60, credits:1, unit:'Drone'},
+  {id:'a3', cat:'Add-Ons', name:'Listing Reel Cut', retail:75, pub:129, partner:60, credits:1, unit:'Reel Cut'},
+  {id:'a4', cat:'Add-Ons', name:'Social Media Package (TBD)', retail:0, pub:0, partner:0, credits:1, unit:'Package', tbd:true},
 ];
 const CATS = ['Content Creation','Photography','Video','Bundles','Tours & Plans','Staging & Marketing','Add-Ons'];
 const STATUSES = ['Booked','Scheduled','Shot','Editing','Client Review','Changes','Review 2','Changes 2','Review 3','Delivered'];
@@ -1277,6 +1277,7 @@ function App(){
       const co = companyOf(c);
       // 🛍 agent-facing services menu (retail prices) + 💳 pay link ride in the manifest
       const svcMenu = CATALOG.filter(s => s.retail).map(s => ({c: s.cat, n: s.name, p: s.retail,
+        ...(s.pub && s.pub > s.retail ? {pub: s.pub} : {}),
         ...(CAL_EVENT_SLUG[s.id] ? {u: 'https://calendly.com/hello-reelestatemedia/' + CAL_EVENT_SLUG[s.id]} : {})}));
       const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
         pay: db.settings.payUrl || '', svc: svcMenu});

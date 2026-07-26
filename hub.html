@@ -129,6 +129,21 @@ body.assist #billingwrap{display:none !important}
 .billrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(245,242,233,.06);font-size:13.5px}
 .billrow:last-child{border-bottom:none}
 .billamt{font-family:var(--serif);font-size:14px;color:var(--txt);white-space:nowrap}
+/* section chips (Brand kit / Billing / Team & referrals) */
+.schips{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 2px}
+.schip{appearance:none;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:rgba(245,242,233,.03);color:var(--dim);border-radius:999px;padding:9px 15px;font-size:12.5px;font-weight:600;font-family:var(--sans);cursor:pointer;letter-spacing:.01em;transition:border-color .18s ease,background .18s ease,color .18s ease;-webkit-tap-highlight-color:transparent}
+.schip:hover{border-color:var(--red);color:var(--txt)}
+.schip.on{background:var(--red);border-color:var(--red);color:#fff}
+body.assist #sectionchips{display:none}
+body.assist #billingwrap{display:none !important}
+/* billing */
+.billtot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:2px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.billtot .n{font-family:var(--serif);font-size:26px;color:var(--txt);white-space:nowrap}
+.billtot .n.owed{color:var(--red)}
+.billpaid{color:var(--teal)}
+.billrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed rgba(245,242,233,.06);font-size:13.5px}
+.billrow:last-child{border-bottom:none}
+.billamt{font-family:var(--serif);font-size:14px;color:var(--txt);white-space:nowrap}
 /* ---- sections ---- */
 .sec{display:flex;align-items:baseline;gap:12px;margin:40px 0 14px}
 .sec .no{font-family:var(--serif);font-style:italic;color:var(--red);font-size:15px}
@@ -293,6 +308,7 @@ body.light .rstar{color:rgba(0,0,0,.14)}
 .svcrow:last-child{border-bottom:none}
 .svcn{flex:1;min-width:0;font-size:13.5px}
 .svcp{font-family:var(--serif);font-size:14.5px;color:var(--txt);white-space:nowrap}
+.svcwas{font-family:var(--serif);font-size:12px;color:var(--faint);text-decoration:line-through;text-decoration-color:var(--red);white-space:nowrap;margin-right:1px;opacity:.9}
 .svcnote{font-size:11.5px;color:var(--faint);margin-top:12px;line-height:1.5}
 /* ---- 🗺 file guide ---- */
 .fileguide{font-size:11.5px;color:var(--dim);line-height:1.7;background:rgba(245,242,233,.025);border:1px dashed var(--line2);border-radius:12px;padding:9px 13px;margin:0 0 12px}
@@ -569,6 +585,11 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
     <span class="msgbadge" id="msgbadge" style="display:none">0</span>
     <span class="mar">→</span>
   </a>
+</div>
+<div class="pcard" id="billingwrap" style="display:none">
+  <h3>💳 Billing &amp; receipts</h3>
+  <div class="psub">Any balance owing and how to settle it — receipts for completed work land in your chat.</div>
+  <div id="billing-body"></div>
 </div>
 <div class="pcard" id="billingwrap" style="display:none">
   <h3>💳 Billing &amp; receipts</h3>
@@ -1230,7 +1251,8 @@ function render(raw){
     svcCats.forEach(function(cat){
       html += '<div class="svccat">' + esc(cat) + '</div>';
       SVC.filter(function(s){ return s.c === cat; }).forEach(function(s){
-        html += '<div class="svcrow"><span class="svcn">' + esc(s.n || '') + '</span><span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook"' + (s.u ? ' data-cal="' + esc(s.u) + '"' : '') + ' title="' + (s.u ? 'Books this exact shoot — your name pre-filled' : 'Opens our calendar') + '">Book</button></div>';
+        var _was = (pin && s.pub && (+s.pub) > (+s.p || 0)) ? '<span class="svcwas">$' + (+s.pub).toLocaleString('en-CA') + '</span>' : '';
+        html += '<div class="svcrow"><span class="svcn">' + esc(s.n || '') + '</span>' + _was + '<span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook"' + (s.u ? ' data-cal="' + esc(s.u) + '"' : '') + ' title="' + (s.u ? 'Books this exact shoot — your name pre-filled' : 'Opens our calendar') + '">Book</button></div>';
       });
     });
     html += '<div class="svcnote">Prices in CAD before tax. Not sure what fits the listing? Ask in chat — we\'ll point you to the right package.</div></div>';
