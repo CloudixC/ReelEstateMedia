@@ -792,7 +792,7 @@ function copyPhotoLink(){
 function syncGallery(){
   const g = gallery[curImg];
   const bw = document.getElementById('bigwrap');
-  const prevIt = compareMode && prevCache[cur - 1] ? prevCache[cur - 1].find(x => x.name === g.name) : null;
+  const prevIt = compareMode && prevCache[cur - 1] ? (prevCache[cur - 1].find(x => x.name === g.name) || prevCache[cur - 1].find(x => baseName(x.name) === baseName(g.name))) : null;
   if(compareMode && !g.isVid){
     bw.innerHTML = '<div class="cmpwrap">' +
       '<div>' + (prevIt && !prevIt.isVid
@@ -1678,4 +1678,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.26-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.26-2</div></div></body></html>
