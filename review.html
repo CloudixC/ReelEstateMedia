@@ -393,8 +393,28 @@ function makeWM(size){
   d.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;background-image:url("' + WM_SVG + '");background-repeat:repeat;background-size:' + (size || 230) + 'px auto;background-position:center';
   return d;
 }
+// Headshot favourites carry forward across re-edits: her picks are one logical set. If the
+// current version has no picks of its own, fall back to the most recent prior version that does
+// (same filenames across V1/V2), so a V2 re-edit still shows the shots she chose on V1.
+function effPickNames(){
+  if(pickMode){
+    if(sels[cur] && sels[cur].length) return sels[cur];
+    for(var vi = cur - 1; vi >= 0; vi--){ if(sels[vi] && sels[vi].length) return sels[vi]; }
+  }
+  return sels[cur] || [];
+}
 // A pick is "unlocked" (clean download) if it's within the included count, or the studio released the extras.
-function pickRank(name){ return photoPicks().indexOf(name); }
+// Match names across versions even when a re-edit renamed the file (e.g. "headshot1" -> "headshot1_v2").
+function baseName(n){ return String(n == null ? '' : n).replace(/[ _\-]*\(?v\d+\)?$/i, '').trim(); }
+// Her carried-forward picks, translated to THIS version's actual filenames so all the exact-match
+// pick logic keeps working across a V1 -> V2 rename (adding _v2, -v2, (v2), etc.).
+function curPickNames(){
+  return effPickNames().map(function(nm){
+    var hit = gallery.find(function(x){ return !x.isVid && (x.name === nm || baseName(x.name) === baseName(nm)); });
+    return hit ? hit.name : nm;
+  });
+}
+function pickRank(name){ var pp = photoPicks(); for(var i = 0; i < pp.length; i++){ if(pp[i] === name || baseName(pp[i]) === baseName(name)) return i; } return -1; }
 function isUnlocked(name){ const r = pickRank(name); return r > -1 && (r < pickCap || extrasReleased); }
 function dlHref(g){ return g.fileId ? 'https://drive.google.com/uc?export=download&id=' + g.fileId : g.big; }
 const SKEY = 'rem_sel_' + project + '_' + dname;
@@ -452,7 +472,7 @@ function setWhoLine(){
   document.getElementById('wholine').innerHTML = 'Reviewing: <b>' + escT(identity) + '</b> ✎';
 }
 function changeWho(){
-  const v = prompt('Who\u2019s reviewing? (your first name)', identity);
+  const v = prompt('Who’s reviewing? (your first name)', identity);
   if(v && v.trim()){ identity = v.trim(); try{ localStorage.setItem(WHOKEY, identity); }catch(e){} setWhoLine(); }
 }
 setWhoLine();
@@ -819,7 +839,7 @@ function syncGallery(){
   if(g.name && !sarr.includes(g.name)){ sarr.push(g.name); try{ localStorage.setItem(SEENKEY, JSON.stringify(seen)); }catch(e){} }
   const sl = document.getElementById('seenlbl');
   if(sl) sl.textContent = 'seen ' + sarr.length + ' / ' + gallery.length;
-  const picks = sels[cur] || [];
+  const picks = curPickNames();
   const sb = document.getElementById('selbtn');
   if(sb){ const on = picks.includes(g.name); sb.textContent = on ? '⭐' : '☆'; sb.classList.toggle('on', on); }
   const sc = document.getElementById('selcount');
@@ -849,6 +869,8 @@ function syncGallery(){
 }
 function toggleSel(){
   const g = gallery[curImg]; if(!g) return;
+  // pickMode: materialize carried-forward picks onto this version before editing so unpick works
+  if(pickMode && !(sels[cur] && sels[cur].length)){ const carried = curPickNames(); if(carried.length) sels[cur] = carried.slice(); }
   const a = sels[cur] = sels[cur] || [];
   const i = a.indexOf(g.name);
   if(i >= 0) a.splice(i, 1);
@@ -896,7 +918,7 @@ function openLightbox(){
     const g = gallery[curImg];
     swapImg(img, g.big, dir || 0);
     document.getElementById('lbcap').textContent = g.name + ' · ' + (curImg + 1) + ' / ' + gallery.length;
-    document.getElementById('lbstar').textContent = (sels[cur] || []).includes(g.name) ? '⭐' : '☆';
+    document.getElementById('lbstar').textContent = curPickNames().includes(g.name) ? '⭐' : '☆';
     window.__navDir = 0;
     syncGallery();
     preloadAround();
@@ -1133,10 +1155,10 @@ function approve(){
   let m = '';
   if(gallery.length){
     const tot = gallery.length, sn = (seen[cur] || []).length;
-    if(sn < tot) m += 'You\u2019ve viewed ' + sn + ' of ' + tot + ' items. ';
+    if(sn < tot) m += 'You’ve viewed ' + sn + ' of ' + tot + ' items. ';
   }
   if(vid && isFinite(vid.duration) && vid.duration > 12 && maxWatched < vid.duration - 3)
-    m += 'You\u2019ve watched ' + fmt(maxWatched) + ' of ' + fmt(vid.duration) + '. ';
+    m += 'You’ve watched ' + fmt(maxWatched) + ' of ' + fmt(vid.duration) + '. ';
   const pend = cmts.filter(c => c.ver === cur && /^(🔁|🗑)/.test(c.txt)).length;
   if(pend) m += pend + ' swap/cut note' + (pend > 1 ? 's' : '') + ' still pending. ';
   const openRes = cmts.filter(c => c.ver === cur - 1 && c.res === 'open').length;
@@ -1164,7 +1186,7 @@ function renderResolve(){
   if(prev.length === 0) return;
   el.className = 'respanel';
   const h = document.createElement('h2');
-  h.textContent = '📋 Your notes on V' + cur + ' — tap what\u2019s been fixed in this version';
+  h.textContent = '📋 Your notes on V' + cur + ' — tap what’s been fixed in this version';
   el.appendChild(h);
   prev.forEach(c => {
     const row = document.createElement('div'); row.className = 'resrow';
@@ -1287,14 +1309,14 @@ function showPtMark(pt, pending){
   if(!pending){ clearTimeout(window.__ptT); window.__ptT = setTimeout(function(){ m.style.display = 'none'; }, 4200); }
 }
 function voiceUrl(txt){ const m = String(txt || '').match(/drive\.google\.com\/file\/d\/([^\/?#]+)/); if(m && /🎙|voice note/i.test(txt)) return 'https://drive.google.com/uc?export=download&id=' + m[1]; return null; }
-function updatePicksBtn(){ const pb = document.getElementById('picksbtn'); if(!pb) return; const n = (sels[cur] || []).length; pb.style.display = n ? 'inline-block' : 'none'; pb.textContent = '⭐ My picks (' + n + ')'; }
+function updatePicksBtn(){ const pb = document.getElementById('picksbtn'); if(!pb) return; const n = (pickMode ? photoPicks().length : (sels[cur] || []).length); pb.style.display = n ? 'inline-block' : 'none'; pb.textContent = '⭐ My picks (' + n + ')'; }
 function toastPick(msg){
   let t = document.getElementById('pktoast');
   if(!t){ t = document.createElement('div'); t.id = 'pktoast'; document.body.appendChild(t); }
   t.textContent = msg; t.style.display = 'block';
   clearTimeout(window.__pkT); window.__pkT = setTimeout(function(){ t.style.display = 'none'; }, 3800);
 }
-function photoPicks(){ return (sels[cur] || []).filter(function(nm){ return gallery.some(function(x){ return !x.isVid && x.name === nm; }); }); }
+function photoPicks(){ return curPickNames().filter(function(nm){ return gallery.some(function(x){ return !x.isVid && x.name === nm; }); }); }
 function renderPickBar(){
   const el = document.getElementById('pickbar'); if(!el) return;
   const photos = gallery.filter(function(g){ return !g.isVid; });
@@ -1352,50 +1374,67 @@ function updateRevTrack(){
   else { el.style.display = 'none'; }
 }
 function showPicks(){
-  const photos = gallery.filter(g => !g.isVid);
-  // In pick mode, order by pick order so the first `pickCap` read as the included favourites.
-  const items = pickMode
-    ? photoPicks().map(nm => photos.find(g => g.name === nm)).filter(Boolean)
-    : photos.filter(g => (sels[cur] || []).includes(g.name));
-  const ov = document.createElement('div'); ov.className = 'picksov'; ov.id = 'picksov';
-  const close = document.createElement('button'); close.className = 'pclose'; close.textContent = '✕ Close'; close.onclick = () => ov.remove(); ov.appendChild(close);
-  const h = document.createElement('h3'); ov.appendChild(h);
-  const setH = () => {
-    const np = pickMode ? photoPicks().length : (sels[cur] || []).length;
-    h.textContent = pickMode
-      ? '⭐ My picks · ' + Math.min(np, pickCap) + ' included' + (np > pickCap ? ' + ' + (np - pickCap) + ' extra' : '')
-      : '⭐ My picks · ' + np + ' of ' + photos.length + ' photos';
-  };
-  setH();
-  if(pickMode){
-    const np = photoPicks().length, ex = Math.max(0, np - pickCap);
-    const note = document.createElement('div'); note.className = 'pnote';
-    note.innerHTML = ex > 0
-      ? (extrasReleased
-          ? 'Your <b>' + pickCap + ' included</b> and <b>' + ex + ' extra</b> images are all unlocked — tap ⬇ on each to download the clean, watermark-free file.'
-          : 'Your <b>' + pickCap + ' included</b> images are ready to download. The <b>' + ex + ' extra</b> stay locked until payment is received — we’ll unlock them the moment it’s in.')
-      : 'Tap ⬇ on any pick to download the clean, watermark-free file. Your first <b>' + pickCap + '</b> are included; extras beyond that are $' + xPrice + ' each.';
-    ov.appendChild(note);
-  }
-  const grid = document.createElement('div'); grid.className = 'picksgrid';
-  if(items.length === 0) grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center;padding:32px">No picks yet — tap ☆ on the shots you love.</div>';
-  items.forEach(g => {
-    const fig = document.createElement('figure');
-    const im = document.createElement('img'); im.src = g.thumb || g.big; im.loading = 'lazy'; fig.appendChild(im);
-    const un = document.createElement('button'); un.className = 'un'; un.textContent = '✕'; un.title = 'Remove from picks';
-    un.onclick = () => { const a = sels[cur] || []; const i = a.indexOf(g.name); if(i >= 0) a.splice(i, 1); try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){} pushReview(); ov.remove(); showPicks(); updatePicksBtn(); renderPickBar(); syncGallery(); };
-    fig.appendChild(un);
+  // Build the picks overlay. In pick mode we always resolve the DOWNLOAD files from the
+  // LATEST version (so a released extra opens the corrected V2 image, never the old V1),
+  // while the pick set carries forward via effPickNames/photoPicks.
+  const render = (latestPhotos) => {
+    const curPhotos = gallery.filter(g => !g.isVid);
+    const dlPhotos = latestPhotos || curPhotos;   // where the clean file comes from
+    const items = pickMode
+      ? photoPicks().map(nm => dlPhotos.find(g => g.name === nm || baseName(g.name) === baseName(nm)) || curPhotos.find(g => g.name === nm || baseName(g.name) === baseName(nm))).filter(Boolean)
+      : curPhotos.filter(g => (sels[cur] || []).includes(g.name));
+    const ov = document.createElement('div'); ov.className = 'picksov'; ov.id = 'picksov';
+    const close = document.createElement('button'); close.className = 'pclose'; close.textContent = '✕ Close'; close.onclick = () => ov.remove(); ov.appendChild(close);
+    const h = document.createElement('h3'); ov.appendChild(h);
+    const setH = () => {
+      const np = pickMode ? photoPicks().length : (sels[cur] || []).length;
+      h.textContent = pickMode
+        ? '⭐ My picks · ' + Math.min(np, pickCap) + ' included' + (np > pickCap ? ' + ' + (np - pickCap) + ' extra' : '')
+        : '⭐ My picks · ' + np + ' of ' + curPhotos.length + ' photos';
+    };
+    setH();
     if(pickMode){
-      const unlocked = isUnlocked(g.name);
-      if(!unlocked) fig.appendChild(makeWM(110));   // extras stay watermarked until released
-      const cap = document.createElement('figcaption');
-      if(unlocked){ const a = document.createElement('a'); a.className = 'pk-dl'; a.href = dlHref(g); a.target = '_blank'; a.rel = 'noreferrer'; a.setAttribute('download', ''); a.textContent = '⬇ Download'; cap.appendChild(a); }
-      else { const l = document.createElement('span'); l.className = 'pk-lock'; l.textContent = '🔒 after payment'; cap.appendChild(l); }
-      fig.appendChild(cap);
+      const np = photoPicks().length, ex = Math.max(0, np - pickCap);
+      const note = document.createElement('div'); note.className = 'pnote';
+      note.innerHTML = ex > 0
+        ? (extrasReleased
+            ? 'Your <b>' + pickCap + ' included</b> and <b>' + ex + ' extra</b> images are all unlocked — tap ⬇ on each to download the clean, watermark-free file.'
+            : 'Your <b>' + pickCap + ' included</b> images are ready to download. The <b>' + ex + ' extra</b> stay locked until payment is received — we’ll unlock them the moment it’s in.')
+        : 'Tap ⬇ on any pick to download the clean, watermark-free file. Your first <b>' + pickCap + '</b> are included; extras beyond that are $' + xPrice + ' each.';
+      ov.appendChild(note);
     }
-    grid.appendChild(fig);
-  });
-  ov.appendChild(grid); document.body.appendChild(ov);
+    const grid = document.createElement('div'); grid.className = 'picksgrid';
+    if(items.length === 0) grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center;padding:32px">No picks yet — tap ☆ on the shots you love.</div>';
+    items.forEach(g => {
+      const fig = document.createElement('figure');
+      const im = document.createElement('img'); im.src = g.thumb || g.big; im.loading = 'lazy'; fig.appendChild(im);
+      const un = document.createElement('button'); un.className = 'un'; un.textContent = '✕'; un.title = 'Remove from picks';
+      un.onclick = () => {
+        if(pickMode && !(sels[cur] && sels[cur].length)){ const c = effPickNames(); if(c.length) sels[cur] = c.slice(); }
+        const a = sels[cur] || []; const i = a.indexOf(g.name); if(i >= 0) a.splice(i, 1);
+        try{ localStorage.setItem(SKEY, JSON.stringify(sels)); }catch(e){} pushReview(); ov.remove(); showPicks(); updatePicksBtn(); renderPickBar(); syncGallery();
+      };
+      fig.appendChild(un);
+      if(pickMode){
+        const unlocked = isUnlocked(g.name);
+        if(!unlocked) fig.appendChild(makeWM(110));   // extras stay watermarked until released
+        const cap = document.createElement('figcaption');
+        if(unlocked){ const a = document.createElement('a'); a.className = 'pk-dl'; a.href = dlHref(g); a.target = '_blank'; a.rel = 'noreferrer'; a.setAttribute('download', ''); a.textContent = '⬇ Download'; cap.appendChild(a); }
+        else { const l = document.createElement('span'); l.className = 'pk-lock'; l.textContent = '🔒 after payment'; cap.appendChild(l); }
+        fig.appendChild(cap);
+      }
+      grid.appendChild(fig);
+    });
+    ov.appendChild(grid); document.body.appendChild(ov);
+  };
+  // Load the latest version's photos for downloads when she's not already on the latest tab.
+  const li = versions.length - 1;
+  if(pickMode && li !== cur){
+    const ready = prevCache[li] ? Promise.resolve(prevCache[li]) : itemsFor(versions[li]).then(it => (prevCache[li] = it));
+    ready.then(it => render((it || []).filter(g => !g.isVid))).catch(() => render(null));
+  } else {
+    render(null);
+  }
 }
 // Studio released the extras (after payment) → unlock downloads live.
 function applyRelease(){
@@ -1602,7 +1641,7 @@ function sendMsg(){
   const t = document.getElementById('tmsg');
   const body = t.value.trim();
   if(!body || !endpoint) return;
-  t.value = ''; 
+  t.value = '';
   fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'msg', ref, project, dname: (typeof dname !== 'undefined' ? dname : ''), who: identity, from: 'agent', body})})
     .then(() => setTimeout(loadThread, 800));
 }
@@ -1639,4 +1678,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.26-1</div></div></body></html>
