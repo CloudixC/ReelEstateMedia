@@ -792,9 +792,10 @@ function folderFallback(r, reason){
 
 function buildGallery(items){
   let ph = items.filter(x => !x.isVid); const vd = items.filter(x => x.isVid);
-  // 🔁 Approve round: show ONLY her already-chosen shots. Fall back to all if her picks
-  // haven't synced onto this device yet (loadReview re-renders once they arrive).
-  if(approveRound && pickMode){
+  // 🔁 Approve round: show ONLY her already-chosen shots — but ONLY on the latest version.
+  // V1 (and any earlier cut) always keeps the FULL original set so she can still buy more later.
+  // Fall back to all if her picks haven't synced onto this device yet (loadReview re-renders once they arrive).
+  if(approveRound && pickMode && cur === versions.length - 1){
     const want = effPickNames();
     if(want.length){
       const keep = ph.filter(g => want.some(nm => g.name === nm || baseName(g.name) === baseName(nm)));
@@ -828,8 +829,9 @@ function buildGallery(items){
   addSection('📷 Photos', ph, 0);
   addSection('🎬 Video', vd, ph.length);
   if(pickMode){ const _ps = document.getElementById('presbtn'); if(_ps) _ps.style.display = 'none'; }   // no clean slideshow while proofing
-  // 🔁 Approve round: she's not re-picking, so hide the ☆ pick control — she reviews her finals + approves.
-  if(approveRound){ const _sb = document.getElementById('selbtn'); if(_sb) _sb.style.display = 'none'; }
+  // 🔁 Approve round (latest version only): she's not re-picking, so hide the ☆ pick control.
+  // On earlier versions (V1 originals) the picker stays fully usable so she can still add more.
+  if(approveRound && cur === versions.length - 1){ const _sb = document.getElementById('selbtn'); if(_sb) _sb.style.display = 'none'; }
   const gname = q.get('goto');
   if(gname && !window.__gotoDone){
     const gi2 = gallery.findIndex(x => x.name === gname);
@@ -978,8 +980,8 @@ function openLightbox(){
     '</div>';
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
-  // 🔁 Approve round: no re-picking in the lightbox either.
-  if(approveRound){ const _s = ov.querySelector('#lbstar'); if(_s) _s.style.display = 'none'; }
+  // 🔁 Approve round (latest version only): no re-picking in the lightbox either.
+  if(approveRound && cur === versions.length - 1){ const _s = ov.querySelector('#lbstar'); if(_s) _s.style.display = 'none'; }
   const draw = (dir) => {
     const g = gallery[curImg];
     if(pickMode){
@@ -1403,9 +1405,10 @@ function renderPickBar(){
   const el = document.getElementById('pickbar'); if(!el) return;
   const photos = gallery.filter(function(g){ return !g.isVid; });
   if(!pickMode || photos.length === 0){ el.style.display = 'none'; return; }
-  // 🔁 Approve round: no re-picking / no "Confirm + extra" bar. Just tell her these are her
-  // finals and to approve below for the download link. Extras gating messaged honestly.
-  if(approveRound){
+  // 🔁 Approve round (latest version only): no re-picking / no "Confirm + extra" bar. Just tell her
+  // these are her finals and to approve below for the download link. On V1 (originals) we fall through
+  // to the normal picker so she can still choose / buy more later. Extras gating messaged honestly.
+  if(approveRound && cur === versions.length - 1){
     el.className = 'pickbar';
     const picks = photoPicks();
     const n = picks.length, extra = Math.max(0, n - pickCap);
@@ -1779,4 +1782,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.28-2</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.28-3</div></div></body></html>
