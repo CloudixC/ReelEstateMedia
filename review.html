@@ -93,6 +93,10 @@ h1#brand em{font-style:italic;color:var(--red)}
   .player.vertical iframe:not(.tall),.player.vertical .vprev,.player.vertical video{width:min(100%, calc(72vh * 9 / 16))}
 }
 .bigimg{width:100%;max-height:72vh;object-fit:contain;display:block;background:#000;animation:pop .45s ease}
+canvas.bigimg.wmcv{width:auto;height:auto;max-width:100%;max-height:72vh;margin:0 auto}
+.lbcv{max-width:100vw;max-height:82vh;width:auto;height:auto;display:block;margin:0 auto;background:#000}
+/* 🔒 proofing protection: no image drag / long-press-save / selection over proofs */
+.player img,.player canvas,.thumbwrap img,.cmpwrap img,#lbov img,.lbcv,.wmk{-webkit-user-drag:none;-khtml-user-drag:none;user-select:none;-webkit-user-select:none;-moz-user-select:none;-webkit-touch-callout:none}
 @keyframes pop{from{opacity:0;transform:scale(.99)}to{opacity:1;transform:none}}
 .vprev{width:100%;aspect-ratio:16/9;border:none;display:block;max-height:72vh;background:#000}
 .edge{position:absolute;top:0;bottom:0;width:15%;max-width:110px;z-index:4;cursor:pointer;border:none;background:transparent;display:flex;align-items:center;transition:background .3s;padding:0}
@@ -393,6 +397,46 @@ function makeWM(size){
   d.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;background-image:url("' + WM_SVG + '");background-repeat:repeat;background-size:' + (size || 230) + 'px auto;background-position:center';
   return d;
 }
+// 🔒 Baked watermark: draw the proof onto a <canvas> with the watermark tiled INTO the pixels.
+// A canvas offers no "Save image as…" and can't be dragged out, so a saved/grabbed copy always
+// carries the mark — unlike a CSS overlay, which right-click "Save image" bypasses on the clean <img>.
+// The Drive photo taints the canvas (cross-origin), which is fine: we only display it, never read it back.
+function wmCanvas(src, tile, cls){
+  const cv = document.createElement('canvas');
+  cv.className = cls || 'bigimg wmcv';
+  cv.dataset.src = src;
+  const im = new Image();
+  im.onload = () => {
+    let w = im.naturalWidth || 1600, h = im.naturalHeight || 1067;
+    const cap = 2400, sc = Math.min(1, cap / Math.max(w, h));
+    w = Math.max(1, Math.round(w * sc)); h = Math.max(1, Math.round(h * sc));
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    try{ ctx.drawImage(im, 0, 0, w, h); }catch(e){}
+    const t = new Image();
+    t.onload = () => {
+      try{
+        const pat = ctx.createPattern(t, 'repeat');
+        const s = (tile || 260) / 300;   // WM_SVG native tile is 300px wide
+        if(pat && pat.setTransform){ try{ pat.setTransform(new DOMMatrix([s, 0, 0, s, 0, 0])); }catch(e){} }
+        ctx.fillStyle = pat; ctx.fillRect(0, 0, w, h);
+      }catch(e){}
+    };
+    t.src = WM_SVG;
+  };
+  im.onerror = () => { cv.width = 16; cv.height = 9; };
+  im.src = src;
+  return cv;
+}
+// Block the easy grabs on proofs: right-click "Save image", drag-to-desktop, iOS long-press save.
+// Defeatable by a determined user — which is exactly why proofs are ALSO baked (wmCanvas) as the fallback.
+if(pickMode){
+  document.addEventListener('contextmenu', e => { e.preventDefault(); }, {capture: true});
+  document.addEventListener('dragstart', e => {
+    const t = e.target;
+    if(t && (t.tagName === 'IMG' || t.tagName === 'CANVAS')) e.preventDefault();
+  }, {capture: true});
+}
 // Headshot favourites carry forward across re-edits: her picks are one logical set. If the
 // current version has no picks of its own, fall back to the most recent prior version that does
 // (same filenames across V1/V2), so a V2 re-edit still shows the shots she chose on V1.
@@ -672,8 +716,8 @@ function renderSingle(url){
     p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
     attachVid(p.querySelector('video'));
   } else if(r.kind === 'img'){
-    p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
-    if(pickMode) p.appendChild(makeWM(260));
+    if(pickMode){ p.innerHTML = ''; p.appendChild(wmCanvas(r.src, 260)); }   // baked-in watermark
+    else p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
     composer('none', '', 'Type your note and Add — it attaches to this image.');
   } else if(r.kind === 'dfolder'){
     if(gkey){
@@ -815,15 +859,20 @@ function syncGallery(){
     gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+  else if(pickMode && !g.isVid){
+    // baked-in watermark: only rebuild the canvas when the shown photo actually changes (no flicker on note/seen updates)
+    const oldc = bw.querySelector('canvas.bigimg');
+    if(!(oldc && oldc.dataset.src === g.big)){ bw.innerHTML = ''; bw.appendChild(wmCanvas(g.big, 260)); }
+  }
   else {
     const old = bw.querySelector('img.bigimg');
     if(old && !old.classList.contains('zoomed')) swapImg(old, g.big, window.__navDir || 0);
     else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
   }
   window.__navDir = 0;
-  // 🖼 proofing watermark over the big image (headshot pick mode)
-  if(pickMode && !g.isVid){ if(!bw.querySelector('.wmk')) bw.appendChild(makeWM(260)); }
-  else { const w0 = bw.querySelector('.wmk'); if(w0) w0.remove(); }
+  // 🖼 proofing watermark: pick-mode single photos are baked (canvas above); compare view still uses an overlay
+  if(pickMode && !g.isVid && !bw.querySelector('canvas.bigimg')){ if(!bw.querySelector('.wmk')) bw.appendChild(makeWM(260)); }
+  else if(!pickMode){ const w0 = bw.querySelector('.wmk'); if(w0) w0.remove(); }
   preloadAround();
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
   document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
@@ -902,7 +951,7 @@ function openLightbox(){
   if(document.getElementById('lbov')) return;
   const ov = document.createElement('div');
   ov.id = 'lbov';
-  ov.innerHTML = (pickMode ? '<div class="lbimg"><img></div>' : '<img>') +
+  ov.innerHTML = (pickMode ? '<div class="lbimg"></div>' : '<img>') +
     '<div class="lbbar">' +
     '<button class="lbb" id="lbprev" title="Previous photo">‹</button>' +
     '<span class="lbcap" id="lbcap"></span>' +
@@ -913,10 +962,13 @@ function openLightbox(){
     '</div>';
   document.body.appendChild(ov);
   const img = ov.querySelector('img');
-  if(pickMode){ const lw = ov.querySelector('.lbimg'); if(lw && !lw.querySelector('.wmk')) lw.appendChild(makeWM(230)); }
   const draw = (dir) => {
     const g = gallery[curImg];
-    swapImg(img, g.big, dir || 0);
+    if(pickMode){
+      const lw = ov.querySelector('.lbimg');
+      const oldc = lw.querySelector('canvas');
+      if(!(oldc && oldc.dataset.src === g.big)){ lw.innerHTML = ''; lw.appendChild(wmCanvas(g.big, 230, 'lbcv')); }   // baked-in watermark
+    } else swapImg(img, g.big, dir || 0);
     document.getElementById('lbcap').textContent = g.name + ' · ' + (curImg + 1) + ' / ' + gallery.length;
     document.getElementById('lbstar').textContent = curPickNames().includes(g.name) ? '⭐' : '☆';
     window.__navDir = 0;
@@ -1678,4 +1730,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.26-2</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.28-1</div></div></body></html>
