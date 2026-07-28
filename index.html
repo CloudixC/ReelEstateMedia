@@ -3596,9 +3596,19 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 updateSettings({reviewPageUrl: base.trim()});
               }
               const entry = srcs.join(',');
+              // 🔁 Headshot CHANGES round: once she's already picked (there's a prior version),
+              // offer per-link approve-only mode — the review shows just her chosen shots + an Approve
+              // button (no re-picking / no "confirm extras" bar), and optionally unlock paid extras.
+              let approveExtra = '';
+              if(isHeadshotDl(d) && (d.reviewVersions || []).length >= 1){
+                if(confirm('Is this the CHANGES / approval round?\n\nOK  = she already picked — the review shows only her chosen shots + an Approve button (no re-picking, no "confirm extras" bar).\nCancel = normal pick round.')){
+                  approveExtra = '&approve=1';
+                  if(confirm('Has she already PAID for her extra images?\n\nOK  = unlock all her picks for download now.\nCancel = keep the extras locked until you release them.')) approveExtra += '&paid=1';
+                }
+              }
               // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
               // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
-              if(d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
+              if(!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
                 copyText(reviewShareText(d, order, client, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
@@ -3623,6 +3633,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
                 pickParams(d) +
+                approveExtra +
                 (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') +
                 // hub code + agent name so the review page can route comments back into this project's chat
                 ((client && (client.hubKey || client.hubId)) ? '&hk=' + encodeURIComponent(client.hubKey || client.hubId) + '&an=' + encodeURIComponent(client.name || '') : '');
@@ -5047,6 +5058,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.26-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.28-1</div>
 </body>
 </html>
