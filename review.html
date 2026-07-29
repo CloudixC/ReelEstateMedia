@@ -465,6 +465,10 @@ function curPickNames(){
 }
 function pickRank(name){ var pp = photoPicks(); for(var i = 0; i < pp.length; i++){ if(pp[i] === name || baseName(pp[i]) === baseName(name)) return i; } return -1; }
 function isUnlocked(name){ const r = pickRank(name); return r > -1 && (r < pickCap || extrasReleased); }
+// 🖼 Watermark lifts once she APPROVES this version — but only on the shots she's entitled to:
+// included picks always; extras only after they're paid/released. Unpaid extras stay marked.
+// Returns true when the watermark should STILL be shown on this photo.
+function wmShown(name){ return pickMode && !(curApproved() && isUnlocked(name)); }
 function dlHref(g){ return g.fileId ? 'https://drive.google.com/uc?export=download&id=' + g.fileId : g.big; }
 const SKEY = 'rem_sel_' + project + '_' + dname;
 let sels = {};
@@ -721,7 +725,7 @@ function renderSingle(url){
     p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
     attachVid(p.querySelector('video'));
   } else if(r.kind === 'img'){
-    if(pickMode){ p.innerHTML = ''; p.appendChild(wmCanvas(r.src, 260)); }   // baked-in watermark
+    if(pickMode && !curApproved()){ p.innerHTML = ''; p.appendChild(wmCanvas(r.src, 260)); }   // baked-in watermark (lifts on approval)
     else p.innerHTML = '<img class="bigimg" src="' + r.src.replace(/"/g,'&quot;') + '">';
     composer('none', '', 'Type your note and Add — it attaches to this image.');
   } else if(r.kind === 'dfolder'){
@@ -821,7 +825,7 @@ function buildGallery(items){
       else { const d = document.createElement('div'); d.className = 'thumbph'; d.textContent = '🎬'; w.appendChild(d); }
       w.onclick = () => { curImg = idx; syncGallery(); openLightbox(); };
       if(g.isVid && g.thumb){ const pb = document.createElement('span'); pb.className = 'pb'; pb.textContent = '▶'; w.appendChild(pb); }
-      if(pickMode && !g.isVid) w.appendChild(makeWM(96));
+      if(!g.isVid && wmShown(g.name)) w.appendChild(makeWM(96));   // watermark lifts on approval for unlocked shots
       const ncEl = document.createElement('span'); ncEl.className = 'ncount'; ncEl.style.display = 'none'; w.appendChild(ncEl);
       th.appendChild(w);
     });
@@ -877,7 +881,7 @@ function syncGallery(){
     gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
   else if(g.isVid) bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-  else if(pickMode && !g.isVid){
+  else if(!g.isVid && wmShown(g.name)){
     // baked-in watermark: only rebuild the canvas when the shown photo actually changes (no flicker on note/seen updates)
     const oldc = bw.querySelector('canvas.bigimg');
     if(!(oldc && oldc.dataset.src === g.big)){ bw.innerHTML = ''; bw.appendChild(wmCanvas(g.big, 260)); }
@@ -888,9 +892,10 @@ function syncGallery(){
     else bw.innerHTML = '<img class="bigimg" src="' + g.big.replace(/"/g,'&quot;') + '">';
   }
   window.__navDir = 0;
-  // 🖼 proofing watermark: pick-mode single photos are baked (canvas above); compare view still uses an overlay
-  if(pickMode && !g.isVid && !bw.querySelector('canvas.bigimg')){ if(!bw.querySelector('.wmk')) bw.appendChild(makeWM(260)); }
-  else if(!pickMode){ const w0 = bw.querySelector('.wmk'); if(w0) w0.remove(); }
+  // 🖼 proofing watermark: single photos are baked (canvas above) while still marked; compare view uses an overlay.
+  // Once approved+unlocked, wmShown is false → no canvas, and we make sure no overlay lingers (clean image).
+  if(!g.isVid && wmShown(g.name) && !bw.querySelector('canvas.bigimg')){ if(!bw.querySelector('.wmk')) bw.appendChild(makeWM(260)); }
+  else { const w0 = bw.querySelector('.wmk'); if(w0) w0.remove(); }
   preloadAround();
   const mixed = gallery.some(x => x.isVid) && gallery.some(x => !x.isVid);
   document.getElementById('glbl').textContent = (g.isVid ? '🎬 ' : mixed ? '📷 ' : '') + g.name + ' · ' + (curImg+1) + ' / ' + gallery.length;
@@ -986,8 +991,14 @@ function openLightbox(){
     const g = gallery[curImg];
     if(pickMode){
       const lw = ov.querySelector('.lbimg');
-      const oldc = lw.querySelector('canvas');
-      if(!(oldc && oldc.dataset.src === g.big)){ lw.innerHTML = ''; lw.appendChild(wmCanvas(g.big, 230, 'lbcv')); }   // baked-in watermark
+      if(wmShown(g.name)){   // still watermarked → baked canvas
+        const oldc = lw.querySelector('canvas');
+        if(!(oldc && oldc.dataset.src === g.big)){ lw.innerHTML = ''; lw.appendChild(wmCanvas(g.big, 230, 'lbcv')); }
+      } else {               // approved + unlocked → clean image
+        let im2 = lw.querySelector('img');
+        if(!im2){ lw.innerHTML = ''; im2 = document.createElement('img'); im2.className = 'lbcv'; lw.appendChild(im2); }
+        if(im2.getAttribute('src') !== g.big) im2.src = g.big;
+      }
     } else swapImg(img, g.big, dir || 0);
     document.getElementById('lbcap').textContent = g.name + ' · ' + (curImg + 1) + ' / ' + gallery.length;
     document.getElementById('lbstar').textContent = curPickNames().includes(g.name) ? '⭐' : '☆';
@@ -1238,6 +1249,8 @@ function approve(){
   if(m && !confirm(m + 'Approve anyway?')) return;
   cmts.push({id: Date.now(), ver: cur, txt: '✓ APPROVED — good to finalize this version', who: identity}); chatMirror(cmts[cmts.length - 1]); save(); renderList();
   if(endpoint){ postFeedback().catch(() => {}); }
+  // 🖼 approved → re-render the media so the watermark lifts on the shots she's entitled to
+  if(pickMode){ try{ renderMedia(); }catch(e){} }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} scheduleAutoSend(); pushReview(); }
@@ -1546,7 +1559,7 @@ function applyRelease(){
   try{ localStorage.setItem(RELKEY, '1'); }catch(e){}
   renderPickBar();
   const ov = document.getElementById('picksov'); if(ov){ ov.remove(); showPicks(); }
-  if(gallery.length) syncGallery();
+  if(gallery.length){ if(curApproved()){ renderMedia(); } else syncGallery(); }
   toastPick('🔓 Your extra images are unlocked — open ⭐ My picks to download them all!');
 }
 function forwardReview(){
@@ -1782,4 +1795,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.28-3</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.29-1</div></div></body></html>

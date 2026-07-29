@@ -440,6 +440,39 @@ const CAL_EVENT_SLUG = {
   b1:'essential-listing-bundle', b2:'pro-listing-bundle', b3:'luxury-listing-bundle',
   t1:'virtual-tour', t2:'floor-plans-virtual-tour', t4:'dedicated-twilight-shoot'
 };
+// 🔎 Calendly booking auto-match helpers — turn a raw booking into a best-guess client + service
+// so the review card comes pre-filled (and known ones auto-book), instead of defaulting to dyn1.
+const slugify = t => String(t || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+// slug -> base (single-credit) service id; first id wins because the map is ordered pod1,pod5,pod10…
+const SLUG_TO_SVC = (() => { const m = {}; Object.keys(CAL_EVENT_SLUG).forEach(id => { const s = CAL_EVENT_SLUG[id]; if(!(s in m)) m[s] = id; }); return m; })();
+// Best-guess service from a Calendly event title: learned map → exact slug → slug prefix → catalog name → keywords.
+function guessServiceId(title, eventMap){
+  const t = (title || '').trim(); if(!t) return '';
+  if(eventMap && eventMap[t]) return eventMap[t];
+  const sl = slugify(t);
+  if(SLUG_TO_SVC[sl]) return SLUG_TO_SVC[sl];
+  const pre = Object.keys(SLUG_TO_SVC).find(s => s.length >= 5 && (sl.startsWith(s) || s.startsWith(sl)));
+  if(pre) return SLUG_TO_SVC[pre];
+  const tl = t.toLowerCase();
+  const cat = (typeof CATALOG !== 'undefined') && CATALOG.find(s => s.name && (tl.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(tl)));
+  if(cat) return cat.id;
+  if(/head\s?shot|portrait/.test(tl)) return 'head';
+  if(/dynamic/.test(tl)) return 'dyn1';
+  if(/podcast|teleprompter/.test(tl)) return 'pod1';
+  if(/you\s*shoot/.test(tl)) return 'ysw1';
+  if(/event|recap/.test(tl)) return 'evt';
+  return '';
+}
+// Best-guess existing client for a booking. strict=true limits to high-confidence matches (learned map or
+// exact email on file) for autopilot; loose adds a same-name fallback for the manual card's pre-fill.
+function guessClientId(bk, db, strict){
+  const email = (bk.invitee_email || '').toLowerCase();
+  if(email && db.settings.emailMap[email]) return db.settings.emailMap[email];
+  if(email){ const c = db.clients.find(c => [c.email, c.contact].some(v => (v || '').toLowerCase() === email)); if(c) return c.id; }
+  if(!strict){ const nm = (bk.invitee_name || '').trim().toLowerCase();
+    if(nm){ const c = db.clients.find(c => (c.name || '').trim().toLowerCase() === nm); if(c) return c.id; } }
+  return '';
+}
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle', tier:'partner', company:'Royal LePage Pinnacle', contact:'Command Centre', notes:'Royal LePage Pinnacle house work — billed at Royal LePage pricing so it earns margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
@@ -1269,7 +1302,7 @@ function App(){
   }, [db.clients, db.orders]);
   const markSubHandled = (id) => setDb(p => ({...p, subsHandled: [...(p.subsHandled || []), id]}));
   const dbRef = React.useRef(db); dbRef.current = db;
-  const pushHub = (clientId) => {
+  const pushHub = (clientId, skipCo) => {
     try {
       const db = dbRef.current;
       const c = db.clients.find(x => x.id === clientId);
@@ -1282,8 +1315,14 @@ function App(){
       const pinTier = c.tier === 'partner' || c.tier === 'internal';
       const showBal = c.showBalance !== undefined ? !!c.showBalance : !pinTier;
       const projects = db.deliverables
-        .filter(d => (db.orders.find(o => o.id === d.orderId) || {}).clientId === clientId)
+        .filter(d => { const o = db.orders.find(o => o.id === d.orderId) || {}; return o.clientId === clientId || o.coAgentId === clientId; })
         .map(d => { const o = db.orders.find(x => x.id === d.orderId) || {};
+          // 🤝 co-agent split: each hub shows only this agent's share of a shared shoot, and a "with …" tag
+          const isCo = o.coAgentId === clientId && o.clientId !== clientId;
+          const coShareAmt = +o.coShare || 0;
+          const myTotal = o.coAgentId ? (isCo ? coShareAmt : Math.max(0, orderTotals(o).total - coShareAmt)) : orderTotals(o).total;
+          const otherId = o.coAgentId ? (isCo ? o.clientId : o.coAgentId) : null;
+          const withName = otherId ? ((db.clients.find(c => c.id === otherId) || {}).name || '').split(' ')[0] : '';
           const owing = showBal && d.status === 'Delivered' && o.payment && o.payment !== 'paid';
           // 🪞 mirror the brief content Jag has entered so the agent sees it pre-filled on their hub
           const bb = getBrief(d);
@@ -1292,10 +1331,10 @@ function App(){
           // 🔒 lock: 'auto' (default) locks once the shoot is done (status index >= 2 = 'Shot'); 'open'/'locked' override
           const briefLock = d.briefLock || 'auto';
           const brLocked = briefLock === 'locked' || (briefLock !== 'open' && STATUSES.indexOf(d.status) >= 2);
-          return {id: d.id, t: dlTitle(d), p: o.project || d.group, st: STATUS_LABEL(d.status),
+          return {id: d.id, t: dlTitle(d), p: (o.project || d.group) + (withName ? ' · 🤝 with ' + withName : ''), st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
-            du: owing ? 1 : 0, amt: owing ? Math.round(orderTotals(o).total * 100) / 100 : 0,
+            du: owing ? 1 : 0, amt: owing ? Math.round(myTotal * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
             br: br, lk: brLocked ? 1 : 0,
             ...(d.status === 'Delivered' ? {
@@ -1312,6 +1351,9 @@ function App(){
       const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
         pay: db.settings.payUrl || '', svc: svcMenu});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
+      // 🤝 keep co-agents on this client's shared shoots in sync too (skipCo guards against recursion)
+      if(!skipCo){ const cos = [...new Set(db.orders.filter(o => o.clientId === clientId && o.coAgentId).map(o => o.coAgentId))];
+        cos.forEach(cid => { if(cid && cid !== clientId) setTimeout(() => pushHub(cid, true), 300); }); }
       const base = (db.settings.reviewPageUrl || '').replace('review.html', 'hub.html');
       return base ? base + '?a=' + hk + '&t=' + (pin ? 'pin' : 'rem') : null;
     } catch(e){ return null; }
@@ -1703,8 +1745,8 @@ function App(){
   const routeIncoming = (incoming) => {
     const auto = [], manual = [];
     incoming.forEach(b => {
-      const cid = db.settings.emailMap[(b.invitee_email || '').toLowerCase()];
-      const sid = (db.settings.eventMap || {})[(b.title || '').trim()];
+      const cid = guessClientId(b, db, true);   // high-confidence only (learned map / exact email on file)
+      const sid = (db.settings.eventMap || {})[(b.title || '').trim()] || SLUG_TO_SVC[slugify(b.title)];   // learned or exact event-slug
       const hasBacklog = cid && db.deliverables.some(d => d.status === 'Booked' &&
         (db.orders.find(o => o.id === d.orderId) || {}).clientId === cid);
       const onBlocked = (db.blockedDays || []).includes(isoToDate(b.start));
@@ -1802,7 +1844,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -3106,7 +3148,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -3194,6 +3236,32 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
         {clientTier(o.clientId) === 'partner' &&
           <div className="row"><span className="teal small">Pinnacle makes on this order</span>
             <span className="teal small">{money(orderMargin(o, 'partner'))}</span></div>}
+      </div>
+      <div style={{marginTop:12}}>
+        <label className="f">Co-agent on this shoot (optional)</label>
+        <div className="flex" style={{gap:10, alignItems:'center'}}>
+          <select value={o.coAgentId || ''} onChange={e => {
+            const v = e.target.value; const prevCo = o.coAgentId;
+            updateOrder(id, v ? {coAgentId: v} : {coAgentId: '', coShare: 0});
+            if(pushHub) setTimeout(() => { pushHub(o.clientId); if(v) pushHub(v); if(prevCo && prevCo !== v) pushHub(prevCo); }, 900);
+          }}>
+            <option value="">— none —</option>
+            {db.clients.filter(c => c.id !== o.clientId && c.id !== 'pinnacle').map(c =>
+              <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {o.coAgentId && <>
+            <span className="small muted" style={{whiteSpace:'nowrap'}}>their share $</span>
+            <input type="number" min="0" step="5" style={{width:96}} value={o.coShare || 0} onChange={e => {
+              updateOrder(id, {coShare: Math.max(0, +e.target.value || 0)});
+              if(pushHub){ const prim = o.clientId, co = o.coAgentId; setTimeout(() => { pushHub(prim); pushHub(co); }, 900); }
+            }}/>
+          </>}
+        </div>
+        {o.coAgentId
+          ? <p className="small faint" style={{marginTop:6}}>
+              Shows this shoot on <strong>{clientName(o.coAgentId)}</strong>'s hub too. Split — {clientName(o.clientId)}: <strong>{money(Math.max(0, t.total - (+o.coShare || 0)))}</strong> · {clientName(o.coAgentId)}: <strong>{money(+o.coShare || 0)}</strong>. Leave share at 0 for visibility only.
+            </p>
+          : <p className="small faint" style={{marginTop:6}}>Attach a second agent so the shoot appears on their hub too — and optionally split the invoice.</p>}
       </div>
       <div style={{marginTop:12}}>
         <label className="f">Notes</label>
@@ -4042,10 +4110,12 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
   const email = (bk.invitee_email || '').toLowerCase();
   const learned = db.settings.emailMap[email];
   const isPinnacleEmail = email.endsWith('rlppinnacle.ca');
-  const guess = learned || '';
-  const [clientId, setClientId] = useState(guess || (db.clients[0] ? db.clients[0].id : ''));
+  const guessedClient = guessClientId(bk, db, false);
+  const guessedService = guessServiceId(bk.title, db.settings.eventMap);
+  const emailMatched = !learned && !!guessedClient;   // matched an existing client by email/name (not a prior booking)
+  const [clientId, setClientId] = useState(guessedClient || (db.clients[0] ? db.clients[0].id : ''));
   const [mode, setMode] = useState('new');
-  const [serviceId, setServiceId] = useState('dyn1');
+  const [serviceId, setServiceId] = useState(guessedService || 'dyn1');
   const [orderId, setOrderId] = useState('');
   const [dlId, setDlId] = useState('');
 
@@ -4075,7 +4145,9 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
         <div className="small muted">{bk.invitee_name} · {bk.invitee_email}</div>
         <div className="small amber">📅 {isoToNice(bk.start)}{bk.location ? ' · 📍 ' + bk.location : ''}</div>
         {learned && <div className="small teal" style={{marginTop:3}}>Known client — mapped from a previous booking</div>}
-        {!learned && isPinnacleEmail && <div className="small teal" style={{marginTop:3}}>Pinnacle email (rlppinnacle.ca) — likely an agent booking</div>}
+        {emailMatched && <div className="small teal" style={{marginTop:3}}>Matched to <strong>{(db.clients.find(c => c.id === guessedClient) || {}).name}</strong> by email — double-check below</div>}
+        {!learned && !emailMatched && isPinnacleEmail && <div className="small teal" style={{marginTop:3}}>Pinnacle email (rlppinnacle.ca) — likely an agent booking</div>}
+        {guessedService && <div className="small faint" style={{marginTop:3}}>Guessed service: <strong>{(svc(guessedService) || {}).name || guessedService}</strong> — change it below if that's not it</div>}
       </div>
       <span className="spacer"></span>
       <button className="btn ghost sm" onClick={() => dismissBooking(bk)}>Dismiss</button>
@@ -4083,7 +4155,7 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
 
     <div style={{marginTop:14}}>
       <ClientPicker db={db} value={clientId} onChange={setClientId} />
-      {!learned && <div className="flex" style={{marginTop:6, gap:14}}>
+      {!learned && !emailMatched && <div className="flex" style={{marginTop:6, gap:14}}>
         <button className="backlink" style={{marginBottom:0}} onClick={() => quickAddAgent('partner')}>+ add "{bk.invitee_name}" as a Royal LePage agent</button>
       </div>}
     </div>
@@ -5061,6 +5133,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.28-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.29-2</div>
 </body>
 </html>
