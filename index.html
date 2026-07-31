@@ -383,6 +383,16 @@ const reelTypeOf = d => {
 
 const DEFAULT_BRIEF = {topic:'', script:'Needed', scriptLink:'', song:'', orientation:'', style:'', location:'', post:'', delivery:''};
 const dlTitle = d => ((getBrief(d).topic || '').trim()) || d.name;
+// 🏷 Canonical shoot title — the SAME on the review page, hub, and invoice: "<type of shoot> · <description>".
+// Type = the service (e.g. "Premium Listing Photos (50 HDR)"). Description = the agent's own name for it,
+// cleaned of any "| Type" suffix they typed (so the address never shows twice), else the property.
+const shootType = d => (d.group || d.name || 'Shoot');
+const cleanDesc = s => String(s || '').split('|')[0].trim();
+function shootDesc(d, o){
+  const raw = cleanDesc((getBrief(d).topic || '').trim());
+  const de = raw || ((o && o.project) ? o.project : '');
+  return (de && de !== shootType(d)) ? de : '';
+}
 /* Media type: photo / video / both. Explicit field wins; otherwise inferred from the service name. */
 function inferMedia(txt){
   const t = (txt || '').toLowerCase();
@@ -1331,7 +1341,8 @@ function App(){
           // 🔒 lock: 'auto' (default) locks once the shoot is done (status index >= 2 = 'Shot'); 'open'/'locked' override
           const briefLock = d.briefLock || 'auto';
           const brLocked = briefLock === 'locked' || (briefLock !== 'open' && STATUSES.indexOf(d.status) >= 2);
-          return {id: d.id, t: dlTitle(d), p: (o.project || d.group) + (withName ? ' · 🤝 with ' + withName : ''), st: STATUS_LABEL(d.status),
+          const _desc = shootDesc(d, o) || (o.project || '');
+          return {id: d.id, t: shootType(d), p: (_desc + (withName ? ' · 🤝 with ' + withName : '')), st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(myTotal * 100) / 100 : 0,
@@ -3695,6 +3706,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               const pinC = isPinnacle(client);
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&d=' + encodeURIComponent(dlTitle(d)) +
+                '&ty=' + encodeURIComponent(shootType(d)) +
+                (shootDesc(d, order) ? '&de=' + encodeURIComponent(shootDesc(d, order)) : '') +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pinC ? 'pin' : 'rem') +
                 (b.orientation === 'Vertical' ? '&o=v' : '') +
@@ -5133,6 +5146,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.29-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.29-3</div>
 </body>
 </html>
