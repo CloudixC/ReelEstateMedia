@@ -389,7 +389,7 @@ body.haspreview{padding-top:44px}
 #teleo{position:fixed;inset:0;background:#000;z-index:300;display:none;flex-direction:column}
 #teleo.on{display:flex}
 #tele-view{flex:1;overflow:hidden;position:relative;cursor:pointer}
-#tele-inner{position:absolute;top:0;left:50%;transform:translateX(-50%);width:min(92vw,860px);font-size:46px;line-height:1.55;font-weight:600;color:#fff;padding:26vh 0 70vh;white-space:pre-wrap;z-index:1}
+#tele-inner{position:absolute;top:0;left:50%;transform:translateX(-50%);width:min(92vw,860px);font-size:46px;line-height:1.55;font-weight:600;color:#fff;padding:26vh 0 70vh;white-space:pre-wrap;z-index:1;will-change:transform;backface-visibility:hidden}
 #tele-inner.mir{transform:translateX(-50%) scaleX(-1)}
 #tele-inner .tl{min-height:1em}
 #tele-inner .tl.beat{color:var(--red2);letter-spacing:.45em;text-align:center;font-size:.7em;opacity:.9}
@@ -420,6 +420,10 @@ body.haspreview{padding-top:44px}
 #tele-loopbtn.live{background:var(--red);border-color:transparent;font-weight:700}
 #tele-loopmark{position:absolute;left:0;right:0;border-top:2px dashed rgba(255,74,82,.6);z-index:2;pointer-events:none}
 #tele-loopmark span{position:absolute;top:-20px;left:2px;font-size:11px;font-weight:700;color:var(--red2);letter-spacing:.09em}
+/* 🔋 low-power (battery-saver) mode — lighter effects for older iPads */
+#tele-power.live{background:rgba(242,169,0,.16);border-color:rgba(242,169,0,.5);color:#f4ba2e;font-weight:700}
+#teleo.lowpower.camon #tele-inner{text-shadow:0 1px 3px #000}
+#teleo.lowpower #tele-shade{background:linear-gradient(180deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,.8) 15vh, transparent 24vh, transparent 66vh, rgba(0,0,0,.62) 100%)}
 /* ---- 💡 content ideas ---- */
 .ideawrap{display:grid;gap:10px;margin-top:2px}
 .ideacard{border:1px solid var(--line2);background:var(--panel2);border-radius:16px;padding:14px 16px}
@@ -649,7 +653,7 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
     <div class="frow2"><span class="fi">💬</span><span><b>A straight line to the studio</b> — one thread per project. Reply, react, edit, full-quality photo &amp; video attachments up to 24 MB.</span></div>
     <div class="frow2"><span class="fi">🎙</span><span><b>Voice notes</b> — between showings? Tap the mic, talk, done. Faster than typing. Works in shoot briefs and on the review page too.</span></div>
     <div class="fsec">📝 Script studio &amp; teleprompter</div>
-    <div class="frow2"><span class="fi">📝</span><span><b>Write or approve your script</b> right here — or ask us to draft it — then read it off the <b>built-in teleprompter</b> on shoot day: adjustable speed, a big eye-line guide, a 3-2-1 countdown, tap-to-pause, multi-take, and you can record straight from the prompter.</span></div>
+    <div class="frow2"><span class="fi">📝</span><span><b>Write or approve your script</b> right here — or ask us to draft it — then read it off the <b>built-in teleprompter</b> on shoot day: adjustable speed, a big eye-line guide, a 3-2-1 countdown, tap-to-pause, multi-take, and you can record straight from the prompter. A <b>🔋 low-power mode</b> (auto for older iPads, or tap to toggle) keeps the scroll smooth on any device.</span></div>
     <div class="fsec">🎥 Review &amp; approve</div>
     <div class="frow2"><span class="fi">⏱</span><span><b>Pin feedback to the exact moment</b> — pause any reel to drop a note at that second, or <b>tap the exact spot</b> on a photo or frame so we know precisely what you mean. One-tap chips for quick notes.</span></div>
     <div class="frow2"><span class="fi">🎙</span><span><b>Leave a voice note on a cut</b> — talk through your changes; it plays back right in the comment.</span></div>
@@ -1572,8 +1576,40 @@ var teleTakes = [], teleFacing = 'user', teleVoice = false, teleRecog = null;
 var teleWords = [], teleWPtr = 0, teleVTarget = 0;
 var telePlayMs = 0, telePlayPos0 = 0, teleWordsTotal = 0, telePxTotal = 1, teleRunNote = '';
 var teleLoop = null;
+var teleMir = false, teleLowPower = false, teleRAF = 0;
 function teleSaveSet(){ try{ localStorage.setItem('rem_tele_v1', JSON.stringify({sp: teleSpeed, f: teleFont})); }catch(e){} }
 function teleEyeY(){ return window.innerHeight * 0.26; }
+/* ⚡ Move the script with a GPU transform (composited) instead of `top`
+   (which forces a full layout + repaint every frame) — the single biggest
+   win for older iPads. Keeps the horizontal centring and the 🪞 mirror. */
+function teleApplyPos(){
+  var el = teleEl && teleEl.querySelector('#tele-inner');
+  if(!el) return;
+  el.style.transform = 'translate3d(-50%,' + (-telePos) + 'px,0)' + (teleMir ? ' scaleX(-1)' : '');
+}
+/* 🔋 Low-power auto-detect — older iPads report few CPU cores; reduced-motion
+   users opt in too. A manual toggle (below) overrides this and is remembered. */
+function teleDetectLowPower(){
+  try{
+    var hc = navigator.hardwareConcurrency;
+    if(typeof hc === 'number' && hc > 0 && hc <= 4) return true;   // older iPads / low-end
+    if(navigator.deviceMemory && navigator.deviceMemory <= 4) return true;
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    return false;
+  }catch(e){ return false; }
+}
+function telePowerPref(){ try{ return localStorage.getItem('rem_tele_power_v1'); }catch(e){ return null; } }
+function teleApplyPower(){
+  if(teleEl) teleEl.classList.toggle('lowpower', !!teleLowPower);
+  var b = teleEl && teleEl.querySelector('#tele-power');
+  if(b){
+    b.textContent = teleLowPower ? '🔋 Low power' : '🚀 High power';
+    b.classList.toggle('live', !!teleLowPower);
+    b.title = teleLowPower
+      ? 'Battery-saver is ON — smoother & cooler on older iPads. Tap for full-quality (High power).'
+      : 'Full-quality scroll & glow. Tap to switch to Low power if it stutters or runs hot.';
+  }
+}
 function teleStat(){
   var inner = teleEl.querySelector('#tele-inner');
   var words = (inner.textContent || '').replace(/•/g, '').split(/\s+/).filter(Boolean).length;
@@ -1650,6 +1686,9 @@ function teleStopCam(){
 }
 function openTele(txt){
   try{ var tp = JSON.parse(localStorage.getItem('rem_tele_v1')); if(tp){ teleSpeed = Math.min(4, Math.max(.35, +tp.sp || 1)); teleFont = Math.min(84, Math.max(24, +tp.f || 46)); } }catch(e){}
+  // 🔋 power mode: your saved choice wins; otherwise auto-detect an older device.
+  var _pw = telePowerPref();
+  teleLowPower = _pw === 'low' ? true : _pw === 'high' ? false : teleDetectLowPower();
   if(!teleEl){
     teleEl = document.createElement('div');
     teleEl.id = 'teleo';
@@ -1665,6 +1704,7 @@ function openTele(txt){
       '<button id="tele-back" title="Jump back three lines">↩ 3 lines</button>' +
       '<button id="tele-loopbtn" title="Loop point — every pause snaps back here for another take">📍 Loop</button>' +
       '<button id="tele-mir" title="Flip for teleprompter glass">🪞</button>' +
+      '<button id="tele-power" title="Battery-saver for older devices">🔋 Low power</button>' +
       '<button id="tele-cambtn" title="Camera on — record yourself right here">🎥</button>' +
       '<button id="tele-flip" title="Switch front / rear camera">🔄</button>' +
       '<button id="tele-rec">⏺ Record</button>' +
@@ -1725,7 +1765,7 @@ function openTele(txt){
       if(teleLoop !== null){
         telePos = teleLoop;
         teleVTarget = teleLoop;
-        inner.style.top = (-telePos) + 'px';
+        teleApplyPos();
         teleBeats.forEach(function(b){ if(b.y - telePos > teleEyeY()) b.done = false; });
         var ly = teleLoop + teleEyeY();
         teleWPtr = 0;
@@ -1739,7 +1779,7 @@ function openTele(txt){
     };
     var teleNudge = function(dy){
       telePos = Math.max(0, telePos + dy);
-      inner.style.top = (-telePos) + 'px';
+      teleApplyPos();
       teleRearm();
     };
     // drag to scrub — finger or mouse; a real drag never counts as a tap
@@ -1751,7 +1791,7 @@ function openTele(txt){
       if(Math.abs(dy) > 8) dragMoved = true;
       if(dragMoved){
         telePos = Math.max(0, dragPos0 - dy);
-        inner.style.top = (-telePos) + 'px';
+        teleApplyPos();
       }
     };
     var dEnd = function(){
@@ -1779,7 +1819,7 @@ function openTele(txt){
       teleVTarget = telePos;
       teleWPtr = 0;
       teleBeats.forEach(function(b){ if(b.y - telePos > teleEyeY()) b.done = false; });
-      inner.style.top = (-telePos) + 'px';
+      teleApplyPos();
     };
     teleEl.querySelector('#tele-back').addEventListener('click', teleBack3);
     teleEl.querySelector('#tele-loopbtn').addEventListener('click', function(){
@@ -1804,7 +1844,13 @@ function openTele(txt){
       mk.style.top = (teleLoop + teleEyeY()) + 'px';
       toast('📍 Loop set — every pause snaps back here, ready for the next take.');
     });
-    teleEl.querySelector('#tele-mir').addEventListener('click', function(){ inner.classList.toggle('mir'); });
+    teleEl.querySelector('#tele-mir').addEventListener('click', function(){ teleMir = !teleMir; inner.classList.toggle('mir', teleMir); teleApplyPos(); });
+    teleEl.querySelector('#tele-power').addEventListener('click', function(){
+      teleLowPower = !teleLowPower;
+      try{ localStorage.setItem('rem_tele_power_v1', teleLowPower ? 'low' : 'high'); }catch(e){}
+      teleApplyPower();
+      toast(teleLowPower ? '🔋 Low power on — lighter & cooler, great for older iPads.' : '🚀 High power on — full-quality scroll & glow.');
+    });
     teleEl.querySelector('#tele-cambtn').addEventListener('click', function(){
       if(teleCamS){ teleStopCam(); return; }
       if(!navigator.mediaDevices || !window.MediaRecorder){ toast('Camera unavailable on this browser.'); return; }
@@ -1977,27 +2023,28 @@ function openTele(txt){
     });
     var lastFrame = performance.now();
     (function step(){
+      teleRAF = requestAnimationFrame(step);        // always reschedule so resume is instant
       var now = performance.now();
-      var dt = Math.min(100, now - lastFrame);
+      if(!telePlay){ lastFrame = now; return; }      // paused → do no work this frame
+      var elapsed = now - lastFrame;
+      if(teleLowPower && elapsed < 32) return;       // 🔋 cap to ~30fps — half the compositing & heat
+      var dt = Math.min(100, elapsed);
       lastFrame = now;
-      if(telePlay){
-        telePlayMs += dt;
-        if(teleVoice){
-          if(teleVTarget > telePos + .5){
-            telePos = Math.min(teleVTarget, telePos + Math.max(.6, (teleVTarget - telePos) * .07) * (dt / 16.7));
-            inner.style.top = (-telePos) + 'px';
-          }
-        } else if(now >= teleBeatUntil){
-          telePos += teleSpeed * (dt / 16.7);
-          var eye = teleEyeY();
-          for(var bi = 0; bi < teleBeats.length; bi++){
-            var b = teleBeats[bi];
-            if(!b.done && (b.y - telePos) <= eye){ b.done = true; teleBeatUntil = now + 1600; break; }
-          }
-          inner.style.top = (-telePos) + 'px';
+      telePlayMs += dt;
+      if(teleVoice){
+        if(teleVTarget > telePos + .5){
+          telePos = Math.min(teleVTarget, telePos + Math.max(.6, (teleVTarget - telePos) * .07) * (dt / 16.7));
+          teleApplyPos();
         }
+      } else if(now >= teleBeatUntil){
+        telePos += teleSpeed * (dt / 16.7);
+        var eye = teleEyeY();
+        for(var bi = 0; bi < teleBeats.length; bi++){
+          var b = teleBeats[bi];
+          if(!b.done && (b.y - telePos) <= eye){ b.done = true; teleBeatUntil = now + 1600; break; }
+        }
+        teleApplyPos();
       }
-      requestAnimationFrame(step);
     })();
   }
   var inn = teleEl.querySelector('#tele-inner');
@@ -2013,8 +2060,9 @@ function openTele(txt){
   if(lb0){ lb0.classList.remove('live'); lb0.textContent = '📍 Loop'; }
   var lm0 = teleEl.querySelector('#tele-loopmark');
   if(lm0) lm0.remove();
-  inn.style.top = '0px';
+  telePos = 0; teleApplyPos();
   teleEl.querySelector('#tele-play').textContent = '▶ Start';
+  teleApplyPower();
   teleEl.classList.add('on');
   window.teleRenderTakes();
   teleWakeOn();
@@ -3089,4 +3137,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">HUB v2026.07.26-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">HUB v2026.08.07-1</div></div></body></html>
