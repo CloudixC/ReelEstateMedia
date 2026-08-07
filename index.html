@@ -483,6 +483,31 @@ function guessClientId(bk, db, strict){
     if(nm){ const c = db.clients.find(c => (c.name || '').trim().toLowerCase() === nm); if(c) return c.id; } }
   return '';
 }
+// 🔁 Same-agent guard — returns the existing client an about-to-be-created agent
+// duplicates, so we reuse their hub instead of minting a second one. Email is
+// decisive; a bare name match only counts when the emails don't prove otherwise
+// (so two different people who share a name are never merged).
+function findAgentDup(db, c){
+  if(!c || !db || !db.clients) return null;
+  const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const em = norm(c.email || c.contact);
+  if(em){
+    const byEmail = db.clients.find(x => x.id !== c.id && [x.email, x.contact].some(v => norm(v) === em));
+    if(byEmail) return byEmail;
+    const mapId = db.settings && db.settings.emailMap && db.settings.emailMap[em];
+    if(mapId){ const m = db.clients.find(x => x.id === mapId && x.id !== c.id); if(m) return m; }
+  }
+  const nm = norm(c.name);
+  if(nm){
+    const byName = db.clients.find(x => x.id !== c.id && norm(x.name) === nm);
+    if(byName){
+      const ee = norm(byName.email || byName.contact);
+      if(em && ee && em !== ee) return null;   // same name, different emails → different people
+      return byName;
+    }
+  }
+  return null;
+}
 const seed = {
   clients: [{id:'pinnacle', name:'Pinnacle', tier:'partner', company:'Royal LePage Pinnacle', contact:'Command Centre', notes:'Royal LePage Pinnacle house work — billed at Royal LePage pricing so it earns margin'}],
   orders: [], deliverables: [], pendingBookings: [], importedIds: [], activity: [], expenses: [], subsHandled: [], blockedDays: [],
@@ -1121,7 +1146,21 @@ function App(){
     setShowNewOrder(false); setOpenOrder(order.id); setView('orders');
     logActivity(`Booked: ${order.project || 'new order'} · ${ds.length} deliverable${ds.length !== 1 ? 's' : ''}`);
   };
-  const addClient = (c) => { setDb(p => ({...p, clients:[...p.clients, c]})); setShowNewClient(false); logActivity(`Added client: ${c.name}`); };
+  // Reuse an agent's existing hub by default; only mint a new record when there's
+  // genuinely no match (or the caller explicitly forces it). Returns the id actually used.
+  const addClient = (c, opts) => {
+    const dup = findAgentDup(db, c);
+    if(dup && !(opts && opts.force)){
+      // fill in any contact detail the existing record was missing — never overwrite
+      setDb(p => ({...p, clients: p.clients.map(x => x.id === dup.id ? {...x,
+        email: x.email || c.email || '', contact: x.contact || c.contact || '', phone: x.phone || c.phone || ''} : x)}));
+      setShowNewClient(false);
+      showToast(`Using ${dup.name}'s existing hub — no duplicate created`);
+      return dup.id;
+    }
+    setDb(p => ({...p, clients:[...p.clients, c]})); setShowNewClient(false); logActivity(`Added client: ${c.name}`);
+    return c.id;
+  };
   const splitDeliverable = (id) => {
     const d = db.deliverables.find(x => x.id === id);
     if(!d || mediaOf(d) !== 'both') return;
@@ -1869,7 +1908,7 @@ function App(){
     {view === 'money' && <Money db={db} clientName={clientName} updateOrder={updateOrder} updateSettings={updateSettings} stats={stats} setPrintDoc={setPrintDoc} addExpense={addExpense} deleteExpense={deleteExpense} />}
 
     {showNewOrder && <NewOrderModal db={db} onClose={() => setShowNewOrder(false)} onSave={addOrder} addClient={addClient} />}
-    {showNewClient && <NewClientModal onClose={() => setShowNewClient(false)} onSave={addClient} />}
+    {showNewClient && <NewClientModal db={db} onClose={() => setShowNewClient(false)} onSave={addClient} />}
     {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onSave={patch => updateClient(editingClient.id, patch)} onDelete={deleteClient} />}
     {printDoc && <DocModal doc={printDoc} db={db} onClose={() => setPrintDoc(null)} updateSettings={updateSettings} />}
     {shootModeId && (() => {
@@ -4134,7 +4173,7 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
 
   const quickAddAgent = (tier) => {
     const c = {id: uid(), name: bk.invitee_name || email, tier, company: 'Pinnacle', contact: bk.invitee_email, email: bk.invitee_email, notes: 'Created from Calendly booking'};
-    addClient(c); setClientId(c.id);
+    setClientId(addClient(c));
   };
 
   const tier = clientTier(clientId);
@@ -4682,9 +4721,8 @@ function NewOrderModal({db, onClose, onSave, addClient}){
   const [qContact, setQContact] = useState('');
   const quickCreate = () => {
     if(!qName.trim()){ alert('Name required'); return; }
-    const c = {id: uid(), name: qName.trim(), tier: qTier, company: qCo.trim(), team: qTeam.trim(), contact: qContact, notes: ''};
-    addClient(c);
-    setClientId(c.id);
+    const c = {id: uid(), name: qName.trim(), tier: qTier, company: qCo.trim(), team: qTeam.trim(), contact: qContact, email: qContact, notes: ''};
+    setClientId(addClient(c));
     setShowQuick(false); setQName(''); setQContact(''); setQTeam('');
   };
 
@@ -4824,8 +4862,9 @@ function PlanBuilder({plan, setPlan}){
 }
 
 /* ---------------- New Client Modal ---------------- */
-function NewClientModal({onClose, onSave}){
+function NewClientModal({db, onClose, onSave}){
   const [name, setName] = useState('');
+  const [dupAgent, setDupAgent] = useState(null);
   const [tier, setTier] = useState('partner');
   const [company, setCompany] = useState('Pinnacle');
   const [team, setTeam] = useState('');
@@ -4836,6 +4875,15 @@ function NewClientModal({onClose, onSave}){
   const [retainerStart, setRetainerStart] = useState(today().slice(0, 7));
   const [plan, setPlan] = useState([]);
   useEffect(() => { if(tier === 'direct' && company === 'Pinnacle') setCompany(''); if(tier !== 'direct' && !company) setCompany('Pinnacle'); }, [tier]);
+  const build = () => ({id: uid(), name: name.trim(), tier, company: company.trim(), team: team.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})});
+  // Save = reuse an existing agent's hub if one matches; only warn+offer a second hub on a real name/email clash.
+  const attempt = () => {
+    if(!name.trim()){ alert('Name required'); return; }
+    const obj = build();
+    const dup = db && findAgentDup(db, obj);
+    if(dup){ setDupAgent(dup); return; }
+    onSave(obj); onClose();
+  };
   return (
   <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
     <div className="modal" style={{maxWidth:480}}>
@@ -4877,9 +4925,16 @@ function NewClientModal({onClose, onSave}){
       <div className="frow one">
         <div><label className="f">Team <span className="faint">(optional — groups agents inside a brokerage)</span></label><input value={team} onChange={e => setTeam(e.target.value)} placeholder="e.g. The Smith Team"/></div>
       </div>
+      {dupAgent && <div style={{marginTop:14, background:'rgba(242,169,0,.12)', border:'1px solid rgba(242,169,0,.42)', borderRadius:8, padding:'11px 13px'}}>
+        <div className="small" style={{color:'var(--amber)', fontWeight:700, marginBottom:8}}>⚠ An agent named “{dupAgent.name}”{dupAgent.company ? ' · ' + dupAgent.company : ''} already exists — they already have a hub. Add to that one, or set up a separate second hub?</div>
+        <div className="flex" style={{gap:8}}>
+          <button className="btn" onClick={() => { onSave(build()); onClose(); }}>Use existing hub</button>
+          <button className="btn ghost" onClick={() => { onSave(build(), {force:true}); onClose(); }}>Create a separate hub anyway</button>
+        </div>
+      </div>}
       <div className="modalfoot">
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;} onSave({id: uid(), name: name.trim(), tier, company: company.trim(), team: team.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})}); }}>Add</button>
+        <button className="btn" onClick={attempt}>Add</button>
       </div>
     </div>
   </div>);
@@ -5146,6 +5201,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.07.29-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.08.07-1</div>
 </body>
 </html>

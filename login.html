@@ -483,6 +483,10 @@
         AGENTS = {};
         var sel = $('adAgent');
         sel.innerHTML = '<option value="">— Pick an agent —</option>';
+        // Keep EVERY hub key in AGENTS so lookups + manual entry still work — nothing is lost.
+        // But collapse the dropdown to one entry per agent (the most-recently-updated hub),
+        // so re-created hubs for the same agent don't clutter the list.
+        var groups = {};
         Object.keys(latest).forEach(function(k){
           var r = latest[k], man = {};
           try{ man = JSON.parse(String(r.body || '{}')); }catch(e2){}
@@ -493,16 +497,24 @@
             brokerage: man.brokerage || '',
             email: man.email || ''
           };
-          var o = document.createElement('option');
-          o.value = k;
-          o.textContent = AGENTS[k].full + (AGENTS[k].brokerage ? ' · ' + AGENTS[k].brokerage : '');
-          sel.appendChild(o);
+          var idKey = (AGENTS[k].full + '|' + AGENTS[k].brokerage).toLowerCase().replace(/\s+/g, ' ').trim();
+          var ts = String(r.ts || r.updated_at || '');
+          if(!groups[idKey] || ts >= groups[idKey].ts) groups[idKey] = {k: k, ts: ts};
         });
+        Object.keys(groups).map(function(id){ return groups[id].k; })
+          .sort(function(x, y){ return AGENTS[x].full.localeCompare(AGENTS[y].full); })
+          .forEach(function(k){
+            var o = document.createElement('option');
+            o.value = k;
+            o.textContent = AGENTS[k].full + (AGENTS[k].brokerage ? ' · ' + AGENTS[k].brokerage : '');
+            sel.appendChild(o);
+          });
         var m = document.createElement('option');
         m.value = '__manual__'; m.textContent = 'Enter a hub key manually…';
         sel.appendChild(m);
-        var n = Object.keys(AGENTS).length;
-        status.textContent = n + ' agent' + (n === 1 ? '' : 's') + ' loaded';
+        var uniq = Object.keys(groups).length, total = Object.keys(latest).length;
+        status.textContent = uniq + ' agent' + (uniq === 1 ? '' : 's') + ' loaded' +
+          (total > uniq ? ' · ' + (total - uniq) + ' duplicate hub' + (total - uniq === 1 ? '' : 's') + ' hidden' : '');
         try{ localStorage.setItem(TOKEN_KEY, token); }catch(e3){}
       })
       .catch(function(){ status.textContent = 'Couldn\'t reach the server'; });
