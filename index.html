@@ -1494,7 +1494,8 @@ function App(){
         const base2 = db.settings.reviewPageUrl;
         if(srcs2.length && base2 && db.settings.inboxUrl){
           const entry2 = srcs2.join(',');
-          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (!isHeadshotDl(cur) || cur.reviewPick))){
+          const hqLink2 = isVideoDl(cur) ? (cur.linkHQ || '').trim() : '';
+          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (cur.reviewHQ || '') === hqLink2 && (!isHeadshotDl(cur) || cur.reviewPick))){
             const o2 = db.orders.find(x => x.id === cur.orderId) || {};
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
             const vers2 = [...(cur.reviewVersions || [])];
@@ -1510,10 +1511,11 @@ function App(){
               '&r=' + encodeURIComponent(cur.id) +
               '&e=' + encodeURIComponent(db.settings.inboxUrl) +
               '&v=' + vers2.map(encodeURIComponent).join('|') +
+              (hqLink2 ? '&hq=' + encodeURIComponent(hqLink2) : '') +
               pickParams(cur) +
               (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
             const code2 = Math.random().toString(36).slice(2, 9);
-            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewPick: isHeadshotDl(cur)};
+            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewHQ: hqLink2, reviewPick: isHeadshotDl(cur)};
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
             if(c2 && c2.id) setTimeout(() => pushHub(c2.id), 1500);
           }
@@ -3661,11 +3663,15 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           {mediaOf(d) === 'both' ? <>
             <label className="f">📷 Photos Link</label>
             <input placeholder="Drive folder / image links" value={d.link} onChange={e => updateDeliverable(d.id, {link: e.target.value})}/>
-            <label className="f" style={{marginTop:10, display:'block'}}>🎬 Video Link</label>
+            <label className="f" style={{marginTop:10, display:'block'}}>🎬 Video Link <span className="faint">· web preview (plays in review)</span></label>
             <input placeholder="Drive file / Dropbox / MP4" value={d.linkVideo || ''} onChange={e => updateDeliverable(d.id, {linkVideo: e.target.value})}/>
           </> : <>
-            <label className="f">Delivery Link</label>
+            <label className="f">Delivery Link{isVideoDl(d) ? <span className="faint"> · web preview (plays in review)</span> : null}</label>
             <input placeholder="Final file / Drive / Frame.io link" value={d.link} onChange={e => updateDeliverable(d.id, {link: e.target.value})}/>
+          </>}
+          {isVideoDl(d) && <>
+            <label className="f" style={{marginTop:10, display:'block'}}>🎞 High-quality final <span className="faint">· unlocks on approval — optional</span></label>
+            <input placeholder="Drive / Dropbox link to the full-res master" value={d.linkHQ || ''} onChange={e => updateDeliverable(d.id, {linkHQ: e.target.value})}/>
           </>}
           <div className="flex" style={{gap:6, marginTop:6, flexWrap:'wrap'}}>
             <CopyBtn text={reviewMsg(d, order, client)} label="✉ Review message"/>
@@ -3729,7 +3735,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               }
               // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
               // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
-              if(!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
+              const hqLink = isVideoDl(d) ? (d.linkHQ || '').trim() : '';
+              if(!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (d.reviewHQ || '') === hqLink && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
                 copyText(reviewShareText(d, order, client, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
@@ -3755,6 +3762,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 '&r=' + encodeURIComponent(d.id) +
                 (db.settings.inboxUrl ? '&e=' + encodeURIComponent(db.settings.inboxUrl) : '') +
                 '&v=' + vers.map(encodeURIComponent).join('|') +
+                (hqLink ? '&hq=' + encodeURIComponent(hqLink) : '') +
                 pickParams(d) +
                 approveExtra +
                 (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') +
@@ -3772,7 +3780,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               if(db.settings.inboxUrl){
                 const code = Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC});
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC});
                 copyText(reviewShareText(d, order, client, shortU));
                 postReviewLinkToChat(shortU);
                 const w = window.open('', '_blank');
@@ -3783,7 +3791,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     if(w) w.location = shortU;
                     showToast('✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewPick: isHeadshotDl(d), reviewPin: pinC}); copyText(reviewShareText(d, order, client, u));
+                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC}); copyText(reviewShareText(d, order, client, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
@@ -5201,6 +5209,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.08.07-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.08.07-2</div>
 </body>
 </html>

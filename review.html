@@ -274,6 +274,10 @@ h1#brand em{font-style:normal;color:var(--amber)}
 .pk-lock{background:rgba(0,0,0,.72);color:#f4ba2e;border:1px solid rgba(242,169,0,.5);border-radius:999px;padding:6px 11px;font-family:var(--mono);font-size:.58rem;font-weight:700;letter-spacing:.05em}
 .picksov .pnote{color:var(--mist);font-size:.82rem;margin:0 4px 12px;line-height:1.5}
 .picksov .pnote b{color:#f4ba2e}
+/* ⚡ smooth-streaming switch for choppy Drive videos */
+.smoothbtn{position:absolute;top:10px;right:10px;z-index:6;display:inline-flex;align-items:center;gap:6px;background:rgba(15,13,15,.72);border:1px solid var(--line2);color:var(--txt);font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:7px 11px;border-radius:999px;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:border-color .2s,background .2s}
+.smoothbtn:hover{border-color:var(--redsoft);background:rgba(15,13,15,.85)}
+.smoothbtn.auto{border-color:rgba(242,169,0,.5);color:#f4ba2e}
 </style></head><body><div class="wrap">
 <div class="topbar">
   <div class="lock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div><h1 id="brand"></h1><div class="sub" id="subline"></div></div></div>
@@ -358,6 +362,9 @@ const endpoint = q.get('e') || '';
 const ref = q.get('r') || '';
 const versions = (q.get('v') || '').split('|').filter(Boolean).map(decodeURIComponent);
 const capParam = q.get('cap') || '';
+// 🎞 High-quality master(s) — the review player streams a lighter web copy; these
+// full-res links are only surfaced in the download panel once she approves.
+const hqLinks = (q.get('hq') || '').split('|').map(s => s.trim()).filter(Boolean);
 const bookParam = q.get('book') || '';
 const incParam = parseInt(q.get('inc') || '', 10);
 const pickCap = parseInt(q.get('pick') || '', 10);
@@ -641,8 +648,34 @@ function driveVideoEl(id, onFail){
   };
   v.addEventListener('loadedmetadata', function(){ ok = true; clearTimeout(tm); });
   v.addEventListener('error', function(){ if(!ok) tryNext(); });
+  // ⚡ The raw Drive file endpoints buffer poorly on big/HD clips and choke older
+  // devices. If playback keeps stalling, hand off to Drive's streaming preview
+  // player (adaptive quality) which plays smoothly. Also exposed as v.__goSmooth
+  // for the manual "Smooth play" button.
+  let switched = false, stalls = 0, waitT = null;
+  v.__goSmooth = () => { if(switched) return; switched = true; clearTimeout(tm); clearTimeout(waitT); onFail(); };
+  v.addEventListener('waiting', function(){
+    if(!ok || switched) return;               // pre-metadata stalls are handled by tryNext
+    stalls++;
+    clearTimeout(waitT);
+    waitT = setTimeout(function(){ if(!v.paused && (v.readyState || 0) < 3) v.__goSmooth(); }, 3200);
+    if(stalls >= 3) v.__goSmooth();            // repeated stutters → just switch
+  });
+  v.addEventListener('playing', function(){ clearTimeout(waitT); });
   tryNext();
   return v;
+}
+// Small overlay button so a client can jump straight to smooth streaming without
+// waiting for the auto-detect. `auto` styles it and flags it was the studio's suggestion.
+function smoothBtn(container, v, auto){
+  if(!container || !v) return;
+  const b = document.createElement('button');
+  b.className = 'smoothbtn' + (auto ? ' auto' : '');
+  b.type = 'button';
+  b.textContent = '⚡ Smooth play';
+  b.title = 'If the video stutters, tap to switch to Google Drive’s streaming player (smoother, adaptive quality).';
+  b.onclick = function(e){ e.preventDefault(); e.stopPropagation(); if(v.__goSmooth) v.__goSmooth(); };
+  container.appendChild(b);
 }
 function renderTabs(){
   const el = document.getElementById('vtabs'); [...el.querySelectorAll('.vbtn')].forEach(n => n.remove()); const _cmp = document.getElementById('cmpbtn');
@@ -709,6 +742,7 @@ function renderSingle(url){
     p.innerHTML = '';
     const v = driveVideoEl(r.id, fallback);
     p.appendChild(v);
+    smoothBtn(p, v);
     attachVid(v);
   } else {
     p.innerHTML = '<iframe src="' + r.src.replace(/"/g,'&quot;') + '" allowfullscreen></iframe>';
@@ -835,6 +869,7 @@ function syncGallery(){
     bw.innerHTML = '';
     const gv = driveVideoEl(g.fileId, () => { g.nfail = true; if(gallery[curImg] === g) syncGallery(); });
     bw.appendChild(gv);
+    smoothBtn(bw, gv);
     fsOnPlay(gv);
     gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
@@ -1306,6 +1341,28 @@ function renderDl(){
   }
   const box = document.getElementById('dllinks'); box.innerHTML = '';
   const parts = (versions[cur] || '').split(',').map(s => s.trim()).filter(Boolean);
+  // 🎞 Approved → hand over the high-quality master (not the web preview she watched).
+  if(hqLinks.length && cur === versions.length - 1){
+    // In a photo+video delivery the photos still come from the folder; only the video is swapped to HQ.
+    if(mboth && parts.length){
+      const dp0 = dlLink(parts[0]);
+      const pa = document.createElement('a'); pa.className = 'dlbtn'; pa.href = dp0.href; pa.target = '_blank'; pa.rel = 'noreferrer'; pa.textContent = '⬇ 📷 ' + dp0.label.replace('⬇ ', '');
+      box.appendChild(pa);
+      if(dp0.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = dp0.note; box.appendChild(n); }
+    }
+    hqLinks.forEach(h => {
+      const d = dlLink(h);
+      const a = document.createElement('a'); a.className = 'dlbtn'; a.href = d.href; a.target = '_blank'; a.rel = 'noreferrer';
+      a.textContent = '⬇ Download the high-quality final';
+      box.appendChild(a);
+      if(d.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = d.note; box.appendChild(n); }
+    });
+    const note = document.createElement('div'); note.className = 'dlnote';
+    note.textContent = '✓ Approved — this is your full-resolution master. (The player above uses a lighter web copy for smooth streaming.)';
+    box.appendChild(note);
+    renderPostReady();
+    return;
+  }
   parts.forEach((u, i) => {
     const d = dlLink(u);
     let label = d.label;
@@ -1720,4 +1777,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.07.29-2</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.08.07-2</div></div></body></html>
