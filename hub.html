@@ -574,7 +574,33 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
 @media(prefers-reduced-motion:reduce){
   body::before,.go::after,h1 em,.beam{animation:none}
 }
-</style></head><body><div class="bgGrid"></div><div class="wrap">
+/* ⚡ lite mode — auto-on for older devices (iPad 5th gen etc.). Strips the GPU-heavy
+   frosted-glass blur, the moving aurora + film-grain backdrops, blend modes and the
+   looping decorative animations. Layout & colours stay; it just renders far cheaper. */
+html.lowfx *{backdrop-filter:none !important;-webkit-backdrop-filter:none !important}
+html.lowfx body::before,html.lowfx body::after{display:none !important}
+html.lowfx *,html.lowfx *::before,html.lowfx *::after{animation:none !important}
+html.lowfx .confetti{display:none !important}
+body.tele-open::before,body.tele-open::after{animation-play-state:paused !important}
+</style>
+<script>/* Set lite mode as early as possible so the heavy effects never even paint on
+   an older device. One saved preference (rem_tele_power_v1) drives this and the teleprompter. */
+(function(){try{
+  var pref=null; try{pref=localStorage.getItem('rem_tele_power_v1');}catch(e){}
+  var low;
+  if(pref==='low') low=true;
+  else if(pref==='high') low=false;
+  else {
+    var mm=window.matchMedia, hc=navigator.hardwareConcurrency, touch=(navigator.maxTouchPoints||0)>1;
+    low = !!(mm && mm('(prefers-reduced-motion: reduce)').matches)
+       || (touch && (typeof hc!=='number' || hc<=4))   // iPad/tablet with few or hidden CPU cores
+       || (typeof hc==='number' && hc<=2)
+       || (!!navigator.deviceMemory && navigator.deviceMemory<=4);
+  }
+  if(low) document.documentElement.classList.add('lowfx');
+}catch(e){}})();
+</script>
+</head><body><div class="bgGrid"></div><div class="wrap">
 <header>
   <div class="brandlock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div class="mark" id="brandmark"></div></div>
   <div class="badge" id="brandbadge"></div>
@@ -1591,23 +1617,26 @@ function teleApplyPos(){
    users opt in too. A manual toggle (below) overrides this and is remembered. */
 function teleDetectLowPower(){
   try{
-    var hc = navigator.hardwareConcurrency;
-    if(typeof hc === 'number' && hc > 0 && hc <= 4) return true;   // older iPads / low-end
-    if(navigator.deviceMemory && navigator.deviceMemory <= 4) return true;
+    if(document.documentElement.classList.contains('lowfx')) return true;   // agrees with the head-script detection
+    var hc = navigator.hardwareConcurrency, touch = (navigator.maxTouchPoints || 0) > 1;
     if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    if(touch && (typeof hc !== 'number' || hc <= 4)) return true;   // iPad / tablet, few or hidden cores
+    if(typeof hc === 'number' && hc <= 2) return true;
+    if(navigator.deviceMemory && navigator.deviceMemory <= 4) return true;
     return false;
   }catch(e){ return false; }
 }
 function telePowerPref(){ try{ return localStorage.getItem('rem_tele_power_v1'); }catch(e){ return null; } }
 function teleApplyPower(){
+  document.documentElement.classList.toggle('lowfx', !!teleLowPower);   // lightens the whole hub, not just the prompter
   if(teleEl) teleEl.classList.toggle('lowpower', !!teleLowPower);
   var b = teleEl && teleEl.querySelector('#tele-power');
   if(b){
     b.textContent = teleLowPower ? '🔋 Low power' : '🚀 High power';
     b.classList.toggle('live', !!teleLowPower);
     b.title = teleLowPower
-      ? 'Battery-saver is ON — smoother & cooler on older iPads. Tap for full-quality (High power).'
-      : 'Full-quality scroll & glow. Tap to switch to Low power if it stutters or runs hot.';
+      ? 'Lite mode is ON — lighter & cooler across the whole hub, best for older iPads. Tap for full-quality (High power).'
+      : 'Full-quality visuals. Tap to switch to Lite mode if the hub or prompter stutters or runs hot.';
   }
 }
 function teleStat(){
@@ -2003,7 +2032,7 @@ function openTele(txt){
       teleTakes.forEach(function(t){ try{ URL.revokeObjectURL(t.url); }catch(e){} });
       teleTakes = [];
       teleRenderTakes();
-      teleEl.classList.remove('on');
+      teleEl.classList.remove('on'); document.body.classList.remove('tele-open');
       if(teleWake){ try{ teleWake.release(); }catch(e){} teleWake = null; }
     });
     // 🎮 clicker / keyboard remote — space·enter·pg-dn play/pause, arrows speed,
@@ -2063,7 +2092,7 @@ function openTele(txt){
   telePos = 0; teleApplyPos();
   teleEl.querySelector('#tele-play').textContent = '▶ Start';
   teleApplyPower();
-  teleEl.classList.add('on');
+  teleEl.classList.add('on'); document.body.classList.add('tele-open');
   window.teleRenderTakes();
   teleWakeOn();
   requestAnimationFrame(function(){ teleMeasureBeats(); teleBuildWords(); teleStat(); });
@@ -3137,4 +3166,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">HUB v2026.08.07-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">HUB v2026.08.07-2</div></div></body></html>
