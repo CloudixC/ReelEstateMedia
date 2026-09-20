@@ -23,7 +23,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:0 18px 112px;overflow-x:hidden}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.55;padding:0 18px 176px;overflow-x:hidden}
 /* ---- atmosphere: one quiet gradient + dot grid + film grain (nothing moves) ---- */
 body::before{content:'';position:fixed;inset:-10% -6%;pointer-events:none;z-index:0;
   background:
@@ -161,6 +161,7 @@ body.assist #billingwrap{display:none !important}
 .shootline{margin-top:12px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(242,169,0,.08);border:1px solid rgba(242,169,0,.24);border-radius:10px;padding:7px 12px;display:inline-block;position:relative;z-index:1}
 .shootline .ics{margin-left:9px;color:var(--txt);opacity:.7;font-weight:600;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s ease}
 .shootline .ics:hover{opacity:1}
+.shootline.pend{border-style:dashed;background:rgba(245,242,233,.03);border-color:var(--line2);color:var(--dim)}
 /* ---- testimonial ---- */
 .tbtn{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:12px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:border-color .18s ease,color .18s ease}
 .tbtn:hover{border-color:var(--amber);color:var(--amber)}
@@ -189,8 +190,16 @@ body.assist #billingwrap{display:none !important}
 .msglink:hover .mar{transform:translateX(4px)}
 .msgbadge{background:linear-gradient(135deg,#ff3d46,#c4141e);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:22px;height:22px;display:grid;place-items:center;padding:0 7px}
 /* ---- upcoming shoots strip ---- */
-.shoots{display:flex;gap:9px;flex-wrap:wrap;margin:18px 0 2px}
-.shootchip{display:inline-flex;align-items:center;gap:9px;background:rgba(242,169,0,.07);border:1px solid rgba(242,169,0,.26);border-radius:12px;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--amber)}
+.shoots{display:flex;flex-direction:column;gap:9px;margin:18px 0 2px}
+#shootsslot2 .shoots{margin:0}
+.shootchip{display:flex;flex-direction:column;gap:6px;width:100%;background:rgba(242,169,0,.07);border:1px solid rgba(242,169,0,.26);border-radius:12px;padding:11px 14px;font-size:12.5px;font-weight:600;color:var(--amber)}
+.shootchip .scrow1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.shootchip .scn{color:var(--txt);font-weight:700;font-size:13.5px}
+.shootchip .scacts{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:2px}
+.shootchip .scnote{font-style:italic;font-weight:500;color:var(--faint);font-size:11.5px}
+.upnext{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:2px 0 9px}
+#shootsslot2{margin-bottom:14px}
+#shootsslot2:empty{display:none}
 .shootchip .when{color:var(--txt);font-weight:600}
 .shootchip a{color:var(--txt);opacity:.7;text-decoration:underline;text-underline-offset:3px;font-weight:600}
 .shootchip a:hover{opacity:1}
@@ -416,6 +425,8 @@ body.assist #tabbar button[data-tab="more"]{display:none}
 .wrow-body{display:none;padding:0 14px 8px}
 .wkrow.open .wrow-body{display:block}
 .wrow-body .card{margin:0;border:none;background:transparent;box-shadow:none;padding:2px 0 2px;animation:none}
+.wdetail{padding:4px 0 6px;border-top:1px dashed var(--line);margin-top:2px}
+.wdetail .act{margin-top:12px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 /* ---- caption + post buttons ---- */
 .tbtn.postbtn{background:linear-gradient(135deg,#ff3d46,#c4141e 75%);color:#fff;border-color:transparent}
 /* ---- 🔳 QR modal ---- */
@@ -490,6 +501,9 @@ body.assist #msgwrap,body.assist .chatfab,body.assist #refwrap,body.assist #bran
 .bsave:disabled{opacity:.6;cursor:default}
 .bstat{font-size:12px;color:var(--dim);margin-left:10px}
 /* ---- floating chat bubble ---- */
+/* One inbox per screen: on Home the Messages card is the door — the fab only
+   floats on the other tabs so there's never two badges for one thread. */
+body[data-tab="home"] .chatfab{display:none !important}
 .chatfab{position:fixed;right:16px;bottom:88px;z-index:50;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#ff3d46,#c4141e 70%);display:flex;align-items:center;justify-content:center;font-size:22px;text-decoration:none;box-shadow:0 12px 30px -8px rgba(234,0,42,.5);transition:transform .18s ease;border:1px solid rgba(255,255,255,.15)}
 .chatfab:hover{transform:translateY(-2px) scale(1.04)}
 .chatfab .fbadge{position:absolute;top:-4px;right:-4px;background:#fff;color:#c4141e;font-size:11px;font-weight:800;border-radius:20px;min-width:20px;height:20px;display:none;place-items:center;padding:0 6px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
@@ -806,6 +820,7 @@ function normalize(h){
 function stageLabel(x){
   const ph = phaseOf(x);
   const stL = String(x.st || '').toLowerCase();
+  if(ph <= 1 && BOOKPEND[String(x.id || '')]) return 'Requested — confirming your slot';
   return x.dv ? 'Delivered — enjoy 🎉'
     : x.rs ? (stL === 'review 2' ? 'Round 2 is ready — take a look'
             : stL === 'review 3' ? 'Final cut is ready — take a look'
@@ -826,7 +841,13 @@ function workRow(x, wi){
   const upcoming = ph <= 1;
   const acts = briefBtn(x) + scriptBtn(x);
   const mini = upcoming ? acts : '';
-  const body = card(x, 0, 'work nested', '', 'Open', true, shootLine(x), upcoming ? '' : acts);
+  // Expansion shows only what the collapsed row doesn't: the full step tracker,
+  // the shoot-day line, and the actions — never a second copy of the card header.
+  var bacts = (upcoming ? '' : acts) +
+    (x.url ? '<a class="go soft" href="' + esc(x.url) + '">Open <span class="ar">→</span></a>' : '');
+  if(bacts.trim()) bacts += renBtn(x);   // rename rides along with real actions — never a lone pencil
+  const body = '<div class="wdetail">' + tracker(x) + shootLine(x) +
+    (bacts.trim() ? '<div class="act">' + bacts + '</div>' : '') + '</div>';
   return '<div class="wkrow" data-wrow="' + wi + '">' +
     '<div class="wrow-head" data-wtoggle="' + wi + '">' +
       '<span class="wtt"><span class="wname"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span></span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
@@ -858,6 +879,7 @@ function briefBtn(x){
 }
 function shootLine(x){
   if(phaseOf(x) > 1 || !x.dt) return '';
+  if(BOOKPEND[String(x.id || '')]) return '<div class="shootline pend">⏳ We&rsquo;re confirming your slot — you&rsquo;ll get a ping the moment it&rsquo;s approved.</div>';
   var d = new Date(String(x.dt) + 'T12:00:00');
   if(isNaN(d.getTime())) return '';
   var today = new Date(); today.setHours(12, 0, 0, 0);
@@ -1070,8 +1092,26 @@ function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
     '</div>';
 }
 let AGENTNAME = '', AGENTEMAIL = '', PAYURL = '';
+var BOOKPEND = {};   // project/booking ids whose shoot still awaits studio approval
+/* Bookings load after the rows render — patch any already-drawn row so the
+   whole page tells ONE story while a shoot is pending. */
+function syncPendingRows(){
+  try{
+    document.querySelectorAll('.wkrow').forEach(function(row){
+      var pid = row.querySelector('.wrow-head [data-pid]');
+      if(!pid || !BOOKPEND[pid.getAttribute('data-pid')]) return;
+      var st = row.querySelector('.wstage');
+      if(st) st.textContent = 'Requested — confirming your slot';
+      var stg = row.querySelector('.stagelbl b');
+      if(stg) stg.textContent = 'Requested — confirming your slot';
+      var sl = row.querySelector('.shootline');
+      if(sl){ sl.classList.add('pend'); sl.innerHTML = '⏳ We&rsquo;re confirming your slot — you&rsquo;ll get a ping the moment it&rsquo;s approved.'; }
+    });
+  }catch(eSp){}
+}
 let SVC = [];
 var DELCOUNT = 0;
+var PROJCOUNT = 0;
 const SELLER_URL = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'seller-prep.html';
 /* ---- Calendly: booking happens in a popup right on this page ---- */
 const CAL_BASE = 'https://calendly.com/hello-reelestatemedia';
@@ -1132,6 +1172,7 @@ function render(raw){
   const rev = items.filter(x => !x.dv && x.rs && x.url);
   const work = items.filter(x => !x.dv && !(x.rs && x.url));
   DELCOUNT = done.length;
+  PROJCOUNT = items.length;
   // ---- since your last visit: diff today's pipeline against the last snapshot ----
   const SEEN_KEY = 'rem_hub_seen_v1:' + a;
   let prev = null;
@@ -1232,6 +1273,7 @@ function render(raw){
   // ---- 📅 Book tab: calendar, open slots, packages, ideas ----
   html += '<div class="viewblk" data-view="bookhead" style="display:none">';
   html += '<div class="tabhead"><h2>Book a <em>shoot</em><span style="color:var(--red)">.</span></h2><span class="thsub">Your details pre-filled</span></div>';
+  html += '<div id="shootsslot2"></div>';
   html += '<div class="bookcta"><a class="go calopen" href="#">📅 Open the calendar <span class="ar">→</span></a></div>';
   html += '<div class="slotrow" id="slotrow"></div>';
   html += '</div>';
@@ -1306,8 +1348,23 @@ function maybeAskRating(items){
   });
   // most recent milestone first; within a project ask the shoot before the edit (chronological)
   q.sort(function(a2, b2){ if(String(b2.dt) !== String(a2.dt)) return String(b2.dt).localeCompare(String(a2.dt)); return (a2.phase === 'shoot' ? 0 : 1) - (b2.phase === 'shoot' ? 0 : 1); });
-  RATE_Q = q.slice(0, 3);                              // cap per visit — gentle, never a wall of prompts
-  if(RATE_Q.length) setTimeout(nextRating, 1300);
+  RATE_Q = q.slice(0, 1);                              // ONE gentle ask per visit — never a wall of prompts
+  if(RATE_Q.length) rateWhenSettled();
+}
+/* Ask only after the agent has actually engaged with the page — never on first paint. */
+var RATE_ARMED = false;
+function rateWhenSettled(){
+  if(RATE_ARMED) return;
+  RATE_ARMED = true;
+  var fire = function(){
+    ['pointerdown', 'scroll', 'keydown'].forEach(function(ev){ window.removeEventListener(ev, fire, true); });
+    setTimeout(function(){
+      // hold off if another modal/sheet is open right now
+      if(document.hidden || document.querySelector('.bmodal.on:not(.rmodal), #teleo.on, #qrmodal.on')){ setTimeout(fire, 6000); return; }
+      nextRating();
+    }, 1400);
+  };
+  ['pointerdown', 'scroll', 'keydown'].forEach(function(ev){ window.addEventListener(ev, fire, true); });
 }
 function nextRating(){
   if(!RATE_Q.length){ if(ratingModal) ratingModal.classList.remove('on'); return; }
@@ -1381,9 +1438,10 @@ function updateWelcome(){
   var slot = document.getElementById('welcomeslot');
   if(!slot) return;
   var st = wState();
-  if(st.dismissed){ slot.innerHTML = ''; return; }
+  // The checklist is for brand-new agents only — anyone with a project in the
+  // pipeline (or delivered) has clearly found their way around already.
+  if(st.dismissed || PROJCOUNT > 0){ slot.innerHTML = ''; return; }
   var items = [
-    {t: '📌 Bookmark this page — it’s your home base', done: !!st.save, act: 'wsave', lbl: 'Done ✓'},
     {t: '🎨 Set up your brand kit (logo, colours)', done: WELCOME.brand, act: 'wbrand', lbl: 'Set up →'},
     {t: '💬 Say hi in your chat — we’re on the other end', done: WELCOME.chat, act: 'wchat', lbl: 'Open chat →'},
     {t: '📅 Book your first shoot', done: WELCOME.book || !!st.booked, act: 'wbook', lbl: 'Book →'}
@@ -1405,6 +1463,11 @@ function loadBookings(){
     .then(function(r){ return r.json(); })
     .then(function(j){
       if(!j.ok) return;
+      BOOKPEND = {};
+      (j.items || []).forEach(function(itP){
+        if(itP.ap === 0){ if(itP.dref) BOOKPEND[String(itP.dref)] = 1; if(itP.id) BOOKPEND[String(itP.id)] = 1; }
+      });
+      syncPendingRows();
       var slot = document.getElementById('shootsslot');
       if(j.items && j.items.length){ WELCOME.book = true; updateWelcome(); }
       // ✅ approval watch — celebrate the moment a shoot flips from pending to approved
@@ -1416,10 +1479,11 @@ function loadBookings(){
         localStorage.setItem('rem_hub_bookap_v1:' + a, JSON.stringify(apSeen));
         if(apNew.length){ toast('✅ Shoot approved: ' + apNew[0].n + ' — locked in!'); confetti(); }
       }catch(eAp){}
-      if(slot && j.items && j.items.length){
+      var slot2 = document.getElementById('shootsslot2');
+      if((slot || slot2) && j.items && j.items.length){
         var briefSent = {};
         try{ briefSent = JSON.parse(localStorage.getItem('rem_hub_sbrief_v1:' + a)) || {}; }catch(eB){}
-        slot.innerHTML = '<div class="shoots">' + j.items.map(function(it){
+        var chipsHtml = '<div class="shoots">' + j.items.map(function(it){
           var d = new Date(it.s);
           var when = isNaN(d.getTime()) ? '' :
             d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) + ' · ' +
@@ -1428,13 +1492,18 @@ function loadBookings(){
           var bm = (window.BRIEFMETA && (window.BRIEFMETA[it.dref] || window.BRIEFMETA[it.id])) || null;
           var pend2 = it.ap === 0;
           var apb = pend2 ? ' <b class="bwait">⏳ Awaiting approval</b>' : ' <b class="bok">✅ Approved</b>';
-          return '<span class="shootchip' + (pend2 ? ' pend' : '') + '">🎬 ' + esc(it.n) + (when ? ' <span class="when">' + esc(when) + '</span>' : '') + apb +
-            ' <a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a>' +
+          return '<span class="shootchip' + (pend2 ? ' pend' : '') + '">' +
+            '<span class="scrow1">🎬 <b class="scn">' + esc(it.n) + '</b>' + apb + '</span>' +
+            (when ? '<span class="when">' + esc(when) + (pend2 ? ' <i class="scnote">usually confirmed within a few hours</i>' : '') + '</span>' : '') +
+            '<span class="scacts">' +
+            '<a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a>' +
             ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '" data-dref="' + esc(it.dref || it.id || '') + '" data-br="' + (bm && bm.br ? encodeURIComponent(JSON.stringify(bm.br)) : '') + '" data-lk="' + (bm && bm.lk ? '1' : '0') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + it.n) + '">' + ((bm && bm.lk) ? '🔒 View brief' : (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief')) + '</a>' +
             (it.rs ? ' <a href="' + esc(it.rs) + '" target="_blank" rel="noopener" title="Something came up? Move it — no guilt.">↔ Reschedule</a>' : '') +
-            '</span>';
-        }).join('') + '</div>' +
-        '<div class="shootact"><button class="mini" id="sellersend" title="A homeowner-friendly prep checklist — send it the moment you book.">📤 Send your seller the prep checklist</button></div>';
+            '</span></span>';
+        }).join('') + '</div>';
+        if(slot) slot.innerHTML = chipsHtml +
+          '<div class="shootact"><button class="mini" id="sellersend" title="A homeowner-friendly prep checklist — send it the moment you book.">📤 Send your seller the prep checklist</button></div>';
+        if(slot2) slot2.innerHTML = '<div class="upnext">Already on the calendar</div>' + chipsHtml;
         var ss = document.getElementById('sellersend');
         if(ss) ss.addEventListener('click', function(){
           var txt = 'We\'ve booked professional photo/video for your home! Here\'s a quick 10-minute prep checklist so it shoots beautifully: ' + SELLER_URL;
@@ -3108,4 +3177,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:64px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">HUB v2026.09.20-2</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-3</div></div></body></html>
