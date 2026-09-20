@@ -1552,7 +1552,7 @@ function App(){
         // 3 — save the folder link as the delivery link (+ thumbnail) and tell the hub
         setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, link: folUrl, dlvFolder: fol, dlvFolderUrl: folUrl, ...(firstImg ? {thumb: firstImg} : {})} : d)}));
         if(c.id) setTimeout(() => pushHub(c.id), 900);
-        showToast('✅ ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' delivered — folder link saved' + (firstImg ? ' · Library thumbnail set' : ''));
+        showToast('✅ ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' uploaded — folder link saved' + (firstImg ? ' · thumbnail set' : '') + '. Set the status whenever you’re ready.');
         if(!firstImg) setTimeout(() => { if(confirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 800);
       }catch(err){
         showToast('⚠ Upload stopped — ' + ((err && err.message) || 'error') + '. Nothing lost: flip the status again to retry, or paste a link instead.');
@@ -1560,6 +1560,7 @@ function App(){
     };
     inp.click();
   };
+  window.deliverFilesFor = deliverFilesFor;   // reachable from the deliverable rows in OrderDetail
   // 🖼 one-tap Library thumbnail: pick an image → shrink it → upload through the
   // inbox's kind:'file' route (lands in Drive, link-shared automatically) →
   // saved on the deliverable → hub re-pushed so the agent sees it right away.
@@ -1604,18 +1605,18 @@ function App(){
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
        !confirm('🚫 ' + patch.shootDate + ' is a blocked day. Schedule anyway?')) return;
     if(cur && patch.status === 'Delivered' && cur.status !== 'Delivered'){
-      if(confirm('📦 Upload the finals right here?\n\nOK → pick the video/photo files. They upload into a tidy Drive folder (shoot type → agent → date · project), the folder is shared, and the delivery link + Library thumbnail save themselves.\n\nCancel → paste a link the old way (best for the really huge files).')){
-        setTimeout(() => deliverFilesFor(id), 250);
-      } else {
+      // Files usually arrive earlier via the 📦 Upload button on the deliverable —
+      // if a link is already on file, flipping the status stays a one-click affair.
+      if(!(cur.dlvFolder || String(cur.link || '').trim())){
         const isB = mediaOf(cur) === 'both';
-        const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip.' : '📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
+        const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)' : '📦 Delivery link (Drive / Frame.io)? OK to save — blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)', cur.link || '');
         if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
         if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
           if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
-        // 🖼 Library thumbnail — pick any image; it uploads to Drive and shares itself
-        if(confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.' + (cur.thumb ? '\n\n(OK replaces the current one · Cancel keeps it)' : '\n\n(Cancel to skip — their Library shows a 🎬 tile instead)'))){
-          setTimeout(() => pickThumbFor(id), 250);
-        }
+      }
+      // 🖼 Library thumbnail — only asks if one isn't set yet
+      if(!cur.thumb && confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.\n\n(Cancel to skip — their Library shows a 🎬 tile instead)')){
+        setTimeout(() => pickThumbFor(id), 250);
       }
     }
     if(cur && isReviewStage(patch.status) && !isReviewStage(cur.status)){
@@ -1655,11 +1656,13 @@ function App(){
           }
         }
       } catch(e){}
-      const isB = mediaOf(cur) === 'both';
-      const l = prompt(isB ? '📷 Photos review link? OK to save — blank to skip.' : '👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
-      if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
-      if(isB){ const lv = prompt('🎬 Video review link? OK to save — blank to skip.', cur.linkVideo || '');
-        if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
+      if(!cur.dlvFolder){   // files already uploaded via 📦? then Client Review is one click — no prompts
+        const isB = mediaOf(cur) === 'both';
+        const l = prompt(isB ? '📷 Photos review link? OK to save — blank to skip.' : '👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
+        if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
+        if(isB){ const lv = prompt('🎬 Video review link? OK to save — blank to skip.', cur.linkVideo || '');
+          if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
+      }
     }
     setDb(p => ({...p, deliverables: p.deliverables.map(d => {
       if(d.id !== id) return d;
@@ -3614,6 +3617,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
         {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
         {uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && <button className="btn ghost sm" title="Uncombine — peel one credit back out into its own reel slot" style={{padding:'0 8px'}} onClick={() => uncombineDeliverable(d.id)}>⊟ Uncombine</button>}
+        <button className="btn ghost sm" title={d.dlvFolder ? 'Upload more files into this project’s Drive folder — same folder, same link, any day' : 'Upload the photo/video files — creates the organized Drive folder (shoot type → agent → date · project), shares it, and saves the link here. Change the status whenever you’re ready.'} style={{padding:'0 8px'}} onClick={() => window.deliverFilesFor && window.deliverFilesFor(d.id)}>📦 Upload</button>
+        {d.dlvFolderUrl && <button className="btn ghost sm" title="Open this project’s delivery folder in Drive" style={{padding:'0 7px'}} onClick={() => window.open(d.dlvFolderUrl, '_blank')}>🗂</button>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
         {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
       </span>
@@ -5343,6 +5348,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-4</div>
 </body>
 </html>
