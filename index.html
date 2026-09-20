@@ -147,6 +147,12 @@
   .titleedit:focus{border-color:var(--amber);background:var(--panel2)}
   .backlink{background:none;border:none;color:var(--amber);font-size:13.5px;padding:0;margin-bottom:14px;font-weight:600}
   .dl-row{display:grid;grid-template-columns:1.4fr 130px 130px 1.2fr;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .dl-meta{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+  .dl-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .dl-pills:empty{display:none}
+  .dl-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .utilrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .utilmore{display:none}
   .dl-row:last-child{border-bottom:none}
   .brief{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:2px 0 12px}
   .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -284,9 +290,21 @@
     .shell{padding:0 12px 70px}
     header.top{padding:16px 0 12px}
     .brand h1{font-size:22px}
-    nav.tabs{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
-    nav.tabs::-webkit-scrollbar{display:none}
-    nav.tabs button{white-space:nowrap;padding:10px 15px}
+    nav.tabs{order:3;width:100%;flex-wrap:wrap;gap:4px}
+    nav.tabs button{white-space:nowrap;padding:9px 10px;font-size:11px;flex:1 1 auto;text-align:center}
+    .utilmore{display:inline-flex;align-items:center;justify-content:center;min-width:42px}
+    .utilrow{display:none}
+    .utilrow.open{display:flex;order:4;width:100%;margin-top:8px}
+    .hdr-actions{flex-wrap:wrap}
+    .dl-head{display:none}
+    table.cards thead{display:none}
+    table.cards,table.cards tbody{display:block;width:100%}
+    table.cards tr{display:flex;flex-wrap:wrap;gap:2px 16px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+    table.cards td{display:block;border:none;padding:2px 0}
+    table.cards td[data-l]::before{content:attr(data-l);display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-faint)}
+    table.cards td[data-l="Project"]{width:100%;font-size:15px}
+    table.cards td[data-l="Project"]::before{display:none}
+    .card table:not(.cards){display:block;overflow-x:auto}
     .btn{padding:11px 20px;min-height:42px}
     .btn.sm{padding:8px 14px;min-height:36px}
     input,select,textarea{font-size:16px;padding:11px 12px;min-height:44px}
@@ -1354,6 +1372,7 @@ function App(){
   const [staleVersion, setStaleVersion] = useState(false);
   const [cloud, setCloud] = useState(() => ({status: 'idle', last: bakMeta().t ? fmtClock(bakMeta().t) : null}));
   const [showCloud, setShowCloud] = useState(false);
+  const [utilOpen, setUtilOpen] = useState(false);   // 📱 phone header: utilities tucked behind ⋯
   const cloudSkip = React.useRef(false);
   const bakBusy = React.useRef(false);
   // ⛅ full snapshot → private JSON in your Drive (kind:'file' priv) + a tiny
@@ -2138,21 +2157,24 @@ function App(){
             {l}{k === 'calendar' && db.pendingBookings.length > 0 ? ` · ${db.pendingBookings.length}` : ''}
           </button>)}
       </nav>
-      <div className="flex" style={{gap:8}}>
-        <button className="btn ghost sm" title="Chat with your agents — opens in a new tab, already unlocked"
-          style={{borderColor:'var(--amber)', color:'var(--amber)'}}
-          onClick={() => {
-            // Hand the chat page your inbox token so it opens straight into the conversations.
-            try{ if(db.settings.inboxToken) localStorage.setItem('rem_admin_token_v1', db.settings.inboxToken); }catch(e){}
-            window.open('studio-chat.html', '_blank');
-          }}>💬 Chat</button>
-        <button className="btn ghost sm" title="Your public testimonial wall — what visitors see" onClick={() => window.open('wall.html', '_blank')}>⭐ Wall</button>
-        <button className="btn ghost sm" title="Cloud backups — auto-saved to your own Google Drive" onClick={() => setShowCloud(true)}
-          style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
-          {(db.settings.inboxUrl && db.settings.inboxToken) ? (cloud.status === 'saving' ? '⛅ …' : cloud.status === 'err' ? '⛅ ⚠' : cloud.last ? '⛅ ✓' : '⛅ ·') : '⛅'}</button>
-        <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
-        <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
-        <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
+      <div className="flex hdr-actions" style={{gap:8}}>
+        <div className={'utilrow' + (utilOpen ? ' open' : '')}>
+          <button className="btn ghost sm" title="Chat with your agents — opens in a new tab, already unlocked"
+            style={{borderColor:'var(--amber)', color:'var(--amber)'}}
+            onClick={() => {
+              // Hand the chat page your inbox token so it opens straight into the conversations.
+              try{ if(db.settings.inboxToken) localStorage.setItem('rem_admin_token_v1', db.settings.inboxToken); }catch(e){}
+              window.open('studio-chat.html', '_blank');
+            }}>💬 Chat</button>
+          <button className="btn ghost sm" title="Your public testimonial wall — what visitors see" onClick={() => window.open('wall.html', '_blank')}>⭐ Wall</button>
+          <button className="btn ghost sm" title="Cloud backups — auto-saved to your own Google Drive" onClick={() => setShowCloud(true)}
+            style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
+            {(db.settings.inboxUrl && db.settings.inboxToken) ? (cloud.status === 'saving' ? '⛅ …' : cloud.status === 'err' ? '⛅ ⚠' : cloud.last ? '⛅ ✓' : '⛅ ·') : '⛅'}</button>
+          <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
+          <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
+          <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
+        </div>
+        <button className={'btn ghost sm utilmore' + (utilOpen ? ' on' : '')} title="Chat, Wall, backups & more" onClick={() => setUtilOpen(!utilOpen)}>{utilOpen ? '✕' : '⋯'}</button>
         <button className="btn" onClick={() => setShowNewOrder(true)}>+ New Booking</button>
       </div>
     </header>
@@ -3458,19 +3480,19 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
           <span className="spacer"></span>
           <span className="small">Total <strong className="num">{money(totVal)}</strong>{marg > 0 && <span className="teal"> · Pinnacle margin {money(marg)}</span>}</span>
         </div>
-        <table><thead><tr><th>Project</th><th>Agent</th><th>Booked</th><th>Progress</th><th>Total</th><th>Payment</th></tr></thead>
+        <table className="cards"><thead><tr><th>Project</th><th>Agent</th><th>Booked</th><th>Progress</th><th>Total</th><th>Payment</th></tr></thead>
         <tbody>
           {os.map(o => { const p = orderProgress(o.id); const t = orderTotals(o); return (
             <tr key={o.id} className="click" onClick={() => setOpenOrder(o.id)}>
-              <td><strong>{o.project || 'Untitled'}</strong></td>
-              <td>{clientName(o.clientId)}</td>
-              <td className="muted">{fmtDate(o.date)}</td>
-              <td style={{minWidth:150}}>
+              <td data-l="Project"><strong>{o.project || 'Untitled'}</strong></td>
+              <td data-l="Agent">{clientName(o.clientId)}</td>
+              <td data-l="Booked" className="muted">{fmtDate(o.date)}</td>
+              <td data-l="Progress" style={{minWidth:150}}>
                 <div className="small muted" style={{marginBottom:4}}>{p.done}/{p.total} · {p.total - p.done} left</div>
                 <div className={'progress' + (p.pct === 100 ? ' done' : '')}><div style={{width:p.pct + '%'}}></div></div>
               </td>
-              <td className="num">{money(t.total)}</td>
-              <td><span className={'pill ' + o.payment}>{o.payment}</span></td>
+              <td data-l="Total" className="num">{money(t.total)}</td>
+              <td data-l="Payment"><span className={'pill ' + o.payment}>{o.payment}</span></td>
             </tr>);})}
         </tbody></table>
       </div>);})}
@@ -3638,7 +3660,7 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
     {groups.map(g => (
       <div className="card" key={g}>
         <h3 style={{fontSize:16}}>{g}</h3>
-        <div className="dl-row small faint" style={{borderBottom:'1px solid var(--line)'}}>
+        <div className="dl-row dl-head small faint" style={{borderBottom:'1px solid var(--line)'}}>
           <span>Deliverable</span><span>Status</span><span>Shoot date</span><span>Prep / Brief</span>
         </div>
         {ds.filter(d => d.group === g).map(d => <DeliverableRow key={d.id} d={d} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable} defaultOpen={d.id === focusDl} order={o} client={db.clients.find(c => c.id === o.clientId) || {}} siblings={ds.filter(x => x.group === g)} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} db={db} updateSettings={updateSettings} />)}
@@ -3740,7 +3762,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL(s)}</option>)}
       </select>
       <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
-      <span className="flex" style={{gap:8}}>
+      <span className="dl-meta">
+      <span className="dl-pills">
         {(() => { const lk = d.briefLock || 'auto'; const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
           return locked
             ? <span className="pill" style={{background:'rgba(212,160,80,.16)', color:'#e6c079', border:'1px solid rgba(212,160,80,.4)'}} title={lk === 'locked' ? "Brief locked for the agent (manual) — open the brief to unlock" : "Brief auto-locked — the shoot's done. Open the brief to unlock for the agent"}>🔒 Brief locked</span>
@@ -3755,6 +3778,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {(() => { const cd = countdownFor(d); return cd && <span className={'pill ' + cd.tone}>{cd.label}</span>; })()}
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
+      </span>
+      <span className="dl-acts">
         {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
         {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
         {uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && <button className="btn ghost sm" title="Uncombine — peel one credit back out into its own reel slot" style={{padding:'0 8px'}} onClick={() => uncombineDeliverable(d.id)}>⊟ Uncombine</button>}
@@ -3763,6 +3788,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {d.dlvFolderUrl && <button className="btn ghost sm" title="Open this project’s delivery folder in Drive" style={{padding:'0 7px'}} onClick={() => window.open(d.dlvFolderUrl, '_blank')}>🗂</button>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
         {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
+      </span>
       </span>
     </div>
     {open &&
@@ -4383,6 +4409,8 @@ function BookForAgentModal({db, applyBookingNew, onClose}){
   );
 }
 function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, applyBookingNew, applyBookingAttach, dismissBooking, orderProgress, addClient, updateSettings}){
+  // errors should LOOK like errors — never dressed in success green
+  const syncBad = /failed|couldn|rejected|error|missing|⚠/i.test(String(syncMsg || ''));
   const [tok, setTok] = useState('');
   const [paste, setPaste] = useState('');
   const [clipErr, setClipErr] = useState('');
@@ -4402,7 +4430,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
         </div>
         <span className="spacer"></span>
         {db.settings.calendlyToken && <>
-          <span className="pill delivered">⚡ Connected · auto-syncs every 20 min</span>
+          <span className={'pill ' + (syncBad ? 'unpaid' : 'delivered')} title={syncBad ? 'Connected, but the last sync hit an error — see the note below. It retries automatically.' : ''}>{syncBad ? '⚡ Connected · last sync failed' : '⚡ Connected · auto-syncs every 20 min'}</span>
           <button className="btn ghost sm" title="Change or remove token" onClick={() => {
             const v = prompt('Calendly Personal Access Token (clear the field to disconnect):', '········');
             if(v === null) return;
@@ -4435,7 +4463,7 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
           <button className="btn sm" disabled={!paste.trim()} onClick={() => { if(importBookings(paste)) setPaste(''); }}>Import</button>
         </div>
       </details>
-      {syncMsg && <p className="small teal" style={{marginTop:10}}>{syncMsg}</p>}
+      {syncMsg && <p className={'small ' + (syncBad ? '' : 'teal')} style={syncBad ? {marginTop:10, color:'var(--red)', fontWeight:700} : {marginTop:10}}>{syncMsg}</p>}
     </div>
     {db.pendingBookings.length === 0 &&
       <div className="card"><div className="empty">No bookings waiting for review. Hit Sync to check for new ones.</div></div>}
@@ -5491,6 +5519,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-5</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-6</div>
 </body>
 </html>
