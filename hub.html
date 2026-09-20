@@ -162,6 +162,8 @@ body.assist #billingwrap{display:none !important}
 .shootline .ics{margin-left:9px;color:var(--txt);opacity:.7;font-weight:600;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s ease}
 .shootline .ics:hover{opacity:1}
 .shootline.pend{border-style:dashed;background:rgba(245,242,233,.03);border-color:var(--line2);color:var(--dim)}
+/* in the Library, everything is delivered — the pill says it, the tracker would just repeat it */
+.card.done .track,.card.done .stageline{display:none}
 /* ---- testimonial ---- */
 .tbtn{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:12px;padding:13px 16px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:border-color .18s ease,color .18s ease}
 .tbtn:hover{border-color:var(--amber);color:var(--amber)}
@@ -258,12 +260,16 @@ a.pill.due2:hover{filter:brightness(1.15)}
 .libsearch input{width:100%;background:rgba(5,5,6,.6);border:1px solid var(--line2);border-radius:12px;color:var(--txt);font-family:var(--sans);font-size:14px;padding:11px 14px;outline:none;transition:border-color .18s ease}
 .libsearch input:focus{border-color:rgba(234,0,42,.5)}
 .libsearch input::placeholder{color:var(--faint)}
-.librow{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;transition:border-color .18s ease}
+.librow{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);border:1px solid var(--line);border-radius:13px;padding:11px 14px;margin-bottom:8px;transition:border-color .18s ease}
 .librow:hover{border-color:rgba(245,242,233,.16)}
 .librow .no{font-family:var(--serif);font-style:italic;color:var(--faint);font-size:12px;min-width:22px}
-.librow .lt{flex:1;min-width:0}
+.librow .lt{flex:1 1 150px;min-width:0}
 .librow .lt b{display:block;font-family:var(--serif);font-weight:480;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.librow .lt span{font-size:11px;color:var(--faint)}
+.librow .lt span{font-size:11px;color:var(--faint);white-space:nowrap}
+.librow .lract{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.lthumb{width:44px;height:44px;border-radius:10px;flex:none;overflow:hidden;background:rgba(245,242,233,.05);border:1px solid var(--line);display:grid;place-items:center;font-size:17px}
+.lthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card .lthumb{width:52px;height:52px;border-radius:12px}
 .mini{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:9px;padding:8px 12px;font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
 .mini:hover{border-color:var(--teal);color:var(--teal)}
 .mini.share:hover{border-color:var(--red2);color:var(--txt)}
@@ -810,7 +816,7 @@ function normalize(h){
     rs: x.rs != null ? !!x.rs : ['client review','review 2','review 3','in review'].some(r => String(x.st || '').toLowerCase() === r),
     dv: x.dv != null ? !!x.dv : String(x.st || '').toLowerCase() === 'delivered',
     url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0, amt: +x.amt || 0,
-    cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '',
+    cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '', th: x.th || '',
     br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
@@ -947,16 +953,26 @@ function libDate(d){
   var dd = new Date(String(d) + 'T12:00:00');
   return isNaN(dd.getTime()) ? 'Delivered' : 'Delivered ' + dd.toLocaleDateString('en-CA', {month:'short', day:'numeric', year:'numeric'});
 }
+/* 🖼 thumbnail tile — a Drive file id or full URL in the project's `th` field;
+   falls back to a quiet clapper tile so the layout never jumps. */
+function thumbHtml(x){
+  var th = String((x && x.th) || '');
+  var src = !th ? '' : (/^https?:/i.test(th) ? th : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(th) + '&sz=w200');
+  return '<span class="lthumb">' + (src ? '<img src="' + esc(src) + '" alt="" loading="lazy" onerror="this.parentNode.textContent=\'🎬\'">' : '🎬') + '</span>';
+}
 function librow(x, di, sid){
   return '<div class="librow" data-lib="' + esc(String(x.t + ' ' + (x.p || '')).toLowerCase()) + '">' +
-    '<span class="no">' + String(di + 1).padStart(2, '0') + '</span>' +
+    thumbHtml(x) +
     '<span class="lt"><b><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span>' + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
+    '<span class="lract">' +
     (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
     '<button class="mini postbtn2" data-post="' + sid + '" title="Copy caption &amp; open Instagram">📲 Post</button>' +
-    '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></div>';
+    '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></span></div>';
 }
 function perfMap(){ try{ return JSON.parse(localStorage.getItem('rem_hub_perf_v1:' + a)) || {}; }catch(e){ return {}; } }
 function perfRow(x, pid){
+  // only ask while the delivery is fresh — nobody remembers how July performed
+  if(x.dt && rDaysSince(x.dt) > 30 && !perfMap()[x.t]) return '';
   var logged = perfMap()[x.t];
   if(logged){
     var icon = logged.mood === 'up' ? '📈' : logged.mood === 'mid' ? '😐' : '📉';
@@ -1082,7 +1098,7 @@ document.getElementById('body').addEventListener('click', function(ev){
 });
 function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
   return '<div class="card ' + cls + '"' + (lib ? ' data-lib="' + esc(lib) + '"' : '') + ' style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
-    '<div class="chead"><div class="tt"><div class="name"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span> ' + renBtn(x) + '</div>' +
+    '<div class="chead">' + (cls.indexOf('done') > -1 ? thumbHtml(x) : '') + '<div class="tt"><div class="name"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span> ' + renBtn(x) + '</div>' +
     '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
     tracker(x) +
     (extraLine || '') +
@@ -1251,14 +1267,14 @@ function render(raw){
       const sid = 'sh' + di;
       SHARE[sid] = {t: x.t, url: x.url || '', cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || ''};
       const shareBtn = '<button class="tbtn sharebtn" data-sh="' + sid + '">↗ Share</button>';
-      if(di < 4){
+      if(di < 1){
         const tb = testiBits(x, 'td' + di);
         PERFT['pf' + di] = x.t;
         const duAmt = x.amt ? ' · $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '';
         const duPill = x.du ? (PAYURL
           ? '<a class="pill due2" href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Tap to pay online — or e-transfer to hello@reelestatemedia.com. Your receipt lands in chat.">💳 Balance due' + duAmt + ' — Pay now</a> '
           : '<span class="pill due2" title="Balance owing — e-transfer to hello@reelestatemedia.com, or message us for the invoice.">💰 Balance due' + duAmt + '</span> ') : '';
-        html += card(x, i++, 'done', duPill + '<span class="pill done">✓ Delivered</span>', 'View finals', true,
+        html += card(x, i++, 'done', duPill + '<span class="pill done">✓ Delivered' + (x.dt ? ' · ' + libDate(x.dt).replace('Delivered ', '') : '') + '</span>', 'View finals', true,
           tb.line + perfRow(x, 'pf' + di), postBits(sid) + shareBtn + tb.btn,
           String(x.t + ' ' + (x.p || '')).toLowerCase());
       } else {
@@ -1477,7 +1493,10 @@ function loadBookings(){
         (j.items || []).forEach(function(it2){ if(it2.ap !== 0 && it2.id && !apSeen[it2.id]){ if(apSeen.__init) apNew.push(it2); apSeen[it2.id] = 1; } });
         apSeen.__init = 1;
         localStorage.setItem('rem_hub_bookap_v1:' + a, JSON.stringify(apSeen));
-        if(apNew.length){ toast('✅ Shoot approved: ' + apNew[0].n + ' — locked in!'); confetti(); }
+        if(apNew.length){
+          toastCal('✅ Shoot approved: ' + apNew[0].n, JSON.stringify({t: apNew[0].n, s: apNew[0].s, e: apNew[0].e}));
+          confetti();
+        }
       }catch(eAp){}
       var slot2 = document.getElementById('shootsslot2');
       if((slot || slot2) && j.items && j.items.length){
@@ -1571,9 +1590,19 @@ function toast(msg){
     document.body.appendChild(toastEl);
   }
   toastEl.textContent = msg;
+  toastEl.onclick = null;
+  toastEl.style.cursor = '';
   toastEl.style.display = 'block';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function(){ toastEl.style.display = 'none'; }, 3200);
+}
+/* a toast the agent can TAP — used for “shoot approved → add it to your calendar” */
+function toastCal(msg, icsSpec){
+  toast(msg + ' — tap to add it to your calendar 📆');
+  toastEl.style.cursor = 'pointer';
+  toastEl.onclick = function(){ try{ downloadIcs(icsSpec); }catch(eT){} toastEl.style.display = 'none'; };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ toastEl.style.display = 'none'; }, 9000);
 }
 /* ---- 📝 script studio + ▶ teleprompter ---- */
 function isScripty(x){ return /reel|video|film|podcast|walkthrough|teleprompter/i.test(String(x.t || '') + ' ' + String(x.p || '')); }
@@ -3177,4 +3206,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-3</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-4</div></div></body></html>

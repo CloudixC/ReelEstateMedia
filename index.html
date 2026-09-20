@@ -1386,6 +1386,7 @@ function App(){
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(myTotal * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
+            ...(d.thumb ? {th: (/drive\.google|docs\.google/.test(String(d.thumb)) ? ((String(d.thumb).match(/[-\w]{25,}/) || [''])[0] || String(d.thumb)) : String(d.thumb))} : {}),
             br: br, lk: brLocked ? 1 : 0,
             ...(d.status === 'Delivered' ? {
               ...(bb.caption ? {cp: bb.caption} : {}),
@@ -1483,6 +1484,9 @@ function App(){
       if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
       if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
         if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
+      // 🖼 Library thumbnail — shows beside this piece in the agent's hub Library
+      const th0 = prompt('🖼 Thumbnail for their Library (Drive image link or file id)? Blank to skip.', cur.thumb || '');
+      if(th0 !== null && th0.trim()) patch = {...patch, thumb: th0.trim()};
     }
     if(cur && isReviewStage(patch.status) && !isReviewStage(cur.status)){
       if(!cur.reviewDate) patch = {...patch, reviewDate: today()};
