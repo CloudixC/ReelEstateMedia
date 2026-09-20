@@ -397,18 +397,24 @@ function shootDesc(d, o){
    through the inbox's resumable route. Both land in the given Drive folder. */
 const UP_ONESHOT = 18 * 1024 * 1024, UP_CHUNK = 20 * 1024 * 1024;
 const upB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error('read failed')); r.onload = () => res(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
-async function upToFolder(inbox, tok, folder, f, onPct){
+async function upToFolder(inbox, tok, folder, f, onPct, ctl){
   const mime = f.type || 'application/octet-stream';
+  const bail = () => { if(ctl && ctl.cancelled) throw new Error('cancelled'); };
+  bail();
   if(f.size <= UP_ONESHOT){
     const b64 = await upB64(f);
+    bail();
     const j = await new Promise((res, rej) => {
       const xhr = new XMLHttpRequest();
+      if(ctl) ctl.xhr = xhr;
       xhr.open('POST', inbox, true);
       if(xhr.upload && onPct) xhr.upload.onprogress = ev => { if(ev.lengthComputable) onPct(Math.min(99, Math.round(ev.loaded / ev.total * 100))); };
       xhr.onload = () => { try{ res(JSON.parse(xhr.responseText || '{}')); }catch(e){ rej(new Error('bad response')); } };
       xhr.onerror = () => rej(new Error('network error'));
+      xhr.onabort = () => rej(new Error('cancelled'));
       xhr.send(JSON.stringify({kind:'file', token: tok, folder: folder, name: f.name, mime, data: b64}));
     });
+    if(ctl) ctl.xhr = null;
     if(!j.ok || !j.id) throw new Error(j.error || 'upload failed');
     if(onPct) onPct(100);
     return j.id;
@@ -417,8 +423,10 @@ async function upToFolder(inbox, tok, folder, f, onPct){
   if(!sess.ok || !sess.session) throw new Error(sess.error || 'could not start the upload');
   let start = 0, id = '';
   while(start < f.size){
+    bail();
     const end = Math.min(start + UP_CHUNK, f.size);
     const data = await upB64(f.slice(start, end));
+    bail();
     const resp = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'chunk', session: sess.session, start, total: f.size, mime, data})}).then(r => r.json());
     if(!resp.ok) throw new Error(resp.error || 'upload interrupted');
     start = end;
@@ -429,6 +437,68 @@ async function upToFolder(inbox, tok, folder, f, onPct){
   if(onPct) onPct(100);
   return id;
 }
+/* 📦 corner upload panel — per-file bars, one Cancel, stays visible while big files stream */
+const UPPANEL = (() => {
+  let el = null, listEl = null, titleEl = null, cancelBtn = null, onCancel = null, hideT = null;
+  const ensure = () => {
+    if(el) return;
+    el = document.createElement('div');
+    el.id = 'up-panel';
+    el.style.cssText = 'position:fixed;right:18px;bottom:18px;z-index:9000;width:330px;max-width:92vw;background:#181818;border:1px solid #2e2e2e;border-radius:14px;box-shadow:0 18px 50px -12px rgba(0,0,0,.85);padding:13px 15px;display:none;font-size:13px;color:#e8e8e8';
+    el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b id="up-title" style="flex:1;font-size:12.5px;line-height:1.35">📦 Uploading…</b><button id="up-cancel" style="background:none;border:1px solid #3a3a3a;color:#bbb;border-radius:8px;padding:3px 11px;cursor:pointer;font-size:12px">Cancel</button></div><div id="up-list" style="max-height:200px;overflow-y:auto"></div>';
+    document.body.appendChild(el);
+    listEl = el.querySelector('#up-list');
+    titleEl = el.querySelector('#up-title');
+    cancelBtn = el.querySelector('#up-cancel');
+    cancelBtn.addEventListener('click', () => { if(onCancel) onCancel(); });
+  };
+  return {
+    open(title, cancelFn){ ensure(); clearTimeout(hideT); onCancel = cancelFn; titleEl.textContent = title; listEl.innerHTML = ''; cancelBtn.style.display = ''; el.style.display = 'block'; },
+    file(name){
+      ensure();
+      const row = document.createElement('div');
+      row.style.cssText = 'margin-bottom:7px';
+      const safe = String(name).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      row.innerHTML = '<div style="display:flex;gap:8px;align-items:baseline"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + safe + '</span><span class="up-pct" style="color:#8a8a8a;font-variant-numeric:tabular-nums">0%</span></div><div style="height:4px;border-radius:4px;background:#2a2a2a;overflow:hidden;margin-top:3px"><div class="up-bar" style="height:100%;width:3%;background:#e11d2a;border-radius:4px;transition:width .2s"></div></div>';
+      listEl.appendChild(row);
+      return {
+        pct(p){ row.querySelector('.up-bar').style.width = Math.max(3, p) + '%'; row.querySelector('.up-pct').textContent = p + '%'; },
+        done(){ row.querySelector('.up-bar').style.width = '100%'; row.querySelector('.up-bar').style.background = '#4cc38a'; row.querySelector('.up-pct').textContent = '✓'; },
+        fail(){ row.querySelector('.up-bar').style.background = '#8a5a20'; row.querySelector('.up-pct').textContent = '✕'; }
+      };
+    },
+    finish(msg, ok){ ensure(); titleEl.textContent = msg; cancelBtn.style.display = 'none'; clearTimeout(hideT); hideT = setTimeout(() => { el.style.display = 'none'; }, ok ? 7000 : 15000); }
+  };
+})();
+/* 🫳 drag-and-drop: drop files straight onto a deliverable row to upload them */
+(() => {
+  const st = document.createElement('style');
+  st.textContent = '.dl-row.dropready{outline:2px dashed #e11d2a;outline-offset:-2px;border-radius:10px;background:rgba(225,29,42,.06)}';
+  document.head.appendChild(st);
+  let hot = null;
+  const clear = () => { if(hot){ hot.classList.remove('dropready'); hot = null; } };
+  document.addEventListener('dragover', e => {
+    const hasFiles = e.dataTransfer && [...(e.dataTransfer.types || [])].indexOf('Files') > -1;
+    if(!hasFiles) return;
+    e.preventDefault();   // stop the browser navigating away on a stray drop
+    const r = e.target && e.target.closest ? e.target.closest('.dl-row[data-dlid]') : null;
+    if(hot && hot !== r) hot.classList.remove('dropready');
+    hot = r;
+    if(r){ r.classList.add('dropready'); e.dataTransfer.dropEffect = 'copy'; }
+  });
+  document.addEventListener('drop', e => {
+    const hasFiles = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length;
+    if(!hasFiles){ clear(); return; }
+    e.preventDefault();
+    const r = e.target && e.target.closest ? e.target.closest('.dl-row[data-dlid]') : null;
+    const id = r && r.getAttribute('data-dlid');
+    const files = [...e.dataTransfer.files];
+    clear();
+    if(id && window.runDeliverUpload) window.runDeliverUpload(id, files);
+  });
+  document.addEventListener('dragend', clear);
+  document.addEventListener('dragleave', e => { if(!e.relatedTarget) clear(); });
+})();
 /* Media type: photo / video / both. Explicit field wins; otherwise inferred from the service name. */
 function inferMedia(txt){
   const t = (txt || '').toLowerCase();
@@ -1515,48 +1585,63 @@ function App(){
   // project folder is reused on re-delivery, even weeks later) → the folder
   // link saves itself as the delivery link → hub re-pushed. First photo in
   // the batch doubles as the Library thumbnail.
+  const runDeliverUpload = async (dlId, files) => {
+    if(window.__upBusy){ showToast('⏳ An upload is already running — let it finish (or cancel it) first.'); return; }
+    if(!files || !files.length) return;
+    const db0 = dbRef.current;
+    const cur = db0.deliverables.find(x => x.id === dlId); if(!cur) return;
+    const o = db0.orders.find(x => x.id === cur.orderId) || {};
+    const c = db0.clients.find(x => x.id === o.clientId) || {};
+    const inbox = db0.settings.inboxUrl, tok = db0.settings.inboxToken || '';
+    if(!inbox || !tok){ showToast('⚠ Set the inbox URL + secret token in Settings first.'); return; }
+    const ctl = {cancelled: false, xhr: null};
+    window.__upBusy = true;
+    UPPANEL.open('📦 ' + dlTitle(cur) + ' — ' + files.length + ' file' + (files.length === 1 ? '' : 's'),
+      () => { ctl.cancelled = true; try{ if(ctl.xhr) ctl.xhr.abort(); }catch(eX){} });
+    try{
+      // 1 — the folder (sticky: saved id wins; else the server matches "<any date> · <project>")
+      let fol = cur.dlvFolder || '', folUrl = cur.dlvFolderUrl || '';
+      if(!fol){
+        const fj = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'dlvfolder', token: tok,
+          type: shootType(cur), agent: (c.name || 'Agent'), project: dlTitle(cur)})}).then(r => r.json());
+        if(!fj || !fj.ok || !fj.id) throw new Error((fj && fj.error) || 'could not make the folder');
+        fol = fj.id; folUrl = fj.url || ('https://drive.google.com/drive/folders/' + fj.id);
+      }
+      // save the link straight away — even a partial upload leaves a valid folder link behind
+      setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, link: folUrl, dlvFolder: fol, dlvFolderUrl: folUrl} : d)}));
+      // 2 — the files, one bar each
+      let firstImg = '', okCount = 0;
+      for(const f of files){
+        if(ctl.cancelled) throw new Error('cancelled');
+        const row = UPPANEL.file(f.name);
+        try{
+          const fid = await upToFolder(inbox, tok, fol, f, p => row.pct(p), ctl);
+          row.done(); okCount++;
+          if(!firstImg && (/^image\//.test(f.type || '') || /\.(jpe?g|png|webp|heic)$/i.test(f.name || ''))) firstImg = fid;
+        }catch(fe){ row.fail(); throw fe; }
+      }
+      // 3 — thumbnail from the first photo, then tell the hub
+      if(firstImg) setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, thumb: firstImg} : d)}));
+      if(c.id) setTimeout(() => pushHub(c.id), 900);
+      UPPANEL.finish('✅ ' + okCount + ' file' + (okCount === 1 ? '' : 's') + ' up — link saved' + (firstImg ? ' · thumbnail set' : '') + '. Set the status whenever you’re ready.', true);
+      if(!firstImg) setTimeout(() => { if(confirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 900);
+    }catch(err){
+      const wasCancelled = ctl.cancelled || /cancelled/.test(String(err && err.message));
+      if(c.id && cur.dlvFolder !== undefined) setTimeout(() => pushHub(c.id), 900);
+      UPPANEL.finish(wasCancelled
+        ? '✕ Upload cancelled. Files already at 100% are in the folder; the rest didn’t go up.'
+        : '⚠ Upload stopped — ' + ((err && err.message) || 'error') + '. Tap 📦 to retry (same folder, nothing lost).', false);
+    }finally{ window.__upBusy = false; }
+  };
+  window.runDeliverUpload = runDeliverUpload;   // drag-and-drop lands here
   const deliverFilesFor = (dlId) => {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.multiple = true; inp.style.display = 'none';
     document.body.appendChild(inp);
-    inp.onchange = async () => {
+    inp.onchange = () => {
       const files = [...(inp.files || [])];
       document.body.removeChild(inp);
-      if(!files.length) return;
-      const db0 = dbRef.current;
-      const cur = db0.deliverables.find(x => x.id === dlId); if(!cur) return;
-      const o = db0.orders.find(x => x.id === cur.orderId) || {};
-      const c = db0.clients.find(x => x.id === o.clientId) || {};
-      const inbox = db0.settings.inboxUrl, tok = db0.settings.inboxToken || '';
-      if(!inbox || !tok){ showToast('⚠ Set the inbox URL + secret token in Settings first.'); return; }
-      try{
-        // 1 — the folder (sticky: the id saved on this deliverable wins; else the
-        //     server finds "<any date> · <project>" under this agent, else creates it)
-        let fol = cur.dlvFolder || '', folUrl = cur.dlvFolderUrl || '';
-        if(!fol){
-          showToast('📁 Setting up the Drive folder…');
-          const fj = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'dlvfolder', token: tok,
-            type: shootType(cur), agent: (c.name || 'Agent'), project: dlTitle(cur)})}).then(r => r.json());
-          if(!fj || !fj.ok || !fj.id) throw new Error((fj && fj.error) || 'could not make the folder');
-          fol = fj.id; folUrl = fj.url || ('https://drive.google.com/drive/folders/' + fj.id);
-        }
-        // 2 — the files
-        let firstImg = '';
-        for(let i = 0; i < files.length; i++){
-          const f = files[i];
-          const label = '📦 Uploading ' + (i + 1) + '/' + files.length + ' — ' + f.name.slice(0, 30);
-          showToast(label);
-          const fid = await upToFolder(inbox, tok, fol, f, pct => showToast(label + ' · ' + pct + '%'));
-          if(!firstImg && (/^image\//.test(f.type || '') || /\.(jpe?g|png|webp|heic)$/i.test(f.name || ''))) firstImg = fid;
-        }
-        // 3 — save the folder link as the delivery link (+ thumbnail) and tell the hub
-        setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, link: folUrl, dlvFolder: fol, dlvFolderUrl: folUrl, ...(firstImg ? {thumb: firstImg} : {})} : d)}));
-        if(c.id) setTimeout(() => pushHub(c.id), 900);
-        showToast('✅ ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' uploaded — folder link saved' + (firstImg ? ' · thumbnail set' : '') + '. Set the status whenever you’re ready.');
-        if(!firstImg) setTimeout(() => { if(confirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 800);
-      }catch(err){
-        showToast('⚠ Upload stopped — ' + ((err && err.message) || 'error') + '. Nothing lost: flip the status again to retry, or paste a link instead.');
-      }
+      runDeliverUpload(dlId, files);
     };
     inp.click();
   };
@@ -1600,6 +1685,7 @@ function App(){
     };
     inp.click();
   };
+  window.pickThumbFor = pickThumbFor;   // 🖼 backfill from any deliverable row
   const updateDeliverable = (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
@@ -1913,6 +1999,56 @@ function App(){
     }
     finishBooking(bk, null);
   };
+  // ✅ Accepting a booking here also APPROVES it on the agent's hub — same effect
+  // as tapping the APPROVE link in the email: writes the token-gated 'bookok' row
+  // and drops the ✅ chat message (the backend fires their push on jag messages).
+  const approveBookingHub = (bk, clientId) => {
+    try{
+      if(!(bk && bk.id && db.settings.inboxUrl && db.settings.inboxToken)) return;
+      const inbox = db.settings.inboxUrl, tok = db.settings.inboxToken;
+      fetch(inbox, {method:'POST', body: JSON.stringify({kind:'bookok', ref: String(bk.id), token: tok,
+        project: String(bk.title || 'Session'), dname: '', who: 'jag', body: '1', from: 'jag'})}).catch(() => {});
+      const c = db.clients.find(x => x.id === clientId) ||
+        db.clients.find(x => String(x.email || x.contact || '').toLowerCase() === String(bk.invitee_email || '').toLowerCase());
+      const hk = c && (c.hubKey || c.hubId);
+      if(hk){
+        let when = '';
+        try{ const dt0 = new Date(bk.start); when = dt0.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'}) + ' at ' + dt0.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'}); }catch(eW){}
+        fetch(inbox, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk),
+          project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
+          body: '✅ Your shoot is approved: ' + String(bk.title || 'Session') + (when ? ' — ' + when : '') + '. Locked in — see you then! 🎬'})}).catch(() => {});
+      }
+      logActivity(`✅ Approved booking: ${bk.invitee_name || ''} — ${bk.title || ''}`);
+      showToast('✅ Approved — their hub chip flips and they get the ping.');
+    }catch(eAp){}
+  };
+  window.approveBookingHub = approveBookingHub;
+  // 💬 one-tap payment nudge → a friendly note in the agent's hub chat (+ their
+  // push rides along server-side). Guarded to once per order per 7 days.
+  const sendPayNudge = (orderId) => {
+    try{
+      const db0 = dbRef.current;
+      const o = db0.orders.find(x => x.id === orderId); if(!o) return;
+      const c = db0.clients.find(x => x.id === o.clientId) || {};
+      const hk = c.hubKey || c.hubId;
+      if(!hk){ showToast('No hub on file for ' + (c.name || 'this client') + ' — copy the reminder instead.'); return; }
+      if(!(db0.settings.inboxUrl && db0.settings.inboxToken)){ showToast('⚠ Set the inbox URL + token in Settings first.'); return; }
+      const gk = 'rem_paynudge_v1:' + orderId;
+      let last = 0; try{ last = +localStorage.getItem(gk) || 0; }catch(eG){}
+      if(Date.now() - last < 7 * 86400000){ showToast('🤝 Already nudged in the last 7 days — give it a beat.'); return; }
+      const amt = money(orderTotals(o).total);
+      const pay = db0.settings.payUrl || '';
+      const first = (c.name || 'there').split(' ')[0];
+      const body = '💳 Hey ' + first + ' — friendly reminder that the balance for “' + (o.project || 'your project') + '” (' + amt + ') is still open. ' +
+        (pay ? 'You can pay online here: ' + pay + ' — or' : 'You can') + ' e-transfer to hello@reelestatemedia.com. Your receipt lands right here the moment it clears. Thank you! 🙏';
+      fetch(db0.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk),
+        project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag', body})}).catch(() => {});
+      try{ localStorage.setItem(gk, String(Date.now())); }catch(eS){}
+      logActivity('💳 Payment nudge sent: ' + (c.name || '') + ' · ' + amt);
+      showToast('💬 Reminder dropped in ' + first + '’s hub chat (with a ping).');
+    }catch(eN){}
+  };
+  window.sendPayNudge = sendPayNudge;
   // Mark a Calendly event id as already handled so the auto-sync never turns it into a duplicate order.
   const markImported = (evId) => { if(evId) setDb(p => ({...p, importedIds: p.importedIds.includes(evId) ? p.importedIds : [...p.importedIds, evId]})); };
 
@@ -1927,6 +2063,7 @@ function App(){
       ds[0].brief = {...(ds[0].brief || DEFAULT_BRIEF), location: bk.location || ''}; }
     setDb(p => ({...p, orders: [order, ...p.orders], deliverables: [...p.deliverables, ...ds]}));
     finishBooking(bk, clientId);
+    approveBookingHub(bk, clientId);
     if(bk.title) setDb(p => ({...p, settings: {...p.settings, eventMap: {...(p.settings.eventMap || {}), [bk.title.trim()]: s.id}}}));
   };
 
@@ -1953,7 +2090,10 @@ function App(){
       ? {...d, shootDate: isoToDate(bk.start), shootTime: isoToTime(bk.start), shootEnd: bk.end ? isoToTime(bk.end) : '', status: d.status === 'Booked' ? 'Scheduled' : d.status,
          brief: {...getBrief(d), location: bk.location || getBrief(d).location}}
       : d)}));
+    const dAt = db.deliverables.find(x => x.id === deliverableId);
+    const oAt = dAt && db.orders.find(x => x.id === dAt.orderId);
     finishBooking(bk, null);
+    approveBookingHub(bk, oAt ? oAt.clientId : null);
   };
   const deleteOrder = (id) => {
     if(!confirm('Delete this order and all its deliverables?')) return;
@@ -2861,6 +3001,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
           <span style={{fontWeight:700}}>{o.project || 'Untitled'}</span>
           <span className="faint small">{c.name} · {money(orderTotals(o).total)}</span>
           <span className="spacer"></span>
+          <button className="btn ghost sm" title="Drop a friendly payment reminder in their hub chat (+ push) — once per 7 days max" onClick={e => { e.stopPropagation(); window.sendPayNudge && window.sendPayNudge(o.id); }}>💬 Nudge hub</button>
           <CopyBtn text={paymentReminderMsg(o, c)} label="✉ Reminder"/>
         </div>);})}
       {feedbackDue.map(({o}) => { const c = clientOf(o.clientId); return (
@@ -3588,7 +3729,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
   const prep = prepScore(d);
   const setBrief = patch => updateDeliverable(d.id, {brief: {...b, ...patch}});
   return (<>
-    <div className="dl-row" ref={rowRef}>
+    <div className="dl-row" ref={rowRef} data-dlid={d.id} title="Tip: drag files onto this row to upload them to its Drive folder">
       <span style={{fontWeight:600, fontSize:14}}>{b.topic ? b.topic : d.name}{b.topic && <span className="faint small"> · {d.name}</span>}
         <span className="faint small"> · {MEDIA_LABEL[mediaOf(d)]}</span>{b.orientation && <span className="faint small"> · {b.orientation === 'Vertical' ? '9:16 Vertical' : b.orientation === 'Horizontal' ? '16:9 Horizontal' : '9:16 + 16:9'}</span>}
         {isReelDl(d) && <span className={'pill ' + (dlCredits(d) > 1 ? 'editing' : 'booked')} style={{marginLeft:6}} title={dlCredits(d) > 1 ? `Combined ${dlCredits(d)} credits into one longer reel` : 'One credit · up to 30s'}>{dlCredits(d) > 1 ? `${dlCredits(d)} credits · up to ${reelSeconds(d)}s` : 'up to 30s'}</span>}
@@ -3618,6 +3759,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
         {uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && <button className="btn ghost sm" title="Uncombine — peel one credit back out into its own reel slot" style={{padding:'0 8px'}} onClick={() => uncombineDeliverable(d.id)}>⊟ Uncombine</button>}
         <button className="btn ghost sm" title={d.dlvFolder ? 'Upload more files into this project’s Drive folder — same folder, same link, any day' : 'Upload the photo/video files — creates the organized Drive folder (shoot type → agent → date · project), shares it, and saves the link here. Change the status whenever you’re ready.'} style={{padding:'0 8px'}} onClick={() => window.deliverFilesFor && window.deliverFilesFor(d.id)}>📦 Upload</button>
+        <button className="btn ghost sm" title={d.thumb ? 'Replace this piece’s Library thumbnail' : 'Add a Library thumbnail — pick any image, it uploads & shares itself (great for backfilling older deliveries)'} style={{padding:'0 7px'}} onClick={() => window.pickThumbFor && window.pickThumbFor(d.id)}>🖼</button>
         {d.dlvFolderUrl && <button className="btn ghost sm" title="Open this project’s delivery folder in Drive" style={{padding:'0 7px'}} onClick={() => window.open(d.dlvFolderUrl, '_blank')}>🗂</button>}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
         {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
@@ -4300,11 +4442,11 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
     {db.pendingBookings.map(bk =>
       <BookingCard key={bk.id} bk={bk} db={db} clientTier={clientTier}
         applyBookingNew={applyBookingNew} applyBookingAttach={applyBookingAttach}
-        dismissBooking={dismissBooking} orderProgress={orderProgress} addClient={addClient} />)}
+        dismissBooking={dismissBooking} orderProgress={orderProgress} addClient={addClient} approveBookingHub={window.approveBookingHub} />)}
   </>);
 }
 
-function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, dismissBooking, orderProgress, addClient}){
+function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, dismissBooking, orderProgress, addClient, approveBookingHub}){
   const bkBlocked = (db.blockedDays || []).includes(isoToDate(bk.start));
   const email = (bk.invitee_email || '').toLowerCase();
   const learned = db.settings.emailMap[email];
@@ -4349,6 +4491,7 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
         {guessedService && <div className="small faint" style={{marginTop:3}}>Guessed service: <strong>{(svc(guessedService) || {}).name || guessedService}</strong> — change it below if that's not it</div>}
       </div>
       <span className="spacer"></span>
+      <button className="btn ghost sm" title="Approve the shoot on the agent's hub now (⏳ → ✅ + ping) — sort the order below whenever" onClick={() => approveBookingHub && approveBookingHub(bk, clientId)}>✅ Approve</button>
       <button className="btn ghost sm" onClick={() => dismissBooking(bk)}>Dismiss</button>
     </div>
 
@@ -5348,6 +5491,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-4</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-5</div>
 </body>
 </html>

@@ -77,6 +77,12 @@ h1 .p{color:var(--red)}
 .stat span{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);font-weight:600}
 .stat.rev b{color:var(--amber)}
 .stat.done b{color:var(--teal)}
+.yrstats{display:flex;margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.yrstats .yr{flex:1;padding:13px 4px 12px;text-align:center;position:relative}
+.yrstats .yr+.yr::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:1px;background:var(--line)}
+.yrstats .yr b{font-family:var(--serif);font-weight:480;font-size:23px;display:block;line-height:1.1;color:var(--txt)}
+.yrstats .yr:first-child b{color:var(--teal)}
+.yrstats .yr span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600}
 /* billing */
 .billtot{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:2px 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .billtot .n{font-family:var(--serif);font-size:26px;color:var(--txt);white-space:nowrap}
@@ -593,6 +599,16 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
 </div>
 <div id="moretab" style="display:none">
 <div class="tabhead"><h2>More<span style="color:var(--red)">.</span></h2><span class="thsub">Your brand, your team, your account</span></div>
+<div class="pcard" id="yearwrap" style="display:none">
+  <h3>📈 Your <span id="yr-label">year</span> so far</h3>
+  <div class="psub">The content bank you&rsquo;ve built with us — worth a mention when a colleague asks who does your videos. 😉</div>
+  <div class="yrstats">
+    <div class="yr"><b id="yr-del">0</b><span>Delivered</span></div>
+    <div class="yr"><b id="yr-work">0</b><span>In the works</span></div>
+    <div class="yr"><b id="yr-refs">0</b><span>Referrals</span></div>
+    <div class="yr"><b id="yr-views">0</b><span>Bio views</span></div>
+  </div>
+</div>
 <div class="pcard" id="billingwrap">
   <h3>💳 Billing &amp; receipts</h3>
   <div class="psub">Any balance owing and how to settle it — receipts for completed work land in your chat.</div>
@@ -1321,6 +1337,17 @@ function render(raw){
   if(justDelivered) setTimeout(confetti, 450);
   startMessages(h);
   // More tab content
+  // 📈 "Your year so far" — the brag card that doubles as a rebooking nudge
+  try{
+    var yrNow = String(new Date().getFullYear());
+    var ywrap = document.getElementById('yearwrap');
+    if(ywrap && items.length){
+      ywrap.style.display = '';
+      document.getElementById('yr-label').textContent = yrNow;
+      document.getElementById('yr-del').textContent = done.filter(function(x){ return String(x.dt || '').slice(0, 4) === yrNow; }).length;
+      document.getElementById('yr-work').textContent = items.length - done.length;
+    }
+  }catch(eYr){}
   var bb = document.getElementById('billing-body');
   if(bb) bb.innerHTML = billingHtml(items);
   document.getElementById('featwrap').style.display = '';
@@ -1534,6 +1561,7 @@ function loadBookings(){
       }
       var rs = document.getElementById('refsub');
       if(rs && j.refs) rs.innerHTML = '<b>🎉 ' + j.refs + ' referral' + (j.refs === 1 ? '' : 's') + ' booked through your link so far.</b> Send it to another colleague — when they book, you get the credit.';
+      try{ var yrR = document.getElementById('yr-refs'); if(yrR && j.refs != null) yrR.textContent = j.refs || 0; }catch(eYr2){}
     }).catch(function(){});
 }
 /* ✏️ rename a project from its card */
@@ -2745,6 +2773,7 @@ function loadBio(){
   if(qb) qb.onclick = function(){ openQR(bioUrl(), 'Your bio page'); };
   fetch(ENDPOINT + '?biohits=' + encodeURIComponent(a)).then(function(r){ return r.json(); }).then(function(j){
     if(!j.ok) return;
+    try{ var yrV = document.getElementById('yr-views'); if(yrV) yrV.textContent = j.views || 0; }catch(eYv){}
     var el = document.getElementById('bio-taps');
     if(!el) return;
     var links = j.links || {}, top = Object.keys(links).sort(function(x, y){ return links[y] - links[x]; })[0];
@@ -3206,4 +3235,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-4</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-5</div></div></body></html>
