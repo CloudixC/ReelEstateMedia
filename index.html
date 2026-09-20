@@ -393,6 +393,42 @@ function shootDesc(d, o){
   const de = raw || ((o && o.project) ? o.project : '');
   return (de && de !== shootType(d)) ? de : '';
 }
+/* 📦 finals upload — small files in one POST, big ones streamed in 20MB chunks
+   through the inbox's resumable route. Both land in the given Drive folder. */
+const UP_ONESHOT = 18 * 1024 * 1024, UP_CHUNK = 20 * 1024 * 1024;
+const upB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error('read failed')); r.onload = () => res(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
+async function upToFolder(inbox, tok, folder, f, onPct){
+  const mime = f.type || 'application/octet-stream';
+  if(f.size <= UP_ONESHOT){
+    const b64 = await upB64(f);
+    const j = await new Promise((res, rej) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', inbox, true);
+      if(xhr.upload && onPct) xhr.upload.onprogress = ev => { if(ev.lengthComputable) onPct(Math.min(99, Math.round(ev.loaded / ev.total * 100))); };
+      xhr.onload = () => { try{ res(JSON.parse(xhr.responseText || '{}')); }catch(e){ rej(new Error('bad response')); } };
+      xhr.onerror = () => rej(new Error('network error'));
+      xhr.send(JSON.stringify({kind:'file', token: tok, folder: folder, name: f.name, mime, data: b64}));
+    });
+    if(!j.ok || !j.id) throw new Error(j.error || 'upload failed');
+    if(onPct) onPct(100);
+    return j.id;
+  }
+  const sess = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'resumable', token: tok, folder: folder, name: f.name, mime, size: f.size})}).then(r => r.json());
+  if(!sess.ok || !sess.session) throw new Error(sess.error || 'could not start the upload');
+  let start = 0, id = '';
+  while(start < f.size){
+    const end = Math.min(start + UP_CHUNK, f.size);
+    const data = await upB64(f.slice(start, end));
+    const resp = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'chunk', session: sess.session, start, total: f.size, mime, data})}).then(r => r.json());
+    if(!resp.ok) throw new Error(resp.error || 'upload interrupted');
+    start = end;
+    if(onPct) onPct(Math.min(99, Math.round(start / f.size * 100)));
+    if(resp.done){ id = resp.id || ''; break; }
+  }
+  if(!id) throw new Error('upload finished without a file id');
+  if(onPct) onPct(100);
+  return id;
+}
 /* Media type: photo / video / both. Explicit field wins; otherwise inferred from the service name. */
 function inferMedia(txt){
   const t = (txt || '').toLowerCase();
@@ -1474,6 +1510,56 @@ function App(){
     const c = o && db.clients.find(x => x.id === o.clientId);
     if(c && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
   };
+  // 📦 deliver the finals from right here: pick files → they land in
+  // REM Deliveries / <shoot type> / <NN · agent> / <date · project> (the same
+  // project folder is reused on re-delivery, even weeks later) → the folder
+  // link saves itself as the delivery link → hub re-pushed. First photo in
+  // the batch doubles as the Library thumbnail.
+  const deliverFilesFor = (dlId) => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true; inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.onchange = async () => {
+      const files = [...(inp.files || [])];
+      document.body.removeChild(inp);
+      if(!files.length) return;
+      const db0 = dbRef.current;
+      const cur = db0.deliverables.find(x => x.id === dlId); if(!cur) return;
+      const o = db0.orders.find(x => x.id === cur.orderId) || {};
+      const c = db0.clients.find(x => x.id === o.clientId) || {};
+      const inbox = db0.settings.inboxUrl, tok = db0.settings.inboxToken || '';
+      if(!inbox || !tok){ showToast('⚠ Set the inbox URL + secret token in Settings first.'); return; }
+      try{
+        // 1 — the folder (sticky: the id saved on this deliverable wins; else the
+        //     server finds "<any date> · <project>" under this agent, else creates it)
+        let fol = cur.dlvFolder || '', folUrl = cur.dlvFolderUrl || '';
+        if(!fol){
+          showToast('📁 Setting up the Drive folder…');
+          const fj = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'dlvfolder', token: tok,
+            type: shootType(cur), agent: (c.name || 'Agent'), project: dlTitle(cur)})}).then(r => r.json());
+          if(!fj || !fj.ok || !fj.id) throw new Error((fj && fj.error) || 'could not make the folder');
+          fol = fj.id; folUrl = fj.url || ('https://drive.google.com/drive/folders/' + fj.id);
+        }
+        // 2 — the files
+        let firstImg = '';
+        for(let i = 0; i < files.length; i++){
+          const f = files[i];
+          const label = '📦 Uploading ' + (i + 1) + '/' + files.length + ' — ' + f.name.slice(0, 30);
+          showToast(label);
+          const fid = await upToFolder(inbox, tok, fol, f, pct => showToast(label + ' · ' + pct + '%'));
+          if(!firstImg && (/^image\//.test(f.type || '') || /\.(jpe?g|png|webp|heic)$/i.test(f.name || ''))) firstImg = fid;
+        }
+        // 3 — save the folder link as the delivery link (+ thumbnail) and tell the hub
+        setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, link: folUrl, dlvFolder: fol, dlvFolderUrl: folUrl, ...(firstImg ? {thumb: firstImg} : {})} : d)}));
+        if(c.id) setTimeout(() => pushHub(c.id), 900);
+        showToast('✅ ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' delivered — folder link saved' + (firstImg ? ' · Library thumbnail set' : ''));
+        if(!firstImg) setTimeout(() => { if(confirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 800);
+      }catch(err){
+        showToast('⚠ Upload stopped — ' + ((err && err.message) || 'error') + '. Nothing lost: flip the status again to retry, or paste a link instead.');
+      }
+    };
+    inp.click();
+  };
   // 🖼 one-tap Library thumbnail: pick an image → shrink it → upload through the
   // inbox's kind:'file' route (lands in Drive, link-shared automatically) →
   // saved on the deliverable → hub re-pushed so the agent sees it right away.
@@ -1518,14 +1604,18 @@ function App(){
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
        !confirm('🚫 ' + patch.shootDate + ' is a blocked day. Schedule anyway?')) return;
     if(cur && patch.status === 'Delivered' && cur.status !== 'Delivered'){
-      const isB = mediaOf(cur) === 'both';
-      const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip.' : '📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
-      if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
-      if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
-        if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
-      // 🖼 Library thumbnail — pick any image; it uploads to Drive and shares itself
-      if(confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.' + (cur.thumb ? '\n\n(OK replaces the current one · Cancel keeps it)' : '\n\n(Cancel to skip — their Library shows a 🎬 tile instead)'))){
-        setTimeout(() => pickThumbFor(id), 250);
+      if(confirm('📦 Upload the finals right here?\n\nOK → pick the video/photo files. They upload into a tidy Drive folder (shoot type → agent → date · project), the folder is shared, and the delivery link + Library thumbnail save themselves.\n\nCancel → paste a link the old way (best for the really huge files).')){
+        setTimeout(() => deliverFilesFor(id), 250);
+      } else {
+        const isB = mediaOf(cur) === 'both';
+        const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip.' : '📦 Delivery link (Drive / Frame.io)? OK to save — leave blank to skip.', cur.link || '');
+        if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
+        if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
+          if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
+        // 🖼 Library thumbnail — pick any image; it uploads to Drive and shares itself
+        if(confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.' + (cur.thumb ? '\n\n(OK replaces the current one · Cancel keeps it)' : '\n\n(Cancel to skip — their Library shows a 🎬 tile instead)'))){
+          setTimeout(() => pickThumbFor(id), 250);
+        }
       }
     }
     if(cur && isReviewStage(patch.status) && !isReviewStage(cur.status)){
@@ -5253,6 +5343,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-3</div>
 </body>
 </html>
