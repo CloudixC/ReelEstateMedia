@@ -1474,6 +1474,45 @@ function App(){
     const c = o && db.clients.find(x => x.id === o.clientId);
     if(c && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
   };
+  // 🖼 one-tap Library thumbnail: pick an image → shrink it → upload through the
+  // inbox's kind:'file' route (lands in Drive, link-shared automatically) →
+  // saved on the deliverable → hub re-pushed so the agent sees it right away.
+  const pickThumbFor = (dlId) => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+    document.body.appendChild(inp);
+    inp.onchange = () => {
+      const f = inp.files && inp.files[0];
+      document.body.removeChild(inp);
+      if(!f) return;
+      showToast('🖼 Uploading thumbnail…');
+      const img = new Image();
+      const url = URL.createObjectURL(f);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * scale));
+        cv.height = Math.max(1, Math.round(img.height * scale));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        const b64 = cv.toDataURL('image/jpeg', 0.82).split(',')[1] || '';
+        fetch(dbRef.current.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'file', name: 'library-thumb-' + dlId + '.jpg', mime: 'image/jpeg', data: b64})})
+          .then(r => r.json())
+          .then(j => {
+            if(!j || !j.ok || !j.id) throw new Error((j && j.error) || 'upload failed');
+            setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, thumb: j.id} : d)}));
+            const cur2 = dbRef.current.deliverables.find(x => x.id === dlId);
+            const o2 = dbRef.current.orders.find(x => x.id === (cur2 && cur2.orderId)) || {};
+            if(o2.clientId) setTimeout(() => pushHub(o2.clientId), 900);
+            showToast('🖼 Thumbnail is on their Library ✓');
+          })
+          .catch(() => showToast('Couldn’t upload the thumbnail — flip the status again to retry.'));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); showToast('That file doesn’t look like an image — thumbnail skipped.'); };
+      img.src = url;
+    };
+    inp.click();
+  };
   const updateDeliverable = (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
@@ -1484,9 +1523,10 @@ function App(){
       if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
       if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
         if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
-      // 🖼 Library thumbnail — shows beside this piece in the agent's hub Library
-      const th0 = prompt('🖼 Thumbnail for their Library (Drive image link or file id)? Blank to skip.', cur.thumb || '');
-      if(th0 !== null && th0.trim()) patch = {...patch, thumb: th0.trim()};
+      // 🖼 Library thumbnail — pick any image; it uploads to Drive and shares itself
+      if(confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.' + (cur.thumb ? '\n\n(OK replaces the current one · Cancel keeps it)' : '\n\n(Cancel to skip — their Library shows a 🎬 tile instead)'))){
+        setTimeout(() => pickThumbFor(id), 250);
+      }
     }
     if(cur && isReviewStage(patch.status) && !isReviewStage(cur.status)){
       if(!cur.reviewDate) patch = {...patch, reviewDate: today()};
@@ -5213,6 +5253,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-2</div>
 </body>
 </html>
