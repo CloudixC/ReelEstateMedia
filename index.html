@@ -671,7 +671,13 @@ function migrate(d){
   return null;
 }
 function load(){ try{
-  return migrate(JSON.parse(localStorage.getItem(LS_KEY))) || seed;
+  let d = migrate(JSON.parse(localStorage.getItem(LS_KEY))) || JSON.parse(JSON.stringify(seed));
+  // 🔗 one-tap device setup: a #setup= link stashed its inbox URL + token here — apply it now
+  try{
+    const p = JSON.parse(localStorage.getItem('rem_setup_v1') || 'null');
+    if(p && p.u){ d.settings.inboxUrl = String(p.u); d.settings.inboxToken = cleanTok(p.t); localStorage.removeItem('rem_setup_v1'); }
+  }catch(e2){}
+  return d;
 } catch(e){ return seed; } }
 const isoToDate = iso => { try{ return new Date(iso).toLocaleDateString('en-CA'); } catch(e){ return today(); } };
 const isoToNice = iso => { try{ return new Date(iso).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); } catch(e){ return iso; } };
@@ -1098,6 +1104,12 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
           if(t2 === null) return;
           if(u2.trim() && t2.trim()){ updateSettings({inboxUrl: u2.trim(), inboxToken: cleanTok(t2)}); setTimeout(load, 400); }
         }}>⚙</button>
+        <button className="btn ghost sm" title="Copy a one-tap setup link for your phone or another device — no typing the token" onClick={() => {
+          const link = makeSetupLink(db.settings.inboxUrl, db.settings.inboxToken);
+          const done = () => alert('🔗 Setup link copied.\n\nText or email it to yourself, open it on the other device, unlock with your passcode — connected. Keep the link private: it contains your admin token.');
+          if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => prompt('Copy this setup link (keep it private):', link));
+          else prompt('Copy this setup link (keep it private):', link);
+        }}>🔗</button>
         <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button></div>
       {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
       {fresh.map(s => {
@@ -1164,6 +1176,20 @@ const dbHash = s => { let h = 5381; for(let i = 0; i < s.length; i++) h = ((h <<
 // phone keyboards love to break pasted tokens: strip whitespace, and since the
 // token is hex, quietly undo any autocapitalisation too
 const cleanTok = s => { s = String(s || '').replace(/\s+/g, ''); return /^[0-9A-Fa-f]+$/.test(s) ? s.toLowerCase() : s; };
+// 🔗 one-tap device setup — open index.html#setup=<code> on any device and the inbox
+// URL + token are stored for it (no typing). The code is made by the 🔗 button.
+(function(){ try{
+  const m = (location.hash || '').match(/[#&]setup=([^&\s]+)/);
+  if(!m) return;
+  const b64 = decodeURIComponent(m[1]).replace(/-/g, '+').replace(/_/g, '/');
+  const p = JSON.parse(decodeURIComponent(escape(atob(b64))));
+  if(p && p.u && /^https:\/\/script\.google\.com\//.test(String(p.u))){
+    localStorage.setItem('rem_setup_v1', JSON.stringify({u: String(p.u), t: String(p.t || '')}));
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}catch(e){} })();
+const makeSetupLink = (u, t) => location.origin + location.pathname + '#setup=' +
+  btoa(unescape(encodeURIComponent(JSON.stringify({u: u, t: t})))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 // backups are stored in UTC (ISO) — show them in the studio's local time
 const fmtTs = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); };
 const fmtClock = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}); };
@@ -5581,6 +5607,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-7</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-8</div>
 </body>
 </html>
