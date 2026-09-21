@@ -415,9 +415,43 @@ function shootDesc(d, o){
    through the inbox's resumable route. Both land in the given Drive folder. */
 const UP_ONESHOT = 18 * 1024 * 1024, UP_CHUNK = 20 * 1024 * 1024;
 const upB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error('read failed')); r.onload = () => res(String(r.result).split(',')[1] || ''); r.readAsDataURL(blob); });
+/* ⚡ fast lane — the inbox script opens a Drive resumable session (kind:'upsession'),
+   then the browser streams the RAW file straight to Drive's own upload servers:
+   no base64 inflation, no per-chunk script processing. Runs at line speed.
+   Any failure that isn't a cancel falls back to the proven chunked path below. */
+async function upFast(inbox, tok, folder, f, onPct, ctl){
+  if(!f.size) throw new Error('empty file');
+  const mime = f.type || 'application/octet-stream';
+  const s = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'upsession', token: tok, folder: folder || '', name: f.name, mime, size: f.size, origin: location.origin})}).then(r => r.json());
+  if(!s.ok || !s.url) throw new Error(s.error || 'no fast session');
+  if(ctl && ctl.cancelled) throw new Error('cancelled');
+  const j = await new Promise((res, rej) => {
+    const xhr = new XMLHttpRequest();
+    if(ctl) ctl.xhr = xhr;
+    xhr.open('PUT', s.url, true);
+    xhr.setRequestHeader('Content-Range', 'bytes 0-' + (f.size - 1) + '/' + f.size);   // Drive's resumable protocol wants this
+    if(xhr.upload && onPct) xhr.upload.onprogress = ev => { if(ev.lengthComputable) onPct(Math.min(99, Math.round(ev.loaded / ev.total * 100))); };
+    xhr.onload = () => { if(xhr.status >= 200 && xhr.status < 300){ try{ res(JSON.parse(xhr.responseText || '{}')); }catch(e){ res({}); } } else rej(new Error('drive replied ' + xhr.status)); };
+    xhr.onerror = () => rej(new Error('network error'));
+    xhr.onabort = () => rej(new Error('cancelled'));
+    xhr.send(f);
+  });
+  if(ctl) ctl.xhr = null;
+  if(!j.id) throw new Error('upload finished without a file id');
+  if(onPct) onPct(100);
+  return j.id;
+}
 async function upToFolder(inbox, tok, folder, f, onPct, ctl){
   const mime = f.type || 'application/octet-stream';
   const bail = () => { if(ctl && ctl.cancelled) throw new Error('cancelled'); };
+  bail();
+  if(tok){
+    try{ return await upFast(inbox, tok, folder, f, onPct, ctl); }
+    catch(e){
+      if((ctl && ctl.cancelled) || /cancelled/.test(String(e && e.message))) throw e;
+      if(onPct) onPct(0);   // fast lane unavailable → start over on the chunked path
+    }
+  }
   bail();
   if(f.size <= UP_ONESHOT){
     const b64 = await upB64(f);
@@ -1752,6 +1786,7 @@ function App(){
     }finally{ window.__upBusy = false; }
   };
   window.runDeliverUpload = runDeliverUpload;   // drag-and-drop lands here
+  window.upToFolder = upToFolder;               // (used by self-tests)
   const deliverFilesFor = (dlId) => {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.multiple = true; inp.style.display = 'none';
@@ -5618,6 +5653,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.20-9</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.21-1</div>
 </body>
 </html>
