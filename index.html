@@ -112,6 +112,8 @@
   .board::-webkit-scrollbar{height:9px}
   .board::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
   .board::-webkit-scrollbar-track{background:var(--ink2);border-radius:5px}
+  @keyframes pfglow{0%{box-shadow:0 0 0 3px rgba(222,170,80,.95)}100%{box-shadow:0 0 0 3px rgba(222,170,80,0)}}
+  .pf-glow{animation:pfglow 1.8s ease-out}
   .col{flex:0 0 236px;background:var(--ink2);border:1px solid var(--line);border-radius:var(--radius);padding:12px;min-height:120px;scroll-snap-align:start}
   .col h4{font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--cream-faint);margin-bottom:10px;display:flex;justify-content:space-between;font-family:'DM Sans',sans-serif;font-weight:700}
   .dcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -1311,7 +1313,7 @@ function App(){
   const [view, setView] = useState('dashboard');
   const [openOrder, setOpenOrder] = useState(null);
   const [cameFrom, setCameFrom] = useState(null);   // ⬅ which tab sent us into an order, so Back returns THERE
-  const openOrderDetail = (id, dlId) => { setCameFrom(view); setOpenOrder(id); setFocusDl(dlId || null); setView('orders'); };
+  const openOrderDetail = (id, dlId) => { setCameFrom(view); window.__pipeBack = dlId || null; setOpenOrder(id); setFocusDl(dlId || null); setView('orders'); };   // __pipeBack: which card the Pipeline board scrolls back to
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const [pipeClient, setPipeClient] = useState('all');
@@ -2289,7 +2291,7 @@ function App(){
       </div>
       <nav className="tabs">
         {[['dashboard','Home'],['calendar','Calendar'],['pipeline','Pipeline'],['review','Review'],['orders','Orders'],['clients','Clients'],['money','Money']].map(([k,l]) =>
-          <button key={k} className={view === k ? 'on' : ''} onClick={() => {setView(k); setOpenOrder(null); setCameFrom(null);}}>
+          <button key={k} className={view === k ? 'on' : ''} onClick={() => {setView(k); setOpenOrder(null); setCameFrom(null); window.__pipeBack = null;}}>
             {l}{k === 'calendar' && db.pendingBookings.length > 0 ? ` · ${db.pendingBookings.length}` : ''}
           </button>)}
       </nav>
@@ -3468,7 +3470,7 @@ function PackCard({g, order, clientName, openOrderDetail, updateDeliverable}){
   const [gd, setGd] = useState(today());
   const [gt, setGt] = useState('10:00');
   return (
-  <div className="dcard click" onClick={() => openOrderDetail(d0.orderId, d0.id)}>
+  <div className="dcard click" data-pf={d0.id} onClick={() => openOrderDetail(d0.orderId, d0.id)}>
     <div className="t">{d0.group}</div>
     <div className="m">{order.project} · {clientName(order.clientId)}</div>
     <div className="m" style={{marginTop:5, display:'flex', gap:5, flexWrap:'wrap'}}>
@@ -3495,6 +3497,17 @@ function PackCard({g, order, clientName, openOrderDetail, updateDeliverable}){
 
 /* ---------------- Pipeline (Kanban) ---------------- */
 function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOrderDetail, updateDeliverable, splitDeliverable}){
+  // coming back from an order: scroll the board so the card you left is centered, with a brief glow
+  useEffect(() => {
+    const id = window.__pipeBack;
+    if(!id) return;
+    window.__pipeBack = null;
+    const t = setTimeout(() => {
+      const el = document.querySelector('[data-pf="' + id + '"]');
+      if(el){ el.scrollIntoView({block:'center', inline:'center'}); try{ el.animate([{boxShadow:'0 0 0 3px rgba(222,170,80,.95)'}, {boxShadow:'0 0 0 3px rgba(222,170,80,0)'}], {duration:1800, easing:'ease-out'}); }catch(e){} }
+    }, 80);
+    return () => clearTimeout(t);
+  }, []);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const list = db.deliverables.filter(d => pipeClient === 'all' || orderOf(d).clientId === pipeClient);
   const [delMo, setDelMo] = useState(today().slice(0,7));
@@ -3508,7 +3521,7 @@ function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOr
   const Card = ({d}) => {
     const o = orderOf(d); const i = STATUSES.indexOf(d.status); const b = getBrief(d); const prep = prepScore(d); const cd = countdownFor(d);
     return (
-      <div className="dcard click" onClick={() => openOrderDetail(d.orderId, d.id)}>
+      <div className="dcard click" data-pf={d.id} onClick={() => openOrderDetail(d.orderId, d.id)}>
         <div className="t">{dlTitle(d)}</div>
         <div className="m">{b.topic ? d.name + ' · ' : ''}{d.group}</div>
         <div className="m">{o.project} · {clientName(o.clientId)}</div>
@@ -5655,6 +5668,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-2</div>
 </body>
 </html>
