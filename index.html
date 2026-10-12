@@ -1310,6 +1310,8 @@ function App(){
   const [db, setDb] = useState(load);
   const [view, setView] = useState('dashboard');
   const [openOrder, setOpenOrder] = useState(null);
+  const [cameFrom, setCameFrom] = useState(null);   // ⬅ which tab sent us into an order, so Back returns THERE
+  const openOrderDetail = (id, dlId) => { setCameFrom(view); setOpenOrder(id); setFocusDl(dlId || null); setView('orders'); };
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
   const [pipeClient, setPipeClient] = useState('all');
@@ -1340,7 +1342,7 @@ function App(){
   const addOrder = (order) => {
     const ds = spawnDeliverables(order);
     setDb(p => ({...p, orders:[order, ...p.orders], deliverables:[...p.deliverables, ...ds]}));
-    setShowNewOrder(false); setOpenOrder(order.id); setView('orders');
+    setShowNewOrder(false); setOpenOrder(order.id); setView('orders'); setCameFrom(null);
     logActivity(`Booked: ${order.project || 'new order'} · ${ds.length} deliverable${ds.length !== 1 ? 's' : ''}`);
   };
   // Reuse an agent's existing hub by default; only mint a new record when there's
@@ -2287,7 +2289,7 @@ function App(){
       </div>
       <nav className="tabs">
         {[['dashboard','Home'],['calendar','Calendar'],['pipeline','Pipeline'],['review','Review'],['orders','Orders'],['clients','Clients'],['money','Money']].map(([k,l]) =>
-          <button key={k} className={view === k ? 'on' : ''} onClick={() => {setView(k); setOpenOrder(null);}}>
+          <button key={k} className={view === k ? 'on' : ''} onClick={() => {setView(k); setOpenOrder(null); setCameFrom(null);}}>
             {l}{k === 'calendar' && db.pendingBookings.length > 0 ? ` · ${db.pendingBookings.length}` : ''}
           </button>)}
       </nav>
@@ -2323,15 +2325,15 @@ function App(){
       </div>
     </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} />}
-    {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} />}
+        openOrderDetail={openOrderDetail} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} />}
+    {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={openOrderDetail} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null);}} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
-        openOrderDetail={(id, dlId)=>{setOpenOrder(id); setFocusDl(dlId || null); setView('orders');}} showToast={showToast} />}
+        openOrderDetail={openOrderDetail} showToast={showToast} />}
     {view === 'calendar' && <>
       <CalendarView db={db} clientName={clientName} setPrintDoc={setPrintDoc} updateDeliverable={updateDeliverable} toggleBlocked={toggleBlockedDay} openNewBooking={() => setShowNewOrder(true)} showToast={showToast} />
       <div style={{marginTop:16}}>
@@ -3634,7 +3636,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, backLabel, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -3656,7 +3658,7 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
     updateOrder(id, {clientId: newId, items});
   };
   return (<>
-    <button className="backlink" onClick={back}>← All orders</button>
+    <button className="backlink" onClick={back}>← {backLabel ? "Back to " + backLabel : "All orders"}</button>
     <div className="card">
       <div className="orderhead">
         <div style={{flex:1, minWidth:240}}>
@@ -5653,6 +5655,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.09.21-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-1</div>
 </body>
 </html>
