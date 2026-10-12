@@ -727,12 +727,13 @@ const addBusinessDays = (ds, n) => {
 };
 /* Delivery promise: photos due 3 days after shoot, video due 5 days after shoot.
    'Both' deliverables carry TWO deadlines — photos at 3 days, video at 5. */
+let TAT = {photo: 3, video: 5};   // delivery promise, in days after the shoot — set from Settings (⏱ button on the Pipeline)
 function dueDatesOf(d){
   if(!d.shootDate) return [];
   const m = mediaOf(d);
-  if(m === 'photo') return [{date: addDays(d.shootDate, 3), kind: 'photo'}];
-  if(m === 'video') return [{date: addDays(d.shootDate, 5), kind: 'video'}];
-  return [{date: addDays(d.shootDate, 3), kind: 'photo'}, {date: addDays(d.shootDate, 5), kind: 'video'}];
+  if(m === 'photo') return [{date: addDays(d.shootDate, TAT.photo), kind: 'photo'}];
+  if(m === 'video') return [{date: addDays(d.shootDate, TAT.video), kind: 'video'}];
+  return [{date: addDays(d.shootDate, TAT.photo), kind: 'photo'}, {date: addDays(d.shootDate, TAT.video), kind: 'video'}];
 }
 const dueDateOf = d => { const a = dueDatesOf(d); return a.length ? a[a.length - 1].date : null; };
 const promiseMet = d => d.status === 'Delivered' || !!d.reviewDate;
@@ -1009,7 +1010,7 @@ function ThreadPanelButton({db, d, order, client}){
 }
 
 /* ---------------- Client Submissions Inbox ---------------- */
-function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating}){
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating, applyFeedback}){
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
@@ -1029,6 +1030,8 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
           if(o && o.__rc && o.brief && o.brief.dref && o.brief.cc && applyAgentBrief) applyAgentBrief(o.brief.dref, o.brief.cc, r2.ts, r2.who);
           return;
         }
+        // 🔧 review feedback: auto-move the deliverable to its Changes stage, carrying the request
+        if(r2.kind === 'feedback' && r2.ref && applyFeedback){ applyFeedback(r2.ref, r2.body, r2.ts, r2.who); return; }
         // ⭐ ratings: dname carries "<phase>:<stars>", body is the comment
         if(r2.kind === 'rating' && r2.ref && applyRating){
           const parts = String(r2.dname || '').split(':');
@@ -1547,6 +1550,53 @@ function App(){
     window.addEventListener('focus', () => { if(!document.hidden) autoSync(); });
     return () => { clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); };
   }, []);
+  // 🎬 the morning after a shoot: Scheduled cards flip themselves to Shot — the editing clock starts without bookkeeping
+  useEffect(() => {
+    const sweep = () => {
+      const t = today();
+      const hit = dbRef.current.deliverables.filter(d => d.status === 'Scheduled' && d.shootDate && d.shootDate < t);
+      if(!hit.length) return;
+      setDb(p => ({...p, deliverables: p.deliverables.map(x => (x.status === 'Scheduled' && x.shootDate && x.shootDate < t) ? {...x, status: 'Shot'} : x)}));
+      logActivity('🎬 Auto-moved ' + hit.length + ' past shoot' + (hit.length > 1 ? 's' : '') + ' to Shot');
+      showToast('🎬 ' + hit.length + ' shoot' + (hit.length > 1 ? 's' : '') + ' from earlier marked Shot — editing clock running');
+    };
+    const t1 = setTimeout(sweep, 3500); const iv1 = setInterval(sweep, 6 * 3600 * 1000);
+    return () => { clearTimeout(t1); clearInterval(iv1); };
+  }, []);
+  // ⏰ prep chase: 48h and 24h before a shoot with an incomplete prep score, the agent
+  // gets a friendly hub-chat nudge (their push rides along server-side). Once per window,
+  // guarded in the db itself so your other devices don't double-send.
+  useEffect(() => {
+    const chase = () => {
+      const d0 = dbRef.current; const inbox = d0.settings.inboxUrl, tok = d0.settings.inboxToken;
+      if(!inbox || !tok) return;
+      const now = Date.now();
+      d0.deliverables.forEach(d => {
+        if(!d.shootDate || d.status === 'Delivered') return;
+        const pr = prepScore(d); if(!pr || pr.done >= pr.total) return;
+        const sd = new Date(d.shootDate + 'T' + (d.shootTime || '09:00')).getTime();
+        const h = (sd - now) / 3600000;
+        const slot = (h > 0 && h <= 24) ? 'p24' : (h > 24 && h <= 48) ? 'p48' : null;
+        if(!slot || (d.prepNudged && d.prepNudged[slot])) return;
+        const o = d0.orders.find(x => x.id === d.orderId) || {};
+        const c = d0.clients.find(x => x.id === o.clientId);
+        const hk = c && (c.hubKey || c.hubId); if(!hk) return;
+        const b = getBrief(d); const miss = [];
+        if(!(b.script === 'Approved' || b.script === 'N/A')) miss.push('script approval');
+        if(!b.song) miss.push('a song pick');
+        if(!b.orientation) miss.push('the format (vertical / horizontal)');
+        if(!miss.length) return;
+        let when = fmtDate(d.shootDate); try{ when = new Date(d.shootDate + 'T12:00').toLocaleDateString('en-US', {weekday:'long'}) + (d.shootTime ? ' at ' + fmtTime(d.shootTime) : ''); }catch(e){}
+        setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === d.id ? {...x, prepNudged: {...(x.prepNudged || {}), [slot]: new Date().toISOString()}} : x)}));
+        fetch(inbox, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk),
+          project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
+          body: '⏰ Your shoot \u201C' + dlTitle(d) + '\u201D is ' + when + ' and I still need ' + miss.join(' + ') + ' to make it perfect. Two minutes on your hub — thank you! 🎬'})}).catch(() => {});
+        logActivity('⏰ Prep nudge → ' + (c.name || 'agent') + ': ' + dlTitle(d) + ' (' + miss.join(', ') + ')');
+      });
+    };
+    const t2 = setTimeout(chase, 5000); const iv2 = setInterval(chase, 3 * 3600 * 1000);
+    return () => { clearTimeout(t2); clearInterval(iv2); };
+  }, []);
   const firstDbRun = React.useRef(true);
   // auto-backup: ~30s after the last change settles (hash-guarded, so quiet
   // periods and no-op reloads never re-upload). Also stamps WHEN this device
@@ -1910,6 +1960,7 @@ function App(){
     setDb(p => ({...p, deliverables: p.deliverables.map(d => {
       if(d.id !== id) return d;
       const next = {...d, ...patch};
+      if(patch.status && next.changeReq && !/^Changes/.test(next.status)) delete next.changeReq;   // changes addressed → pill comes off
       if(patch.status === 'Delivered' && !next.deliveredDate) next.deliveredDate = today();
       if(patch.status && patch.status !== 'Delivered') next.deliveredDate = '';
       if(patch.shootDate && d.status === 'Booked' && !patch.status) next.status = 'Scheduled';
@@ -1941,6 +1992,16 @@ function App(){
         copyText(deliveryMsg({...cur, ...patch}, o, c));
         actions.push({label: '✉ Copy again', fn: () => copyText(deliveryMsg({...cur, ...patch}, o, c))});
         showToast(`✓ ${dlTitle(cur)} delivered · ✉ client message copied`, actions);
+        // 🎉 delivery receipt → the agent's hub chat (their push rides along) + a gentle rating ask. Once per deliverable.
+        const hk6 = c && (c.hubKey || c.hubId);
+        if(hk6 && db.settings.inboxUrl && !cur.dlvMsgTs){
+          const link6 = String(patch.dlvFolderUrl || cur.dlvFolderUrl || patch.link || cur.link || '').trim();
+          fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk6),
+            project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
+            body: '🎉 \u201C' + dlTitle(cur) + '\u201D is delivered!' + (link6 ? ' Everything\u2019s here: ' + link6 : ' It\u2019s in your hub\u2019s Library.') +
+              '\n\nIf you\u2019ve got 20 seconds, tap \u2B50 Rate on your hub — it means a lot. Enjoy! 🏡'})}).catch(() => {});
+          setTimeout(() => setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === id ? {...x, dlvMsgTs: new Date().toISOString()} : x)})), 600);
+        }
       } else if(isReviewStage(patch.status)){
         copyText(reviewMsg({...cur, ...patch}, o, c));
         actions.push({label: '✉ Copy again', fn: () => copyText(reviewMsg({...cur, ...patch}, o, c))});
@@ -1964,6 +2025,20 @@ function App(){
       const c3 = db.clients.find(x => x.id === o3.clientId) || {};
       if(c3 && c3.id && (c3.hubKey || c3.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c3.id), 700);
     }
+  };
+  // 🔧 Agent sent review feedback → the card moves itself to the matching Changes stage and carries the request
+  const applyFeedback = (dref, body, ts, who) => {
+    if(!dref) return;
+    const d = db.deliverables.find(x => x.id === dref);
+    if(!d || !isReviewStage(d.status)) return;
+    if(d.changeReq && String(d.changeReq.ts || '') >= String(ts || '')) return;   // already handled this (or a newer) one
+    const txt = String(body || '').trim();
+    // a plain thumbs-up isn't a change request — leave the card where it is
+    if(txt.length < 220 && /\b(all good|looks? (great|good|perfect)|love (it|them)|perfect|approved?|no changes|good to go|send (the )?finals?)\b/i.test(txt)) return;
+    const nxt = d.status === 'Client Review' ? 'Changes' : d.status === 'Review 2' ? 'Changes 2' : d.status;
+    setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? {...x, status: nxt, changeReq: {t: txt.slice(0, 2000), ts: String(ts || new Date().toISOString()), w: who || ''}} : x)}));
+    logActivity('🔧 ' + (who || 'Agent') + ' requested changes on ' + dlTitle(d) + (nxt !== d.status ? ' → ' + nxt : ''));
+    showToast('🔧 ' + (who || 'Agent') + ' asked for changes on ' + dlTitle(d) + ' — card moved to ' + STATUS_LABEL(nxt));
   };
   // 📝 Agent filled the shoot brief → drop it straight into this deliverable's brief (idempotent per submission time).
   const applyAgentBrief = (dref, cc, ts, who) => {
@@ -2266,6 +2341,8 @@ function App(){
     if(i >= 0 && i < STATUSES.length) updateDeliverable(d.id, {status: STATUSES[i]});
   };
 
+  TAT.photo = Math.max(1, +db.settings.tatPhoto || 3); TAT.video = Math.max(1, +db.settings.tatVideo || 5);
+
   /* ---- stats ---- */
   const stats = useMemo(() => {
     const active = db.orders.filter(o => orderProgress(o.id).done < orderProgress(o.id).total || orderProgress(o.id).total === 0);
@@ -2327,8 +2404,8 @@ function App(){
       </div>
     </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={openOrderDetail} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} />}
-    {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={openOrderDetail} />}
+        openOrderDetail={openOrderDetail} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback} />}
+    {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={openOrderDetail} updateSettings={updateSettings} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
@@ -3076,7 +3153,7 @@ function WinBack({db}){
     </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating}){
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating, applyFeedback}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -3131,7 +3208,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
-      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating}/>
+      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
@@ -3496,7 +3573,7 @@ function PackCard({g, order, clientName, openOrderDetail, updateDeliverable}){
 }
 
 /* ---------------- Pipeline (Kanban) ---------------- */
-function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOrderDetail, updateDeliverable, splitDeliverable}){
+function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOrderDetail, updateDeliverable, splitDeliverable, updateSettings}){
   // coming back from an order: scroll the board so the card you left is centered, with a brief glow
   useEffect(() => {
     const id = window.__pipeBack;
@@ -3527,6 +3604,9 @@ function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOr
         <div className="m">{o.project} · {clientName(o.clientId)}</div>
         {d.shootDate && <div className="m amber">📅 {fmtDate(d.shootDate)}{timeRange(d) ? ' · ' + timeRange(d) : ''}</div>}
         {cd && <div className="m" style={{marginTop:4}}><span className={'pill ' + cd.tone}>{cd.label}</span></div>}
+        {d.changeReq && /^Changes/.test(d.status) &&
+          <div className="m" style={{marginTop:4}} title={(d.changeReq.w ? d.changeReq.w + ': ' : '') + d.changeReq.t}>
+            <span className="pill unpaid">🔧 changes asked</span> {String(d.changeReq.t || '').slice(0, 64)}{(d.changeReq.t || '').length > 64 ? '…' : ''}</div>}
         {d.status !== 'Delivered' &&
           <div className="m" style={{marginTop:5, display:'flex', gap:5, flexWrap:'wrap'}}>
             <span className="pill booked">{MEDIA_LABEL[mediaOf(d)]}</span>
@@ -3551,6 +3631,14 @@ function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOr
     <div className="flex" style={{marginBottom:16}}>
       <h3 className="serif" style={{fontSize:21}}>Deliverable Pipeline</h3>
       <span className="spacer"></span>
+      <button className="btn ghost sm" title="Delivery promise — days after the shoot that photos / videos are due. Powers every countdown pill and late flag."
+        onClick={() => {
+          const ph = prompt('Photos due how many days after the shoot?', String(TAT.photo));
+          if(ph === null) return;
+          const vi = prompt('Videos due how many days after the shoot?', String(TAT.video));
+          if(vi === null) return;
+          if(updateSettings) updateSettings({tatPhoto: Math.max(1, +ph || 3), tatVideo: Math.max(1, +vi || 5)});
+        }}>⏱ {TAT.photo}d / {TAT.video}d</button>
       <select style={{width:'auto'}} value={pipeClient} onChange={e => setPipeClient(e.target.value)}>
         <option value="all">All clients</option>
         {sortClients(db.clients).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -3925,6 +4013,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           return <span className="pill" style={{background:'rgba(240,192,74,.15)', color:'#e6c079', border:'1px solid rgba(240,192,74,.4)'}} title={title}>{parts.join(' · ')}</span>;
         })()}
         {(() => { const cd = countdownFor(d); return cd && <span className={'pill ' + cd.tone}>{cd.label}</span>; })()}
+        {d.changeReq && /^Changes/.test(d.status) && <span className="pill unpaid" title={(d.changeReq.w ? d.changeReq.w + ': ' : '') + d.changeReq.t}>🔧 changes asked</span>}
         {prep && <span className={'pill ' + (prep.done === prep.total ? 'delivered' : prep.done > 0 ? 'editing' : 'booked')}>
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
       </span>
@@ -5531,13 +5620,15 @@ function DocModal({doc, db, onClose, updateSettings}){
               <div className="small" style={{marginTop:6, color:'#17181c'}}>
                 <strong>{o.project || 'Untitled project'}</strong> · {c.name || '—'}{c.contact ? ' · ' + c.contact : ''}
               </div>
-              {b.location && <div className="small" style={{marginTop:3}}>📍 {b.location}</div>}
+              {b.location && <div className="small" style={{marginTop:3}}>📍 <a href={'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(b.location)} target="_blank" rel="noopener" style={{color:'inherit'}}>{b.location}</a></div>}
               <div className="small" style={{marginTop:6, color:'#5a5c63'}}>
                 {[MEDIA_LABEL[mediaOf(d)],
                   b.orientation && ('Format: ' + b.orientation),
                   b.style && ('Style: ' + b.style),
                   ('Script: ' + b.script),
-                  b.song && ('🎵 ' + b.song)].filter(Boolean).join('   ·   ')}
+                  b.song && ('🎵 ' + b.song),
+                  (() => { const pr = prepScore(d); return pr ? (pr.done === pr.total ? '✓ Prep ready' : '⚠ Prep ' + pr.done + '/' + pr.total) : ''; })(),
+                  d.dlvFolderUrl && '🗂 Folder ready'].filter(Boolean).join('   ·   ')}
               </div>
               {b.scriptLink && <div className="small" style={{marginTop:3, color:'#5a5c63'}}>Script: {b.scriptLink}</div>}
               {b.post && <div className="small" style={{marginTop:3, color:'#5a5c63'}}>Post: {b.post}</div>}
@@ -5668,6 +5759,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-3</div>
 </body>
 </html>
