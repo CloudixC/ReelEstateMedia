@@ -1231,6 +1231,70 @@ const cleanTok = s => { s = String(s || '').replace(/\s+/g, ''); return /^[0-9A-
 }catch(e){} })();
 const makeSetupLink = (u, t) => location.origin + location.pathname + '#setup=' +
   btoa(unescape(encodeURIComponent(JSON.stringify({u: u, t: t})))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+/* ---------------- 📒 Op ledger (Stage 1: dual-write) ----------------
+   Every record edit becomes one tiny row in the inbox sheet's new "ops" tab.
+   Devices replay rows they haven't seen; the rule is newest edit PER RECORD
+   wins (not newest device). The snapshot system (ccbak) keeps running
+   underneath as the Stage-1 safety net and the fresh-device bootstrap. */
+const OPS_COLLECTIONS = ['clients', 'orders', 'deliverables'];
+const OPS_LISTS = ['pendingBookings', 'importedIds', 'expenses', 'subsHandled', 'blockedDays'];   // activity stays snapshot-only (noisy + cosmetic)
+const devId = () => { try{ let v = localStorage.getItem('rem_dev_v1'); if(!v){ v = Math.random().toString(36).slice(2, 10); localStorage.setItem('rem_dev_v1', v); } return v; }catch(e){ return 'mem'; } };
+const opStamps = () => { try{ return JSON.parse(localStorage.getItem('rem_opmt_v1') || '{}'); }catch(e){ return {}; } };
+const saveStamps = m => { try{ localStorage.setItem('rem_opmt_v1', JSON.stringify(m)); }catch(e){} };
+const opOutbox = () => { try{ return JSON.parse(localStorage.getItem('rem_opout_v1') || '[]'); }catch(e){ return []; } };
+const saveOutbox = a => { try{ localStorage.setItem('rem_opout_v1', JSON.stringify(a.slice(-400))); }catch(e){} };
+const opCursor = () => { try{ return +localStorage.getItem('rem_opcur_v1') || 0; }catch(e){ return 0; } };
+const saveCursor = n => { try{ localStorage.setItem('rem_opcur_v1', String(n)); }catch(e){} };
+// after adopting a full snapshot, that snapshot is the checkpoint: only ledger rows NEWER than it may apply
+function stampAllFrom(md, tsMs){
+  const st = {};
+  OPS_COLLECTIONS.forEach(c => (md[c] || []).forEach(r => { if(r && r.id) st[c + '.' + r.id] = tsMs; }));
+  Object.keys(md.settings || {}).forEach(k => { st['settings.' + k] = tsMs; });
+  OPS_LISTS.forEach(k => { st['list.' + k] = tsMs; });
+  saveStamps(st);
+}
+// diff two db snapshots into ledger ops
+function diffDb(prev, next){
+  const ops = []; const now = Date.now(); const dv = devId();
+  OPS_COLLECTIONS.forEach(col => {
+    const a = prev[col] || [], b = next[col] || [];
+    const am = {}; a.forEach(r => { am[r.id] = r; });
+    const bm = {}; b.forEach(r => { bm[r.id] = r; });
+    b.forEach(r => { const o = am[r.id]; if(!o || JSON.stringify(o) !== JSON.stringify(r)) ops.push({ts: now, dev: dv, key: col + '.' + r.id, data: r}); });
+    a.forEach(r => { if(!bm[r.id]) ops.push({ts: now, dev: dv, key: col + '.' + r.id, data: null}); });
+  });
+  const ps = prev.settings || {}, ns = next.settings || {};
+  const ks = {}; Object.keys(ps).concat(Object.keys(ns)).forEach(k => { ks[k] = 1; });
+  Object.keys(ks).forEach(k => { if(JSON.stringify(ps[k]) !== JSON.stringify(ns[k])) ops.push({ts: now, dev: dv, key: 'settings.' + k, data: ns[k] === undefined ? null : ns[k]}); });
+  OPS_LISTS.forEach(k => { if(JSON.stringify(prev[k] || []) !== JSON.stringify(next[k] || [])) ops.push({ts: now, dev: dv, key: 'list.' + k, data: next[k] || []}); });
+  return ops;
+}
+// apply incoming ledger rows — newest per record wins, stamps updated in place
+function applyOpsTo(db0, items, stamps){
+  let next = db0, changed = 0;
+  items.forEach(it => {
+    const k = String(it.key || ''); if(!k || k.indexOf('.') < 0) return;
+    if(+(stamps[k] || 0) >= +(it.ts || 0)) return;   // we already hold the same or a newer edit
+    stamps[k] = +(it.ts || 0);
+    const dot = k.indexOf('.'); const group = k.slice(0, dot), id = k.slice(dot + 1);
+    const data = it.data;
+    if(OPS_COLLECTIONS.includes(group)){
+      const list = next[group] || []; const i = list.findIndex(r => r.id === id);
+      if(data === null || data === undefined){ if(i > -1){ next = {...next, [group]: list.filter(r => r.id !== id)}; changed++; } }
+      else if(i > -1){ if(JSON.stringify(list[i]) !== JSON.stringify(data)){ next = {...next, [group]: list.map(r => r.id === id ? data : r)}; changed++; } }
+      else { next = {...next, [group]: [...list, data]}; changed++; }
+    } else if(group === 'settings'){
+      if(JSON.stringify((next.settings || {})[id]) !== JSON.stringify(data === null ? undefined : data)){
+        const ns2 = {...next.settings}; if(data === null) delete ns2[id]; else ns2[id] = data;
+        next = {...next, settings: ns2}; changed++;
+      }
+    } else if(group === 'list' && OPS_LISTS.includes(id)){
+      if(JSON.stringify(next[id] || []) !== JSON.stringify(data || [])){ next = {...next, [id]: data || []}; changed++; }
+    }
+  });
+  return {next, changed};
+}
 // backups are stored in UTC (ISO) — show them in the studio's local time
 const fmtTs = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); };
 const fmtClock = iso => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'}); };
@@ -1491,6 +1555,7 @@ function App(){
     const md = migrate(row.data);
     if(!md){ alert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
     cloudSkip.current = true;
+    if(window.__opsAdopt) window.__opsAdopt(md, row.updated_at);
     setDb(md);
     try{ localStorage.setItem('rem_ccbak_v1', JSON.stringify({h: dbHash(JSON.stringify(md)), t: String(row.updated_at || new Date().toISOString())})); }catch(e){}
     setCloud({status:'idle', last: fmtClock(row.updated_at)});
@@ -1532,6 +1597,7 @@ function App(){
       if(!md2) return;
       if(weighDb(md2) <= 1 && localW > 1){ if(doBackupRef.current) doBackupRef.current(true); return; }   // 🛡 cloud newest is a blank device's copy — overwrite it with this full one
       cloudSkip.current = true;
+      if(window.__opsAdopt) window.__opsAdopt(md2, newest.ts);
       setDb(md2);
       try{ localStorage.setItem('rem_ccbak_v1', JSON.stringify({h: dbHash(JSON.stringify(md2)), t: String(newest.ts)})); }catch(e){}
       setCloud({status: 'idle', last: fmtClock(newest.ts)});
@@ -1609,6 +1675,76 @@ function App(){
     const t = setTimeout(() => { doBackup(false); }, window.__BAK_MS || 30000);
     return () => clearTimeout(t);
   }, [db]);
+  /* ---- 📒 ledger engine (Stage 1) ---- */
+  const prevOpsDb = React.useRef(null);
+  const applyingOps = React.useRef(false);   // true while a change came FROM the ledger/snapshot — never re-diff those into new ops
+  const opsBusy = React.useRef(false);
+  const opsFlush = async () => {
+    const d0 = dbRef.current; const inbox = d0.settings.inboxUrl, tok = d0.settings.inboxToken;
+    const out = opOutbox();
+    if(!inbox || !tok || !out.length || opsBusy.current) return;
+    opsBusy.current = true;
+    try{
+      const batch = out.slice(0, 120);
+      const j = await fetch(inbox, {method:'POST', body: JSON.stringify({kind:'ops', token: tok, ops: batch})}).then(r => r.json());
+      if(j && j.ok){
+        saveOutbox(opOutbox().slice(batch.length));
+        if(j.cursor && +j.cursor > opCursor()) {} // reads advance the cursor; our own rows get skipped by dev id
+      }
+    }catch(e){}
+    opsBusy.current = false;
+    if(opOutbox().length) setTimeout(() => opsFlushRef.current && opsFlushRef.current(), 2000);
+  };
+  const opsFlushRef = React.useRef(null); opsFlushRef.current = opsFlush;
+  const opsPull = async () => {
+    const d0 = dbRef.current; const inbox = d0.settings.inboxUrl, tok = d0.settings.inboxToken;
+    if(!inbox || !tok) return;
+    try{
+      let cur = opCursor(), guard = 0, totalChanged = 0;
+      while(guard++ < 8){
+        const j = await fetch(inbox + '?token=' + encodeURIComponent(tok) + '&ops=' + cur).then(r => r.json());
+        if(!(j && j.ok)) return;
+        const mine = devId();
+        const items = (j.items || []).filter(it => it && it.dev !== mine);
+        if(items.length){
+          const st = opStamps();
+          const res = applyOpsTo(dbRef.current, items, st);
+          saveStamps(st);
+          if(res.changed){ applyingOps.current = true; cloudSkip.current = true; setDb(res.next); totalChanged += res.changed; }
+        } else if(j.items && j.items.length){
+          // only our own rows — still record their stamps so a later replay can't resurrect older state
+          const st2 = opStamps(); j.items.forEach(it => { const k = String(it.key || ''); if(k && +(st2[k] || 0) < +(it.ts || 0)) st2[k] = +(it.ts || 0); }); saveStamps(st2);
+        }
+        cur = +j.cursor || cur; saveCursor(cur);
+        if(!j.more) break;
+      }
+      window.__opsHealth = {at: Date.now(), cursor: cur, applied: totalChanged};
+    }catch(e){}
+  };
+  const opsPullRef = React.useRef(null); opsPullRef.current = opsPull;
+  window.__opsAdopt = (md, ts) => {   // a full snapshot was adopted → it's the new checkpoint
+    applyingOps.current = true;
+    let ms = Date.now(); try{ const m2 = new Date(ts).getTime(); if(m2) ms = m2; }catch(e){}
+    stampAllFrom(md, ms);
+    saveOutbox([]);   // anything unsent predates the snapshot we just took as truth
+  };
+  useEffect(() => {   // the differ: any local db change → ledger ops in the outbox
+    if(prevOpsDb.current === null){ prevOpsDb.current = db; return; }
+    if(applyingOps.current){ applyingOps.current = false; prevOpsDb.current = db; return; }
+    const ops = diffDb(prevOpsDb.current, db);
+    prevOpsDb.current = db;
+    if(!ops.length) return;
+    const st = opStamps(); ops.forEach(o => { st[o.key] = o.ts; }); saveStamps(st);
+    saveOutbox(opOutbox().concat(ops));
+    clearTimeout(window.__opsT); window.__opsT = setTimeout(() => opsFlushRef.current && opsFlushRef.current(), window.__OPS_MS || 2500);
+  }, [db]);
+  useEffect(() => {   // pull cadence: on open, every 90s, and on tab show/hide
+    const t0 = setTimeout(() => opsPullRef.current && opsPullRef.current(), 4000);
+    const iv = setInterval(() => { if(opsFlushRef.current) opsFlushRef.current(); if(opsPullRef.current) opsPullRef.current(); }, 90 * 1000);
+    const onVis2 = () => { if(document.hidden){ if(opsFlushRef.current) opsFlushRef.current(); } else if(opsPullRef.current) opsPullRef.current(); };
+    document.addEventListener('visibilitychange', onVis2);
+    return () => { clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis2); };
+  }, []);
   useEffect(() => {
     const check = () => fetch(location.pathname || 'index.html', {cache: 'no-store'})
       .then(r => r.text()).then(t => {
@@ -5759,6 +5895,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.12-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.13-1</div>
 </body>
 </html>
