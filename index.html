@@ -1587,15 +1587,16 @@ function App(){
         return;   // cloud already matches this device
       }
       if(localW > 1){
-        if(String(newest.ts) <= String(bakMeta().t || '')) return;   // nothing newer than our last write/pull
-        let touched = 0; try{ touched = +localStorage.getItem('rem_db_touched_v1') || 0; }catch(e){}
-        if(touched > new Date(newest.ts).getTime()){ if(doBackupRef.current) doBackupRef.current(false); return; }   // our edits are newer → push
+        // 📒 STAGE 2: a device with real data NEVER swaps in whole snapshots any more —
+        // records travel through the op ledger, newest edit per record wins. Snapshots
+        // live on only as the fresh-device bootstrap + the weekly Drive backups.
+        if(metaW(newest) <= 1 && doBackupRef.current) doBackupRef.current(true);   // 🛡 a blank copy is sitting as the bootstrap — replace it with this full one
+        return;
       }
       const r2 = await fetch(inboxUrl + '?token=' + encodeURIComponent(inboxToken) + '&ccrestore=' + encodeURIComponent(newest.id)).then(r => r.json());
       if(!(r2.ok && r2.data)) return;
       const md2 = migrate(JSON.parse(r2.data));
       if(!md2) return;
-      if(weighDb(md2) <= 1 && localW > 1){ if(doBackupRef.current) doBackupRef.current(true); return; }   // 🛡 cloud newest is a blank device's copy — overwrite it with this full one
       cloudSkip.current = true;
       if(window.__opsAdopt) window.__opsAdopt(md2, newest.ts);
       setDb(md2);
@@ -2127,7 +2128,9 @@ function App(){
       if(patch.status === 'Delivered'){
         copyText(deliveryMsg({...cur, ...patch}, o, c));
         actions.push({label: '✉ Copy again', fn: () => copyText(deliveryMsg({...cur, ...patch}, o, c))});
-        showToast(`✓ ${dlTitle(cur)} delivered · ✉ client message copied`, actions);
+        const sibs = db.deliverables.filter(x => x.orderId === cur.orderId);
+        const packDone = sibs.length > 1 && sibs.every(x => x.id === id || x.status === 'Delivered');
+        showToast(`✓ ${dlTitle(cur)} delivered` + (packDone ? ' · 🔁 package complete — rebook offer waiting on Home' : ' · ✉ client message copied'), actions);
         // 🎉 delivery receipt → the agent's hub chat (their push rides along) + a gentle rating ask. Once per deliverable.
         const hk6 = c && (c.hubKey || c.hubId);
         if(hk6 && db.settings.inboxUrl && !cur.dlvMsgTs){
@@ -3196,7 +3199,7 @@ function WeekStrip({db, goCalendar}){
     </div>);
 }
 
-function ActionQueue({db, openOrderDetail, goCalendar}){
+function ActionQueue({db, openOrderDetail, goCalendar, updateOrder}){
   const [showAll, setShowAll] = useState(false);
   const td = today();
   const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
@@ -3236,6 +3239,29 @@ function ActionQueue({db, openOrderDetail, goCalendar}){
       const c = db.clients.find(x => x.id === o.clientId) || {};
       items.push({pri: 4, icon: '💳', txt: `${(c.name || 'Client').split(' ')[0]}: ${waiting.length} credit${waiting.length > 1 ? 's' : ''} unscheduled`, btn: 'Open →', act: () => openOrderDetail(o.id, waiting[0].id)});
     }
+  });
+  // 🔁 REBOOK RADAR — a multi-piece package just fully delivered and nothing new is booked:
+  // offer next month's package while they're at peak happiness, one tap, once per order.
+  db.orders.forEach(o => {
+    if(o.rebookOffered) return;
+    const dls = db.deliverables.filter(d => d.orderId === o.id);
+    if(dls.length < 2 || !dls.every(d => d.status === 'Delivered')) return;
+    const last = dls.map(d => d.deliveredDate || '').sort().slice(-1)[0];
+    if(!last || daysSince(last) > 21) return;
+    const c = db.clients.find(x => x.id === o.clientId); if(!c || c.id === 'pinnacle') return;
+    if(db.orders.some(o2 => o2.clientId === o.clientId && o2.id !== o.id && (o2.date || '') > (o.date || ''))) return;
+    const hk = c.hubKey || c.hubId;
+    items.push({pri: 2, icon: '🔁', txt: `${(c.name || 'Client').split(' ')[0]} finished “${o.project}” — offer next month while it's hot`, btn: '✉ Offer rebook', act: () => {
+      const first = (c.name || 'there').split(' ')[0];
+      if(hk && db.settings.inboxUrl){
+        fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk),
+          project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
+          body: '🎉 ' + first + ' — that wraps \u201C' + o.project + '\u201D, everything\u2019s delivered! The agents who win keep content rolling every month. Tap \uD83D\uDCC5 Book on your hub and let\u2019s lock in your next package before the calendar fills. \uD83C\uDFAC'})}).catch(() => {});
+        updateOrder(o.id, {rebookOffered: new Date().toISOString()});
+      } else {
+        alert('No hub chat for ' + (c.name || 'this client') + ' yet — add their hub key on the Clients tab first.');
+      }
+    }});
   });
   const ranked = items.sort((a, b) => a.pri - b.pri);
   if(ranked.length === 0) return null;
@@ -3335,7 +3361,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
       <DigestStrip db={db}/>
       <WeekStrip db={db} goCalendar={goCalendar}/>
     </div>
-    <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar}/>
+    <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar}updateOrder={updateOrder} />
     <WinBack db={db}/>
     <div className="card today">
       <div className="flex" style={{marginBottom:10}}>
@@ -4901,6 +4927,13 @@ function BookingCard({bk, db, clientTier, applyBookingNew, applyBookingAttach, d
         {guessedService && <div className="small faint" style={{marginTop:3}}>Guessed service: <strong>{(svc(guessedService) || {}).name || guessedService}</strong> — change it below if that's not it</div>}
       </div>
       <span className="spacer"></span>
+      {guessedClient && guessedService && svc(guessedService) && (() => {
+        const gs = svc(guessedService); const gt = clientTier(guessedClient);
+        const gc = db.clients.find(c => c.id === guessedClient) || {};
+        return <button className="btn sm" style={{background:'var(--teal)', borderColor:'var(--teal)', color:'#08130d', fontWeight:700}}
+          title={'Everything matched — one tap creates the order, schedules the shoot, and approves it on their hub:\n' + (gc.name || '') + ' · ' + gs.name + ' · ' + money(rateFor(gt, gs))}
+          onClick={() => applyBookingNew(bk, guessedClient, guessedService)}>⚡ Book it · {money(rateFor(gt, gs))}</button>;
+      })()}
       <button className="btn ghost sm" title="Approve the shoot on the agent's hub now (⏳ → ✅ + ping) — sort the order below whenever" onClick={() => approveBookingHub && approveBookingHub(bk, clientId)}>✅ Approve</button>
       <button className="btn ghost sm" onClick={() => dismissBooking(bk)}>Dismiss</button>
     </div>
@@ -5903,6 +5936,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.19-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.19-2</div>
 </body>
 </html>
