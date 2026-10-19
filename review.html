@@ -272,6 +272,10 @@ h1#brand em{font-style:normal;color:var(--amber)}
 .picksgrid figure figcaption{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:6px}
 .pk-dl{background:var(--teal);color:#08130d;border:none;border-radius:999px;padding:6px 12px;font-family:var(--mono);font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;cursor:pointer}
 .pk-lock{background:rgba(0,0,0,.72);color:#f4ba2e;border:1px solid rgba(242,169,0,.5);border-radius:999px;padding:6px 11px;font-family:var(--mono);font-size:.58rem;font-weight:700;letter-spacing:.05em}
+.pk-all{display:inline-flex;align-items:center;gap:8px;background:var(--teal);color:#08130d;border:none;border-radius:999px;padding:11px 20px;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin:0 4px 8px}
+.pk-all:hover{filter:brightness(1.05)}
+.pk-all:disabled{opacity:.7;cursor:default}
+.pk-allnote{color:var(--dim);font-size:.74rem;margin:0 4px 14px;line-height:1.5}
 .picksov .pnote{color:var(--mist);font-size:.82rem;margin:0 4px 12px;line-height:1.5}
 .picksov .pnote b{color:#f4ba2e}
 /* ⚡ smooth-streaming switch for choppy Drive videos */
@@ -647,21 +651,9 @@ function driveVideoEl(id, onFail){
     tm = setTimeout(() => { if(!ok && (v.readyState || 0) < 1) tryNext(); }, 9000);
   };
   v.addEventListener('loadedmetadata', function(){ ok = true; clearTimeout(tm); });
+  // Only fall back to Drive's (busier) streaming player if the clean native player
+  // truly can't load — never on a passing stutter, since that player is cluttered.
   v.addEventListener('error', function(){ if(!ok) tryNext(); });
-  // ⚡ The raw Drive file endpoints buffer poorly on big/HD clips and choke older
-  // devices. If playback keeps stalling, hand off to Drive's streaming preview
-  // player (adaptive quality) which plays smoothly. Also exposed as v.__goSmooth
-  // for the manual "Smooth play" button.
-  let switched = false, stalls = 0, waitT = null;
-  v.__goSmooth = () => { if(switched) return; switched = true; clearTimeout(tm); clearTimeout(waitT); onFail(); };
-  v.addEventListener('waiting', function(){
-    if(!ok || switched) return;               // pre-metadata stalls are handled by tryNext
-    stalls++;
-    clearTimeout(waitT);
-    waitT = setTimeout(function(){ if(!v.paused && (v.readyState || 0) < 3) v.__goSmooth(); }, 3200);
-    if(stalls >= 3) v.__goSmooth();            // repeated stutters → just switch
-  });
-  v.addEventListener('playing', function(){ clearTimeout(waitT); });
   tryNext();
   return v;
 }
@@ -734,22 +726,23 @@ function renderSingle(url){
       }).catch(e => folderFallback(r, 'gallery couldn’t load: ' + e.message + '. Checklist: folder shared as “Anyone with link” · Drive API enabled · key website restriction is https://cloudixc.github.io/*'));
     } else folderFallback(r, 'this link has no gallery key. In the app, tap 🎬 Review room again after saving your Drive API key so a fresh link is generated.');
   } else if(r.kind === 'dfile'){
-    // ▶ Default: Drive's smooth streaming player — plays instantly, no click. Notes by typing the time.
+    // ▶ Default: the clean native player — single set of controls, and pausing pins a
+    //   note to that exact second. Smooth as long as the web-preview file is light.
+    const showClean = () => {
+      p.innerHTML = '';
+      const v = driveVideoEl(r.id, showSmooth);   // only if it genuinely can't load
+      p.appendChild(v);
+      vidSwitchBtn(p, '⚡ Smooth streaming', 'Choppy on this device? Tap for Google Drive’s adaptive stream (busier controls, but smoother on a heavy file).', showSmooth);
+      attachVid(v);
+    };
+    // ⚡ Manual fallback: Drive's adaptive streaming player (busier UI). Notes by typing the time.
     const showSmooth = () => {
       vid = null;
       p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-      composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. Want to pin the exact second instead? Tap ✎ Precise notes.');
-      vidSwitchBtn(p, '✎ Precise notes', 'Switch to the exact-second player — pause anywhere to pin a note at that moment.', showPrecise);
+      composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. For a cleaner player + exact-second pinning, tap ✎ Clean player.');
+      vidSwitchBtn(p, '✎ Clean player', 'Back to the clean player — pause anywhere to pin a note at that exact second.', showClean);
     };
-    // ✎ Opt-in: the frame-accurate player where pausing captures the exact second.
-    const showPrecise = () => {
-      p.innerHTML = '';
-      const v = driveVideoEl(r.id, showSmooth);   // if this one stalls, it drops back to smooth
-      p.appendChild(v);
-      vidSwitchBtn(p, '⚡ Smooth play', 'Playing choppy? Tap to go back to smooth streaming.', showSmooth);
-      attachVid(v);
-    };
-    showSmooth();
+    showClean();
   } else {
     p.innerHTML = '<iframe src="' + r.src.replace(/"/g,'&quot;') + '" allowfullscreen></iframe>';
     composer('manual', 'time / photo ref (optional)', 'Add your notes below — include a time or photo reference so we know where to look.');
@@ -844,6 +837,7 @@ function buildGallery(items){
   const cb = document.getElementById('cmpbtn');
   if(cb) cb.style.display = (versions.length > 1 && cur > 0) ? '' : 'none';
   syncGallery();
+  try{ renderDl(); }catch(e){}   // the gallery loads async — refresh the download panel so “Download all” sees the photos
 }
 function copyPhotoLink(){
   const g = gallery[curImg]; if(!g) return;
@@ -871,19 +865,19 @@ function syncGallery(){
     fsOnPlay(dv);
     dv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(dv.currentTime); });
   }
-  else if(g.isVid && g.fileId && g.precise){
-    // ✎ exact-second player (opt-in) — pausing fills the time so notes pin to that moment
+  else if(g.isVid && g.fileId && !g.smooth){
+    // ▶ default: the clean native player — pausing fills the time so notes pin to that moment
     bw.innerHTML = '';
-    const gv = driveVideoEl(g.fileId, () => { g.precise = false; if(gallery[curImg] === g) syncGallery(); });
+    const gv = driveVideoEl(g.fileId, () => { g.smooth = true; if(gallery[curImg] === g) syncGallery(); });
     bw.appendChild(gv);
-    vidSwitchBtn(bw, '⚡ Smooth play', 'Playing choppy? Tap to go back to smooth streaming.', () => { g.precise = false; syncGallery(); });
+    vidSwitchBtn(bw, '⚡ Smooth streaming', 'Choppy on this device? Tap for Google Drive’s adaptive stream (busier controls, but smoother on a heavy file).', () => { g.smooth = true; syncGallery(); });
     fsOnPlay(gv);
     gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
   else if(g.isVid){
-    // ▶ default: Drive's smooth streaming player — no click needed
+    // ⚡ manual fallback: Drive's adaptive streaming player (busier UI)
     bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-    if(g.fileId) vidSwitchBtn(bw, '✎ Precise notes', 'Switch to the exact-second player — pause to pin a note at that moment.', () => { g.precise = true; syncGallery(); });
+    if(g.fileId) vidSwitchBtn(bw, '✎ Clean player', 'Back to the clean player — pause to pin a note at that exact second.', () => { g.smooth = false; syncGallery(); });
   }
   else if(!g.isVid && wmShown(g.name)){
     const oldc = bw.querySelector('canvas.bigimg');
@@ -1335,6 +1329,51 @@ function dlLink(url){
   if(u.includes('dropbox.com')) return {href: u.replace(/([?&])(dl=0|raw=1)/,'$1dl=1'), label: '⬇ Download from Dropbox', note: ''};
   return {href: u, label: '⬇ Download', note: ''};
 }
+// ⬇ One-tap "everything at once": a server-built zip of the whole approved gallery,
+// with a per-file cascade as the fallback. Never offered on watermarked pick galleries —
+// those download through ⭐ My picks, which respects the unlock rules.
+function addDlAllBtn(box){
+  if(pickMode || !endpoint) return;
+  const ph = gallery.filter(g => !g.isVid && g.fileId);
+  if(ph.length < 2) return;
+  const b = document.createElement('button'); b.className = 'dlbtn';
+  const reset = () => { b.disabled = false; b.textContent = '⬇ Download all ' + ph.length + ' photos'; };
+  reset();
+  const runSequential = () => {
+    b.disabled = true;
+    let i = 0;
+    const step = () => {
+      if(i >= ph.length){ b.textContent = '✓ Sent all ' + ph.length + ' to your downloads'; setTimeout(reset, 5000); return; }
+      const g = ph[i]; i++;
+      const f = document.createElement('iframe'); f.style.display = 'none'; f.src = dlHref(g); document.body.appendChild(f);
+      setTimeout(() => { try{ f.remove(); }catch(e){} }, 60000);
+      b.textContent = 'Downloading… ' + i + ' / ' + ph.length;
+      setTimeout(step, 700);
+    };
+    step();
+  };
+  b.onclick = () => {
+    const ids = ph.map(g => g.fileId);
+    b.disabled = true;
+    b.textContent = '📦 Zipping ' + ids.length + ' photos…';
+    const zname = (dispType || project || 'photos') + ' — finals';
+    fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'zip', ids: ids, name: zname})})
+      .then(r => r.json())
+      .then(j => {
+        if(j && j.ok && j.url){
+          const f = document.createElement('iframe'); f.style.display = 'none'; f.src = j.url; document.body.appendChild(f);
+          setTimeout(() => { try{ f.remove(); }catch(e){} }, 120000);
+          b.textContent = '✓ Downloading all ' + (j.n || ids.length) + ' (one zip)';
+          setTimeout(reset, 6000);
+        } else { runSequential(); }
+      })
+      .catch(runSequential);
+  };
+  box.appendChild(b);
+  const n = document.createElement('div'); n.className = 'dlnote';
+  n.textContent = 'Comes as a single zip when possible; on some phones files may arrive one by one.';
+  box.appendChild(n);
+}
 function renderDl(){
   const dp = document.getElementById('dlpanel');
   const approved = cmts.some(c => c.ver === cur && c.txt.indexOf('✓ APPROVED') === 0);
@@ -1360,6 +1399,7 @@ function renderDl(){
       const pa = document.createElement('a'); pa.className = 'dlbtn'; pa.href = dp0.href; pa.target = '_blank'; pa.rel = 'noreferrer'; pa.textContent = '⬇ 📷 ' + dp0.label.replace('⬇ ', '');
       box.appendChild(pa);
       if(dp0.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = dp0.note; box.appendChild(n); }
+      addDlAllBtn(box);
     }
     hqLinks.forEach(h => {
       const d = dlLink(h);
@@ -1382,6 +1422,7 @@ function renderDl(){
     box.appendChild(a);
     if(d.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = d.note; box.appendChild(n); }
   });
+  addDlAllBtn(box);
   renderPostReady();
 }
 function resetPtBtn(){ const b = document.getElementById('ptbtn'); if(b){ b.classList.remove('on'); b.textContent = '📍'; } const m = document.getElementById('ptmark'); if(m) m.style.display = 'none'; }
@@ -1482,7 +1523,7 @@ function confirmPicks(){
     fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'feedback', ref: ref, project: project, dname: dname, who: identity, body: body})}).catch(function(){});
     try{
       const hk = q.get('hk') || '', an = q.get('an') ? decodeURIComponent(q.get('an')) : '';
-      if(hk && an) fetch(endpoint, {method:'POST', keepalive:true, body: JSON.stringify({kind:'msg', ref: hk, project: an + ' — ' + dname, dname:'', who: identity, from:'agent',
+      if(hk && an) fetch(endpoint, {method:'POST', keepalive:true, body: JSON.stringify({kind: 'msg', ref: hk, project: an + ' — ' + dname, dname:'', who: identity, from:'agent',
         body: '⭐ Picked ' + n + ' headshot' + (n !== 1 ? 's' : '') + (extra ? ' (' + pickCap + ' included + ' + extra + ' extra · $' + cost + ')' : '') + '.'})}).catch(function(){});
     }catch(e){}
   }
@@ -1524,6 +1565,52 @@ function showPicks(){
             : 'Your <b>' + pickCap + ' included</b> images are ready to download. The <b>' + ex + ' extra</b> stay locked until payment is received — we’ll unlock them the moment it’s in.')
         : 'Tap ⬇ on any pick to download the clean, watermark-free file. Your first <b>' + pickCap + '</b> are included; extras beyond that are $' + xPrice + ' each.';
       ov.appendChild(note);
+    }
+    // ⬇ Download all — one server-built zip when possible (best on phones); otherwise fire each file in turn.
+    if(pickMode){
+      const dlAll = items.filter(g => isUnlocked(g.name));
+      if(dlAll.length){
+        const allBtn = document.createElement('button'); allBtn.className = 'pk-all';
+        const reset = () => { allBtn.disabled = false; allBtn.textContent = '⬇ Download all ' + dlAll.length; };
+        reset();
+        const runSequential = () => {
+          allBtn.disabled = true;
+          let i = 0;
+          const step = () => {
+            if(i >= dlAll.length){ allBtn.textContent = '✓ Sent all ' + dlAll.length + ' to your downloads'; setTimeout(reset, 5000); return; }
+            const g = dlAll[i]; i++;
+            const f = document.createElement('iframe'); f.style.display = 'none'; f.src = dlHref(g); document.body.appendChild(f);
+            setTimeout(() => { try{ f.remove(); }catch(e){} }, 60000);
+            allBtn.textContent = 'Downloading… ' + i + ' / ' + dlAll.length;
+            setTimeout(step, 700);
+          };
+          step();
+        };
+        allBtn.onclick = () => {
+          const ids = dlAll.map(g => g.fileId).filter(Boolean);
+          // Prefer a single zip built server-side (one file, great on mobile). Falls back to per-file.
+          if(endpoint && ids.length && ids.length === dlAll.length){
+            allBtn.disabled = true;
+            allBtn.textContent = '📦 Zipping ' + ids.length + ' photos…';
+            const zname = (dispType || project || who || 'headshots') + ' — picks';
+            fetch(endpoint, {method:'POST', body: JSON.stringify({kind:'zip', ids: ids, name: zname})})
+              .then(r => r.json())
+              .then(j => {
+                if(j && j.ok && j.url){
+                  const f = document.createElement('iframe'); f.style.display = 'none'; f.src = j.url; document.body.appendChild(f);
+                  setTimeout(() => { try{ f.remove(); }catch(e){} }, 120000);
+                  allBtn.textContent = '✓ Downloading your ' + (j.n || ids.length) + ' picks (one zip)';
+                  setTimeout(reset, 6000);
+                } else { runSequential(); }
+              })
+              .catch(runSequential);
+          } else runSequential();
+        };
+        ov.appendChild(allBtn);
+        const an = document.createElement('div'); an.className = 'pk-allnote';
+        an.textContent = 'Comes as a single zip when possible. On some phones a few may arrive separately — tap ⬇ on any you miss.';
+        ov.appendChild(an);
+      }
     }
     const grid = document.createElement('div'); grid.className = 'picksgrid';
     if(items.length === 0) grid.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;text-align:center;padding:32px">No picks yet — tap ☆ on the shots you love.</div>';
@@ -1788,4 +1875,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.08.07-3</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.10.19-1</div></div></body></html>
