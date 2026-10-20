@@ -407,15 +407,25 @@ const dlTitle = d => ((getBrief(d).topic || '').trim()) || d.name;
 // Type = the service (e.g. "Premium Listing Photos (50 HDR)"). Description = the agent's own name for it,
 // cleaned of any "| Type" suffix they typed (so the address never shows twice), else the property.
 const shootType = d => (d.group || d.name || 'Shoot');
-// 🏷 What a deliverable is called in CHAT — same words as its delivery-page card:
-// "<type of shoot> · <event / property>", so a bare "Event Recap Photo and Video"
-// never appears without saying WHICH event it was.
-function chatTitle(d, o){
+// 🏷 dlSub: everything that distinguishes this deliverable — the CUSTOM name Jag gave
+// it (e.g. "Team Feras 01") first, then the event / property. Auto-generated names
+// ("Photos", "Reel 2 of 5"…) don't count as custom and stay hidden.
+function dlSub(d, o){
   const o2 = o || {};
-  const de = (function(){ try{ return shootDesc(d, o2) || (o2.project || ''); }catch(e){ return (o2.project || ''); } })();
+  const parts = [];
+  const nm = String(d.name || '').trim();
   const ty = shootType(d);
-  if(de && de !== ty && de !== dlTitle(d)) return ty + ' · ' + de;
-  return dlTitle(d);
+  const stock = /^(photos?|videos?|photo \d+|video \d+|reel ?\d+( of \d+)?|headshots?)$/i;
+  if(nm && nm !== ty && !stock.test(nm)) parts.push(nm);
+  let de = ''; try{ de = shootDesc(d, o2) || (o2.project || ''); }catch(e){ de = (o2.project || ''); }
+  if(de && de !== ty && parts.indexOf(de) < 0) parts.push(de);
+  return parts.join(' · ');
+}
+// What a deliverable is called in CHAT — same words as its delivery/review page:
+// "<type of shoot> · <custom name> · <event / property>".
+function chatTitle(d, o){
+  const sub = dlSub(d, o);
+  return sub ? shootType(d) + ' · ' + sub : dlTitle(d);
 }
 const cleanDesc = s => String(s || '').split('|')[0].trim();
 function shootDesc(d, o){
@@ -1839,7 +1849,7 @@ function App(){
           // 🔒 lock: 'auto' (default) locks once the shoot is done (status index >= 2 = 'Shot'); 'open'/'locked' override
           const briefLock = d.briefLock || 'auto';
           const brLocked = briefLock === 'locked' || (briefLock !== 'open' && STATUSES.indexOf(d.status) >= 2);
-          const _desc = shootDesc(d, o) || (o.project || '');
+          const _desc = dlSub(d, o) || (o.project || '');
           return {id: d.id, t: shootType(d), p: (_desc + (withName ? ' · 🤝 with ' + withName : '')), st: STATUS_LABEL(d.status),
             si: STATUSES.indexOf(d.status), sn: STATUSES.length,
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
@@ -2070,7 +2080,9 @@ function App(){
         if(srcs2.length && base2 && db.settings.inboxUrl){
           const entry2 = srcs2.join(',');
           const hqLink2 = isVideoDl(cur) ? (cur.linkHQ || '').trim() : '';
-          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (cur.reviewHQ || '') === hqLink2 && (!isHeadshotDl(cur) || cur.reviewPick))){
+          const oDe = db.orders.find(x => x.id === cur.orderId) || {};
+          const de2 = dlSub(cur, oDe);
+          if(!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (cur.reviewHQ || '') === hqLink2 && (!isHeadshotDl(cur) || cur.reviewPick) && (cur.reviewDe || '') === de2)){
             const o2 = db.orders.find(x => x.id === cur.orderId) || {};
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
             const vers2 = [...(cur.reviewVersions || [])];
@@ -2078,6 +2090,8 @@ function App(){
             const pin2 = isPinnacle(c2);
             const full2 = base2 + '?p=' + encodeURIComponent(o2.project || cur.group) +
               '&d=' + encodeURIComponent(dlTitle(cur)) +
+              '&ty=' + encodeURIComponent(shootType(cur)) +
+              (de2 ? '&de=' + encodeURIComponent(de2) : '') +
               '&n=' + encodeURIComponent((c2.name || '').split(' ')[0]) +
               '&t=' + (pin2 ? 'pin' : 'rem') +
               ((getBrief(cur).orientation === 'Vertical') ? '&o=v' : '') +
@@ -2090,7 +2104,7 @@ function App(){
               pickParams(cur) +
               (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '');
             const code2 = ((cur.reviewUrl || '').match(/[?&]x=([a-z0-9]+)/) || [])[1] || Math.random().toString(36).slice(2, 9);
-            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewHQ: hqLink2, reviewPick: isHeadshotDl(cur)};
+            patch = {...patch, reviewVersions: vers2, reviewUrl: base2 + '?x=' + code2, reviewSig: entry2, reviewHQ: hqLink2, reviewPick: isHeadshotDl(cur), reviewDe: de2};
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'link', ref: code2, project: o2.project || cur.group, who: 'app', body: full2.split('?').slice(1).join('?')})}).catch(() => {});
             if(c2 && c2.id) setTimeout(() => pushHub(c2.id), 1500);
           }
@@ -4453,7 +4467,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
               // carries the watermark/pick flag — otherwise regenerate so an old link picks up pick mode.
               const hqLink = isVideoDl(d) ? (d.linkHQ || '').trim() : '';
-              if(!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (d.reviewHQ || '') === hqLink && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client)){
+              if(!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (d.reviewHQ || '') === hqLink && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client) && (d.reviewDe || '') === dlSub(d, order)){
                 copyText(reviewShareText(d, order, client, d.reviewUrl));
                 window.open(d.reviewUrl, '_blank');
                 showToast('🔗 Same versions — link copied with the project name, ready to paste');
@@ -4470,7 +4484,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               const u = base + '?p=' + encodeURIComponent(order.project || d.group) +
                 '&d=' + encodeURIComponent(dlTitle(d)) +
                 '&ty=' + encodeURIComponent(shootType(d)) +
-                (shootDesc(d, order) ? '&de=' + encodeURIComponent(shootDesc(d, order)) : '') +
+                (dlSub(d, order) ? '&de=' + encodeURIComponent(dlSub(d, order)) : '') +
                 '&n=' + encodeURIComponent(((client && client.name) || '').split(' ')[0]) +
                 '&t=' + (pinC ? 'pin' : 'rem') +
                 (b.orientation === 'Vertical' ? '&o=v' : '') +
@@ -4500,7 +4514,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 const prevX = ((d.reviewUrl || '').match(/[?&]x=([a-z0-9]+)/) || [])[1] || '';
                 const code = prevX || Math.random().toString(36).slice(2, 9);
                 const shortU = base + '?x=' + code;
-                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC});
+                updateDeliverable(d.id, {reviewUrl: shortU, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC, reviewDe: dlSub(d, order)});
                 copyText(reviewShareText(d, order, client, shortU));
                 if(prevX){
                   const hkU = client && (client.hubKey || client.hubId);
@@ -4516,7 +4530,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     if(w) w.location = shortU;
                     showToast(prevX ? '♻ Same link, updated — their original link now shows the new round' : '✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
-                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC}); copyText(reviewShareText(d, order, client, u));
+                    updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC, reviewDe: dlSub(d, order)}); copyText(reviewShareText(d, order, client, u));
                     alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
@@ -5946,6 +5960,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-2</div>
 </body>
 </html>
