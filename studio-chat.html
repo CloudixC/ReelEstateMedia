@@ -85,7 +85,7 @@
       <div class="px-4 py-3 border-b border-[#262626]">
         <div class="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3 py-2">
           <svg class="w-4 h-4 text-[#5c5c5c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="search" type="text" placeholder="Search brokerages, agents, projects" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
+          <input id="search" type="text" placeholder="Search brokerages, agents, messages" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
         </div>
       </div>
 
@@ -167,10 +167,12 @@
 <script>
   // ============================================================
   // Studio chat — YOUR side of the agent messages.
-  // Sidebar is the full tree: Brokerage ▸ Agent ▸ (Direct + Projects).
+  // ONE chat per agent: every project update folds into their direct
+  // thread wearing a 🎬 context chip — tap the chip to jump straight
+  // to that project in the Command Centre (its ← button brings you
+  // back here). Teams/groups are the only extra rooms.
   // Unlocks with your admin token; one ?token= fetch returns all rows:
-  //   hub   rows — build the tree (newest hub per agent wins; stale
-  //               duplicates only shown if they hold message history)
+  //   hub   rows — build the agent list (newest hub per agent wins)
   //   msg   rows — messages (photos ride inside bodies)
   //   read  rows — synced read markers (badges + Seen tags)
   //   react rows — synced emoji reactions
@@ -194,10 +196,25 @@
   const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const initialsOf = name => String(name).split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
 
+  // 🧹 one-time: fold the old per-project read markers into each agent's single
+  // chat so nothing already-read lights up as unread after the merge.
+  try {
+    const st0 = JSON.parse(localStorage.getItem(READ_KEY)) || {};
+    const mx = {};
+    Object.keys(st0).forEach(k => {
+      const i = k.indexOf('|p-');
+      if (i > -1){ const g = k.slice(0, i) + '|general'; if (st0[k] > (mx[g] || '')) mx[g] = st0[k]; }
+    });
+    let ch = false;
+    Object.keys(mx).forEach(g => { if (mx[g] > (st0[g] || '')){ st0[g] = mx[g]; ch = true; } });
+    if (ch) localStorage.setItem(READ_KEY, JSON.stringify(st0));
+  } catch(e){}
+
   // ---------- state ----------
   let TOKEN = '';
   let agents = [];              // {key, name, brokerage, initials, hubIdx, stale, convos:[...]}
   let groupConvos = [];         // 👥 group chats built from kind:'group' rows
+  let PROJMAP = {};             // project label -> {t, id, url} — context chips + CC deep links
   let activeId = '';
   let searchTerm = '';
   let reactMap = {};            // msgId -> emoji -> {a:0|1, j:0|1}
@@ -309,6 +326,7 @@
     const hubs = {};
     rows.forEach(r => { if (r.kind === 'hub') hubs[String(r.ref)] = r; });
 
+    PROJMAP = {};
     const byKey = {};
     Object.keys(hubs).forEach(key => {
       let man = {};
@@ -316,10 +334,12 @@
       const name = man.agent || man.n || String(hubs[key].project || key);
       const ag = { key, name, brokerage: man.brokerage || '', initials: initialsOf(name), hubIdx: rowIdx(hubs[key]), convos: [] };
       ag.convos.push({ id: key + '|general', key, name: ag.name, sub: 'Direct chat', initials: ag.initials, kind: 'direct', label: generalLabel(ag), messages: [], lastTs: '' });
+      // ONE chat per agent — no thread-per-content. Each project's label maps to
+      // its deliverable id so its messages wear a tappable 🎬 chip instead.
       (man.projects || man.items || []).forEach(x => {
         const title = x.t != null ? x.t : (x.ttl || '');
         if (!title) return;
-        ag.convos.push({ id: key + '|p-' + slug(title), key, name: title, sub: x.p != null ? x.p : (x.proj || ''), initials: initialsOf(title), kind: 'project', label: projectLabel(ag, title), url: x.url || '', messages: [], lastTs: '' });
+        PROJMAP[projectLabel(ag, title)] = { t: title, id: String(x.id || ''), url: x.url || '' };
       });
       byKey[key] = ag;
     });
@@ -443,6 +463,7 @@
         ts: String(r.ts || ''),
         side: side === 'j' ? 'out' : 'in',
         who: side === 'j' ? 'You' : (r.who || c.name),
+        proj: String(r.project || ''),
         text: b.text, atts: b.atts, q: b.q, poll: b.poll, brief: b.brief
       });
     });
@@ -524,7 +545,7 @@
     return out;
   }
 
-  // ---------- sidebar: Brokerage ▸ Agent ▸ Project tree ----------
+  // ---------- sidebar: Brokerage ▸ Agent tree ----------
   const badge = n => n > 0 ? `<span class="unread-badge text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] grid place-items-center px-1 shrink-0">${n}</span>` : '';
   const chevron = open => `<svg class="w-3.5 h-3.5 shrink-0 transition-transform ${open?'rotate-90':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
   const pinIcon = `<svg class="w-3 h-3 text-[#e11d2a] shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/></svg>`;
@@ -681,10 +702,10 @@
     const gSorted = groupConvos.slice().sort((x,y) =>
       ((isPinned(y.id)?1:0) - (isPinned(x.id)?1:0)) || ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
     const groupsHtml = `<div class="px-4 pt-3 pb-1 flex items-center justify-between">
-        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">👥 Teams</span>
-        <button id="new-group-btn" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-2.5 py-1 transition-colors" title="Create a team — a group chat plus each member's direct line">＋ New team</button>
+        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">👥 Teams & groups</span>
+        <button id="new-group-btn" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-2.5 py-1 transition-colors" title="Create a group — one agent for a project room, or several for a team">＋ New group</button>
       </div>`
-      + (gSorted.length ? gSorted.map(groupNode).join('') : `<div class="px-4 pb-1 text-[11px] text-[#5c5c5c]">No teams yet — start one with ＋.</div>`)
+      + (gSorted.length ? gSorted.map(groupNode).join('') : `<div class="px-4 pb-1 text-[11px] text-[#5c5c5c]">No groups yet — start one with ＋. Agents can also start one from their hub.</div>`)
       + `<div class="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">Agents</div>`;
 
     // group agents by brokerage, both levels sorted by pin-presence then recency
@@ -713,8 +734,9 @@
           const aUn = agentUnread(ag);
           const main = ag.convos.find(c => c.kind === 'direct');
           const aActive = main && main.id === activeId;
+          const extras = convosSorted(ag).filter(c => c.kind !== 'direct');
           let ah = `<div class="flex items-stretch ${aActive ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'border-l-2 border-transparent'}">
-            <button data-node="a:${esc(ag.key)}" class="pl-6 pr-1 flex items-center text-[#7a7a7a] hover:text-white transition-colors" aria-label="Toggle projects">${chevron(aOpen)}</button>
+            ${extras.length ? `<button data-node="a:${esc(ag.key)}" class="pl-6 pr-1 flex items-center text-[#7a7a7a] hover:text-white transition-colors" aria-label="Toggle review-page chats">${chevron(aOpen)}</button>` : `<span class="pl-6 pr-1 flex items-center text-transparent">${chevron(false)}</span>`}
             <button ${main ? `data-convo="${esc(main.id)}"` : ''} class="flex-1 min-w-0 text-left pr-3 py-2 flex items-center gap-2 hover:bg-[#161616] transition-colors" title="${esc(ag.name)} — direct chat">
               <span class="w-6 h-6 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[9px] font-serif-display ${aUn?'text-[#e11d2a]':'text-[#9a9a9a]'} shrink-0">${esc(ag.initials)}</span>
               <span class="flex-1 min-w-0 flex items-center gap-1.5">
@@ -726,7 +748,7 @@
               ${badge(aUn)}
             </button>
           </div>`;
-          if (aOpen) ah += convosSorted(ag).filter(c => c.kind !== 'direct').map(c => convoRow(c, true)).join('');
+          if (aOpen) ah += extras.map(c => convoRow(c, true)).join('');
           return ah;
         }).join('');
       }
@@ -871,7 +893,7 @@
     return (atts || []).map(at => {
       if (at.k === 'audio' && at.id){
         const cap = inSide ? 'text-[#8a8a8a]' : 'text-white/75';
-        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' \u00b7 ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
+        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' · ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
       }
       if (at.k === 'image' && (at.d || at.id)){
         return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
@@ -890,7 +912,7 @@
   }
 
   // @mentions — bold + red on incoming, bold + underline on your red bubbles
-  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'\u2019-]*)/g,
+  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'’-]*)/g,
     (mm, pre, nm) => pre + '<span class="font-bold ' + (inSide ? 'text-[#e11d2a]' : 'underline underline-offset-2') + '">@' + nm + '</span>');
 
   // 🗳 poll bubble — tap an option to vote, tap again to retract
@@ -942,13 +964,23 @@
           <span class="block text-[11.5px] ${inSide ? 'text-[#8a8a8a]' : 'text-white/70'} truncate">${esc(m.q.t || '')}</span>
         </button>`
       : '';
+    // 🎬 context chip — which project this message is about. Tap → that project
+    // opens in the Command Centre; its ← Back to Chat button returns here.
+    const pjInfo = m.proj && PROJMAP[m.proj] ? PROJMAP[m.proj] : null;
+    const pjChip = pjInfo
+      ? (pjInfo.id
+        ? `<a href="index.html#dl=${esc(pjInfo.id)}" class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'} mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''} underline underline-offset-2" title="Open this project in your Command Centre — its ← button brings you back here">🎬 ${esc(pjInfo.t)}</a>`
+        : `<span class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'} mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">🎬 ${esc(pjInfo.t)}</span>`)
+      : '';
     const inner = m.brief
-      ? `<div class="flex flex-col gap-1 min-w-[200px]">${quote}${briefBlock(m, inSide)}</div>`
+      ? `<div class="flex flex-col gap-1 min-w-[200px]">${pjChip ? `<div class="px-1 pt-1">${pjChip}</div>` : ''}${quote}${briefBlock(m, inSide)}</div>`
       : m.poll
-      ? `<div class="flex flex-col gap-1 min-w-[180px]">${quote}${pollBlock(m, inSide)}</div>`
+      ? `<div class="flex flex-col gap-1 min-w-[180px]">${pjChip ? `<div class="px-1 pt-1">${pjChip}</div>` : ''}${quote}${pollBlock(m, inSide)}</div>`
       : hasAtt
-      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
-      : quote + mentionize(linkify(m.text), inSide);
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${pjChip}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
+      : m.q
+      ? `<div class="flex flex-col gap-0.5 min-w-0 max-w-[74vw] sm:max-w-[360px]">${pjChip}${quote}<div class="min-w-0 break-words">${mentionize(linkify(m.text), inSide)}</div></div>`
+      : pjChip + quote + mentionize(linkify(m.text), inSide);
     const pad = (m.poll || m.brief) ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
     const hoverBtn = (cls, mid, title, svg) =>
       `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
@@ -1226,19 +1258,19 @@
         stream.getTracks().forEach(t => t.stop());
         clearInterval(vTimer);
         micBtn.classList.remove('recording');
-        micBtn.title = 'Record a voice note \u2014 tap again to send';
+        micBtn.title = 'Record a voice note — tap again to send';
         const secs = Math.round((Date.now() - vT0) / 1000);
         const blob = new Blob(vChunks, { type: (vRec && vRec.mimeType) || 'audio/webm' });
         vRec = null;
-        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short \u2014 hold the thought and try again.'); return; }
+        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short — hold the thought and try again.'); return; }
         await sendVoiceNote(blob, secs);
       };
       vRec.start();
       vT0 = Date.now();
       micBtn.classList.add('recording');
-      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's \u2014 tap to send'; }, 500);
-      showToast('\u{1F399} Recording\u2026 tap the mic again to send.');
-    } catch(e){ showToast('Microphone unavailable \u2014 check your browser permissions.'); }
+      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's — tap to send'; }, 500);
+      showToast('\u{1F399} Recording… tap the mic again to send.');
+    } catch(e){ showToast('Microphone unavailable — check your browser permissions.'); }
   });
   async function sendVoiceNote(blob, secs){
     const c = convoById(activeId); if (!c) return;
@@ -1246,10 +1278,10 @@
     const f = new File([blob], 'voice-note-' + secs + 's.' + ext, { type: blob.type || 'audio/webm' });
     let att;
     try {
-      showToast('Sending voice note\u2026');
+      showToast('Sending voice note…');
       const id = await uploadToDrive(f);
       att = { k: 'audio', id, n: f.name, s: f.size, m: f.type || 'audio/webm', sec: secs };
-    } catch(e){ showToast("Couldn't send the voice note \u2014 try again in a moment."); return; }
+    } catch(e){ showToast("Couldn't send the voice note — try again in a moment."); return; }
     const body = JSON.stringify({ __rc: 1, t: '', att: [att] });
     const now = new Date().toISOString();
     c.messages.push({ id: '', ts: now, side: 'out', who: 'Reel Estate Media', text: '', atts: [att], q: null });
@@ -1676,7 +1708,7 @@
     setTimeout(() => loadAll().catch(()=>{}), 1500);
   });
 
-  // ---------- 👥 groups: create (studio-only) + edit name / photo / members ----------
+  // ---------- 👥 groups: create + edit name / photo / members ----------
   const grpModal = document.createElement('div');
   grpModal.id = 'grp-modal';
   grpModal.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
@@ -1700,7 +1732,7 @@
     grpModal.innerHTML = `
     <div class="w-full max-w-md bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col max-h-[88vh]">
       <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
-        <h3 class="font-serif-display text-lg text-white">${editing ? 'Edit <span class="text-[#e11d2a] italic">team</span>' : 'New <span class="text-[#e11d2a] italic">team</span>'}</h3>
+        <h3 class="font-serif-display text-lg text-white">${editing ? 'Edit <span class="text-[#e11d2a] italic">group</span>' : 'New <span class="text-[#e11d2a] italic">group</span>'}</h3>
         <button id="grp-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -1712,13 +1744,13 @@
         </button>
         <input id="grp-pic-input" type="file" accept="image/*" class="hidden">
         <div class="flex-1 min-w-0">
-          <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Team name</p>
-          <input id="grp-name" type="text" maxlength="48" placeholder="e.g. Pinnacle Power Team" value="${editing ? esc(grpEditing.name) : ''}" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+          <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Group name</p>
+          <input id="grp-name" type="text" maxlength="48" placeholder="e.g. Leadership Interviews, Pinnacle Power Team" value="${editing ? esc(grpEditing.name) : ''}" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
         </div>
       </div>
       <div class="px-5 pb-3">
         <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Description <span class="normal-case tracking-normal font-normal">(optional — everyone sees it)</span></p>
-        <input id="grp-desc" type="text" maxlength="140" placeholder="What's this team for? e.g. King West condo launches" value="${editing ? esc(grpEditing.desc || '') : ''}"
+        <input id="grp-desc" type="text" maxlength="140" placeholder="What's this group for? e.g. King West condo launches" value="${editing ? esc(grpEditing.desc || '') : ''}"
           class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
       </div>
       <div class="px-5 pb-1 flex items-center justify-between">
@@ -1737,9 +1769,9 @@
         </label>`).join('') || '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No agents yet — push a hub first.</p>'}
       </div>
       <div class="px-5 py-4 border-t border-[#262626]">
-        <button id="grp-save" class="w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">${editing ? 'Save changes' : 'Create team'}</button>
-        ${editing ? '<button id="grp-off" class="w-full mt-2 text-[11px] font-semibold text-[#6a6a6a] hover:text-[#e11d2a] py-1.5 transition-colors">Delete this team</button>' : ''}
-        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">${editing ? 'Everyone in the team can rename it or change its photo — members are yours to manage.' : "Only you can create teams — agents can't."}</p>
+        <button id="grp-save" class="w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">${editing ? 'Save changes' : 'Create group'}</button>
+        ${editing ? '<button id="grp-off" class="w-full mt-2 text-[11px] font-semibold text-[#6a6a6a] hover:text-[#e11d2a] py-1.5 transition-colors">Delete this group</button>' : ''}
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">${editing ? 'Everyone in the group can rename it or change its photo — members are yours to manage.' : 'One agent = a project room for them; several = a team chat. Agents can also start one from their hub.'}</p>
       </div>
     </div>`;
     grpRefreshFooter();
@@ -1765,8 +1797,8 @@
     const name = (grpModal.querySelector('#grp-name').value || '').trim();
     const desc = (grpModal.querySelector('#grp-desc').value || '').trim();
     const members = [...grpModal.querySelectorAll('input[data-key]:checked')].map(x => x.dataset.key);
-    if (!name){ showToast('Give the team a name first.'); return; }
-    if (!members.length){ showToast('Pick at least one agent for the team.'); return; }
+    if (!name){ showToast('Give the group a name first.'); return; }
+    if (!members.length){ showToast('Pick at least one agent for the group.'); return; }
     const editing = grpEditing;
     const gid = editing ? editing.gid : 'grp-' + Math.random().toString(36).slice(2, 10);
     const btn = grpModal.querySelector('#grp-save');
@@ -1778,7 +1810,7 @@
       editing.members = members; editing.memberNames = members.map(nameOf);
       editing.sub = '👥 Group · ' + (members.length + 1) + ' people';
       closeGrpModal();
-      showToast('👥 Team updated');
+      showToast('👥 Group updated');
       renderSidebar(); renderThread();
     } else {
       const c = { id: 'g|' + gid, gid, key: gid, kind: 'group', label: '',
@@ -1788,7 +1820,7 @@
       groupConvos.push(c);
       expanded.add('g:' + gid);
       closeGrpModal();
-      showToast("👥 Team created — the group chat is live in every member's hub");
+      showToast("👥 Group created — it's live in every member's hub");
       selectConversation(c.id);
     }
     setTimeout(() => loadAll().catch(()=>{}), 1500);
@@ -1812,7 +1844,7 @@
         try { await postGroup(g.gid, { name: g.name, desc: g.desc || '', pic: g.pic, members: g.members, on: false }); } catch(e2){}
         groupConvos = groupConvos.filter(x => x.gid !== g.gid);
         if (activeId === g.id){ const first = allConvos()[0]; activeId = first ? first.id : ''; }
-        showToast('Team deleted');
+        showToast('Group deleted');
         renderSidebar(); renderThread();
         setTimeout(() => loadAll().catch(()=>{}), 1500);
       }

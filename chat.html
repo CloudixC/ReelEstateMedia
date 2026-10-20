@@ -59,6 +59,9 @@
         <h2 class="font-serif-display text-xl text-white">Mess<span class="text-[#e11d2a] italic">ages</span></h2>
         <div class="flex items-center gap-2">
           <span id="total-badge" class="unread-badge text-[11px] font-semibold rounded-full px-2 py-0.5" style="display:none">0</span>
+          <button id="new-group-btn" class="w-8 h-8 grid place-items-center rounded-full text-[#7a7a7a] hover:text-white hover:bg-[#1c1c1c] transition-colors" title="Start a group chat — e.g. a room for one project" aria-label="New group chat">
+            <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+          </button>
           <button id="close-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white" aria-label="Close">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -150,8 +153,10 @@
 <script>
   // ============================================================
   // Agent-facing messages — wired to the REM inbox (Apps Script).
-  // One general thread + one thread per project under this agent's
-  // hub key, grouped by each message's `project` label.
+  // ONE direct chat with the studio holds everything — project
+  // updates arrive with a tappable context chip instead of each
+  // piece of content spawning its own thread. Group chats (made by
+  // you with ＋, or by the studio) are the only extra rooms.
   //   msg   rows — the messages themselves (photos ride inside the
   //                body as compressed data-URLs)
   //   read  rows — synced read markers (unread badges + Seen tag)
@@ -180,6 +185,7 @@
   let AGENT = '';
   let BROKERAGE = '';
   let conversations = [];       // {id, name, sub, initials, label, messages:[], lastTs}
+  let PROJMAP = {};             // project label -> {t, url} — powers the context chips
   let activeId = 'general';
   let searchTerm = '';
   let reactMap = {};            // msgId -> emoji -> {a:0|1, j:0|1}
@@ -193,6 +199,14 @@
 
   // ---------- read state (synced via 'read' rows + local overlay) ----------
   const READ_KEY = 'rem_chat_read_v1:' + a;
+  // 🧹 one-time: fold the old per-project read markers into the single chat so
+  // nothing that was already read lights up as unread after the merge.
+  try {
+    const st0 = JSON.parse(localStorage.getItem(READ_KEY)) || {};
+    let mx0 = st0.general || '';
+    Object.keys(st0).forEach(k => { if (k.indexOf('p-') === 0 && st0[k] > mx0) mx0 = st0[k]; });
+    if (mx0 && mx0 !== (st0.general || '')){ st0.general = mx0; localStorage.setItem(READ_KEY, JSON.stringify(st0)); }
+  } catch(e){}
   let serverRead = {};
   let theirRead = {};
   function localRead(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
@@ -257,7 +271,7 @@
   }
   $('#pin-btn').addEventListener('click', () => togglePin(activeId));
 
-  // ---------- conversations from the hub manifest ----------
+  // ---------- conversations: ONE direct chat (+ groups) ----------
   function generalLabel(){ return (AGENT || 'Agent') + ' — Content Hub'; }
   function projectLabel(title){ return (AGENT || 'Agent') + ' — ' + title; }
 
@@ -265,18 +279,17 @@
     AGENT = hub.agent || hub.n || '';
     BROKERAGE = hub.brokerage || '';
     const raw = hub.projects || hub.items || [];
+    // No thread-per-content: remember each project's label so its messages can
+    // wear a context chip inside the one chat instead.
+    PROJMAP = {};
+    raw.forEach(x => {
+      const title = x.t != null ? x.t : (x.ttl || '');
+      if (title) PROJMAP[projectLabel(title)] = { t: title, url: x.url || '' };
+    });
     conversations = [{
       id: 'general', name: 'Reel Estate Media', sub: 'Direct chat',
       initials: 'RE', label: generalLabel(), messages: [], lastTs: ''
     }];
-    raw.forEach(x => {
-      const title = x.t != null ? x.t : (x.ttl || '');
-      if (!title) return;
-      conversations.push({
-        id: 'p-' + slug(title), name: title, sub: x.p != null ? x.p : (x.proj || ''),
-        initials: initialsOf(title), label: projectLabel(title), url: x.url || '', messages: [], lastTs: ''
-      });
-    });
   }
 
   // ---------- body encoding (photos ride inside msg bodies) ----------
@@ -342,6 +355,7 @@
         ts: String(r.ts || ''),
         side: side === 'j' ? 'in' : 'out',
         who: side === 'j' ? 'Reel Estate Media' : (r.who || AGENT || 'You'),
+        proj: String(r.project || ''),
         text: b.text, atts: b.atts, q: b.q, poll: b.poll, brief: b.brief
       });
     });
@@ -554,7 +568,7 @@
     return (atts || []).map(at => {
       if (at.k === 'audio' && at.id){
         const cap = inSide ? 'text-[#8a8a8a]' : 'text-white/75';
-        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' \u00b7 ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
+        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' · ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
       }
       if (at.k === 'image' && (at.d || at.id)){
         return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"${at.id ? ` data-view="https://drive.google.com/file/d/${esc(at.id)}/view"` : ''}><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
@@ -583,7 +597,7 @@
   }
 
   // @mentions — bold + red on incoming, bold + underline on your red bubbles
-  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'\u2019-]*)/g,
+  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'’-]*)/g,
     (mm, pre, nm) => pre + '<span class="font-bold ' + (inSide ? 'text-[#e11d2a]' : 'underline underline-offset-2') + '">@' + nm + '</span>');
 
   // 🗳 poll bubble — tap an option to vote, tap again to retract
@@ -671,15 +685,21 @@
     const cc = convoById(activeId);
     const gwho = (cc && cc.group && inSide)
       ? `<span class="block text-[10px] font-semibold text-[#e11d2a] mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">${esc(m.who)}</span>` : '';
+    // 🎬 context chip — which piece of content this update is about (tap to open it)
+    const pj = (!cc || !cc.group) && m.proj && m.proj !== generalLabel() ? PROJMAP[m.proj] : null;
+    const pjChip = pj
+      ? `<span class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'} mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">${pj.url ? `<a href="${esc(pj.url)}" target="_blank" rel="noopener" class="underline underline-offset-2" title="Open this project">🎬 ${esc(pj.t)}</a>` : '🎬 ' + esc(pj.t)}</span>`
+      : '';
+    const hdr = gwho || pjChip;
     const inner = m.brief
-      ? `<div class="flex flex-col gap-1 min-w-[200px]">${gwho ? `<div class="px-1 pt-1">${gwho}</div>` : ''}${quote}${briefBlock(m, inSide)}</div>`
+      ? `<div class="flex flex-col gap-1 min-w-[200px]">${hdr ? `<div class="px-1 pt-1">${hdr}</div>` : ''}${quote}${briefBlock(m, inSide)}</div>`
       : m.poll
-      ? `<div class="flex flex-col gap-1 min-w-[180px]">${gwho ? `<div class="px-1 pt-1">${gwho}</div>` : ''}${quote}${pollBlock(m, inSide)}</div>`
+      ? `<div class="flex flex-col gap-1 min-w-[180px]">${hdr ? `<div class="px-1 pt-1">${hdr}</div>` : ''}${quote}${pollBlock(m, inSide)}</div>`
       : hasAtt
-      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${gwho}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${hdr}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
       : m.q
-      ? `<div class="flex flex-col gap-0.5 min-w-0 max-w-[74vw] sm:max-w-[360px]">${gwho}${quote}<div class="min-w-0 break-words">${mentionize(linkify(m.text), inSide)}</div></div>`
-      : gwho + mentionize(linkify(m.text), inSide);
+      ? `<div class="flex flex-col gap-0.5 min-w-0 max-w-[74vw] sm:max-w-[360px]">${hdr}${quote}<div class="min-w-0 break-words">${mentionize(linkify(m.text), inSide)}</div></div>`
+      : hdr + mentionize(linkify(m.text), inSide);
     const pad = (m.poll || m.brief) ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
     const hoverBtn = (cls, mid, title, svg) =>
       `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
@@ -715,7 +735,7 @@
     const ge = $('#grp-edit');
     if (ge){ ge.classList.toggle('hidden', !c.group); ge.classList.toggle('flex', !!c.group); }
     $('#input-label').textContent = 'Message · ' + c.name;
-    $('#chat-input').placeholder = c.group ? 'Message ' + c.name + '…' : (c.id === 'general' ? 'Message Reel Estate Media…' : 'Write a message about ' + c.name + '…');
+    $('#chat-input').placeholder = c.group ? 'Message ' + c.name + '…' : 'Message Reel Estate Media…';
     const pl = $('#proj-link');
     if (c.url){ pl.href = c.url; pl.classList.remove('hidden'); pl.classList.add('flex'); }
     else { pl.classList.add('hidden'); pl.classList.remove('flex'); }
@@ -989,6 +1009,52 @@
     return id;
   }
 
+  // ---------- ➕ start a group chat (you can, we can — nothing is automatic) ----------
+  const ngModal = document.createElement('div');
+  ngModal.className = 'fixed inset-0 z-[80] hidden items-center justify-center bg-black/70 p-6';
+  ngModal.innerHTML = `
+    <div class="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+      <p class="font-serif-display text-lg text-white mb-1">New group chat</p>
+      <p class="text-[12px] text-[#8a8a8a] mb-4">A separate room with us — handy for one project, a listing or a campaign. Your main chat stays as it is.</p>
+      <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Name</label>
+      <input id="ng-name" type="text" maxlength="40" placeholder="e.g. Leadership Interviews" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[14px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-4">
+      <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">What's it for? (optional)</label>
+      <input id="ng-desc" type="text" maxlength="140" placeholder="Everyone in it sees this" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[13px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-5">
+      <div class="flex gap-2 justify-end">
+        <button id="ng-cancel" class="text-[12px] px-4 py-2.5 rounded-full border border-[#2a2a2a] text-[#8a8a8a] hover:text-white">Cancel</button>
+        <button id="ng-create" class="text-[12px] font-semibold px-5 py-2.5 rounded-full bg-[#e11d2a] hover:bg-[#c81824] text-white">Create group</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ngModal);
+  function openNg(){
+    ngModal.classList.remove('hidden'); ngModal.classList.add('flex');
+    ngModal.querySelector('#ng-name').value = '';
+    ngModal.querySelector('#ng-desc').value = '';
+    setTimeout(() => ngModal.querySelector('#ng-name').focus(), 50);
+  }
+  function closeNg(){ ngModal.classList.add('hidden'); ngModal.classList.remove('flex'); }
+  ngModal.addEventListener('click', e => { if (e.target === ngModal || e.target.closest('#ng-cancel')) closeNg(); });
+  $('#new-group-btn').addEventListener('click', openNg);
+  ngModal.querySelector('#ng-create').addEventListener('click', () => {
+    const nm = (ngModal.querySelector('#ng-name').value || '').trim();
+    const ds = (ngModal.querySelector('#ng-desc').value || '').trim();
+    if (!nm){ ngModal.querySelector('#ng-name').focus(); return; }
+    const gid = 'grp-' + Math.random().toString(36).slice(2, 10);
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'group', ref: gid, project:'', dname:'',
+      who: AGENT || 'Agent', from:'agent',
+      body: JSON.stringify({ name: nm, desc: ds, pic:'', members: [a], on: true })
+    })}).then(() => {
+      const c = { id: 'g|' + gid, gid, name: nm, desc: ds, sub: '👥 Group · 2 people',
+        initials: '👥', pic: '', members: [{k: a, n: AGENT || 'You'}], group: true, messages: [], lastTs: '' };
+      conversations.push(c);
+      closeNg();
+      showToast('👥 Group created — we’re in it with you.');
+      selectConversation(c.id);
+    }).catch(() => showToast("Couldn't create the group — try again in a moment."));
+  });
+  ngModal.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.target.id === 'ng-name' || e.target.id === 'ng-desc')) ngModal.querySelector('#ng-create').click(); });
+
   // ---------- 👥 group settings (any member can rename / change the photo) ----------
   const gpicInput = document.createElement('input');
   gpicInput.type = 'file'; gpicInput.accept = 'image/*'; gpicInput.className = 'hidden';
@@ -1003,7 +1069,7 @@
     grpPanel.innerHTML = `
       <div class="w-full max-w-sm bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
         <p class="font-serif-display text-lg text-white mb-1">Group settings</p>
-        <p class="text-[12px] text-[#8a8a8a] mb-4">Anyone in the group can change these \u2014 everyone sees the update.</p>
+        <p class="text-[12px] text-[#8a8a8a] mb-4">Anyone in the group can change these — everyone sees the update.</p>
         <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Group name</label>
         <input id="grp-name" type="text" maxlength="40" class="w-full bg-[#101010] border border-[#2a2a2a] text-white text-[14px] rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 mb-4">
         <label class="block text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-1.5">Description</label>
@@ -1033,11 +1099,11 @@
       const f = gpicInput.files && gpicInput.files[0];
       gpicInput.value = '';
       if (!f || !grpPanel) return;
-      if (f.size > 8 * 1024 * 1024){ showToast('Photo is over 8 MB \u2014 try a smaller one.'); return; }
+      if (f.size > 8 * 1024 * 1024){ showToast('Photo is over 8 MB — try a smaller one.'); return; }
       const btn = grpPanel.querySelector('#grp-pic-btn');
-      btn.textContent = 'Uploading\u2026';
+      btn.textContent = 'Uploading…';
       try { newPic = await uploadToDrive(f); paintPic(); btn.textContent = '📷 Change photo'; }
-      catch(e){ btn.textContent = '📷 Change photo'; showToast("Couldn't upload the photo \u2014 try again."); }
+      catch(e){ btn.textContent = '📷 Change photo'; showToast("Couldn't upload the photo — try again."); }
     };
     grpPanel.querySelector('#grp-cancel').addEventListener('click', () => { grpPanel.remove(); grpPanel = null; });
     grpPanel.addEventListener('click', e => { if (e.target === grpPanel){ grpPanel.remove(); grpPanel = null; } });
@@ -1051,8 +1117,8 @@
       })}).then(() => {
         c.name = nm; c.pic = newPic; c.desc = ds;
         renderSidebar(); renderThread();
-        showToast('Group updated \u2713');
-      }).catch(() => showToast("Couldn't save \u2014 try again in a moment."));
+        showToast('Group updated ✓');
+      }).catch(() => showToast("Couldn't save — try again in a moment."));
       grpPanel.remove(); grpPanel = null;
     });
   });
@@ -1074,19 +1140,19 @@
         stream.getTracks().forEach(t => t.stop());
         clearInterval(vTimer);
         micBtn.classList.remove('recording');
-        micBtn.title = 'Record a voice note \u2014 tap again to send';
+        micBtn.title = 'Record a voice note — tap again to send';
         const secs = Math.round((Date.now() - vT0) / 1000);
         const blob = new Blob(vChunks, { type: (vRec && vRec.mimeType) || 'audio/webm' });
         vRec = null;
-        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short \u2014 hold the thought and try again.'); return; }
+        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short — hold the thought and try again.'); return; }
         await sendVoiceNote(blob, secs);
       };
       vRec.start();
       vT0 = Date.now();
       micBtn.classList.add('recording');
-      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's \u2014 tap to send'; }, 500);
-      showToast('\u{1F399} Recording\u2026 tap the mic again to send.');
-    } catch(e){ showToast('Microphone unavailable \u2014 check your browser permissions.'); }
+      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's — tap to send'; }, 500);
+      showToast('\u{1F399} Recording… tap the mic again to send.');
+    } catch(e){ showToast('Microphone unavailable — check your browser permissions.'); }
   });
   async function sendVoiceNote(blob, secs){
     const c = convoById(activeId); if (!c) return;
@@ -1094,10 +1160,10 @@
     const f = new File([blob], 'voice-note-' + secs + 's.' + ext, { type: blob.type || 'audio/webm' });
     let att;
     try {
-      showToast('Sending voice note\u2026');
+      showToast('Sending voice note…');
       const id = await uploadToDrive(f);
       att = { k: 'audio', id, n: f.name, s: f.size, m: f.type || 'audio/webm', sec: secs };
-    } catch(e){ showToast("Couldn't send the voice note \u2014 try again in a moment."); return; }
+    } catch(e){ showToast("Couldn't send the voice note — try again in a moment."); return; }
     const body = JSON.stringify({ __rc: 1, t: '', att: [att] });
     const now = new Date().toISOString();
     c.messages.push({ id: '', ts: now, side: 'out', who: AGENT || 'You', text: '', atts: [att], q: null });
@@ -1604,8 +1670,8 @@
           .then(g => {
             (g.items || []).forEach(it => conversations.push({
               id: 'g|' + it.id, gid: it.id, name: it.name || 'Group', desc: it.desc || '',
-              sub: '\uD83D\uDC65 Group \u00B7 ' + ((it.members || []).length + 1) + ' people',
-              initials: '\uD83D\uDC65', pic: it.pic || '', members: it.members || [],
+              sub: '👥 Group · ' + ((it.members || []).length + 1) + ' people',
+              initials: '👥', pic: it.pic || '', members: it.members || [],
               group: true, messages: [], lastTs: ''
             }));
           })

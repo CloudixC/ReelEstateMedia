@@ -591,7 +591,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
     <span class="mic">💬</span>
     <span class="mtt">
       <span class="mh">Open your messages</span>
-      <span class="ms">Questions, updates, quick replies — one thread per project, straight to us.</span>
+      <span class="ms">Questions, updates, quick replies — one chat for everything, straight to us.</span>
     </span>
     <span class="msgbadge" id="msgbadge" style="display:none">0</span>
     <span class="mar">→</span>
@@ -661,7 +661,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
     <div class="frow2"><span class="fi">📍</span><span><b>Watch every project move</b> across 6 stages in real time — automatic updates in your chat when things enter editing, hit review, or get delivered.</span></div>
     <div class="frow2"><span class="fi">👀</span><span><b>“Since your last visit” recap</b> — open your hub after a few days and it catches you up instantly. Confetti when finals land. 🎉</span></div>
     <div class="fsec">💬 Direct chat</div>
-    <div class="frow2"><span class="fi">💬</span><span><b>A straight line to the studio</b> — one thread per project. Reply, react, edit, full-quality photo &amp; video attachments up to 24 MB.</span></div>
+    <div class="frow2"><span class="fi">💬</span><span><b>A straight line to the studio</b> — one chat for everything, with group rooms when you want them. Reply, react, edit, full-quality photo &amp; video attachments.</span></div>
     <div class="frow2"><span class="fi">🎙</span><span><b>Voice notes</b> — between showings? Tap the mic, talk, done. Faster than typing. Works in shoot briefs and on the review page too.</span></div>
     <div class="fsec">📝 Script studio &amp; teleprompter</div>
     <div class="frow2"><span class="fi">📝</span><span><b>Write or approve your script</b> right here — or ask us to draft it — then read it off the <b>built-in teleprompter</b> on shoot day: adjustable speed, a big eye-line guide, a 3-2-1 countdown, tap-to-pause, multi-take, and you can record straight from the prompter. A <b>🔋 low-power mode</b> (auto for older iPads, or tap to toggle) keeps the scroll smooth on any device.</span></div>
@@ -1060,7 +1060,7 @@ function sendTesti(tid){
   if(err) err.textContent = '';
   var title = TESTI[tid] || '';
   // Two rows: a permanent 'testimonial' record (emails Jag instantly) and a
-  // regular chat message so it shows up in the project's thread.
+  // regular chat message so it shows up in the direct thread.
   var p1 = fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
     kind:'testimonial', ref:a, project:'⭐ ' + title, dname:'', who:AGENTNAME, body:text, from:'' }) });
   var p2 = fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
@@ -2074,7 +2074,7 @@ function openTele(txt){
       }).then(function(){
         tk.sent = true;
         teleRenderTakes();
-        toast('🎬 Take ' + (i + 1) + ' sent — it&rsquo;s in your chat thread with us.');
+        toast('🎬 Take ' + (i + 1) + ' sent — it&rsquo;s in your chat with us.');
       }).catch(function(){
         btn.disabled = false; btn.textContent = '📤 Send';
         toast('Upload didn&rsquo;t go through — check your connection and try again.');
@@ -3067,7 +3067,9 @@ function billingHtml(items){
 function fail(big, sm){
   document.getElementById('body').innerHTML = '<div class="center"><div class="big">' + big + '</div><div class="sm">' + sm + '</div></div>';
 }
-/* ---- messages: the full chat lives on chat.html — this is the door in ---- */
+/* ---- messages: the full chat lives on chat.html — this is the door in.
+   ONE chat holds everything now, so unread counting is simply "newer than
+   the general read marker". ---- */
 function startMessages(h){
   RENDERED = true;
   MSGREADY = true;
@@ -3077,14 +3079,14 @@ function startMessages(h){
   var fab = document.getElementById('chatfab');
   fab.href = chatHref;
   fab.style.display = '';
-  // Unread = messages from us newer than the agent's last-read marker.
-  // Markers sync through the backend ('read' rows) and merge with this
-  // device's local overlay. Same conversation ids as chat.html:
-  // 'general' + 'p-<slugged project title>'.
-  var slug = function(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); };
-  var idOf = {};
-  idOf[(h.agent || 'Agent') + ' — Content Hub'] = 'general';
-  h.items.forEach(function(x){ if(x.t) idOf[(h.agent || 'Agent') + ' — ' + x.t] = 'p-' + slug(x.t); });
+  // 🧹 one-time: fold the old per-project read markers into the single chat so
+  // history the agent already read doesn't light up as unread after the merge.
+  try{
+    var st0 = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {};
+    var mx0 = st0.general || '';
+    Object.keys(st0).forEach(function(k){ if(k.indexOf('p-') === 0 && st0[k] > mx0) mx0 = st0[k]; });
+    if(mx0 && mx0 !== (st0.general || '')){ st0.general = mx0; localStorage.setItem('rem_chat_read_v1:' + a, JSON.stringify(st0)); }
+  }catch(eF){}
   function pollThread(){
   var readMap = {};
   try{ readMap = JSON.parse(localStorage.getItem('rem_chat_read_v1:' + a)) || {}; }catch(e){}
@@ -3100,8 +3102,7 @@ function startMessages(h){
           return;
         }
         if(m.kind === 'read' && m.from !== 'jag'){
-          var id = idOf[String(m.project || '')] || 'general';
-          srvRead[id] = String(m.body || '');   // chronological — last marker wins
+          srvRead.general = String(m.body || '');   // chronological — last marker wins
         }
       });
       var count = 0, last = null;
@@ -3110,9 +3111,8 @@ function startMessages(h){
         if(m.from !== 'jag' && !WELCOME.chat){ WELCOME.chat = true; updateWelcome(); }
         last = m;                                // chronological — ends on the newest
         if(m.from !== 'jag') return;
-        var id = idOf[String(m.project || '')] || 'general';
-        var seen = readMap[id] || '';
-        if((srvRead[id] || '') > seen) seen = srvRead[id];
+        var seen = readMap.general || '';
+        if((srvRead.general || '') > seen) seen = srvRead.general;
         if(String(m.ts) > seen) count++;
       });
       // live preview of the latest message on the door card
@@ -3235,4 +3235,4 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.09.20-5</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.10.20-1</div></div></body></html>

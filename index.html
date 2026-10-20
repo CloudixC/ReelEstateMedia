@@ -1407,6 +1407,24 @@ function App(){
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(db)); }, [db]);
 
+  // 💬 deep link from Studio Chat: index.html#dl=<deliverable id> opens that
+  // project focused on the piece — the ← button then goes straight back to the chat.
+  const dlLinkDone = React.useRef(false);
+  useEffect(() => {
+    if(dlLinkDone.current || locked) return;
+    const mDl = (location.hash || '').match(/#dl=([A-Za-z0-9_.:-]+)/);
+    if(!mDl) return;
+    const dDl = (db.deliverables || []).find(x => x.id === mDl[1]);
+    if(!dDl) return;
+    dlLinkDone.current = true;
+    try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+    setCameFrom('chat');
+    window.__pipeBack = dDl.id;
+    setOpenOrder(dDl.orderId);
+    setFocusDl(dDl.id);
+    setView('orders');
+  }, [db, locked]);
+
   const clientName = id => (db.clients.find(c => c.id === id) || {}).name || '—';
   const clientTier = id => (db.clients.find(c => c.id === id) || {}).tier || 'partner';
   const orderDeliverables = oid => db.deliverables.filter(d => d.orderId === oid);
@@ -2573,7 +2591,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom === 'chat'){ setCameFrom(null); if(history.length > 1) history.back(); else window.location.assign('studio-chat.html'); return; } if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({chat:'Chat', dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={openOrderDetail} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -5960,6 +5978,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-3</div>
 </body>
 </html>
