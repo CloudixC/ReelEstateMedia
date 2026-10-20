@@ -347,6 +347,7 @@ const CATALOG = [
   {id:'ysw5', cat:'Content Creation', name:'You Shoot We Edit (5 Reels)', retail:375, pub:549, partner:325, credits:5, unit:'Reel'},
   {id:'ysw10',cat:'Content Creation', name:'You Shoot We Edit (10 Reels)', retail:650, pub:899, partner:550, credits:10, unit:'Reel'},
   {id:'evt',  cat:'Content Creation', name:'Event Recap (Photo & Video – 2 Hrs)', retail:600, pub:749, partner:450, credits:1, unit:'Event Recap'},
+  {id:'evhr', cat:'Content Creation', name:'Event Coverage — Extra Hour (beyond incl. 2 hrs)', retail:150, pub:150, partner:150, credits:0, unit:'Hour'},
   {id:'head', cat:'Content Creation', name:'Headshots', retail:100, pub:199, partner:80, credits:1, unit:'Headshot Session'},
   // Photography
   {id:'p20', cat:'Photography', name:'Essential Listing Photos (20 HDR)', retail:150, pub:199, partner:125, credits:1, unit:'Photo Set'},
@@ -938,6 +939,7 @@ function spawnDeliverables(order){
   const out = [];
   order.items.forEach(item => {
     const s = svc(item.serviceId);
+    if(s && s.credits === 0) return;   // billing-only line (e.g. extra event hours) — no deliverables
     for(let q=0; q<item.qty; q++){
       const qTag = item.qty > 1 ? ` (#${q+1})` : '';
       if(s && s.components){
@@ -1912,7 +1914,7 @@ function App(){
       orders: p.orders.map(x => x.id === orderId ? {...x, items: [...x.items, item]} : x),
       deliverables: [...p.deliverables, ...ds]}));
     logActivity(`Added ${s.name} to ${o.project || 'order'}`);
-    showToast(`+ ${s.name} — ${ds.length} deliverable${ds.length !== 1 ? 's' : ''} added`);
+    showToast(s.credits === 0 ? `+ ${s.name} — billing only, no deliverables` : `+ ${s.name} — ${ds.length} deliverable${ds.length !== 1 ? 's' : ''} added`);
   };
   const removeOrderItem = (orderId, ix) => {
     const o = db.orders.find(x => x.id === orderId); if(!o) return;
@@ -4014,6 +4016,13 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
                 <option key={s.id} value={s.id}>{s.name} — {s.tbd ? 'TBD' : money(rateFor(clientTier(o.clientId), s))}</option>)}
             </optgroup>))}
         </select>
+        {o.items.some(i => i.serviceId === 'evt' || /event/i.test(i.name)) &&
+          <button className="btn ghost sm" style={{marginTop:6}} title="Event coverage includes 2 hours — each extra hour bills $150 on this order (no deliverables spawned). Tap again for +2, +3…"
+            onClick={() => {
+              const hx = o.items.findIndex(i => i.serviceId === 'evhr');
+              if(hx > -1){ updateOrderItem(id, hx, {qty: o.items[hx].qty + 1}); showToast('⏱ ' + (o.items[hx].qty + 1) + ' extra hours on this event — ' + money((o.items[hx].qty + 1) * o.items[hx].price) + ' added to billing'); }
+              else { addOrderItem(id, 'evhr'); }
+            }}>⏱ ＋1 extra hour · $150</button>}
         <p className="small faint" style={{marginTop:6}}>Adding a service spawns its deliverables · removing one deletes them (with Undo) · qty and price changes affect billing only.</p>
       </div>
 
@@ -5978,6 +5987,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-4</div>
 </body>
 </html>
