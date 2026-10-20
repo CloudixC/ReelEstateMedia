@@ -81,6 +81,11 @@ function render(hub, kit, bio){
   h += '</div>';
   const ig = String(kit.ig || bio.ig || '').replace(/^@/, '');
   if(ig) h += '<a class="ig biolink" data-bl="Instagram" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener">📸 @' + esc(ig) + '</a>';
+  var pageEmpty = !((bio.links || []).length) && !String(bio.blurb || '').trim() && !String(bio.phone || '').trim();
+  var stok = ''; try{ stok = localStorage.getItem('rem_admin_token_v1') || ''; }catch(eS){}
+  if(pageEmpty && stok){
+    h += '<div class="blurb" style="margin-top:28px;border:1px dashed var(--line2);border-radius:14px;padding:14px 16px;font-size:13.5px;text-align:left">🎬 <b>Studio note — only your browsers see this:</b> ' + esc(name) + '\u2019s bio page hasn\u2019t been filled in yet, so visitors only get the contact button' + (kit.head ? '' : ' and a placeholder photo') + '. It fills in from their hub → More → 🔗 link-in-bio (tagline, phone, buttons, headshot) — they can do it, or you can from their hub.</div>';
+  }
   h += '<div class="credit"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke="#F2A900" stroke-width="13" stroke-linecap="round"/><g fill="#FAF8F5"><polygon points="55,42 64,48 64,72 55,78"/><polygon points="66,49.3 73,54 73,66 66,70.7"/><polygon points="75,55.3 82,60 75,64.7"/></g></svg>Content by <a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Reel Estate Media</a></div>';
   document.getElementById('wrap').innerHTML = h;
   try{ if(!sessionStorage.getItem('rem_biohit_v:' + a)){ sessionStorage.setItem('rem_biohit_v:' + a, '1'); logHit({t: 'view'}); } }catch(eV){ logHit({t: 'view'}); }
@@ -99,20 +104,32 @@ function studioPicker(tok){
   document.getElementById('wrap').innerHTML = '<div class="center">Loading your agents…</div>';
   fetch(ENDPOINT + '?token=' + encodeURIComponent(tok)).then(function(r){ return r.json(); }).then(function(j){
     if(!j.ok){ fail('This link is missing its key — open it from an agent’s hub, or via 🔗 Bio on your Clients tab.'); return; }
-    var hubs = {};   // ref -> agent name (rows are chronological, newest hub per ref wins)
+    var hubs = {}, bios = {}, brands = {};   // rows are chronological — newest per ref wins
     (j.rows || []).forEach(function(r){
-      if(r.kind !== 'hub') return;
-      try{ var m = JSON.parse(String(r.body || '{}')); hubs[String(r.ref)] = String(m.agent || m.n || r.ref); }catch(e){}
+      var k = String(r.ref);
+      if(r.kind === 'hub'){ try{ var m = JSON.parse(String(r.body || '{}')); hubs[k] = String(m.agent || m.n || k); }catch(e){} }
+      else if(r.kind === 'bio'){ try{ bios[k] = JSON.parse(String(r.body || '{}')); }catch(e){} }
+      else if(r.kind === 'brand'){ try{ brands[k] = JSON.parse(String(r.body || '{}')); }catch(e){} }
     });
     var byName = {};   // agent name -> newest key
     Object.keys(hubs).forEach(function(k){ byName[hubs[k]] = k; });
-    var names = Object.keys(byName).sort(function(x, y){ return x.localeCompare(y); });
+    var ready = function(k){
+      var b = bios[k] || {}, kt = brands[k] || {};
+      return !!(((b.links || []).length) || String(b.blurb || '').trim() || String(b.phone || '').trim() || kt.head);
+    };
+    var names = Object.keys(byName).sort(function(x, y){
+      var rx = ready(byName[x]) ? 0 : 1, ry = ready(byName[y]) ? 0 : 1;
+      return rx !== ry ? rx - ry : x.localeCompare(y);
+    });
     if(!names.length){ fail('No agent pages yet — push a hub from your Command Centre first.'); return; }
     var h = '<div class="head ph">🎬</div><h1>Bio <em>pages</em></h1>' +
       '<div class="brok">Studio view · only you see this list — tap an agent to open their live page</div>' +
       '<div class="links">';
     names.forEach(function(n){
-      h += '<a class="lbtn" href="bio.html?a=' + encodeURIComponent(byName[n]) + '">' + esc(n) + '</a>';
+      var ok = ready(byName[n]);
+      h += '<a class="lbtn" href="bio.html?a=' + encodeURIComponent(byName[n]) + '" style="justify-content:space-between;text-align:left">' +
+        '<span>' + esc(n) + '</span>' +
+        '<span style="font-size:12px;font-weight:600;color:' + (ok ? 'var(--dim)' : 'var(--faint)') + '">' + (ok ? '✓ set up' : 'empty') + '</span></a>';
     });
     h += '</div>';
     document.getElementById('wrap').innerHTML = h;
