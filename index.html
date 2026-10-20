@@ -407,6 +407,16 @@ const dlTitle = d => ((getBrief(d).topic || '').trim()) || d.name;
 // Type = the service (e.g. "Premium Listing Photos (50 HDR)"). Description = the agent's own name for it,
 // cleaned of any "| Type" suffix they typed (so the address never shows twice), else the property.
 const shootType = d => (d.group || d.name || 'Shoot');
+// 🏷 What a deliverable is called in CHAT — same words as its delivery-page card:
+// "<type of shoot> · <event / property>", so a bare "Event Recap Photo and Video"
+// never appears without saying WHICH event it was.
+function chatTitle(d, o){
+  const o2 = o || {};
+  const de = (function(){ try{ return shootDesc(d, o2) || (o2.project || ''); }catch(e){ return (o2.project || ''); } })();
+  const ty = shootType(d);
+  if(de && de !== ty && de !== dlTitle(d)) return ty + ' · ' + de;
+  return dlTitle(d);
+}
 const cleanDesc = s => String(s || '').split('|')[0].trim();
 function shootDesc(d, o){
   const raw = cleanDesc((getBrief(d).topic || '').trim());
@@ -766,7 +776,7 @@ const copyText = async (t) => {
 };
 function reviewMsg(d, o, c){
   const first = ((c && c.name) || 'there').split(' ')[0];
-  const ttl = dlTitle(d);
+  const ttl = chatTitle(d, o);
   const rl = d.reviewUrl || d.link;
   return `Hi ${first} — ${ttl}${o && o.project && o.project !== ttl ? ` for ${o.project}` : ''} is ready for your review${rl ? ': ' + rl : '!'}` +
     `\n\nTake a look and reply with any tweaks (timestamps or notes work great) — I'll turn revisions around quickly. If it's all good, just say the word and I'll send the finals.\n\n— Reel Estate Media`;
@@ -775,7 +785,7 @@ function reviewMsg(d, o, c){
 // Concise share text so a pasted review link names the property (the preview card can't — crawlers don't run the page's JS)
 function reviewShareText(d, o, c, url){
   const agent = (c && c.name) ? String(c.name).trim() : '';
-  const proj = dlTitle(d);                                  // the reel/project name, e.g. "Before Real Estate Reel Part 1"
+  const proj = chatTitle(d, o);                             // full identity, e.g. "Event Recap Photo and Video · Fall Gala"
   const head = agent ? agent + ' · ' + proj : proj;         // agent name, then project name
   return `🎬 ${head} — ready for your review 👀` + (url ? `\n${url}` : '');
 }
@@ -1657,7 +1667,7 @@ function App(){
         setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === d.id ? {...x, prepNudged: {...(x.prepNudged || {}), [slot]: new Date().toISOString()}} : x)}));
         fetch(inbox, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk),
           project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
-          body: '⏰ Your shoot \u201C' + dlTitle(d) + '\u201D is ' + when + ' and I still need ' + miss.join(' + ') + ' to make it perfect. Two minutes on your hub — thank you! 🎬'})}).catch(() => {});
+          body: '⏰ Your shoot \u201C' + chatTitle(d, o) + '\u201D is ' + when + ' and I still need ' + miss.join(' + ') + ' to make it perfect. Two minutes on your hub — thank you! 🎬'})}).catch(() => {});
         logActivity('⏰ Prep nudge → ' + (c.name || 'agent') + ': ' + dlTitle(d) + ' (' + miss.join(', ') + ')');
       });
     };
@@ -2115,8 +2125,8 @@ function App(){
         const tS = (patch.shootTime !== undefined ? patch.shootTime : cur.shootTime) || '';
         const whenS = fmtDate(patch.shootDate) + (tS ? ' at ' + tS : '');
         fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hkS,
-          project: (cS.name || 'Agent') + ' — ' + dlTitle(cur), dname: '', who: 'Jag', from: 'jag',
-          body: '📅 Your shoot for “' + dlTitle(cur) + '” is booked for ' + whenS + '. Tap “Shoot brief” on your hub to tell us about it!'})}).catch(() => {});
+          project: (cS.name || 'Agent') + ' — ' + chatTitle(cur, oS), dname: '', who: 'Jag', from: 'jag',
+          body: '📅 Your shoot for “' + chatTitle(cur, oS) + '” is booked for ' + whenS + '. Tap “Shoot brief” on your hub to tell us about it!'})}).catch(() => {});
       }
     }
     if(cur && patch.status && patch.status !== cur.status){
@@ -2137,7 +2147,7 @@ function App(){
           const link6 = String(patch.dlvFolderUrl || cur.dlvFolderUrl || patch.link || cur.link || '').trim();
           fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk6),
             project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
-            body: '🎉 \u201C' + dlTitle(cur) + '\u201D is delivered!' + (link6 ? ' Everything\u2019s here: ' + link6 : ' It\u2019s in your hub\u2019s Library.') +
+            body: '🎉 \u201C' + chatTitle(cur, o) + '\u201D is delivered!' + (link6 ? ' Everything\u2019s here: ' + link6 : ' It\u2019s in your hub\u2019s Library.') +
               '\n\nIf you\u2019ve got 20 seconds, tap \u2B50 Rate on your hub — it means a lot. Enjoy! 🏡'})}).catch(() => {});
           setTimeout(() => setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === id ? {...x, dlvMsgTs: new Date().toISOString()} : x)})), 600);
         }
@@ -4221,7 +4231,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
             if(!db.settings.inboxUrl){ alert('Connect the inbox first (Settings) so the release can reach their review page.'); return; }
             if(!confirm((released ? 'Send the unlock again' : 'Release the extra images') + ' for ' + dlTitle(d) + '?\nThis unlocks the paid extras on ' + ((client && client.name) || 'the client') + "'s review page for download.")) return;
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id,
-              project: ((client && client.name) || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
+              project: ((client && client.name) || '') + ' — ' + chatTitle(d, o), dname:'', who:'Reel Estate Media', from:'jag',
               body: '[[REL]]🔓 Payment received — your extra headshots are unlocked! Open “⭐ My picks” on your review page to download them.'})}).catch(() => {});
             updateDeliverable(d.id, {extrasReleased: true});
             showToast('🔓 Extra images released for ' + dlTitle(d) + ' — they can download them now.');
@@ -4481,8 +4491,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 const hk = client && (client.hubKey || client.hubId);
                 if(!hk || !db.settings.inboxUrl) return;
                 fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hk,
-                  project: (client.name || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
-                  body:'🎬 Your review for “' + dlTitle(d) + '” is ready — tap to watch & leave your notes:\n' + link})}).catch(() => {});
+                  project: (client.name || '') + ' — ' + chatTitle(d, order), dname:'', who:'Reel Estate Media', from:'jag',
+                  body:'🎬 Your review for “' + chatTitle(d, order) + '” is ready — tap to watch & leave your notes:\n' + link})}).catch(() => {});
               };
               if(db.settings.inboxUrl){
                 // ♻ same link forever: if they already HAVE a short link, update what it points
@@ -4495,8 +4505,8 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                 if(prevX){
                   const hkU = client && (client.hubKey || client.hubId);
                   if(hkU && db.settings.inboxUrl) fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: hkU,
-                    project: (client.name || '') + ' — ' + dlTitle(d), dname:'', who:'Reel Estate Media', from:'jag',
-                    body:'🔁 Your review page for “' + dlTitle(d) + '” has been updated — the new version is live on the same link:\n' + shortU})}).catch(() => {});
+                    project: (client.name || '') + ' — ' + chatTitle(d, order), dname:'', who:'Reel Estate Media', from:'jag',
+                    body:'🔁 Your review page for “' + chatTitle(d, order) + '” has been updated — the new version is live on the same link:\n' + shortU})}).catch(() => {});
                 } else postReviewLinkToChat(shortU);
                 const w = window.open('', '_blank');
                 if(w){ try{ w.document.write('<body style="background:#0a0a0c;color:#a6a49d;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:92vh;font-size:15px">Creating your short link\u2026</body>'); }catch(e){} }
@@ -5936,6 +5946,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.19-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-1</div>
 </body>
 </html>
