@@ -3157,8 +3157,10 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       });
     }
     /* ---- on-page editing, approve -> release flow, and the review watermark ---- */
-    var siteReleased=false, siteApproved=false;
+    var siteReleased=false, siteApproved=false, reqLay='', appLay='';
     try{ siteApproved = localStorage.getItem('ll-ap-'+R_REF)==='1'; }catch(e){}
+    try{ reqLay = localStorage.getItem('ll-req-'+R_REF)||''; }catch(e){}
+    function layNameOf(id){ return id ? (((LAYOUTS.filter(function(x){ return x.id===id; })[0])||{}).name || id) : ''; }
 
     var st=document.createElement('style');
     st.textContent='.rem-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:59;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(20,19,17,.93);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);max-width:94vw}'+
@@ -3397,14 +3399,26 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(R_ENDPOINT && (R_HK || R_REF) && (R_TOK || siteReleased)) h+='<button type="button" data-rem-kiosk>📋 Sign-in mode</button>';
       if(llViews != null) h+='<button type="button" class="done" style="cursor:default" title="Unique visits to this page">👀 '+llViews+' view'+(llViews!==1?'s':'')+'</button>';
       if(R_ENDPOINT && R_REF){
+        var locked = appLay || (siteReleased ? reqLay : '');
         if(R_TOK){
-          h+= siteReleased ? '<button type="button" class="done">✓ Approved — agent can sign-in + publish</button>'
-                           : '<button type="button" data-rem-release class="go">✅ Approve & unlock</button>';
+          h+= siteReleased ? '<button type="button" class="done">✓ Approved'+(locked?': '+esc(layNameOf(locked)):'')+' — agent can sign-in + publish</button>'
+                           : '<button type="button" data-rem-release class="go">✅ Approve'+(reqLay?' '+esc(layNameOf(reqLay)):'')+' & unlock</button>';
         } else if(siteReleased){
-          h+= publishedUrl ? '<button type="button" data-rem-live class="done" style="cursor:pointer">🔗 Live link</button><button type="button" data-rem-publish>🚀 Re-publish</button>'
-                           : '<button type="button" data-rem-publish class="go">🚀 Publish — get the live link</button>';
+          if(!locked || rt === locked){
+            h+= publishedUrl ? '<button type="button" data-rem-live class="done" style="cursor:pointer">🔗 Live link</button><button type="button" data-rem-publish>🚀 Re-publish</button>'
+                             : '<button type="button" data-rem-publish class="go">🚀 Publish — get the live link</button>';
+          } else {
+            h+='<button type="button" data-rem-golock class="done" style="cursor:pointer">🔓 Approved: '+esc(layNameOf(locked))+' — open to publish</button>';
+            if(rt !== 'home'){ var tiX = tierOf(rt); h+='<button type="button" data-rem-approve>📨 Request this design · $'+tiX.price+'</button>'; }
+          }
         } else if(siteApproved){
-          h+='<button type="button" class="done">✓ Requested — awaiting studio approval</button>';
+          if(rt === 'home' || !reqLay || rt === reqLay){
+            h+='<button type="button" class="done">✓ Requested'+(reqLay?': '+esc(layNameOf(reqLay)):'')+' — awaiting studio approval</button>';
+          } else {
+            var tiY = tierOf(rt);
+            h+='<button type="button" class="done" style="cursor:default">⏳ Requested: '+esc(layNameOf(reqLay))+'</button>';
+            h+='<button type="button" data-rem-approve>📨 Request this instead · $'+tiY.price+'</button>';
+          }
         } else if(rt !== 'home'){
           var ti = tierOf(rt);
           h+='<button type="button" data-rem-approve class="go">📨 Request this design · $'+ti.price+'</button>';
@@ -3418,28 +3432,34 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var rb=bar.querySelector('[data-rem-release]'); if(rb) rb.onclick=releaseSite;
       var pb=bar.querySelector('[data-rem-publish]'); if(pb) pb.onclick=publishSite;
       var lv=bar.querySelector('[data-rem-live]'); if(lv) lv.onclick=function(){ openLiveLink(publishedUrl); };
+      var gl=bar.querySelector('[data-rem-golock]'); if(gl) gl.onclick=function(){ var lk=appLay||reqLay; if(lk) location.hash=lk; };
       var sk=bar.querySelector('[data-rem-share]'); if(sk) sk.onclick=openShareKit;
       var kk=bar.querySelector('[data-rem-kiosk]'); if(kk) kk.onclick=openKiosk;
     }
     function requestSite(){
       var rt = route(); if(rt === 'home') return;
       var ti = tierOf(rt);
-      var layName = (LAYOUTS.filter(function(x){ return x.id === rt; })[0] || {}).name || rt;
+      var layNm = layNameOf(rt) || rt;
       llPush(true);
       var nm = L.agentName || R_AGENT || 'The agent';
-      var body = '🏡 Listing-page design request — ' + layName + ' (' + ti.name + ' · $' + ti.price + ') for ' + (L.address||'') + '.\nReview & approve here: ' + location.href;
+      var body = '[[SITE-REQ:' + rt + ']] 🏡 Listing-page design request — ' + layNm + ' (' + ti.name + ' · $' + ti.price + ') for ' + (L.address||'') + '.\nReview & approve here: ' + location.href;
       var msgs = [ fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:nm,from:'agent',body:body})}) ];
       if(R_HK && R_AN && R_DNAME) msgs.push(fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_HK,project:R_AN+' — '+R_DNAME,dname:'',who:nm,from:'agent',body:body})}));
-      Promise.all(msgs).then(function(){ siteApproved=true; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); }catch(e2){} llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
+      Promise.all(msgs).then(function(){ siteApproved=true; reqLay=rt; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); localStorage.setItem('ll-req-'+R_REF, rt); }catch(e2){} llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
     }
     function releaseSite(){
-      fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:'[[SITE-OK]] ✅ Your listing-page design is approved — Sign-in mode and publishing are now unlocked on your page.'})})
-        .then(function(){ siteReleased=true; llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
+      var lay0 = reqLay || (route() !== 'home' ? route() : '');
+      var tag0 = lay0 ? '[[SITE-OK:' + lay0 + ']]' : '[[SITE-OK]]';
+      var nm0 = lay0 ? layNameOf(lay0) + ' design' : 'listing-page design';
+      fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:tag0 + ' ✅ Your ' + nm0 + ' is approved — Sign-in mode and publishing are now unlocked on your page.'})})
+        .then(function(){ siteReleased=true; appLay=lay0; llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
     }
     // 🚀 publish: mints a short client link through the inbox (same system as review links)
     function publishSite(){
       var rt = route();
       if(rt === 'home'){ alert('Open the design you want to publish first — the live link locks onto it.'); return; }
+      var lkd = appLay || reqLay;
+      if(lkd && rt !== lkd){ alert('Only your approved design (' + layNameOf(lkd) + ') can be published. To switch designs, request this one and the studio will approve it.'); return; }
       var code = Math.random().toString(36).slice(2, 9);
       var qs = location.search.slice(1).replace(/&?(pub|lay|x)=[^&]*/g, '') + '&pub=1&lay=' + rt;
       llPush(true);
@@ -3847,8 +3867,12 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     if(R_ENDPOINT && R_REF){
       fetch(R_ENDPOINT+'?thread='+encodeURIComponent(R_REF)).then(function(x){ return x.json(); }).then(function(j){
         var rows=j.rows||[];
-        if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[BRO-OK]]')===0; })) broReleased=true;
-        if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[SITE-OK]]')===0; })) siteReleased=true;
+        rows.forEach(function(m3){
+          var b=String(m3.body||'');
+          if(m3.from==='jag' && b.indexOf('[[BRO-OK]]')===0) broReleased=true;
+          if(m3.from==='jag' && b.indexOf('[[SITE-OK')===0){ siteReleased=true; var ma=b.match(/^\[\[SITE-OK:([a-z]+)\]\]/); if(ma) appLay=ma[1]; }
+          if(b.indexOf('[[SITE-REQ:')===0){ var mr=b.match(/^\[\[SITE-REQ:([a-z]+)\]\]/); if(mr){ reqLay=mr[1]; siteApproved=true; } }
+        });
         updBar();
       }).catch(function(){});
     }
@@ -3856,5 +3880,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-11</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-12</div>
 </body></html>

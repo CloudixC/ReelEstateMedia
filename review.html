@@ -1837,8 +1837,7 @@ function loadThread(){
         const mine = m.from !== 'jag';
         let bodyTxt = String(m.body || '');
         if(bodyTxt.indexOf(REL_MARK) === 0) bodyTxt = bodyTxt.slice(REL_MARK.length).trim();
-        if(bodyTxt.indexOf('[[BRO-OK]]') === 0) bodyTxt = bodyTxt.slice(10).trim();
-        if(bodyTxt.indexOf('[[SITE-OK]]') === 0) bodyTxt = bodyTxt.slice(11).trim();
+        bodyTxt = bodyTxt.replace(/^\[\[(BRO-OK|SITE-OK[^\]]*|SITE-REQ[^\]]*)\]\]\s*/, '');
         return '<div class="bub ' + (mine ? 'me' : 'them') + '"><span class="bwho">' +
           (m.from === 'jag' ? 'Reel Estate Media' : escT(m.who || 'You')) + ' · ' + (m.ts || '').slice(5, 16).replace('T', ' ') +
           '</span>' + escT(bodyTxt) + '</div>';
@@ -1889,4 +1888,4 @@ if(endpoint && ref){
   setInterval(loadThread, 60000);
   setInterval(loadFeedback, 60000);
 }
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.10.21-3</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.10.21-4</div></div></body></html>
