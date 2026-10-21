@@ -1965,19 +1965,11 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   if(fromDelivery){
     // First open from this delivery: swap the demo house for the agent's real context,
     // leave the rest blank for them to fill (placeholders show what goes where).
-    // Every visible field carries a placeholder the agent replaces — nothing renders empty.
-    Object.assign(L, {
-      status:'Just listed', address:R_ADDR||'123 Your Street', city:'Neighbourhood, City', price:'$X,XXX,XXX', mls:'',
-      beds:'X', baths:'X', sqft:'X,XXX', lot:'XX \u00d7 XXX ft', parking:'X car', built:'XXXX',
-      headline:'Your headline, a line that sells this home',
-      intro:'Opening paragraph \u2014 replace this with the first thing buyers should read: what makes this home special.',
-      body:'More about the home \u2014 the rooms, finishes, the lot and the street.\nAdd a second paragraph for schools, parks and commute.',
-      highlights:"Best feature | Replace with this home's standout \u2014 one per line: Name | detail\nKitchen | e.g. Quartz island, gas range, walk-in pantry\nPrimary suite | e.g. Vaulted ceiling, spa ensuite\nOutdoor space | e.g. Stone patio, fenced yard\nExtras | e.g. Finished basement, EV-ready garage",
-      openHouse:'', video:'', tour:'', brochure:'',
-      name:R_ADDR||'Property Name', website:'', license:'',
-      agentName:R_AGENT||'Your Name', agentTitle:'Sales Representative', brokerage: R_PIN?'Royal LePage Pinnacle':'Your Brokerage',
-      phone:'(XXX) XXX-XXXX', email:'you@email.com'
-    });
+    // Only overwrite what the delivery actually tells us — the sample listing text stays
+    // in place as the guide for everything else, so nothing ever renders empty.
+    if(R_ADDR){ L.address = R_ADDR; L.name = R_ADDR; }
+    if(R_AGENT){ L.agentName = R_AGENT; }
+    if(R_PIN){ L.brokerage = 'Royal LePage Pinnacle'; }
     try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); }catch(e){}
   }
   var photos = []; // {url,name} — kept in memory for this visit
