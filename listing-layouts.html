@@ -2108,7 +2108,13 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '<p class="end fine">'+legal()+'</p></div>';
   }
   var RS_SECTIONS = [['home','Home'],['residence','Residence'],['gallery','Gallery'],['film','Film'],['tour','3D Tour'],['features','Features'],['location','Location'],['openhouse','Open House'],['contact','Contact']];
-  function mapsUrl(){ return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent([L.address, L.city].filter(Boolean).join(', ')); }
+  function mapsUrl(){
+    // The search uses the address as typed. The neighbourhood/city line is only added
+    // when the address doesn't already include one (no comma), so searches never double up.
+    var dest = String(L.address||'').trim();
+    if(dest.indexOf(',') === -1 && L.city) dest = [dest, L.city].filter(Boolean).join(', ');
+    return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest);
+  }
   function mapSVG(seedStr){
     var h=2166136261; for (var i=0;i<seedStr.length;i++){ h^=seedStr.charCodeAt(i); h=Math.imul(h,16777619); }
     var a=h>>>0; function r(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }
