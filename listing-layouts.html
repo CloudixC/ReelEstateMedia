@@ -3424,6 +3424,19 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         hd.addEventListener('pointerup', function(){ pd=null; });
       })();
       var pv=imgPanel.querySelector('.rem-imgp-pv img');
+      // The preview takes the real photo spot's size and shape (clamped to fit the
+      // panel), so what you frame here is exactly what shows on the page.
+      (function(){
+        var figEl = isHead ? document.querySelector('#stage figure.ph[data-head]') : document.querySelector('#stage figure.ph[data-phi="'+slot+'"]');
+        if(!figEl) return;
+        var fr = figEl.getBoundingClientRect();
+        if(fr.width < 5 || fr.height < 5) return;
+        var scl = Math.min(1, 430/fr.width, 420/fr.height);
+        var box = pv.parentElement;
+        box.style.width = Math.max(110, Math.round(fr.width*scl))+'px';
+        box.style.height = Math.max(110, Math.round(fr.height*scl))+'px';
+        box.style.margin = '0 auto';
+      })();
       var zr=imgPanel.querySelector('[data-ip-zoom]');
       function paint(){
         var p = curPi()>-1 ? photos[curPi()] : null;
@@ -3480,5 +3493,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-6</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-7</div>
 </body></html>
