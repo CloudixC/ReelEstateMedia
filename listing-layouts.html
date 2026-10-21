@@ -1948,7 +1948,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     intro:'Sun reaches the open kitchen from three sides, and the family room opens straight onto a stone patio under two mature maples.',
     body:'Upstairs, four bedrooms share a quiet hallway, with the primary suite set apart at the back of the house. A finished lower level adds a recreation room, a guest bedroom and a full bath.\nWalk to two elementary schools and the Glen Abbey trail system.',
     highlights:"Chef's kitchen | Quartz island, gas range, walk-in pantry\nPrimary retreat | Vaulted ceiling, spa ensuite, two closets\nFinished lower level | Rec room, guest bedroom, full bath\nPrivate yard | Stone patio, mature maples, no rear neighbours\nMain-floor office | French doors, built-in shelving\nUpdated systems | Furnace and roof replaced in recent years\nHardwood floors | Wide-plank white oak through the main floor\nOversized windows | Morning light in every principal room\nHeated ensuite floors | Radiant heat under porcelain tile\nWalk-in closets | Built-in organizers in both principal closets",
-    openHouse:'Saturday, October 24 | 2:00 PM – 4:00 PM\nSunday, October 25 | 1:00 PM – 3:00 PM | Wine and tour\nThursday, October 29 | 12:00 PM – 1:00 PM | Broker\'s open', video:'', tour:'', brochure:'', name:'Ridgeview House',
+    openHouse:'Saturday, October 24 | 2:00 PM – 4:00 PM\nSunday, October 25 | 1:00 PM – 3:00 PM | Wine and tour\nThursday, October 29 | 12:00 PM – 1:00 PM | Broker\'s open', video:'', tour:'', brochure:'', offerDate:'', docs:'', name:'Ridgeview House',
     website:'', license:'', agentBio:'', agentName:'Priya Sandhu', agentTitle:'Sales Representative', brokerage:'Your Brokerage Name', phone:'905-555-0142', email:'priya@example.com'
   };
   /* ---------- Reel Estate Media bridge: opened from a delivery page, this pre-fills the
@@ -3066,7 +3066,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '<fieldset><legend>Property</legend>'+f('name','Property name (big headline)','Ridgeview House')+f('address','Address','1418 Ridgeview Crescent')+f('city','Neighbourhood, city','Glen Abbey, Oakville')+
         '<div class="two">'+f('price','Price','$1,249,000')+f('status','Status label','Just listed')+'</div>'+
         '<div class="three">'+f('beds','Beds')+f('baths','Baths')+f('sqft','Sq ft')+'</div><div class="three">'+f('lot','Lot')+f('parking','Parking')+f('built','Year built')+'</div>'+
-        f('mls','MLS® number')+ta('openHouse','Open houses, one per line: Day | time | label (optional)',3)+f('video','Video link','https://…','url')+'<div class="two">'+f('tour','3D tour link','https://…','url')+f('brochure','Brochure link','https://…','url')+'</div></fieldset>'+
+        f('mls','MLS® number')+f('offerDate','Offers reviewed on (shows a countdown)','','datetime-local')+ta('docs','Documents, one per line: Label | link (floor plan, inspection, feature sheet…)',3)+ta('openHouse','Open houses, one per line: Day | time | label (optional)',3)+f('video','Video link','https://…','url')+'<div class="two">'+f('tour','3D tour link','https://…','url')+f('brochure','Brochure link','https://…','url')+'</div></fieldset>'+
       '<fieldset><legend>Story</legend>'+f('headline','Headline')+ta('intro','Opening paragraph',3)+ta('body','More about the home',4)+
         ta('highlights','Highlights, one per line: Name | detail',5)+'</fieldset>'+
       '<fieldset><legend>Agent</legend><div class="two">'+f('agentName','Name')+f('agentTitle','Title')+'</div>'+f('brokerage','Brokerage')+
@@ -3258,7 +3258,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var hits=[], frees=[], all=stage.querySelectorAll('*');
       for(var i2=0;i2<all.length;i2++){
         var el=all[i2];
-        if(el.closest('a,button,input,textarea,select,svg,form,figure')) continue;
+        if(el.closest('a,button,input,textarea,select,svg,form,figure,.rem-x')) continue;
         var t=nrm(el.textContent);
         if(!t) continue;
         if(EDITMAP[t]) hits.push(el);
@@ -3286,7 +3286,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       for(var i4=0;i4<all.length;i4++){
         var el=all[i4];
         if(el.childElementCount!==0) continue;
-        if(el.closest('a,button,svg,input,textarea,select,form,figure')) continue;
+        if(el.closest('a,button,svg,input,textarea,select,form,figure,.rem-x')) continue;
         var t=nrm(el.textContent);
         if(t && map[t]!=null && map[t]!==t){ el.dataset.remKey=t; el.textContent=map[t]; }
       }
@@ -3323,6 +3323,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(siteReleased && !R_TOK && !siteApproved){ bar.style.display='none'; return; }
       bar.style.display='';
       var h='<button type="button" data-rem-edit class="'+(EDIT_ON?'on':'')+'">'+(EDIT_ON?'✓ Editing — tap any text, then tap away':'✎ Edit text on page')+'</button>';
+      h+='<button type="button" data-rem-share>📣 Share kit</button>';
+      if(R_ENDPOINT && (R_HK || R_REF)) h+='<button type="button" data-rem-kiosk>📋 Sign-in mode</button>';
+      if(llViews != null) h+='<button type="button" class="done" style="cursor:default" title="Unique visits to this page">👀 '+llViews+' view'+(llViews!==1?'s':'')+'</button>';
       if(R_ENDPOINT && R_REF){
         if(R_TOK){
           h+= siteReleased ? '<button type="button" class="done">✓ Released to agent</button>'
@@ -3338,6 +3341,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var eb=bar.querySelector('[data-rem-edit]'); if(eb) eb.onclick=function(){ EDIT_ON=!EDIT_ON; document.body.classList.toggle('rem-editmode', EDIT_ON); if(EDIT_ON) annotate(); else render(true); updBar(); };
       var ab=bar.querySelector('[data-rem-approve]'); if(ab) ab.onclick=approveSite;
       var rb=bar.querySelector('[data-rem-release]'); if(rb) rb.onclick=releaseSite;
+      var sk=bar.querySelector('[data-rem-share]'); if(sk) sk.onclick=openShareKit;
+      var kk=bar.querySelector('[data-rem-kiosk]'); if(kk) kk.onclick=openKiosk;
     }
     function approveSite(){
       llPush(true);
@@ -3345,11 +3350,11 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var lay=route()==='home'?'':(' ('+route()+' layout)');
       var msgs=[ fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:nm,from:'agent',body:'🏡 I’ve approved my listing page'+lay+(L.address?' — '+L.address:'')+'. Please release it when it looks good.'})}) ];
       if(R_HK && R_AN && R_DNAME) msgs.push(fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_HK,project:R_AN+' — '+R_DNAME,dname:'',who:nm,from:'agent',body:'🏡 '+nm+' approved their listing page'+lay+'. Review + release it here: '+location.href})}));
-      Promise.all(msgs).then(function(){ siteApproved=true; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); }catch(e2){} updBar(); }).catch(function(){ updBar(); });
+      Promise.all(msgs).then(function(){ siteApproved=true; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); }catch(e2){} llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
     }
     function releaseSite(){
       fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:'[[SITE-OK]] 🏡 Your listing page is released — it’s ready to share.'})})
-        .then(function(){ siteReleased=true; updBar(); }).catch(function(){ updBar(); });
+        .then(function(){ siteReleased=true; llDirUpsert(1); updBar(); }).catch(function(){ updBar(); });
     }
 
     function injectAgentBio(){
@@ -3363,6 +3368,211 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         var p=document.createElement('p'); p.className='rem-abio'; p.textContent=L.agentBio; blk.appendChild(p);
       });
     }
+    /* =================== agent toolkit =================== */
+    var MC = {dp:20, rate:4.5, am:25};
+    var llViews = null, LLDIR = null;
+    function priceNum(){ var n = parseInt(String(L.price||'').replace(/[^\d]/g,''), 10); return (n && n > 10000) ? n : 0; }
+    function fmtMoney(n){ return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+    // -- leads: every showing/contact form posts for real --
+    function sendLead(label, nm2, phn, em2, note){
+      var body = '📩 ' + label + ' — ' + (L.address||'') + (L.price ? ' (' + L.price + ')' : '') + '\n' + nm2 + (phn ? ' · ' + phn : '') + (em2 ? ' · ' + em2 : '') + (note ? '\n“' + note + '”' : '');
+      var posts = [];
+      if(R_HK) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_HK, project:(R_AN && R_DNAME ? R_AN+' — '+R_DNAME : ''), dname:'', who: nm2 + ' (buyer)', from:'agent', body: body})}));
+      if(R_REF) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_REF, project:R_PROJECT, dname:R_DNAME, who: nm2 + ' (buyer)', from:'agent', body: body})}));
+      return Promise.all(posts);
+    }
+    document.getElementById('app').addEventListener('submit', function(e){
+      var f = e.target && e.target.closest ? e.target.closest('form') : null;
+      if(!f || !f.closest('#stage')) return;
+      e.preventDefault(); e.stopPropagation();
+      var vals = {n:'', p:'', m:'', e:''};
+      [].slice.call(f.querySelectorAll('input,textarea')).forEach(function(i){
+        var lbl = ((i.getAttribute('aria-label')||'') + ' ' + (i.getAttribute('placeholder')||'')).toLowerCase();
+        if(/name/.test(lbl)) vals.n = i.value.trim();
+        else if(/phone/.test(lbl)) vals.p = i.value.trim();
+        else if(/email/.test(lbl)) vals.e = i.value.trim();
+        else if(i.tagName === 'TEXTAREA' || /message/.test(lbl)) vals.m = i.value.trim();
+      });
+      var msg = f.querySelector('.rq-msg, .hb-msg');
+      if(!msg){ msg = document.createElement('p'); msg.className = 'hb-msg'; f.appendChild(msg); }
+      if(!vals.n || (!vals.p && !vals.e)){ msg.textContent = 'Add your name and a phone or email so ' + (L.agentName||'the agent') + ' can reach you.'; return; }
+      if(!R_ENDPOINT || (!R_HK && !R_REF)){ msg.textContent = 'Reach ' + (L.agentName||'the agent') + ' at ' + [L.phone, L.email].filter(Boolean).join(' · '); return; }
+      msg.textContent = 'Sending…';
+      sendLead('Showing request', vals.n, vals.p, vals.e, vals.m)
+        .then(function(){ msg.textContent = '✓ Sent — ' + (L.agentName||'the agent') + ' will be in touch shortly.'; [].slice.call(f.querySelectorAll('input,textarea')).forEach(function(i){ i.value=''; }); })
+        .catch(function(){ msg.textContent = 'Couldn’t send — call ' + (L.phone || L.email || 'the agent') + '.'; });
+    }, true);
+
+    // -- views: counted once per visitor session, shown in the studio/agent bar --
+    if(R_ENDPOINT && R_REF){
+      var seenK = 'llhit:' + R_REF, seen1 = false;
+      try{ seen1 = sessionStorage.getItem(seenK) === '1'; }catch(e){}
+      if(!seen1){ try{ sessionStorage.setItem(seenK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'view'})})}).catch(function(){}); }
+      fetch(R_ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + R_REF)).then(function(x){ return x.json(); }).then(function(j){ if(j && j.ok && j.views != null){ llViews = +j.views || 0; updBar(); } }).catch(function(){});
+    }
+
+    // -- listing directory: this agent's released pages cross-link each other --
+    function llDirUpsert(released){
+      if(!R_ENDPOINT || !R_HK || !R_REF) return;
+      fetch(R_ENDPOINT + '?review=' + encodeURIComponent('lldir-' + R_HK)).then(function(x){ return x.json(); }).then(function(j){
+        var items = (j && j.state && j.state.items) || {};
+        var prev = items[R_REF] || {};
+        items[R_REF] = {addr: L.address||'', price: L.price||'', url: location.href.split('#')[0], hero: (photos[0] ? photos[0].url : (prev.hero||'')), rel: released != null ? released : (prev.rel||0), at: Date.now()};
+        fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'review', ref:'lldir-'+R_HK, project:'', dname:'', who:'', body: JSON.stringify({items: items, at: Date.now()})})}).catch(function(){});
+      }).catch(function(){});
+    }
+    if(R_ENDPOINT && R_HK){
+      fetch(R_ENDPOINT + '?review=' + encodeURIComponent('lldir-' + R_HK)).then(function(x){ return x.json(); }).then(function(j){
+        LLDIR = (j && j.state && j.state.items) || null;
+        if(LLDIR) injectExtras();
+      }).catch(function(){});
+    }
+
+    // -- injected sections: offer countdown, mortgage (not on Classic), documents, more-from-agent --
+    function offerBanner(){
+      var old = document.getElementById('rem-offer'); if(old) old.remove();
+      if(!L.offerDate) return;
+      var d = new Date(L.offerDate); if(isNaN(d)) return;
+      var stage = document.getElementById('stage'); if(!stage) return;
+      if(Date.now() - d.getTime() > 86400000) return;
+      var el = document.createElement('div'); el.id = 'rem-offer'; el.className = 'rem-x';
+      el.style.cssText = 'position:relative;z-index:7;background:#1a1205;color:#f4ba2e;text-align:center;padding:11px 16px;font:600 13.5px/1.4 "Manrope",system-ui,sans-serif;letter-spacing:.04em';
+      stage.insertBefore(el, stage.firstChild);
+      var tick = function(){
+        var el2 = document.getElementById('rem-offer'); if(!el2) return;
+        var ms = d.getTime() - Date.now();
+        var when = d.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+        if(ms <= 0){ el2.textContent = '📑 Offers are being reviewed'; return; }
+        var dd = Math.floor(ms/86400000), hh = Math.floor(ms%86400000/3600000), mm = Math.floor(ms%3600000/60000);
+        el2.textContent = '📑 Offers reviewed ' + when + ' — ' + (dd ? dd + 'd ' : '') + hh + 'h ' + mm + 'm left';
+      };
+      tick();
+      clearInterval(window.__remOfferT); window.__remOfferT = setInterval(tick, 30000);
+    }
+    function mortgageCard(){
+      var old = document.getElementById('rem-mortgage'); if(old) old.remove();
+      var rt = route();
+      if(rt === 'showcase' || rt === 'split' || rt === 'cover' || rt === 'home') return;
+      var P = priceNum(); if(!P) return;
+      var contact = document.querySelector('#stage #rs-contact'); if(!contact) return;
+      var sec = document.createElement('section'); sec.id = 'rem-mortgage'; sec.className = 'rem-x';
+      sec.style.cssText = 'padding:64px 24px;display:flex;justify-content:center';
+      sec.innerHTML = '<div style="width:min(680px,100%);border:1px solid rgba(127,127,127,.35);border-radius:16px;padding:28px;font-family:Manrope,system-ui,sans-serif">'+
+        '<p style="font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.6;margin:0 0 6px">Estimated monthly payment</p>'+
+        '<p style="font-size:40px;font-weight:700;margin:0 0 18px" data-mc-out></p>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:18px;font-size:13px">'+
+        '<label style="display:block">Down payment — <b data-mc-dplbl></b><input type="range" min="5" max="50" step="1" data-mc-dp style="width:100%"></label>'+
+        '<label style="display:block">Rate %<input type="number" min="0.5" max="12" step="0.05" data-mc-rate style="width:100%;padding:7px 9px;border:1px solid rgba(127,127,127,.4);border-radius:8px;background:transparent;color:inherit;font:inherit"></label>'+
+        '<label style="display:block">Amortization<select data-mc-am style="width:100%;padding:7px 9px;border:1px solid rgba(127,127,127,.4);border-radius:8px;background:transparent;color:inherit;font:inherit"><option value="20">20 years</option><option value="25">25 years</option><option value="30">30 years</option></select></label>'+
+        '</div><p style="font-size:11.5px;opacity:.55;margin:14px 0 0">Estimate only — excludes taxes, insurance and CMHC where applicable. Talk to your lender.</p></div>';
+      contact.parentNode.insertBefore(sec, contact);
+      var dp = sec.querySelector('[data-mc-dp]'), rate = sec.querySelector('[data-mc-rate]'), am = sec.querySelector('[data-mc-am]');
+      dp.value = MC.dp; rate.value = MC.rate; am.value = String(MC.am);
+      var calc = function(){
+        MC.dp = +dp.value; MC.rate = +rate.value || 0.5; MC.am = +am.value;
+        var principal = P * (1 - MC.dp/100);
+        var mr = Math.pow(1 + MC.rate/200, 1/6) - 1;
+        var n = MC.am * 12;
+        var m = mr > 0 ? principal * mr / (1 - Math.pow(1 + mr, -n)) : principal / n;
+        sec.querySelector('[data-mc-out]').textContent = fmtMoney(m) + ' /mo';
+        sec.querySelector('[data-mc-dplbl]').textContent = MC.dp + '% (' + fmtMoney(P * MC.dp/100) + ')';
+      };
+      dp.oninput = calc; rate.oninput = calc; am.onchange = calc;
+      calc();
+    }
+    function docsSection(){
+      var old = document.getElementById('rem-docs'); if(old) old.remove();
+      var rows = String(L.docs||'').split('\n').map(function(ln){ var p = ln.split('|'); return {t: nrm(p[0]), u: nrm(p.slice(1).join('|'))}; }).filter(function(x){ return x.t && x.u; });
+      if(!rows.length) return;
+      var contact = document.querySelector('#stage #rs-contact'); if(!contact) return;
+      var sec = document.createElement('section'); sec.id = 'rem-docs'; sec.className = 'rem-x';
+      sec.style.cssText = 'padding:40px 24px 8px;display:flex;justify-content:center';
+      sec.innerHTML = '<div style="width:min(680px,100%);font-family:Manrope,system-ui,sans-serif">'+
+        '<p style="font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.6;margin:0 0 10px">Documents</p>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:10px">'+rows.map(function(x){ return '<a href="'+esc(x.u)+'" target="_blank" rel="noopener" style="display:inline-flex;gap:7px;align-items:center;border:1px solid rgba(127,127,127,.4);border-radius:999px;padding:9px 15px;font-size:13px;text-decoration:none;color:inherit">⬇ '+esc(x.t)+'</a>'; }).join('')+'</div></div>';
+      contact.parentNode.insertBefore(sec, contact);
+    }
+    function moreSection(){
+      var old = document.getElementById('rem-more'); if(old) old.remove();
+      if(!LLDIR) return;
+      var others = Object.keys(LLDIR).filter(function(k){ return k !== R_REF && LLDIR[k] && LLDIR[k].rel; }).map(function(k){ return LLDIR[k]; }).sort(function(a,b){ return (b.at||0)-(a.at||0); }).slice(0,3);
+      if(!others.length) return;
+      var stage = document.getElementById('stage'); if(!stage) return;
+      var anchor = stage.querySelector('footer');
+      var sec = document.createElement('section'); sec.id = 'rem-more'; sec.className = 'rem-x';
+      sec.style.cssText = 'padding:48px 24px;display:flex;justify-content:center';
+      sec.innerHTML = '<div style="width:min(900px,100%);font-family:Manrope,system-ui,sans-serif">'+
+        '<p style="font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.6;margin:0 0 12px">More from '+esc((L.agentName||'this agent').split(' ')[0])+'</p>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">'+
+        others.map(function(o){ return '<a href="'+esc(o.url)+'" style="display:block;border:1px solid rgba(127,127,127,.35);border-radius:14px;overflow:hidden;text-decoration:none;color:inherit">'+
+          (o.hero ? '<span style="display:block;aspect-ratio:3/2;background:url(&quot;'+esc(o.hero)+'&quot;) center/cover"></span>' : '')+
+          '<span style="display:block;padding:12px 14px"><b style="display:block;font-size:14.5px">'+esc(o.addr||'Listing')+'</b><span style="font-size:12.5px;opacity:.65">'+esc(o.price||'')+'</span></span></a>'; }).join('')+'</div></div>';
+      if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(sec, anchor); else (stage.firstElementChild || stage).appendChild(sec);
+    }
+    function injectExtras(){
+      try{ offerBanner(); }catch(e){}
+      try{ mortgageCard(); }catch(e){}
+      try{ docsSection(); }catch(e){}
+      try{ moreSection(); }catch(e){}
+    }
+
+    // -- share kit: QR + copy link + ready-to-post text --
+    function copyTxt(t, btn, orig){ var done=function(){ if(btn){ btn.textContent='✓ Copied'; setTimeout(function(){ btn.textContent=orig; }, 1400); } }; if(navigator.clipboard) navigator.clipboard.writeText(t).then(done).catch(done); else done(); }
+    function openShareKit(){
+      var old = document.getElementById('rem-share'); if(old){ old.remove(); return; }
+      var url = location.href.split('#')[0];
+      var m = document.createElement('div'); m.id = 'rem-share'; m.className = 'rem-imgp';
+      m.innerHTML = '<div class="rem-imgp-head"><b>📣 Share kit</b><span>'+esc(L.address||'')+'</span><button type="button" data-sk-close title="Close">✕</button></div>'+
+        '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">'+
+        '<canvas data-sk-qr width="150" height="150" style="background:#fff;border-radius:10px;flex:none"></canvas>'+
+        '<div style="flex:1;min-width:180px;display:flex;flex-direction:column;gap:8px">'+
+        '<button type="button" class="rem-ip-btn" data-sk-link>🔗 Copy page link</button>'+
+        '<button type="button" class="rem-ip-btn" data-sk-text>📝 Copy post text</button>'+
+        '<p style="margin:2px 0 0;font-size:11px;color:rgba(245,242,236,.6)">Right-click / long-press the QR to save it for sign riders and feature sheets.</p>'+
+        '</div></div>';
+      document.body.appendChild(m);
+      m.querySelector('[data-sk-close]').onclick = function(){ m.remove(); };
+      var lb = m.querySelector('[data-sk-link]'); lb.onclick = function(){ copyTxt(url, lb, '🔗 Copy page link'); };
+      var tb = m.querySelector('[data-sk-text]'); tb.onclick = function(){ copyTxt('🏡 ' + (L.address||'') + (L.price ? ' · ' + L.price : '') + '\n' + (L.headline||'') + '\n\nFull photos, video + details: ' + url, tb, '📝 Copy post text'); };
+      var draw = function(){ try{ new QRious({element: m.querySelector('[data-sk-qr]'), value: url, size: 150, padding: 10}); }catch(e){} };
+      if(window.QRious) draw(); else loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js').then(draw).catch(function(){});
+    }
+
+    // -- open-house sign-in (tablet mode) --
+    function openKiosk(){
+      var old = document.getElementById('rem-kiosk'); if(old){ old.remove(); return; }
+      var k = document.createElement('div'); k.id = 'rem-kiosk';
+      k.style.cssText = 'position:fixed;inset:0;z-index:80;background:#14130f;color:#f5f2ec;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;font-family:Manrope,system-ui,sans-serif';
+      k.innerHTML = '<button type="button" data-kq style="position:absolute;top:14px;right:16px;background:none;border:1px solid rgba(255,255,255,.3);color:#f5f2ec;border-radius:999px;padding:8px 14px;cursor:pointer">✕ Exit</button>'+
+        '<p style="font-size:12px;letter-spacing:.26em;text-transform:uppercase;opacity:.6;margin:0 0 10px">Open house</p>'+
+        '<h1 style="font-size:clamp(26px,5vw,44px);margin:0 0 6px;font-weight:700">'+esc(L.address||'')+'</h1>'+
+        '<p style="opacity:.7;margin:0 0 26px">Welcome! Please sign in — '+esc(L.agentName||'the listing agent')+' would love to follow up.</p>'+
+        '<div style="width:min(420px,100%);display:flex;flex-direction:column;gap:10px">'+
+        '<input data-kn placeholder="Full name" style="padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#f5f2ec;font-size:17px">'+
+        '<input data-kp placeholder="Phone" type="tel" style="padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#f5f2ec;font-size:17px">'+
+        '<input data-ke placeholder="Email" type="email" style="padding:15px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.06);color:#f5f2ec;font-size:17px">'+
+        '<button type="button" data-kgo style="padding:16px;border-radius:12px;border:none;background:#F2A900;color:#1a1205;font-weight:800;font-size:17px;cursor:pointer">Sign in</button>'+
+        '<p data-kmsg style="min-height:20px;margin:4px 0 0;font-size:13.5px;color:#8ae0b4"></p>'+
+        '<p data-kcount style="margin:0;font-size:12px;opacity:.5"></p></div>';
+      document.body.appendChild(k);
+      var cnt = 0;
+      k.querySelector('[data-kq]').onclick = function(){ if(confirm('Exit open-house sign-in?')) k.remove(); };
+      k.querySelector('[data-kgo]').onclick = function(){
+        var n2 = k.querySelector('[data-kn]').value.trim(), p2 = k.querySelector('[data-kp]').value.trim(), e2 = k.querySelector('[data-ke]').value.trim();
+        var msg = k.querySelector('[data-kmsg]');
+        if(!n2 || (!p2 && !e2)){ msg.style.color = '#ffb4a8'; msg.textContent = 'Name plus a phone or email, please!'; return; }
+        msg.style.color = '#8ae0b4'; msg.textContent = 'Signing in…';
+        sendLead('Open house sign-in', n2, p2, e2, '').then(function(){
+          cnt++;
+          msg.textContent = '✓ Thanks, ' + n2.split(' ')[0] + '! Enjoy the home.';
+          k.querySelector('[data-kcount]').textContent = cnt + ' signed in';
+          ['[data-kn]','[data-kp]','[data-ke]'].forEach(function(q){ k.querySelector(q).value=''; });
+          setTimeout(function(){ if(msg.textContent.indexOf('Thanks') > -1) msg.textContent=''; }, 2600);
+        }).catch(function(){ msg.style.color = '#ffb4a8'; msg.textContent = 'Didn’t send — check the connection and try again.'; });
+      };
+    }
+
     var _render=render, _refresh=refreshStage;
     // Any same-page re-render (edit toggle on/off, text or photo edits, theme) keeps you
     // exactly where you were — window scroll AND the horizontal page track (Residence
@@ -3378,8 +3588,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(st1 && sv.s.length){ var a1=st1.querySelectorAll('*'); sv.s.forEach(function(e2){ var el=a1[e2[0]]; if(el){ el.scrollLeft=e2[1]; el.scrollTop=e2[2]; } }); }
       window.scrollTo(0, sv.wy);
     }
-    render=function(k){ var sv = (k===true) ? snapScroll() : null; _render(k); applyOverrides(); injectAgentBio(); annotate(); restoreScroll(sv); };
-    refreshStage=function(){ var sv=snapScroll(); _refresh(); applyOverrides(); injectAgentBio(); annotate(); restoreScroll(sv); };
+    render=function(k){ var sv = (k===true) ? snapScroll() : null; _render(k); applyOverrides(); injectAgentBio(); injectExtras(); annotate(); restoreScroll(sv); };
+    refreshStage=function(){ var sv=snapScroll(); _refresh(); applyOverrides(); injectAgentBio(); injectExtras(); annotate(); restoreScroll(sv); };
     applyOverrides(); injectAgentBio();
 
     /* ---- image editing: in edit mode, tap any photo to swap, zoom and reposition it ---- */
@@ -3510,5 +3720,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-8</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-9</div>
 </body></html>
