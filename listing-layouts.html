@@ -1951,9 +1951,29 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     openHouse:'Saturday, October 24 | 2:00 PM – 4:00 PM\nSunday, October 25 | 1:00 PM – 3:00 PM | Wine and tour\nThursday, October 29 | 12:00 PM – 1:00 PM | Broker\'s open', video:'', tour:'', brochure:'', name:'Ridgeview House',
     website:'', license:'', agentName:'Priya Sandhu', agentTitle:'Sales Representative', brokerage:'Your Brokerage Name', phone:'905-555-0142', email:'priya@example.com'
   };
-  var KEY='listing-layouts-v1';
+  /* ---------- Reel Estate Media bridge: opened from a delivery page, this pre-fills the
+     listing and runs the request→release flow for the print brochure ---------- */
+  var RQP = new URLSearchParams(location.search);
+  var R_ENDPOINT=RQP.get('e')||'', R_REF=RQP.get('r')||'', R_HK=RQP.get('hk')||'', R_AN=RQP.get('an')?decodeURIComponent(RQP.get('an')):'', R_DNAME=RQP.get('d')||'', R_PROJECT=RQP.get('p')||'', R_GKEY=RQP.get('k')||'', R_PH=RQP.get('ph')||'', R_AGENT=RQP.get('ag')||'', R_ADDR=RQP.get('addr')||'', R_PIN=RQP.get('t')!=='rem';
+  var R_TOK=''; try{ R_TOK=localStorage.getItem('rem_admin_token_v1')||''; }catch(e){}
+  var broReleased=false, broRequested=false;
+  try{ broRequested = localStorage.getItem('ll-broreq-'+R_REF)==='1'; }catch(e){}
+  var KEY = R_REF ? 'listing-layouts-'+R_REF : 'listing-layouts-v1';
+  var fromDelivery=false; if(R_REF){ try{ fromDelivery = !localStorage.getItem(KEY); }catch(e){} }
   var L = Object.assign({}, SAMPLE);
   try { var s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.listing) Object.assign(L, s.listing); } catch(e){}
+  if(fromDelivery){
+    // First open from this delivery: swap the demo house for the agent's real context,
+    // leave the rest blank for them to fill (placeholders show what goes where).
+    Object.assign(L, {
+      status:'Just listed', address:R_ADDR||'', city:'', price:'', mls:'',
+      beds:'', baths:'', sqft:'', lot:'', parking:'', built:'',
+      headline:'', intro:'', body:'', highlights:'', openHouse:'', video:'', tour:'', brochure:'',
+      name:R_ADDR||'', website:'', license:'',
+      agentName:R_AGENT||'', agentTitle:'', brokerage: R_PIN?'Royal LePage Pinnacle':'', phone:'', email:''
+    });
+    try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); }catch(e){}
+  }
   var photos = []; // {url,name} — kept in memory for this visit
   var headshot = null;
   var videoFile = null; // uploaded listing film, kept in memory for this visit
@@ -2627,6 +2647,39 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     if (window.claude && window.claude.use) {
       window.claude.use('downloads').then(function(d){ if(!d||!document.body.contains(m)) return; dl.hidden=false; dl.onclick=function(){ makeBrochurePdf(m, d, dl); }; }).catch(function(){});
     }
+    else if (R_TOK || broReleased) {
+      // Studio browser (admin token on this device) — or the studio has released this
+      // brochure to the agent. Either way the PDF builds and saves right here.
+      dl.hidden=false; dl.onclick=function(){ makeBrochurePdf(m, null, dl); };
+      if (R_TOK && R_ENDPOINT && R_REF && !broReleased) {
+        var rel=document.createElement('button'); rel.type='button'; rel.className='bro-btn'; rel.textContent='✓ Release to agent';
+        rel.title='Unlocks the Download PDF button on the agent\u2019s side — until then they only see a request button.';
+        rel.onclick=function(){
+          rel.disabled=true; rel.textContent='Releasing\u2026';
+          fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_REF, project:R_PROJECT, dname:R_DNAME, who:'Reel Estate Media', from:'jag', body:'[[BRO-OK]] \ud83d\udcc4 Your print brochure is ready \u2014 open your listing page, open the brochure and tap Download PDF.'})})
+            .then(function(){ broReleased=true; rel.textContent='\u2713 Released'; })
+            .catch(function(){ rel.disabled=false; rel.textContent='Retry release'; });
+        };
+        dl.parentNode.insertBefore(rel, dl);
+      }
+    }
+    else if (R_ENDPOINT && R_REF) {
+      // Agent view before release: they can preview the brochure and request the print
+      // PDF — the studio finalizes it and releases the download.
+      var rq=document.createElement('button'); rq.type='button'; rq.className='bro-btn primary';
+      var setRq=function(){ rq.textContent = broRequested ? '\u2713 Requested \u2014 we\u2019re preparing it' : '\ud83d\udcc4 Request this brochure'; rq.disabled = !!broRequested; };
+      setRq();
+      rq.title='We\u2019ll finalize the print PDF and unlock the download for you right here.';
+      rq.onclick=function(){
+        rq.disabled=true; rq.textContent='Sending\u2026';
+        var nm=(L.agentName||R_AGENT||'The agent');
+        var reqs=[ fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_REF, project:R_PROJECT, dname:R_DNAME, who:nm, from:'agent', body:'\ud83d\udcc4 Brochure request \u2014 I\u2019d like the print brochure PDF for my listing page ('+BRO_KIND+' layout'+(L.address||R_ADDR?', '+(L.address||R_ADDR):'')+').'})}) ];
+        if(R_HK && R_AN && R_DNAME) reqs.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_HK, project:R_AN+' \u2014 '+R_DNAME, dname:'', who:nm, from:'agent', body:'\ud83d\udcc4 '+nm+' requested the print brochure for their listing page ('+BRO_KIND+' layout). Open their page in your browser to review + release the download: '+location.href})}));
+        Promise.all(reqs).then(function(){ broRequested=true; try{ localStorage.setItem('ll-broreq-'+R_REF,'1'); }catch(e){} setRq(); })
+          .catch(function(){ rq.disabled=false; rq.textContent='Retry request'; });
+      };
+      dl.parentNode.insertBefore(rq, dl);
+    }
   }
   function loadScript(src){ return new Promise(function(res,rej){ var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=function(){ rej(new Error('load')); }; document.head.appendChild(s); }); }
   function makeBrochurePdf(m, downloads, btn){
@@ -2652,7 +2705,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       }, Promise.resolve()).then(function(){
         holder.remove();
         var name=(String(L.address||'listing').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-') || 'listing')+'-brochure.pdf';
-        return downloads.save({ filename:name, data: pdf.output('blob') });
+        if (downloads) return downloads.save({ filename:name, data: pdf.output('blob') });
+        var a=document.createElement('a'); a.href=URL.createObjectURL(pdf.output('blob')); a.download=name; document.body.appendChild(a); a.click();
+        setTimeout(function(){ try{ URL.revokeObjectURL(a.href); a.remove(); }catch(e){} }, 4000);
       });
     }).then(function(){ st.textContent='Saved.'; }).catch(function(e){
       st.textContent = (e && e.code==='declined') ? 'Download cancelled.' : 'The PDF could not be made here. You can still screenshot the pages.';
@@ -3006,6 +3061,27 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   window.addEventListener('hashchange',function(){ render(false); });
   window.addEventListener('resize',function(){ fitThumbs(); setStick(); var t=rsTrack(); if(t&&rsHorizontal(t)){ var i=rsIndex(t); t.scrollLeft=rsPages(t)[i].offsetLeft; } });
   render(false);
+  /* ---- Reel Estate Media bridge: pull the delivered photos + brochure release state ---- */
+  (function remBridge(){
+    if(R_PH && R_GKEY){
+      var ids=[]; String(R_PH).split(',').forEach(function(u){ var m2=u.match(/\/drive\/(?:u\/\d+\/)?folders\/([^\/?#]+)/); if(m2) ids.push(m2[1]); });
+      ids.forEach(function(fid){
+        fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("'"+fid+"' in parents and mimeType contains 'image/' and trashed=false")+'&key='+R_GKEY+'&fields=files(id,name)&orderBy=name&pageSize=200')
+          .then(function(x){ return x.json(); })
+          .then(function(j){
+            var fl=(j.files||[]).sort(function(a,b){ return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}); });
+            if(!fl.length) return;
+            fl.forEach(function(f){ photos.push({url:'https://drive.google.com/thumbnail?id='+f.id+'&sz=w2400', name:f.name.replace(/\.[a-z0-9]+$/i,'')}); });
+            render(true);
+          }).catch(function(){});
+      });
+    }
+    if(R_ENDPOINT && R_REF){
+      fetch(R_ENDPOINT+'?thread='+encodeURIComponent(R_REF)).then(function(x){ return x.json(); }).then(function(j){
+        if((j.rows||[]).some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[BRO-OK]]')===0; })) broReleased=true;
+      }).catch(function(){});
+    }
+  })();
 })();
 </script>
 
