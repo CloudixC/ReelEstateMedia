@@ -3404,7 +3404,6 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     function tierOf(rt){ var p = PRICE[rt] || 0; var disp = (typeof SALE !== 'undefined' && SALE[p]) ? SALE[p] : p; return { name: p === 100 ? 'Private Collection' : p === 50 ? 'Signature' : 'Classic', price: disp }; }
     function updBar(){
       if(R_PUB && !R_TOK){ bar.style.display='none'; return; }
-      if(siteReleased && !R_TOK && !siteApproved && !publishedUrl){ bar.style.display='none'; return; }
       bar.style.display='';
       var rt = route();
       var h='<button type="button" data-rem-edit class="'+(EDIT_ON?'on':'')+'">'+(EDIT_ON?'✓ Editing — tap any text, then tap away':'✎ Edit text on page')+'</button>';
@@ -3444,7 +3443,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           var ti = tierOf(rt);
           h+='<button type="button" data-rem-approve class="go">📨 Request this design · $'+ti.price+'</button>';
         } else {
-          h+='<button type="button" class="done" style="cursor:default;opacity:.7">👈 Open a design to request it</button>';
+          h+='<button type="button" data-rem-pickhint class="go">👇 Choose a design below to request it</button>';
         }
       }
       bar.innerHTML=h;
@@ -3455,6 +3454,16 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var lv=bar.querySelector('[data-rem-live]'); if(lv) lv.onclick=function(){ openLiveLink(publishedUrl); };
       var gl=bar.querySelector('[data-rem-golock]'); if(gl) gl.onclick=function(){ var lk=appLay||reqLay; if(lk) location.hash=lk; };
       var av=bar.querySelector('[data-rem-agview]'); if(av) av.onclick=function(){ try{ sessionStorage.setItem('rem-agentview','1'); }catch(e){} location.reload(); };
+      var ph=bar.querySelector('[data-rem-pickhint]'); if(ph) ph.onclick=function(){ var t=document.querySelector('.tier'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); };
+      if(rt==='home' && R_ENDPOINT && R_REF && !R_TOK){
+        var lk2 = appLay || reqLay;
+        document.querySelectorAll('a.card').forEach(function(c){
+          var id=(c.getAttribute('href')||'').slice(1), g=c.querySelector('.go'); if(!g) return;
+          if(siteReleased && lk2 && id===lk2) g.textContent='✅ Approved — open to publish →';
+          else if(!siteReleased && reqLay && id===reqLay) g.textContent='✓ Requested — awaiting studio approval';
+          else g.textContent='Open & request this design →';
+        });
+      }
       var sk=bar.querySelector('[data-rem-share]'); if(sk) sk.onclick=openShareKit;
       var kk=bar.querySelector('[data-rem-kiosk]'); if(kk) kk.onclick=openKiosk;
     }
@@ -3902,5 +3911,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-14</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-15</div>
 </body></html>
