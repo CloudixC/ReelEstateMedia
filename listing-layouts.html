@@ -2662,6 +2662,18 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '<button type="button" class="bro-btn primary" data-bro-dl hidden>Download PDF</button><button type="button" class="bro-btn" data-bro-close>Close</button></div></div>'+
       '<p class="bro-status" data-bro-status aria-live="polite"></p><div class="bro-pages">'+broPagesFor(BRO_KIND)+'</div></div>';
     var m=w.firstChild; placeOver(m); app.appendChild(m);
+    // Until the studio releases the brochure, the preview pages carry THE CONTENT HUB
+    // watermark on the agent's side. The generated/released PDF is always clean.
+    if(R_REF && !broReleased && !R_TOK){
+      var wmTxt = R_PIN ? 'THE CONTENT HUB' : 'REEL ESTATE MEDIA';
+      var wmBg = 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="210"><text x="180" y="115" font-family="Arial,Helvetica,sans-serif" font-size="27" font-weight="800" fill="rgba(127,127,127,0.4)" text-anchor="middle" transform="rotate(-24 180 105)">'+wmTxt+'</text></svg>');
+      [].slice.call(m.querySelectorAll('[data-bro-page]')).forEach(function(pg){
+        try{ if(getComputedStyle(pg).position==='static') pg.style.position='relative'; }catch(e){}
+        var wv=document.createElement('div');
+        wv.style.cssText='position:absolute;inset:0;z-index:9;pointer-events:none;background-repeat:repeat;background-position:center;background-image:url("'+wmBg+'")';
+        pg.appendChild(wv);
+      });
+    }
     m.querySelector('[data-bro-close]').onclick=closeBrochure;
     m.querySelector('[data-bro-close]').focus();
     var dl=m.querySelector('[data-bro-dl]');
@@ -3109,18 +3121,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '.rem-bar button.go{background:#F2A900;border-color:#F2A900;color:#1a1205;font-weight:700}'+
       '.rem-bar button.done{background:rgba(76,195,138,.18);border-color:#4cc38a;color:#8ae0b4;cursor:default}'+
       'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
-      'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
-      '.rem-wm{position:fixed;inset:0;z-index:58;pointer-events:none;background-repeat:repeat;background-position:center}';
+      'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}';
     document.head.appendChild(st);
-
-    var WMTXT = R_PIN ? 'THE CONTENT HUB' : 'REEL ESTATE MEDIA';
-    var wmSvg = 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="430" height="250"><text x="215" y="135" font-family="Arial,Helvetica,sans-serif" font-size="31" font-weight="800" fill="rgba(127,127,127,0.32)" text-anchor="middle" transform="rotate(-24 215 125)">'+WMTXT+'</text></svg>');
-    var wmEl=null;
-    function updateWM(){
-      var need = !!R_REF && !siteReleased;
-      if(need && !wmEl){ wmEl=document.createElement('div'); wmEl.className='rem-wm'; wmEl.style.backgroundImage='url("'+wmSvg+'")'; document.body.appendChild(wmEl); }
-      if(wmEl) wmEl.style.display = need ? '' : 'none';
-    }
 
     /* draft syncs through the studio inbox so the agent, the studio and (once released)
        anyone with the link all see the same content, newest wins */
@@ -3205,7 +3207,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var h='<button type="button" data-rem-edit class="'+(EDIT_ON?'on':'')+'">'+(EDIT_ON?'✓ Editing — tap any text, then tap away':'✎ Edit text on page')+'</button>';
       if(R_ENDPOINT && R_REF){
         if(R_TOK){
-          h+= siteReleased ? '<button type="button" class="done">✓ Released — watermark off</button>'
+          h+= siteReleased ? '<button type="button" class="done">✓ Released to agent</button>'
                            : '<button type="button" data-rem-release class="go">🔓 Release page to agent</button>';
         } else if(siteReleased){
           h+='<button type="button" class="done">✓ Released — ready to share</button>';
@@ -3228,8 +3230,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       Promise.all(msgs).then(function(){ siteApproved=true; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); }catch(e2){} updBar(); }).catch(function(){ updBar(); });
     }
     function releaseSite(){
-      fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:'[[SITE-OK]] 🏡 Your listing page is released — the watermark is off and it’s ready to share.'})})
-        .then(function(){ siteReleased=true; updateWM(); updBar(); }).catch(function(){ updBar(); });
+      fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:'[[SITE-OK]] 🏡 Your listing page is released — it’s ready to share.'})})
+        .then(function(){ siteReleased=true; updBar(); }).catch(function(){ updBar(); });
     }
 
     var _render=render, _refresh=refreshStage;
@@ -3241,10 +3243,10 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         var rows=j.rows||[];
         if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[BRO-OK]]')===0; })) broReleased=true;
         if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[SITE-OK]]')===0; })) siteReleased=true;
-        updateWM(); updBar();
+        updBar();
       }).catch(function(){});
     }
-    updateWM(); updBar();
+    updBar();
   })();
 })();
 </script>
