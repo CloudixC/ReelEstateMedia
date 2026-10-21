@@ -3156,8 +3156,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '.rem-imgp-pv{position:relative;height:190px;border-radius:10px;overflow:hidden;background:#000;cursor:grab;touch-action:none}'+
       '.rem-imgp-pv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}'+
       '.rem-imgp-row{display:flex;align-items:center;gap:10px;margin-top:10px}.rem-imgp-row input[type=range]{flex:1}'+
-      '.rem-imgp-strip{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px}'+
-      '.rem-th{flex:none;width:56px;height:42px;border-radius:7px;border:2px solid transparent;background-size:cover;background-position:center;cursor:pointer}'+
+      '.rem-imgp-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;margin-top:10px;max-height:168px;overflow-y:auto;padding-right:2px}'+
+      '.rem-imgp-count{margin-top:10px;color:rgba(245,242,236,.6);font-size:11px}'+
+      '.rem-th{width:100%;aspect-ratio:4/3;border-radius:7px;border:2px solid transparent;background-size:cover;background-position:center;cursor:pointer}'+
       '.rem-th.on{border-color:#F2A900}'+
       '.rem-ip-btn{display:inline-block;background:transparent;border:1px solid rgba(255,255,255,.28);color:#f5f2ec;font:600 12px/1 "Manrope",system-ui,sans-serif;padding:8px 13px;border-radius:999px;cursor:pointer}'+
       '.rem-ip-btn.go{background:#F2A900;border-color:#F2A900;color:#1a1205;margin-left:auto}';
@@ -3371,7 +3372,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         '<div class="rem-imgp-head"><b>Photo spot '+(slot+1)+'</b><span>drag to reposition \u00b7 slide to zoom</span><button type="button" data-ip-close title="Close">\u2715</button></div>'+
         '<div class="rem-imgp-pv"><img draggable="false" alt=""></div>'+
         '<div class="rem-imgp-row"><span>Zoom</span><input type="range" min="100" max="260" step="2" data-ip-zoom></div>'+
-        (photos.length?'<div class="rem-imgp-strip">'+thumbs+'</div>':'')+
+        (photos.length?'<div class="rem-imgp-count">Choose from this delivery \u2014 '+photos.length+' photo'+(photos.length!==1?'s':'')+' (scroll for more)</div><div class="rem-imgp-strip">'+thumbs+'</div>':'')+
         '<div class="rem-imgp-row"><label class="rem-ip-btn" for="rem-ip-file">\u2b06 Upload</label><input type="file" id="rem-ip-file" accept="image/*" hidden><button type="button" class="rem-ip-btn" data-ip-reset>Reset</button><button type="button" class="rem-ip-btn go" data-ip-done>Done</button></div>';
       document.body.appendChild(imgPanel);
       var pv=imgPanel.querySelector('.rem-imgp-pv img');
