@@ -2004,7 +2004,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var L = Object.assign({}, SAMPLE);
   var OV = {};      // per-layout free-text overrides: { layout: { 'original text': 'replacement' } }
   var IMGOV = {};   // per-photo-slot overrides: { slot: { pi: photoIndex, s: zoom, x: %, y: % } }
-  try { var s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.listing) Object.assign(L, s.listing); if(s && s.ov) OV = s.ov; if(s && s.imgov) IMGOV = s.imgov; } catch(e){}
+  var BROV = {};    // brochure text overrides: { brochureKind: { leafIndex: 'replacement text' } }
+  try { var s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.listing) Object.assign(L, s.listing); if(s && s.ov) OV = s.ov; if(s && s.imgov) IMGOV = s.imgov; if(s && s.brov) BROV = s.brov; } catch(e){}
   // Repair pass: drafts saved by earlier versions could hold empty or "X,XXX"-style fields.
   // Anywhere the sample has guide text and the draft has none, the sample text comes back.
   (function(){
@@ -2037,7 +2038,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var videoFile = null; // uploaded listing film, kept in memory for this visit
   var ui = { theme:'cream', device:'desktop', drawer:false };
   try { var t=localStorage.getItem(KEY+'-theme'); if(t) ui.theme=t; } catch(e){}
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV})); localStorage.setItem(KEY+'-theme', ui.theme); } catch(e){} }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV, brov:BROV})); localStorage.setItem(KEY+'-theme', ui.theme); } catch(e){} }
 
   var SALE = { 25:20, 50:40, 100:80 };
   var PRICE = { showcase:25, split:25, cover:25, meridian:50, linden:50, westbrook:50, residence:100, monograph:100, pavilion:100 };
@@ -2734,6 +2735,37 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     }
     m.querySelector('[data-bro-close]').onclick=closeBrochure;
     m.querySelector('[data-bro-close]').focus();
+    /* ✎ Brochure text editing — for the studio, and for the agent once the
+       brochure has been approved/released. Edits persist with the page edits. */
+    (function(){
+      var pagesEl = m.querySelector('.bro-pages'); if(!pagesEl) return;
+      var leaves = [].slice.call(pagesEl.querySelectorAll('*')).filter(function(el){
+        if(el.children.length) return false;
+        if(/^(IMG|SVG|PATH|BR|HR|INPUT|BUTTON|STYLE|SCRIPT)$/i.test(el.tagName)) return false;
+        return (el.textContent||'').trim().length > 0;
+      });
+      var kv = BROV[BRO_KIND] || {};
+      leaves.forEach(function(el, ix){ if(kv[ix] != null && String(kv[ix]).trim()) el.textContent = kv[ix]; });
+      if(!(R_TOK || broReleased)) return;
+      var eb=document.createElement('button'); eb.type='button'; eb.className='bro-btn'; eb.textContent='✎ Edit text';
+      var on=false;
+      eb.onclick=function(){
+        on=!on; eb.textContent = on ? '✓ Done editing' : '✎ Edit text';
+        leaves.forEach(function(el){
+          if(on){ el.setAttribute('contenteditable','true'); el.style.outline='1.5px dashed rgba(234,0,42,.55)'; el.style.outlineOffset='2px'; el.style.cursor='text'; }
+          else { el.removeAttribute('contenteditable'); el.style.outline=''; el.style.outlineOffset=''; el.style.cursor=''; }
+        });
+      };
+      pagesEl.addEventListener('input', function(ev){
+        var el=ev.target && ev.target.closest ? ev.target.closest('[contenteditable]') : null;
+        var ix=leaves.indexOf(el); if(ix<0) return;
+        if(!BROV[BRO_KIND]) BROV[BRO_KIND]={};
+        BROV[BRO_KIND][ix]=el.textContent;
+        save();
+      });
+      var cl=m.querySelector('[data-bro-close]');
+      cl.parentNode.insertBefore(eb, cl);
+    })();
     var dl=m.querySelector('[data-bro-dl]');
     if (window.claude && window.claude.use) {
       window.claude.use('downloads').then(function(d){ if(!d||!document.body.contains(m)) return; dl.hidden=false; dl.onclick=function(){ makeBrochurePdf(m, d, dl); }; }).catch(function(){});
@@ -3174,6 +3206,15 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     try{ siteApproved = localStorage.getItem('ll-ap-'+R_REF)==='1'; }catch(e){}
     try{ reqLay = localStorage.getItem('ll-req-'+R_REF)||''; }catch(e){}
     function layNameOf(id){ return id ? (((LAYOUTS.filter(function(x){ return x.id===id; })[0])||{}).name || id) : ''; }
+    /* Once the agent has chosen (requested) a design, their page locks onto that
+       one template — the picker and the other layouts stay out of sight. */
+    function enforceLock(){
+      var lk = (!R_TOK && !R_PUB) ? (appLay || reqLay) : '';
+      if(!lk || !RENDER[lk]){ document.body.classList.remove('rem-locklay'); return; }
+      document.body.classList.add('rem-locklay');
+      if((location.hash||'').slice(1) !== lk) location.hash = lk;
+    }
+    window.addEventListener('hashchange', function(){ setTimeout(enforceLock, 0); });
 
     var st=document.createElement('style');
     st.textContent='.rem-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:59;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(20,19,17,.93);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);max-width:94vw}'+
@@ -3185,6 +3226,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
       'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
       '.rem-pub .tool{display:none}'+
+      'body.rem-locklay .tool .left a[href="#"]{display:none}body.rem-locklay .tool .nav{display:none}'+
       'body.rem-editmode #stage{isolation:isolate}'+
       'body:not(.rem-editmode) .sc figure.ph[data-phi]:not([data-head]),body:not(.rem-editmode) .sp figure.ph[data-phi]:not([data-head]),body:not(.rem-editmode) .cv figure.ph[data-phi]:not([data-head]){cursor:zoom-in}'+
       'body.rem-editmode #stage figure.ph{cursor:pointer;outline:1.5px dashed rgba(242,169,0,.6);outline-offset:-2px}'+
@@ -3260,7 +3302,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     function llPush(now){
       if(!R_ENDPOINT || !R_REF) return;
       clearTimeout(llPushT);
-      var send=function(){ fetch(R_ENDPOINT,{method:'POST',keepalive:true,body:JSON.stringify({kind:'review', ref:'ll-'+R_REF, project:R_PROJECT, dname:R_DNAME, who:(L.agentName||R_AGENT||'Agent'), body: JSON.stringify({listing:L, ov:OV, imgov:IMGOV, at: lsAt()||Date.now()})})}).catch(function(){}); };
+      var send=function(){ fetch(R_ENDPOINT,{method:'POST',keepalive:true,body:JSON.stringify({kind:'review', ref:'ll-'+R_REF, project:R_PROJECT, dname:R_DNAME, who:(L.agentName||R_AGENT||'Agent'), body: JSON.stringify({listing:L, ov:OV, imgov:IMGOV, brov:BROV, at: lsAt()||Date.now()})})}).catch(function(){}); };
       if(now) send(); else llPushT=setTimeout(send, 1800);
     }
     var _save = save;
@@ -3287,7 +3329,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           headshot = (/drive\.google|docs\.google/.test(String(h.hd)) && dm) ? 'https://drive.google.com/thumbnail?id='+dm[0]+'&sz=w800' : String(h.hd);
           chg=true;
         }
-        if(chg){ try{ localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV})); }catch(e2){} render(true); }
+        if(chg){ try{ localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV, brov:BROV})); }catch(e2){} render(true); }
       }).catch(function(){});
     }
     if(R_ENDPOINT && R_REF){
@@ -3297,7 +3339,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           Object.assign(L, stt.listing);
           if(stt.ov) OV = stt.ov;
           if(stt.imgov) IMGOV = stt.imgov;
-          try{ localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV})); localStorage.setItem(KEY+'-at', String(+stt.at||Date.now())); }catch(e){}
+          if(stt.brov) BROV = stt.brov;
+          try{ localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV, brov:BROV})); localStorage.setItem(KEY+'-at', String(+stt.at||Date.now())); }catch(e){}
           render(true);
         }
       }).catch(function(){});
@@ -3476,7 +3519,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var body = '[[SITE-REQ:' + rt + ']] 🏡 Listing-page design request — ' + layNm + ' (' + ti.name + ' · $' + ti.price + ') for ' + (L.address||'') + '.\nReview & approve here: ' + location.href;
       var msgs = [ fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:nm,from:'agent',body:body})}) ];
       if(R_HK && R_AN && R_DNAME) msgs.push(fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_HK,project:R_AN+' — '+R_DNAME,dname:'',who:nm,from:'agent',body:body})}));
-      Promise.all(msgs).then(function(){ siteApproved=true; reqLay=rt; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); localStorage.setItem('ll-req-'+R_REF, rt); }catch(e2){} llDirUpsert(0); updBar(); }).catch(function(){ updBar(); });
+      Promise.all(msgs).then(function(){ siteApproved=true; reqLay=rt; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); localStorage.setItem('ll-req-'+R_REF, rt); }catch(e2){} llDirUpsert(0); enforceLock(); updBar(); }).catch(function(){ updBar(); });
     }
     function releaseSite(){
       var lay0 = reqLay || (route() !== 'home' ? route() : '');
@@ -3904,12 +3947,14 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           if(m3.from==='jag' && b.indexOf('[[SITE-OK')===0){ siteReleased=true; var ma=b.match(/^\[\[SITE-OK:([a-z]+)\]\]/); if(ma) appLay=ma[1]; }
           if(b.indexOf('[[SITE-REQ:')===0){ var mr=b.match(/^\[\[SITE-REQ:([a-z]+)\]\]/); if(mr){ reqLay=mr[1]; siteApproved=true; } }
         });
+        enforceLock();
         updBar();
       }).catch(function(){});
     }
+    enforceLock();
     updBar();
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-16</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-17</div>
 </body></html>
