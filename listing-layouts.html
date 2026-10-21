@@ -2050,13 +2050,18 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     if(sc>1) out += 'transform:scale('+sc+');transform-origin:'+x+'% '+y+'%;';
     return out;
   }
+  // Each rendered photo spot gets its own key (layout + position in the page), so
+  // editing one spot never touches the hero or any other spot that happens to show
+  // the same photo number.
+  var PH_CTX='x', PH_SEQ=0;
   function ph(i, cls, alt){
-    var ov = IMGOV[i];
+    var pk = PH_CTX + ':' + (PH_SEQ++);
+    var ov = IMGOV[pk];
     var pi = (ov && ov.pi!=null) ? ov.pi : i;
     var p = photos.length ? photos[pi % photos.length] : null;
     var sty = imgStyle(ov);
     var inner = p ? '<img src="'+p.url+'" alt="'+esc(alt||'')+'"'+(sty?' style="'+sty+'"':'')+'>' : PH[i % PH.length];
-    return '<figure class="ph '+(cls||'')+'" data-phi="'+i+'">'+inner+'</figure>';
+    return '<figure class="ph '+(cls||'')+'" data-phi="'+pk+'" data-phn="'+i+'">'+inner+'</figure>';
   }
   function head(cls){ return '<figure class="ph '+(cls||'')+'">'+(headshot?'<img src="'+headshot+'" alt="">':HEADSVG)+'</figure>'; }
   function paras(t){ return String(t||'').split(/\n+/).filter(Boolean).map(function(p){return '<p>'+esc(p)+'</p>';}).join(''); }
@@ -2679,7 +2684,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   }
   function closeBrochure(){ var m=document.getElementById('bro'); if(m) m.remove(); }
   var BRO_KIND='meridian';
-  function broPagesFor(k){ if(k==='meridian') return meridianBrochurePages(); if(k==='linden') return lindenBrochurePages(); if(k==='westbrook') return westbrookBrochurePages(); return k==='residence' ? residenceBrochurePages() : (k==='monograph' ? monographBrochurePages() : (k==='pavilion' ? pavilionBrochurePages() : brochurePages())); }
+  function broPagesFor(k){ PH_CTX='bro-'+k; PH_SEQ=0; if(k==='meridian') return meridianBrochurePages(); if(k==='linden') return lindenBrochurePages(); if(k==='westbrook') return westbrookBrochurePages(); return k==='residence' ? residenceBrochurePages() : (k==='monograph' ? monographBrochurePages() : (k==='pavilion' ? pavilionBrochurePages() : brochurePages())); }
   function openBrochure(kind){
     BRO_KIND = (kind==='residence'||kind==='monograph'||kind==='pavilion'||kind==='linden'||kind==='westbrook') ? kind : 'meridian';
     closeBrochure(); if(!document.getElementById('stage')) return;
@@ -2975,6 +2980,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '</div></div>';
   }
   var RENDER = { showcase:showcase, split:split, cover:cover, residence:residence, monograph:monograph, pavilion:pavilion, meridian:meridian, linden:linden, westbrook:westbrook };
+  Object.keys(RENDER).forEach(function(rk){ var rf=RENDER[rk]; RENDER[rk]=function(){ PH_CTX=rk; PH_SEQ=0; return rf(); }; });
 
   /* ---------- views ---------- */
   var app = document.getElementById('app');
@@ -3149,6 +3155,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       '.rem-bar button.done{background:rgba(76,195,138,.18);border-color:#4cc38a;color:#8ae0b4;cursor:default}'+
       'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
       'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
+      'body.rem-editmode #stage{isolation:isolate}'+
       'body.rem-editmode #stage figure.ph{cursor:pointer;outline:1.5px dashed rgba(242,169,0,.6);outline-offset:-2px}'+
       '#stage .rem-abio{margin-top:10px;font-size:13px;line-height:1.6;opacity:.85;max-width:52ch}'+
       '.rem-imgp{position:fixed;left:50%;transform:translateX(-50%);bottom:72px;z-index:62;width:min(460px,94vw);background:#161513;border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px;color:#f5f2ec;font:500 12px/1.4 "Manrope",system-ui,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.5)}'+
@@ -3362,14 +3369,15 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     /* ---- image editing: in edit mode, tap any photo to swap, zoom and reposition it ---- */
     var imgPanel=null;
     function closeImgPanel(){ if(imgPanel){ imgPanel.remove(); imgPanel=null; } }
-    function openImgPanel(slot){
+    function openImgPanel(slot, defIdx){
       closeImgPanel();
+      defIdx = defIdx || 0;
       var ov = IMGOV[slot] = IMGOV[slot] || {};
       imgPanel=document.createElement('div'); imgPanel.className='rem-imgp';
-      var curPi=function(){ return photos.length ? ((ov.pi!=null?ov.pi:slot)%photos.length) : -1; };
+      var curPi=function(){ return photos.length ? ((ov.pi!=null?ov.pi:defIdx)%photos.length) : -1; };
       var thumbs = photos.map(function(p,k2){ return '<button type="button" class="rem-th" data-pick="'+k2+'" style="background-image:url(&quot;'+p.url+'&quot;)" title="'+esc(p.name||'')+'"></button>'; }).join('');
       imgPanel.innerHTML =
-        '<div class="rem-imgp-head"><b>Photo spot '+(slot+1)+'</b><span>drag to reposition \u00b7 slide to zoom</span><button type="button" data-ip-close title="Close">\u2715</button></div>'+
+        '<div class="rem-imgp-head"><b>This photo spot</b><span>drag to reposition \u00b7 slide to zoom</span><button type="button" data-ip-close title="Close">\u2715</button></div>'+
         '<div class="rem-imgp-pv"><img draggable="false" alt=""></div>'+
         '<div class="rem-imgp-row"><span>Zoom</span><input type="range" min="100" max="260" step="2" data-ip-zoom></div>'+
         (photos.length?'<div class="rem-imgp-count">Choose from this delivery \u2014 '+photos.length+' photo'+(photos.length!==1?'s':'')+' (scroll for more)</div><div class="rem-imgp-strip">'+thumbs+'</div>':'')+
@@ -3395,7 +3403,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       imgPanel.querySelector('[data-ip-done]').onclick=function(){ commit(); closeImgPanel(); };
       imgPanel.querySelector('[data-ip-close]').onclick=closeImgPanel;
       var fi=imgPanel.querySelector('#rem-ip-file');
-      fi.onchange=function(){ var f=fi.files[0]; if(!f) return; photos.push({url:URL.createObjectURL(f), name:f.name.replace(/\.[a-z0-9]+$/i,'')}); ov.pi=photos.length-1; closeImgPanel(); commit(); openImgPanel(slot); };
+      fi.onchange=function(){ var f=fi.files[0]; if(!f) return; photos.push({url:URL.createObjectURL(f), name:f.name.replace(/\.[a-z0-9]+$/i,'')}); ov.pi=photos.length-1; closeImgPanel(); commit(); openImgPanel(slot, defIdx); };
       var drag=null, pvw=imgPanel.querySelector('.rem-imgp-pv');
       pvw.addEventListener('pointerdown', function(e){ drag={x:e.clientX, y:e.clientY, ox:(ov.x==null?50:ov.x), oy:(ov.y==null?50:ov.y)}; try{ pvw.setPointerCapture(e.pointerId); }catch(e2){} e.preventDefault(); });
       pvw.addEventListener('pointermove', function(e){ if(!drag) return; var r=pvw.getBoundingClientRect(); var sc=ov.s||1;
@@ -3409,7 +3417,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(!EDIT_ON || !e.target.closest) return;
       if(!e.target.closest('#stage')) return;
       var fig=e.target.closest('figure.ph[data-phi]');
-      if(fig){ e.preventDefault(); e.stopPropagation(); openImgPanel(+fig.getAttribute('data-phi')); return; }
+      if(fig){ e.preventDefault(); e.stopPropagation(); openImgPanel(fig.getAttribute('data-phi'), +fig.getAttribute('data-phn')||0); return; }
       var act=e.target.closest('a,button');
       if(act){ e.preventDefault(); e.stopPropagation(); }
     }, true);
