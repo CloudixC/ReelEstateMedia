@@ -3097,11 +3097,154 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           }).catch(function(){});
       });
     }
+    /* ---- on-page editing, approve -> release flow, and the review watermark ---- */
+    var siteReleased=false, siteApproved=false;
+    try{ siteApproved = localStorage.getItem('ll-ap-'+R_REF)==='1'; }catch(e){}
+
+    var st=document.createElement('style');
+    st.textContent='.rem-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:59;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;background:rgba(20,19,17,.93);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:8px 10px;box-shadow:0 10px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);max-width:94vw}'+
+      '.rem-bar button{appearance:none;border:1px solid rgba(255,255,255,.28);background:transparent;color:#f5f2ec;font:600 12.5px/1 "Manrope",system-ui,sans-serif;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}'+
+      '.rem-bar button:hover{border-color:rgba(255,255,255,.6)}'+
+      '.rem-bar button.on{background:#EA002A;border-color:#EA002A;color:#fff}'+
+      '.rem-bar button.go{background:#F2A900;border-color:#F2A900;color:#1a1205;font-weight:700}'+
+      '.rem-bar button.done{background:rgba(76,195,138,.18);border-color:#4cc38a;color:#8ae0b4;cursor:default}'+
+      'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
+      'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
+      '.rem-wm{position:fixed;inset:0;z-index:58;pointer-events:none;background-repeat:repeat;background-position:center}';
+    document.head.appendChild(st);
+
+    var WMTXT = R_PIN ? 'THE CONTENT HUB' : 'REEL ESTATE MEDIA';
+    var wmSvg = 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="430" height="250"><text x="215" y="135" font-family="Arial,Helvetica,sans-serif" font-size="31" font-weight="800" fill="rgba(127,127,127,0.32)" text-anchor="middle" transform="rotate(-24 215 125)">'+WMTXT+'</text></svg>');
+    var wmEl=null;
+    function updateWM(){
+      var need = !!R_REF && !siteReleased;
+      if(need && !wmEl){ wmEl=document.createElement('div'); wmEl.className='rem-wm'; wmEl.style.backgroundImage='url("'+wmSvg+'")'; document.body.appendChild(wmEl); }
+      if(wmEl) wmEl.style.display = need ? '' : 'none';
+    }
+
+    /* draft syncs through the studio inbox so the agent, the studio and (once released)
+       anyone with the link all see the same content, newest wins */
+    function lsAt(){ try{ return +localStorage.getItem(KEY+'-at')||0; }catch(e){ return 0; } }
+    var llPushT=null;
+    function llPush(now){
+      if(!R_ENDPOINT || !R_REF) return;
+      clearTimeout(llPushT);
+      var send=function(){ fetch(R_ENDPOINT,{method:'POST',keepalive:true,body:JSON.stringify({kind:'review', ref:'ll-'+R_REF, project:R_PROJECT, dname:R_DNAME, who:(L.agentName||R_AGENT||'Agent'), body: JSON.stringify({listing:L, at: lsAt()||Date.now()})})}).catch(function(){}); };
+      if(now) send(); else llPushT=setTimeout(send, 1800);
+    }
+    var _save = save;
+    save = function(){ _save(); try{ localStorage.setItem(KEY+'-at', String(Date.now())); }catch(e){} llPush(); };
     if(R_ENDPOINT && R_REF){
-      fetch(R_ENDPOINT+'?thread='+encodeURIComponent(R_REF)).then(function(x){ return x.json(); }).then(function(j){
-        if((j.rows||[]).some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[BRO-OK]]')===0; })) broReleased=true;
+      fetch(R_ENDPOINT+'?review='+encodeURIComponent('ll-'+R_REF)).then(function(x){ return x.json(); }).then(function(j){
+        var stt=j && j.state;
+        if(stt && stt.listing && (+stt.at||0) > lsAt()){
+          Object.assign(L, stt.listing);
+          try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); localStorage.setItem(KEY+'-at', String(+stt.at||Date.now())); }catch(e){}
+          render(true);
+        }
       }).catch(function(){});
     }
+
+    /* ---- tap-to-edit: any text on the rendered site maps back to its listing field ---- */
+    var EDIT_ON=false, EDITMAP={};
+    function nrm(x){ return String(x==null?'':x).replace(/\s+/g,' ').trim(); }
+    var PLAIN=['address','name','city','price','status','mls','beds','baths','sqft','lot','parking','built','headline','intro','agentName','agentTitle','brokerage','phone','email','website','license'];
+    var HINT={beds:/bed/i, baths:/bath/i, sqft:/sq|ft/i, lot:/lot/i, parking:/park|car|garage/i, built:/built|year/i, price:/offer|price/i, status:/listed|status|sale/i};
+    function buildMap(){
+      EDITMAP={};
+      var add=function(v,fn,hint){ v=nrm(v); if(!v) return; (EDITMAP[v]=EDITMAP[v]||[]).push({fn:fn,hint:hint}); };
+      PLAIN.forEach(function(k){ add(L[k], (function(kk){ return function(nv){ L[kk]=nv; }; })(k), k); });
+      String(L.body||'').split('\n').forEach(function(ln,i){ add(ln, function(nv){ var a=String(L.body||'').split('\n'); a[i]=nv; L.body=a.join('\n'); }); });
+      String(L.highlights||'').split('\n').forEach(function(ln,i){
+        var p=ln.split('|'); var t=nrm(p[0]), d=nrm(p.slice(1).join('|'));
+        if(t) add(t, function(nv){ var a=String(L.highlights||'').split('\n'); var q=a[i].split('|'); q[0]=nv; a[i]=q.map(nrm).join(' | '); L.highlights=a.join('\n'); });
+        if(d) add(d, function(nv){ var a=String(L.highlights||'').split('\n'); var q=a[i].split('|'); a[i]=nrm(q[0])+' | '+nv; L.highlights=a.join('\n'); });
+      });
+    }
+    function annotate(){
+      if(!EDIT_ON) return;
+      var stage=document.getElementById('stage'); if(!stage) return;
+      buildMap();
+      var hits=[], all=stage.querySelectorAll('*');
+      for(var i2=0;i2<all.length;i2++){
+        var el=all[i2];
+        if(el.closest('a,button,input,textarea,select,svg,form')) continue;
+        var t=nrm(el.textContent);
+        if(t && EDITMAP[t]) hits.push(el);
+      }
+      hits.forEach(function(el){
+        if(hits.some(function(o){ return o!==el && el.contains(o); })) return;
+        try{ el.contentEditable='plaintext-only'; }catch(e2){}
+        if(el.contentEditable!=='plaintext-only' && el.contentEditable!=='true') el.contentEditable='true';
+        el.setAttribute('data-remedit','1'); el.setAttribute('spellcheck','false');
+        el.dataset.remOrig = nrm(el.textContent);
+      });
+    }
+    document.addEventListener('keydown', function(e){ if(e.key==='Enter' && e.target && e.target.getAttribute && e.target.getAttribute('data-remedit')){ e.preventDefault(); e.target.blur(); } }, true);
+    document.addEventListener('focusout', function(e){
+      var el=e.target; if(!el || !el.getAttribute || !el.getAttribute('data-remedit')) return;
+      var orig=el.dataset.remOrig||'', nv=nrm(el.textContent);
+      if(nv===orig || !orig) return;
+      var entries=EDITMAP[orig]; if(!entries || !entries.length) return;
+      var use=entries;
+      if(entries.length>1){
+        var pe=el.parentElement, ge=pe&&pe.parentElement;
+        var ctx=nrm(((pe&&pe.textContent)||'')+' '+((ge&&ge.textContent)||'')).slice(0,180);
+        for(var i3=0;i3<entries.length;i3++){ var hh=entries[i3].hint; if(hh && HINT[hh] && HINT[hh].test(ctx)){ use=[entries[i3]]; break; } }
+      }
+      use.forEach(function(en){ en.fn(nv); });
+      save();
+      refreshStage();
+    }, true);
+
+    /* ---- floating bar: edit toggle + approve (agent) / release (studio) ---- */
+    var bar=document.createElement('div'); bar.className='rem-bar'; document.body.appendChild(bar);
+    function updBar(){
+      if(siteReleased && !R_TOK && !siteApproved){ bar.style.display='none'; return; }
+      bar.style.display='';
+      var h='<button type="button" data-rem-edit class="'+(EDIT_ON?'on':'')+'">'+(EDIT_ON?'✓ Editing — tap any text, then tap away':'✎ Edit text on page')+'</button>';
+      if(R_ENDPOINT && R_REF){
+        if(R_TOK){
+          h+= siteReleased ? '<button type="button" class="done">✓ Released — watermark off</button>'
+                           : '<button type="button" data-rem-release class="go">🔓 Release page to agent</button>';
+        } else if(siteReleased){
+          h+='<button type="button" class="done">✓ Released — ready to share</button>';
+        } else {
+          h+= siteApproved ? '<button type="button" class="done">✓ Sent to the studio — awaiting release</button>'
+                           : '<button type="button" data-rem-approve class="go">✅ Approve — send to studio</button>';
+        }
+      }
+      bar.innerHTML=h;
+      var eb=bar.querySelector('[data-rem-edit]'); if(eb) eb.onclick=function(){ EDIT_ON=!EDIT_ON; document.body.classList.toggle('rem-editmode', EDIT_ON); if(EDIT_ON) annotate(); else render(true); updBar(); };
+      var ab=bar.querySelector('[data-rem-approve]'); if(ab) ab.onclick=approveSite;
+      var rb=bar.querySelector('[data-rem-release]'); if(rb) rb.onclick=releaseSite;
+    }
+    function approveSite(){
+      llPush(true);
+      var nm=L.agentName||R_AGENT||'The agent';
+      var lay=route()==='home'?'':(' ('+route()+' layout)');
+      var msgs=[ fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:nm,from:'agent',body:'🏡 I’ve approved my listing page'+lay+(L.address?' — '+L.address:'')+'. Please release it when it looks good.'})}) ];
+      if(R_HK && R_AN && R_DNAME) msgs.push(fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_HK,project:R_AN+' — '+R_DNAME,dname:'',who:nm,from:'agent',body:'🏡 '+nm+' approved their listing page'+lay+'. Review + release it here: '+location.href})}));
+      Promise.all(msgs).then(function(){ siteApproved=true; try{ localStorage.setItem('ll-ap-'+R_REF,'1'); }catch(e2){} updBar(); }).catch(function(){ updBar(); });
+    }
+    function releaseSite(){
+      fetch(R_ENDPOINT,{method:'POST',body:JSON.stringify({kind:'msg',ref:R_REF,project:R_PROJECT,dname:R_DNAME,who:'Reel Estate Media',from:'jag',body:'[[SITE-OK]] 🏡 Your listing page is released — the watermark is off and it’s ready to share.'})})
+        .then(function(){ siteReleased=true; updateWM(); updBar(); }).catch(function(){ updBar(); });
+    }
+
+    var _render=render, _refresh=refreshStage;
+    render=function(k){ _render(k); annotate(); };
+    refreshStage=function(){ _refresh(); annotate(); };
+
+    if(R_ENDPOINT && R_REF){
+      fetch(R_ENDPOINT+'?thread='+encodeURIComponent(R_REF)).then(function(x){ return x.json(); }).then(function(j){
+        var rows=j.rows||[];
+        if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[BRO-OK]]')===0; })) broReleased=true;
+        if(rows.some(function(m3){ return m3.from==='jag' && String(m3.body||'').indexOf('[[SITE-OK]]')===0; })) siteReleased=true;
+        updateWM(); updBar();
+      }).catch(function(){});
+    }
+    updateWM(); updBar();
   })();
 })();
 </script>
