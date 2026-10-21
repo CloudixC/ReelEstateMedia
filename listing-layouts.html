@@ -3156,6 +3156,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
       'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
       'body.rem-editmode #stage{isolation:isolate}'+
+      'body:not(.rem-editmode) .sc figure.ph[data-phi]:not([data-head]),body:not(.rem-editmode) .sp figure.ph[data-phi]:not([data-head]),body:not(.rem-editmode) .cv figure.ph[data-phi]:not([data-head]){cursor:zoom-in}'+
       'body.rem-editmode #stage figure.ph{cursor:pointer;outline:1.5px dashed rgba(242,169,0,.6);outline-offset:-2px}'+
       '#stage .rem-abio{margin-top:10px;font-size:13px;line-height:1.6;opacity:.85;max-width:52ch}'+
       '#stage .agent div .lines{display:block;margin-top:6px}'+
@@ -3469,6 +3470,22 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       pvw.addEventListener('pointerup', function(){ if(drag){ drag=null; commit(); } });
       paint();
     }
+    // Classic layouts (Showcase, Split, Cover) get the same full-screen gallery as the
+    // other tiers: tap any photo to open it, with grid view and slideshow inside.
+    document.getElementById('app').addEventListener('click', function(e){
+      if(EDIT_ON || !e.target.closest) return;
+      var rt = route();
+      if(rt !== 'showcase' && rt !== 'split' && rt !== 'cover') return;
+      if(!e.target.closest('#stage')) return;
+      if(e.target.closest('a,button,form,input,textarea,select,video,iframe')) return;
+      var fig = e.target.closest('figure.ph[data-phi]');
+      if(!fig || fig.getAttribute('data-head')) return;
+      if(fig.closest('.video, .film, .agent, .close')) return;
+      if(!photos.length) return;
+      var fov = IMGOV[fig.getAttribute('data-phi')];
+      var fpi = (fov && fov.pi != null) ? fov.pi : (+fig.getAttribute('data-phn') || 0);
+      openAll('photo', fpi % photos.length);
+    });
     document.getElementById('app').addEventListener('click', function(e){
       if(!EDIT_ON || !e.target.closest) return;
       if(!e.target.closest('#stage')) return;
@@ -3493,5 +3510,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-7</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-8</div>
 </body></html>
