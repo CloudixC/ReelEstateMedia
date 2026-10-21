@@ -1956,6 +1956,19 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var RQP = new URLSearchParams(location.search);
   var R_ENDPOINT=RQP.get('e')||'', R_REF=RQP.get('r')||'', R_HK=RQP.get('hk')||'', R_AN=RQP.get('an')?decodeURIComponent(RQP.get('an')):'', R_DNAME=RQP.get('d')||'', R_PROJECT=RQP.get('p')||'', R_GKEY=RQP.get('k')||'', R_PH=RQP.get('ph')||'', R_AGENT=RQP.get('ag')||'', R_ADDR=RQP.get('addr')||'', R_PIN=RQP.get('t')!=='rem';
   var R_TOK=''; try{ R_TOK=localStorage.getItem('rem_admin_token_v1')||''; }catch(e){}
+  var AGENT_VIEW=false; try{ AGENT_VIEW = sessionStorage.getItem('rem-agentview')==='1'; }catch(e){}
+  var HAD_TOK = R_TOK;
+  if(AGENT_VIEW && R_TOK) R_TOK='';
+  if(AGENT_VIEW && HAD_TOK){
+    document.addEventListener('DOMContentLoaded', function(){
+      var p=document.createElement('button');
+      p.type='button';
+      p.textContent='\ud83d\udc41 Viewing as agent \u2014 back to admin';
+      p.style.cssText='position:fixed;top:10px;right:10px;z-index:2147483647;font:700 12px/1 system-ui,sans-serif;background:#1a1a1a;color:#ffd166;border:1px solid #ffd166;border-radius:999px;padding:9px 14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)';
+      p.onclick=function(){ try{ sessionStorage.removeItem('rem-agentview'); }catch(e){} location.reload(); };
+      document.body.appendChild(p);
+    });
+  }
   // 🚀 Published client link: ?x=<code> resolves through the studio inbox into the
   // full page address, exactly like review links do.
   var R_X = RQP.get('x');
@@ -3401,6 +3414,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(R_ENDPOINT && R_REF){
         var locked = appLay || (siteReleased ? reqLay : '');
         if(R_TOK){
+          h+='<button type="button" data-rem-agview title="Preview this page exactly as the agent sees it">\ud83d\udc41 View as agent</button>';
           if(siteReleased){
             h+='<button type="button" class="done">✓ Approved'+(locked?': '+esc(layNameOf(locked)):'')+' — agent can sign-in + publish</button>';
           } else if(reqLay){
@@ -3440,6 +3454,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var pb=bar.querySelector('[data-rem-publish]'); if(pb) pb.onclick=publishSite;
       var lv=bar.querySelector('[data-rem-live]'); if(lv) lv.onclick=function(){ openLiveLink(publishedUrl); };
       var gl=bar.querySelector('[data-rem-golock]'); if(gl) gl.onclick=function(){ var lk=appLay||reqLay; if(lk) location.hash=lk; };
+      var av=bar.querySelector('[data-rem-agview]'); if(av) av.onclick=function(){ try{ sessionStorage.setItem('rem-agentview','1'); }catch(e){} location.reload(); };
       var sk=bar.querySelector('[data-rem-share]'); if(sk) sk.onclick=openShareKit;
       var kk=bar.querySelector('[data-rem-kiosk]'); if(kk) kk.onclick=openKiosk;
     }
@@ -3887,5 +3902,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-13</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-14</div>
 </body></html>
