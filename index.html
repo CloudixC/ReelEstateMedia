@@ -1889,7 +1889,9 @@ function App(){
         ...(s.pub && s.pub > s.retail ? {pub: s.pub} : {}),
         ...(CAL_EVENT_SLUG[s.id] ? {u: 'https://calendly.com/hello-reelestatemedia/' + CAL_EVENT_SLUG[s.id]} : {})}));
       const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
-        pay: db.settings.payUrl || '', svc: svcMenu});
+        pay: db.settings.payUrl || '', svc: svcMenu,
+        // 🏡 listing-page profile — the listing builder reads these to fill the agent section
+        an: c.name || '', at: c.agentTitle || '', hd: c.headshot || '', web: c.website || '', lic: c.licenseNo || '', abio: c.bioText || '', ph: c.phone || ''});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
       // 🤝 keep co-agents on this client's shared shoots in sync too (skipCo guards against recursion)
       if(!skipCo){ const cos = [...new Set(db.orders.filter(o => o.clientId === clientId && o.coAgentId).map(o => o.coAgentId))];
@@ -5740,6 +5742,11 @@ function EditClientModal({client, onClose, onSave, onDelete}){
   const [phone, setPhone] = useState(client.phone || '');
   const [birthday, setBirthday] = useState(client.birthday || '');
   const [instagram, setInstagram] = useState(client.instagram || '');
+  const [agentTitle, setAgentTitle] = useState(client.agentTitle || '');
+  const [headshot, setHeadshot] = useState(client.headshot || '');
+  const [website, setWebsite] = useState(client.website || '');
+  const [licenseNo, setLicenseNo] = useState(client.licenseNo || '');
+  const [bioText, setBioText] = useState(client.bioText || '');
   const [notes, setNotes] = useState(client.notes || '');
   const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : (client.tier === 'direct' || client.tier === 'unlimited'));
   const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
@@ -5788,6 +5795,18 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <div><label className="f">Birthday</label><input type="date" value={birthday} onChange={e => setBirthday(e.target.value)}/></div>
         <div><label className="f">Instagram</label><input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@handle"/></div>
       </div>
+      <div style={{margin:'14px 0 6px', fontSize:11, letterSpacing:'.14em', textTransform:'uppercase', color:'var(--dim, #948e8b)', fontWeight:700}}>🏡 Listing-page profile <span className="faint" style={{textTransform:'none', letterSpacing:0, fontWeight:400}}>— auto-fills their listing pages &amp; brochures</span></div>
+      <div className="frow">
+        <div><label className="f">Title</label><input value={agentTitle} onChange={e => setAgentTitle(e.target.value)} placeholder="Sales Representative"/></div>
+        <div><label className="f">Licence / registration #</label><input value={licenseNo} onChange={e => setLicenseNo(e.target.value)} placeholder="e.g. 4765 1032"/></div>
+      </div>
+      <div className="frow">
+        <div><label className="f">Headshot <span className="faint">(Drive link or image URL)</span></label><input value={headshot} onChange={e => setHeadshot(e.target.value)} placeholder="https://drive.google.com/file/d/…"/></div>
+        <div><label className="f">Website</label><input value={website} onChange={e => setWebsite(e.target.value)} placeholder="www.theirsite.com"/></div>
+      </div>
+      <div className="frow one">
+        <div><label className="f">Realtor description <span className="faint">(shows in the agent section of their listing pages)</span></label><textarea rows="2" value={bioText} onChange={e => setBioText(e.target.value)} placeholder="Award-winning Brampton realtor helping families buy and sell across Peel for over a decade…"/></div>
+      </div>
       <div className="frow one">
         <div><label className="f">Relationship Notes</label><textarea rows="2" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Kids' names, favourite coffee, farm area, referral source…"/></div>
       </div>
@@ -5805,7 +5824,7 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <span className="spacer"></span>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;}
-          onSave({name: name.trim(), tier, company: company.trim(), team: team.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})}); }}>Save Changes</button>
+          onSave({name: name.trim(), tier, company: company.trim(), team: team.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), agentTitle: agentTitle.trim(), headshot: headshot.trim(), website: website.trim(), licenseNo: licenseNo.trim(), bioText: bioText.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})}); }}>Save Changes</button>
       </div>
     </div>
   </div>);
@@ -5993,6 +6012,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.20-6</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.21-1</div>
 </body>
 </html>

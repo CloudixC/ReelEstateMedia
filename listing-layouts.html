@@ -1949,7 +1949,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     body:'Upstairs, four bedrooms share a quiet hallway, with the primary suite set apart at the back of the house. A finished lower level adds a recreation room, a guest bedroom and a full bath.\nWalk to two elementary schools and the Glen Abbey trail system.',
     highlights:"Chef's kitchen | Quartz island, gas range, walk-in pantry\nPrimary retreat | Vaulted ceiling, spa ensuite, two closets\nFinished lower level | Rec room, guest bedroom, full bath\nPrivate yard | Stone patio, mature maples, no rear neighbours\nMain-floor office | French doors, built-in shelving\nUpdated systems | Furnace and roof replaced in recent years\nHardwood floors | Wide-plank white oak through the main floor\nOversized windows | Morning light in every principal room\nHeated ensuite floors | Radiant heat under porcelain tile\nWalk-in closets | Built-in organizers in both principal closets",
     openHouse:'Saturday, October 24 | 2:00 PM – 4:00 PM\nSunday, October 25 | 1:00 PM – 3:00 PM | Wine and tour\nThursday, October 29 | 12:00 PM – 1:00 PM | Broker\'s open', video:'', tour:'', brochure:'', name:'Ridgeview House',
-    website:'', license:'', agentName:'Priya Sandhu', agentTitle:'Sales Representative', brokerage:'Your Brokerage Name', phone:'905-555-0142', email:'priya@example.com'
+    website:'', license:'', agentBio:'', agentName:'Priya Sandhu', agentTitle:'Sales Representative', brokerage:'Your Brokerage Name', phone:'905-555-0142', email:'priya@example.com'
   };
   /* ---------- Reel Estate Media bridge: opened from a delivery page, this pre-fills the
      listing and runs the request→release flow for the print brochure ---------- */
@@ -3065,6 +3065,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         ta('highlights','Highlights, one per line: Name | detail',5)+'</fieldset>'+
       '<fieldset><legend>Agent</legend><div class="two">'+f('agentName','Name')+f('agentTitle','Title')+'</div>'+f('brokerage','Brokerage')+
         '<div class="two">'+f('phone','Phone')+f('email','Email','','email')+'</div>'+'<div class="two">'+f('website','Website','www.yoursite.com')+f('license','Licence / registration #')+'</div>'+
+        ta('agentBio','About the agent (short description)',3)+
         '<label><span>Headshot</span><input class="in" type="file" accept="image/*" id="headpick"></label></fieldset>'+
       '</div><footer><button class="btn secondary sm" type="button" data-reset>Reset to sample</button><button class="btn primary sm" type="button" data-close>Done</button></footer></aside>';
   }
@@ -3149,6 +3150,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       'body.rem-editmode [data-remedit]{outline:1.5px dashed rgba(234,0,42,.6);outline-offset:3px;cursor:text}'+
       'body.rem-editmode [data-remedit]:hover,body.rem-editmode [data-remedit]:focus{outline-style:solid;background:rgba(234,0,42,.07)}'+
       'body.rem-editmode #stage figure.ph{cursor:pointer;outline:1.5px dashed rgba(242,169,0,.6);outline-offset:-2px}'+
+      '#stage .rem-abio{margin-top:10px;font-size:13px;line-height:1.6;opacity:.85;max-width:52ch}'+
       '.rem-imgp{position:fixed;left:50%;transform:translateX(-50%);bottom:72px;z-index:62;width:min(460px,94vw);background:#161513;border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px;color:#f5f2ec;font:500 12px/1.4 "Manrope",system-ui,sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.5)}'+
       '.rem-imgp-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.rem-imgp-head b{font-size:13px}.rem-imgp-head span{color:rgba(245,242,236,.6)}.rem-imgp-head button{margin-left:auto;background:none;border:none;color:#f5f2ec;font-size:15px;cursor:pointer}'+
       '.rem-imgp-pv{position:relative;height:190px;border-radius:10px;overflow:hidden;background:#000;cursor:grab;touch-action:none}'+
@@ -3173,6 +3175,29 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     }
     var _save = save;
     save = function(){ _save(); try{ localStorage.setItem(KEY+'-at', String(Date.now())); }catch(e){} llPush(); };
+    // 🏡 agent profile from the Command Centre (rides on their hub): title, headshot,
+    // description, website, licence, phone, email — fills anything still on sample text.
+    if(R_ENDPOINT && R_HK){
+      fetch(R_ENDPOINT+'?hub='+encodeURIComponent(R_HK)).then(function(x){ return x.json(); }).then(function(j){
+        var h=j && j.hub; if(!h) return;
+        var chg=false;
+        var setIf=function(k, v){ if(v && (L[k]===SAMPLE[k] || !L[k])){ L[k]=String(v); chg=true; } };
+        setIf('agentName', h.an || h.agent);
+        setIf('agentTitle', h.at);
+        setIf('brokerage', h.brokerage);
+        setIf('email', h.email);
+        setIf('phone', h.ph);
+        setIf('website', h.web);
+        setIf('license', h.lic);
+        setIf('agentBio', h.abio);
+        if(h.hd && !headshot){
+          var dm=String(h.hd).match(/[-\w]{25,}/);
+          headshot = (/drive\.google|docs\.google/.test(String(h.hd)) && dm) ? 'https://drive.google.com/thumbnail?id='+dm[0]+'&sz=w800' : String(h.hd);
+          chg=true;
+        }
+        if(chg){ try{ localStorage.setItem(KEY, JSON.stringify({listing:L, ov:OV, imgov:IMGOV})); }catch(e2){} render(true); }
+      }).catch(function(){});
+    }
     if(R_ENDPOINT && R_REF){
       fetch(R_ENDPOINT+'?review='+encodeURIComponent('ll-'+R_REF)).then(function(x){ return x.json(); }).then(function(j){
         var stt=j && j.state;
@@ -3189,7 +3214,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     /* ---- tap-to-edit: any text on the rendered site maps back to its listing field ---- */
     var EDIT_ON=false, EDITMAP={};
     function nrm(x){ return String(x==null?'':x).replace(/\s+/g,' ').trim(); }
-    var PLAIN=['address','name','city','price','status','mls','beds','baths','sqft','lot','parking','built','headline','intro','agentName','agentTitle','brokerage','phone','email','website','license'];
+    var PLAIN=['address','name','city','price','status','mls','beds','baths','sqft','lot','parking','built','headline','intro','agentName','agentTitle','brokerage','phone','email','website','license','agentBio'];
     var HINT={beds:/bed/i, baths:/bath/i, sqft:/sq|ft/i, lot:/lot/i, parking:/park|car|garage/i, built:/built|year/i, price:/offer|price/i, status:/listed|status|sale/i};
     function buildMap(){
       EDITMAP={};
@@ -3315,10 +3340,21 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         .then(function(){ siteReleased=true; updBar(); }).catch(function(){ updBar(); });
     }
 
+    function injectAgentBio(){
+      var bio = nrm(L.agentBio||''); if(!bio) return;
+      var stage=document.getElementById('stage'); if(!stage) return;
+      var nm = nrm(L.agentName||''); if(!nm) return;
+      [].slice.call(stage.querySelectorAll('b,h2,h3')).forEach(function(nameEl){
+        if(nrm(nameEl.textContent)!==nm) return;
+        var blk=nameEl.parentElement; if(!blk || blk.closest('nav') || blk.querySelector('.rem-abio')) return;
+        if(!blk.querySelector('.lines, .ln-lines, .wb-lines') && !/listing agent/i.test(blk.textContent)) return;
+        var p=document.createElement('p'); p.className='rem-abio'; p.textContent=L.agentBio; blk.appendChild(p);
+      });
+    }
     var _render=render, _refresh=refreshStage;
-    render=function(k){ _render(k); applyOverrides(); annotate(); };
-    refreshStage=function(){ _refresh(); applyOverrides(); annotate(); };
-    applyOverrides();
+    render=function(k){ _render(k); applyOverrides(); injectAgentBio(); annotate(); };
+    refreshStage=function(){ _refresh(); applyOverrides(); injectAgentBio(); annotate(); };
+    applyOverrides(); injectAgentBio();
 
     /* ---- image editing: in edit mode, tap any photo to swap, zoom and reposition it ---- */
     var imgPanel=null;
