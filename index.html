@@ -2613,7 +2613,7 @@ function App(){
 
     {showNewOrder && <NewOrderModal db={db} onClose={() => setShowNewOrder(false)} onSave={addOrder} addClient={addClient} />}
     {showNewClient && <NewClientModal db={db} onClose={() => setShowNewClient(false)} onSave={addClient} />}
-    {editingClient && <EditClientModal client={editingClient} onClose={() => setEditingClient(null)} onSave={patch => updateClient(editingClient.id, patch)} onDelete={deleteClient} />}
+    {editingClient && <EditClientModal client={editingClient} inboxUrl={db.settings.inboxUrl || ''} onClose={() => setEditingClient(null)} onSave={patch => updateClient(editingClient.id, patch)} onDelete={deleteClient} />}
     {printDoc && <DocModal doc={printDoc} db={db} onClose={() => setPrintDoc(null)} updateSettings={updateSettings} />}
     {shootModeId && (() => {
       const d = db.deliverables.find(x => x.id === shootModeId);
@@ -5736,7 +5736,7 @@ function NewClientModal({db, onClose, onSave}){
 }
 
 /* ---------------- Edit Client Modal ---------------- */
-function EditClientModal({client, onClose, onSave, onDelete}){
+function EditClientModal({client, inboxUrl, onClose, onSave, onDelete}){
   const [name, setName] = useState(client.name || '');
   const [tier, setTier] = useState(client.tier || 'partner');
   const [company, setCompany] = useState(client.company || '');
@@ -5750,6 +5750,34 @@ function EditClientModal({client, onClose, onSave, onDelete}){
   const [website, setWebsite] = useState(client.website || '');
   const [licenseNo, setLicenseNo] = useState(client.licenseNo || '');
   const [bioText, setBioText] = useState(client.bioText || '');
+  const [hsBusy, setHsBusy] = useState('');
+  const hsThumb = u => { const m = String(u || '').match(/[-\w]{25,}/); return (/drive\.google|docs\.google/.test(String(u)) && m) ? 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w120' : u; };
+  const uploadHeadshot = (file) => {
+    if(!file) return;
+    if(!inboxUrl){ alert('Connect your inbox (Settings) first — the photo uploads straight into your Drive through it.'); return; }
+    setHsBusy('⏳ Uploading…');
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try{
+          const max = 1200, sc = Math.min(1, max / Math.max(img.width, img.height));
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(img.width * sc)); cv.height = Math.max(1, Math.round(img.height * sc));
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          const b64 = cv.toDataURL('image/jpeg', 0.88).split(',')[1];
+          fetch(inboxUrl, {method:'POST', body: JSON.stringify({kind:'file', name: 'headshot-' + (name || 'agent').trim().replace(/\s+/g, '-').toLowerCase() + '.jpg', mime: 'image/jpeg', data: b64})})
+            .then(r => r.json()).then(j => {
+              if(j.ok && j.id){ setHeadshot('https://drive.google.com/file/d/' + j.id + '/view'); setHsBusy('✓ Uploaded to your Drive'); setTimeout(() => setHsBusy(''), 3000); }
+              else throw new Error(j.error || 'failed');
+            }).catch(() => setHsBusy('⚠ Upload failed — try again or paste a Drive link'));
+        }catch(e){ setHsBusy('⚠ Couldn’t read that image'); }
+      };
+      img.onerror = () => setHsBusy('⚠ Couldn’t read that image');
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  };
   const [notes, setNotes] = useState(client.notes || '');
   const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : (client.tier === 'direct' || client.tier === 'unlimited'));
   const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
@@ -5804,7 +5832,14 @@ function EditClientModal({client, onClose, onSave, onDelete}){
         <div><label className="f">Licence / registration #</label><input value={licenseNo} onChange={e => setLicenseNo(e.target.value)} placeholder="e.g. 4765 1032"/></div>
       </div>
       <div className="frow">
-        <div><label className="f">Headshot <span className="faint">(Drive link or image URL)</span></label><input value={headshot} onChange={e => setHeadshot(e.target.value)} placeholder="https://drive.google.com/file/d/…"/></div>
+        <div><label className="f">Headshot</label>
+          <div style={{display:'flex', gap:8, alignItems:'center'}}>
+            {headshot ? <img src={hsThumb(headshot)} alt="" style={{width:38, height:38, borderRadius:8, objectFit:'cover', flex:'none', border:'1px solid rgba(255,255,255,.15)'}} onError={e => { e.target.style.display = 'none'; }}/> : null}
+            <label className="btn ghost sm" style={{cursor:'pointer', whiteSpace:'nowrap', margin:0}}>⬆ Upload photo<input type="file" accept="image/*" style={{display:'none'}} onChange={e => { uploadHeadshot(e.target.files[0]); e.target.value = ''; }}/></label>
+            <input value={headshot} onChange={e => setHeadshot(e.target.value)} placeholder="…or paste a link" style={{minWidth:0}}/>
+          </div>
+          {hsBusy ? <p className="small faint" style={{marginTop:3}}>{hsBusy}</p> : null}
+        </div>
         <div><label className="f">Website</label><input value={website} onChange={e => setWebsite(e.target.value)} placeholder="www.theirsite.com"/></div>
       </div>
       <div className="frow one">
@@ -6015,6 +6050,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.21-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.21-3</div>
 </body>
 </html>
