@@ -3362,18 +3362,22 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       });
     }
     var _render=render, _refresh=refreshStage;
-    render=function(k){ _render(k); applyOverrides(); injectAgentBio(); annotate(); };
-    // A refresh after an edit keeps you exactly where you were — window scroll AND the
-    // horizontal page track (Residence etc.) both restore, no jump back to page 1.
-    refreshStage=function(){
-      var st0=document.getElementById('stage'), saved=[];
-      if(st0){ var a0=st0.querySelectorAll('*'); for(var si=0;si<a0.length;si++){ if(a0[si].scrollLeft||a0[si].scrollTop) saved.push([si, a0[si].scrollLeft, a0[si].scrollTop]); } }
-      var wy=window.scrollY;
-      _refresh(); applyOverrides(); injectAgentBio(); annotate();
+    // Any same-page re-render (edit toggle on/off, text or photo edits, theme) keeps you
+    // exactly where you were — window scroll AND the horizontal page track (Residence
+    // etc.) both restore, no jump back to page 1.
+    function snapScroll(){
+      var st0=document.getElementById('stage'), out=[];
+      if(st0){ var a0=st0.querySelectorAll('*'); for(var si=0;si<a0.length;si++){ if(a0[si].scrollLeft||a0[si].scrollTop) out.push([si, a0[si].scrollLeft, a0[si].scrollTop]); } }
+      return {s:out, wy:window.scrollY};
+    }
+    function restoreScroll(sv){
+      if(!sv) return;
       var st1=document.getElementById('stage');
-      if(st1 && saved.length){ var a1=st1.querySelectorAll('*'); saved.forEach(function(sv){ var el=a1[sv[0]]; if(el){ el.scrollLeft=sv[1]; el.scrollTop=sv[2]; } }); }
-      window.scrollTo(0, wy);
-    };
+      if(st1 && sv.s.length){ var a1=st1.querySelectorAll('*'); sv.s.forEach(function(e2){ var el=a1[e2[0]]; if(el){ el.scrollLeft=e2[1]; el.scrollTop=e2[2]; } }); }
+      window.scrollTo(0, sv.wy);
+    }
+    render=function(k){ var sv = (k===true) ? snapScroll() : null; _render(k); applyOverrides(); injectAgentBio(); annotate(); restoreScroll(sv); };
+    refreshStage=function(){ var sv=snapScroll(); _refresh(); applyOverrides(); injectAgentBio(); annotate(); restoreScroll(sv); };
     applyOverrides(); injectAgentBio();
 
     /* ---- image editing: in edit mode, tap any photo to swap, zoom and reposition it ---- */
@@ -3469,5 +3473,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-4</div>
 </body></html>
