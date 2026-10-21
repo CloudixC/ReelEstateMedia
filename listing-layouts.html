@@ -3183,6 +3183,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         var chg=false;
         var setIf=function(k, v){ if(v && (L[k]===SAMPLE[k] || !L[k])){ L[k]=String(v); chg=true; } };
         setIf('agentName', h.an || h.agent);
+        // a draft that only has the hub's first name upgrades to the full name
+        if(h.an && h.agent && L.agentName === String(h.agent) && String(h.an) !== String(h.agent)){ L.agentName = String(h.an); chg = true; }
         setIf('agentTitle', h.at);
         setIf('brokerage', h.brokerage);
         setIf('email', h.email);
