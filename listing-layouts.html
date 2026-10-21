@@ -3206,6 +3206,13 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       try{ el.contentEditable='plaintext-only'; }catch(e2){}
       if(el.contentEditable!=='plaintext-only' && el.contentEditable!=='true') el.contentEditable='true';
       el.setAttribute('data-remedit','1'); el.setAttribute('spellcheck','false');
+      // While editing, smaller text sits above big display type — so a giant title's
+      // line box can't swallow taps meant for the small line sitting next to it.
+      try{
+        var cs=getComputedStyle(el);
+        if(cs.position==='static') el.style.position='relative';
+        el.style.zIndex=String(Math.max(1, 2000-Math.round((parseFloat(cs.fontSize)||16)*10)));
+      }catch(e3){}
     }
     function annotate(){
       if(!EDIT_ON) return;
