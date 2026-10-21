@@ -1962,6 +1962,23 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var fromDelivery=false; if(R_REF){ try{ fromDelivery = !localStorage.getItem(KEY); }catch(e){} }
   var L = Object.assign({}, SAMPLE);
   try { var s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.listing) Object.assign(L, s.listing); } catch(e){}
+  // Repair pass: drafts saved by earlier versions could hold empty or "X,XXX"-style fields.
+  // Anywhere the sample has guide text and the draft has none, the sample text comes back.
+  (function(){
+    var changed = false;
+    var junk = {'$X,XXX,XXX':1,'X':1,'X,XXX':1,'XX \u00d7 XXX ft':1,'X car':1,'XXXX':1,'(XXX) XXX-XXXX':1,'you@email.com':1,'Your Name':1,'Property Name':1,'Neighbourhood, City':1,'123 Your Street':1,'Your Brokerage':1,'Your headline, a line that sells this home':1};
+    var junkPrefix = ['Opening paragraph \u2014 replace this', 'More about the home \u2014 the rooms', 'Best feature | Replace with'];
+    Object.keys(SAMPLE).forEach(function(k){
+      if(SAMPLE[k] === '') return;
+      var v = L[k];
+      var bad = (v == null || String(v).trim() === '' || junk[v] || junkPrefix.some(function(p){ return String(v).indexOf(p) === 0; }));
+      if(bad){ L[k] = SAMPLE[k]; changed = true; }
+    });
+    if(R_ADDR){ if(L.address === SAMPLE.address){ L.address = R_ADDR; changed = true; } if(L.name === SAMPLE.name){ L.name = R_ADDR; changed = true; } }
+    if(R_AGENT && L.agentName === SAMPLE.agentName){ L.agentName = R_AGENT; changed = true; }
+    if(R_PIN && R_REF && L.brokerage === SAMPLE.brokerage){ L.brokerage = 'Royal LePage Pinnacle'; changed = true; }
+    if(changed){ try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); }catch(e){} }
+  })();
   if(fromDelivery){
     // First open from this delivery: swap the demo house for the agent's real context,
     // leave the rest blank for them to fill (placeholders show what goes where).
