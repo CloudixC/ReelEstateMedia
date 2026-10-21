@@ -2063,7 +2063,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     var inner = p ? '<img src="'+p.url+'" alt="'+esc(alt||'')+'"'+(sty?' style="'+sty+'"':'')+'>' : PH[i % PH.length];
     return '<figure class="ph '+(cls||'')+'" data-phi="'+pk+'" data-phn="'+i+'">'+inner+'</figure>';
   }
-  function head(cls){ return '<figure class="ph '+(cls||'')+'">'+(headshot?'<img src="'+headshot+'" alt="">':HEADSVG)+'</figure>'; }
+  function head(cls){ var hov=IMGOV['head'], hsty=imgStyle(hov); return '<figure class="ph '+(cls||'')+'" data-head="1">'+(headshot?'<img src="'+headshot+'" alt=""'+(hsty?' style="'+hsty+'"':'')+'>':HEADSVG)+'</figure>'; }
   function paras(t){ return String(t||'').split(/\n+/).filter(Boolean).map(function(p){return '<p>'+esc(p)+'</p>';}).join(''); }
   function hl(){ return String(L.highlights||'').split('\n').map(function(l){ var a=l.split('|'); return {t:(a[0]||'').trim(), d:(a.slice(1).join('|')||'').trim()}; }).filter(function(x){return x.t;}); }
   function specs(){ return [[L.beds,'Bedrooms'],[L.baths,'Bathrooms'],[L.sqft,'Sq ft'],[L.lot,'Lot'],[L.parking,'Parking']].filter(function(x){return x[0];}); }
@@ -3384,7 +3384,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     /* ---- image editing: in edit mode, tap any photo to swap, zoom and reposition it ---- */
     var imgPanel=null, imgPanelPos=null;
     function closeImgPanel(){ if(imgPanel){ imgPanel.remove(); imgPanel=null; } }
-    function openImgPanel(slot, defIdx){
+    function openImgPanel(slot, defIdx, isHead){
       closeImgPanel();
       defIdx = defIdx || 0;
       var ov = IMGOV[slot] = IMGOV[slot] || {};
@@ -3392,10 +3392,10 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var curPi=function(){ return photos.length ? ((ov.pi!=null?ov.pi:defIdx)%photos.length) : -1; };
       var thumbs = photos.map(function(p,k2){ return '<button type="button" class="rem-th" data-pick="'+k2+'" style="background-image:url(&quot;'+p.url+'&quot;)" title="'+esc(p.name||'')+'"></button>'; }).join('');
       imgPanel.innerHTML =
-        '<div class="rem-imgp-head"><b>This photo spot</b><span>drag to reposition \u00b7 slide to zoom</span><button type="button" data-ip-close title="Close">\u2715</button></div>'+
+        '<div class="rem-imgp-head"><b>'+(isHead?'Headshot':'This photo spot')+'</b><span>drag to reposition \u00b7 slide to zoom</span><button type="button" data-ip-close title="Close">\u2715</button></div>'+
         '<div class="rem-imgp-pv"><img draggable="false" alt=""></div>'+
         '<div class="rem-imgp-row"><span>Zoom</span><input type="range" min="100" max="260" step="2" data-ip-zoom></div>'+
-        (photos.length?'<div class="rem-imgp-count">Choose from this delivery \u2014 '+photos.length+' photo'+(photos.length!==1?'s':'')+' (scroll for more)</div><div class="rem-imgp-strip">'+thumbs+'</div>':'')+
+        (!isHead && photos.length?'<div class="rem-imgp-count">Choose from this delivery \u2014 '+photos.length+' photo'+(photos.length!==1?'s':'')+' (scroll for more)</div><div class="rem-imgp-strip">'+thumbs+'</div>':'')+
         '<div class="rem-imgp-row"><label class="rem-ip-btn" for="rem-ip-file">\u2b06 Upload</label><input type="file" id="rem-ip-file" accept="image/*" hidden><button type="button" class="rem-ip-btn" data-ip-reset>Reset</button><button type="button" class="rem-ip-btn go" data-ip-done>Done</button></div>';
       document.body.appendChild(imgPanel);
       // The editor can be dragged out of the way by its title bar, so you can watch
@@ -3427,7 +3427,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var zr=imgPanel.querySelector('[data-ip-zoom]');
       function paint(){
         var p = curPi()>-1 ? photos[curPi()] : null;
-        if(p && pv.getAttribute('src')!==p.url) pv.src=p.url;
+        var src = isHead ? headshot : (p ? p.url : '');
+        if(src && pv.getAttribute('src')!==src) pv.src=src;
         var x=(ov.x==null?50:ov.x), y=(ov.y==null?50:ov.y), sc=ov.s||1;
         pv.style.objectPosition=x+'% '+y+'%';
         pv.style.transform='scale('+sc+')';
@@ -3443,7 +3444,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       imgPanel.querySelector('[data-ip-done]').onclick=function(){ commit(); closeImgPanel(); };
       imgPanel.querySelector('[data-ip-close]').onclick=closeImgPanel;
       var fi=imgPanel.querySelector('#rem-ip-file');
-      fi.onchange=function(){ var f=fi.files[0]; if(!f) return; photos.push({url:URL.createObjectURL(f), name:f.name.replace(/\.[a-z0-9]+$/i,'')}); ov.pi=photos.length-1; closeImgPanel(); commit(); openImgPanel(slot, defIdx); };
+      fi.onchange=function(){ var f=fi.files[0]; if(!f) return;
+        if(isHead){ headshot=URL.createObjectURL(f); closeImgPanel(); commit(); openImgPanel(slot, defIdx, true); return; }
+        photos.push({url:URL.createObjectURL(f), name:f.name.replace(/\.[a-z0-9]+$/i,'')}); ov.pi=photos.length-1; closeImgPanel(); commit(); openImgPanel(slot, defIdx); };
       var drag=null, pvw=imgPanel.querySelector('.rem-imgp-pv');
       pvw.addEventListener('pointerdown', function(e){ drag={x:e.clientX, y:e.clientY, ox:(ov.x==null?50:ov.x), oy:(ov.y==null?50:ov.y)}; try{ pvw.setPointerCapture(e.pointerId); }catch(e2){} e.preventDefault(); });
       pvw.addEventListener('pointermove', function(e){ if(!drag) return; var r=pvw.getBoundingClientRect(); var sc=ov.s||1;
@@ -3456,8 +3459,11 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     document.getElementById('app').addEventListener('click', function(e){
       if(!EDIT_ON || !e.target.closest) return;
       if(!e.target.closest('#stage')) return;
-      var fig=e.target.closest('figure.ph[data-phi]');
-      if(fig){ e.preventDefault(); e.stopPropagation(); openImgPanel(fig.getAttribute('data-phi'), +fig.getAttribute('data-phn')||0); return; }
+      var fig=e.target.closest('figure.ph[data-phi],figure.ph[data-head]');
+      if(fig){ e.preventDefault(); e.stopPropagation();
+        if(fig.getAttribute('data-head')) openImgPanel('head', 0, true);
+        else openImgPanel(fig.getAttribute('data-phi'), +fig.getAttribute('data-phn')||0);
+        return; }
       var act=e.target.closest('a,button');
       if(act){ e.preventDefault(); e.stopPropagation(); }
     }, true);
@@ -3474,5 +3480,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-5</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.10.21-6</div>
 </body></html>
