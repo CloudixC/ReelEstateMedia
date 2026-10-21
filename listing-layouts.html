@@ -1960,6 +1960,20 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   try{ broRequested = localStorage.getItem('ll-broreq-'+R_REF)==='1'; }catch(e){}
   var KEY = R_REF ? 'listing-layouts-'+R_REF : 'listing-layouts-v1';
   var fromDelivery=false; if(R_REF){ try{ fromDelivery = !localStorage.getItem(KEY); }catch(e){} }
+  // Property name for the Private Collection designs: just the street name — no house
+  // number, no Street/Rd/Terrace suffix, no city. One-word streets become "<Name> House"
+  // so the giant title breaks onto two lines and fits the layouts.
+  function propName(addr){
+    var a = String(addr||'').split(',')[0].trim();
+    a = a.replace(/^[#\d][\w-]*\s+/, '');
+    var SUF = /^(street|st|road|rd|avenue|ave|av|boulevard|blvd|drive|dr|court|crt|ct|crescent|cres|terrace|terr|ter|lane|ln|way|place|pl|circle|cir|trail|trl|gardens|gdns|garden|grove|close|row|square|sq|heights|hts|parkway|pkwy|gate|mews|path|landing|line|point|pt|run|walk|chase|glen|view|vw)\.?$/i;
+    var DIRW = /^(n|s|e|w|north|south|east|west|ne|nw|se|sw)\.?$/i;
+    var words = a.split(/\s+/).filter(Boolean);
+    while(words.length > 1 && (SUF.test(words[words.length-1]) || DIRW.test(words[words.length-1]))) words.pop();
+    a = words.join(' ');
+    if(words.length === 1 && a) a = a + ' House';
+    return a || String(addr||'').split(',')[0].trim();
+  }
   var L = Object.assign({}, SAMPLE);
   try { var s = JSON.parse(localStorage.getItem(KEY)||'null'); if (s && s.listing) Object.assign(L, s.listing); } catch(e){}
   // Repair pass: drafts saved by earlier versions could hold empty or "X,XXX"-style fields.
@@ -1974,7 +1988,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       var bad = (v == null || String(v).trim() === '' || junk[v] || junkPrefix.some(function(p){ return String(v).indexOf(p) === 0; }));
       if(bad){ L[k] = SAMPLE[k]; changed = true; }
     });
-    if(R_ADDR){ if(L.address === SAMPLE.address){ L.address = R_ADDR; changed = true; } if(L.name === SAMPLE.name){ L.name = R_ADDR; changed = true; } }
+    if(R_ADDR){ if(L.address === SAMPLE.address){ L.address = R_ADDR; changed = true; } if(L.name === SAMPLE.name || L.name === R_ADDR){ L.name = propName(R_ADDR); changed = true; } }
     if(R_AGENT && L.agentName === SAMPLE.agentName){ L.agentName = R_AGENT; changed = true; }
     if(R_PIN && R_REF && L.brokerage === SAMPLE.brokerage){ L.brokerage = 'Royal LePage Pinnacle'; changed = true; }
     if(changed){ try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); }catch(e){} }
@@ -1984,7 +1998,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     // leave the rest blank for them to fill (placeholders show what goes where).
     // Only overwrite what the delivery actually tells us — the sample listing text stays
     // in place as the guide for everything else, so nothing ever renders empty.
-    if(R_ADDR){ L.address = R_ADDR; L.name = R_ADDR; }
+    if(R_ADDR){ L.address = R_ADDR; L.name = propName(R_ADDR); }
     if(R_AGENT){ L.agentName = R_AGENT; }
     if(R_PIN){ L.brokerage = 'Royal LePage Pinnacle'; }
     try{ localStorage.setItem(KEY, JSON.stringify({listing:L})); }catch(e){}
