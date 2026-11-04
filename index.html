@@ -4220,9 +4220,9 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
       <select value={d.status} onChange={e => updateDeliverable(d.id, e.target.value === 'Booked' ? {status: 'Booked', shootDate: '', shootTime: ''} : {status: e.target.value})}>
         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL(s)}</option>)}
       </select>
-      <span style={{display:'inline-flex', alignItems:'center', gap:4}}>
-        <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
-        {d.shootDate && <button className="arrow" title="Clear the date — not shot yet" onClick={() => updateDeliverable(d.id, {shootDate: '', shootTime: '', shootEnd: ''})}>✕</button>}
+      <span style={{display:'flex', alignItems:'center', gap:3, minWidth:0, whiteSpace:'nowrap'}}>
+        <input type="date" value={d.shootDate} style={{flex:1, minWidth:0}} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
+        {d.shootDate && <button className="arrow" title="Clear the date — not shot yet" style={{flex:'0 0 auto', padding:'2px 5px', minHeight:0, lineHeight:1, fontSize:11}} onClick={() => updateDeliverable(d.id, {shootDate: '', shootTime: '', shootEnd: ''})}>✕</button>}
       </span>
       <span className="dl-meta">
       <span className="dl-pills">
@@ -6057,6 +6057,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-3</div>
 </body>
 </html>
