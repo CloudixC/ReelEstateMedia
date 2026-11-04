@@ -79,6 +79,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .chip{border:1px solid var(--hair2);background:var(--panel);border-radius:999px;padding:6px 13px;font:700 12px var(--sans);color:var(--ink2)}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip small{opacity:.6;margin-left:4px}
+.chips.sub{margin:-8px 0 18px;padding-left:4px}.chips.sub .chip{font-size:11.5px;padding:5px 11px}
+.sec{margin-bottom:26px}.sec .sh{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--hair2)}
+.sec .sh h3{margin:0;font:700 20px var(--serif)}.sec .sh span{color:var(--ink3);font-size:12px}.sec .sh span b{color:var(--ink2);font-weight:700}
 .back{border:0;background:transparent;color:var(--ink2);font:700 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:0;margin-bottom:14px;display:inline-flex;align-items:center;gap:8px}
 .back:hover{color:var(--brass)}
 .av{border-radius:50%;background:var(--panel2) center/cover no-repeat;border:1px solid var(--hair);display:grid;place-items:center;font:700 var(--serif);color:var(--brass);flex:0 0 auto}
@@ -196,7 +199,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.04-2</div>
+<div id="verstamp" title="App version">VAULT v2026.11.04-3</div>
 <script>
 (function(){
   'use strict';
@@ -238,9 +241,18 @@ button{font:inherit;color:inherit;cursor:pointer}
   function matchFilter(it,f){
     if(f==='all') return true;
     if(f==='reel') return it.media!=='photo';
-    if(f==='photo') return it.kind==='photo' || it.media==='both';
+    if(f==='photo') return it.media!=='video';
     return it.kind===f;
   }
+  /* Photo categories (sub-chips under Photos) */
+  var PCAT={event:['📸','Events'],listing:['🏡','Listings'],headshot:['👤','Headshots'],other:['✨','Other']};
+  function photoCat(it){
+    if(it.kind==='headshot') return 'headshot';
+    if(it.kind==='listing') return 'listing';
+    if(/recap|event|launch|seminar|gala|preview|open house|party|mixer|awards|conference|networking/i.test(it.title+' '+it.project+' '+(it.d.group||''))) return 'event';
+    return 'other';
+  }
+  function wallMatch(it){ if(!matchFilter(it,state.filter)) return false; if(state.filter==='photo' && state.pcat && state.pcat!=='all' && photoCat(it)!==state.pcat) return false; return !state.project || it.project===state.project; }
   /* Which files inside the delivery's folder the chip shows: Reels → clips only, photo chips → stills only */
   function fileOk(f,filter){ if(filter==='reel') return !!f.v; if(filter==='photo'||filter==='headshot'||filter==='listing') return !f.v; return true; }
   function companyOf(c){ var co=(c.company||'').trim(); if(co) return co; return (c.tier==='partner'||c.tier==='internal')?'Royal LePage Pinnacle':'Independent'; }
@@ -365,18 +377,40 @@ button{font:inherit;color:inherit;cursor:pointer}
         return '<div class="co"><h2>'+esc(g.name)+'</h2><span>'+g.list.length+' agent'+(g.list.length!==1?'s':'')+' · '+g.pieces+' pieces</span></div>'+
           '<div class="agrid">'+g.list.map(function(x,i){
             return '<div class="acard" data-agent="'+esc(x.id)+'" style="animation-delay:'+(i*40)+'ms">'+(x.last?'<span class="last">'+esc(fmtDate(x.last))+'</span>':'')+avHTML(x)+'<h3>'+esc(x.name)+'</h3><div class="t">'+esc(x.title)+'</div>'+
-              '<div class="n"><div><b>'+x.items.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+(x.counts.photo+x.counts.listing+x.counts.headshot)+'</b>photo sets</div></div></div>';
+              '<div class="n"><div><b>'+x.items.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+x.counts.photo+'</b>photo sets</div></div></div>';
           }).join('')+'</div>';
       }).join('');
     }
-    var items=a.items.filter(function(i){ return matchFilter(i,state.filter)&&(!state.project||i.project===state.project); });
+    var items=a.items.filter(wallMatch);
     var projects=[]; a.items.forEach(function(i){ if(i.project&&projects.indexOf(i.project)<0) projects.push(i.project); });
+    var tile=function(it,i){ return '<div class="tile '+(it.kind==='reel'?'v':'')+'" data-open="'+esc(it.id)+'" data-exp="'+esc(it.id)+'" style="animation-delay:'+(i*25)+'ms">'+thumbHTML(it)+'<div class="cap">'+esc(it.title)+'<small>'+esc(it.project)+' · '+esc(fmtDate(it.date))+'</small></div></div>'; };
+    var body;
+    if(!items.length) body='<div class="empty"><b>Empty shelf</b>No pieces match that filter.</div>';
+    else if(state.filter==='all') body='<div class="masonry">'+items.map(tile).join('')+'</div>';
+    else {
+      /* grouped into sections by project / shoot */
+      var secs=[]; items.forEach(function(it){ var k=it.project||it.title; var sec=secs.find(function(x){ return x.k===k; }); if(!sec){ sec={k:k,date:it.date,items:[]}; secs.push(sec); } sec.items.push(it); if(String(it.date)>String(sec.date)) sec.date=it.date; });
+      body=secs.map(function(sec){ return '<div class="sec"><div class="sh"><h3>'+esc(sec.k)+'</h3><span>'+esc(fmtDate(sec.date))+' · <b data-seccnt="'+esc(sec.k)+'">…</b></span></div><div class="masonry">'+sec.items.map(tile).join('')+'</div></div>'; }).join('');
+    }
     return '<button class="back" data-back>← All agents</button>'+
       '<div class="wallhead">'+avHTML(a)+'<div><h2>'+esc(a.name)+'</h2><p>'+esc(a.title)+(a.first?' · with us since '+esc(fmtDate(a.first)):'')+'</p></div></div>'+
-      '<div class="chips">'+[['all','Everything']].concat(Object.keys(KIND).filter(function(k){ return k!=='other'&&a.counts[k]; }).map(function(k){ return [k,KIND[k][0]+' '+KIND[k][1]]; })).map(function(f){ return '<button class="chip '+(state.filter===f[0]?'on':'')+'" data-filter="'+f[0]+'">'+f[1]+(f[0]!=='all'?'<small>'+a.counts[f[0]]+'</small>':'')+'</button>'; }).join('')+
+      '<div class="chips">'+[['all','Everything'],['reel','🎬 Reels'],['photo','📷 Photos']].map(function(f){ return '<button class="chip '+(state.filter===f[0]?'on':'')+'" data-filter="'+f[0]+'">'+f[1]+(f[0]!=='all'?'<small data-cnt="'+f[0]+'">…</small>':'')+'</button>'; }).join('')+
         (projects.length>1?'<select class="chip" id="proj"><option value="">All projects</option>'+projects.map(function(p){ return '<option '+(state.project===p?'selected':'')+' value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('')+'</select>':'')+'</div>'+
-      (items.length?'<div class="masonry">'+items.map(function(it,i){ return '<div class="tile '+(it.kind==='reel'?'v':'')+'" data-open="'+esc(it.id)+'" data-exp="'+esc(it.id)+'" style="animation-delay:'+(i*25)+'ms">'+thumbHTML(it)+'<div class="cap">'+esc(it.title)+'<small>'+esc(it.project)+' · '+esc(fmtDate(it.date))+'</small></div></div>'; }).join('')+'</div>'
-        :'<div class="empty"><b>Empty shelf</b>No pieces match that filter.</div>');
+      (state.filter==='photo' ? '<div class="chips sub">'+[['all','All photos']].concat(Object.keys(PCAT).map(function(k){ return [k,PCAT[k][0]+' '+PCAT[k][1]]; })).map(function(f){ return '<button class="chip '+((state.pcat||'all')===f[0]?'on':'')+'" data-pcat="'+f[0]+'">'+f[1]+'<small data-cnt="p:'+f[0]+'">…</small></button>'; }).join('')+'</div>' : '')+
+      body;
+  }
+  /* Counts = the clips / photos actually on the wall, so they're filled in once the folders have loaded */
+  function refreshCounts(a){
+    Promise.all(a.items.map(function(it){ return thumbFor(it).then(function(files){ return {it:it,files:files}; }); })).then(function(rows){
+      if(cur()!==a) return;
+      var n=function(pred,fk){ return rows.reduce(function(s,r){ return pred(r.it) ? s + r.files.filter(function(f){ return fileOk(f,fk); }).length : s; },0); };
+      var set=function(key,val){ app.querySelectorAll('[data-cnt="'+key+'"]').forEach(function(el){ el.textContent=val; var ch=el.closest('.chip'); if(ch && /^p:(?!all)/.test(key)) ch.style.display = val ? '' : 'none'; }); };
+      set('reel', n(function(it){ return matchFilter(it,'reel') && (!state.project||it.project===state.project); },'reel'));
+      set('photo', n(function(it){ return matchFilter(it,'photo') && (!state.project||it.project===state.project); },'photo'));
+      set('p:all', n(function(it){ return matchFilter(it,'photo') && (!state.project||it.project===state.project); },'photo'));
+      Object.keys(PCAT).forEach(function(k){ set('p:'+k, n(function(it){ return matchFilter(it,'photo') && photoCat(it)===k && (!state.project||it.project===state.project); },'photo')); });
+      app.querySelectorAll('[data-seccnt]').forEach(function(el){ var k=el.getAttribute('data-seccnt'); var c=n(function(it){ return wallMatch(it) && (it.project||it.title)===k; }, state.filter); el.textContent=c+(state.filter==='reel'?' clip':' photo')+(c!==1?'s':''); });
+    });
   }
 
   /* --- CABINET --- */
@@ -410,7 +444,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     var hero='<div class="hero fade">'+avHTML(a)+'<div><div class="eyebrow">'+esc(c.company||'Royal LePage Pinnacle')+(c.tier?' · '+esc(c.tier):'')+'</div><h2>'+esc(a.name)+'</h2><div style="color:var(--ink2);font-weight:700">'+esc(a.title)+'</div>'+
       (c.bioText?'<div class="bio">'+esc(c.bioText)+'</div>':'')+
       '<div class="contact">'+(c.phone?'<a href="tel:'+esc(c.phone)+'">📞 '+esc(c.phone)+'</a>':'')+(c.email?'<a href="mailto:'+esc(c.email)+'">✉ '+esc(c.email)+'</a>':'')+(c.website?'<a target="_blank" rel="noreferrer" href="'+esc(/^https?:/.test(c.website)?c.website:'https://'+c.website)+'">🌐 '+esc(c.website)+'</a>':'')+'</div></div>'+
-      '<div class="stats"><div><b>'+shoots+'</b>Shoots</div><div><b>'+a.counts.reel+'</b>Reels</div><div><b>'+(a.counts.photo+a.counts.listing)+'</b>Photo sets</div><div><b>'+a.counts.headshot+'</b>Headshots</div><div><b>'+months+'</b>Months</div><div><b>'+money(a.spent)+'</b>Invested</div></div>'+
+      '<div class="stats"><div><b>'+shoots+'</b>Shoots</div><div><b>'+a.counts.reel+'</b>Reels</div><div><b>'+a.counts.photo+'</b>Photo sets</div><div><b>'+a.counts.headshot+'</b>Headshots</div><div><b>'+months+'</b>Months</div><div><b>'+money(a.spent)+'</b>Invested</div></div>'+
       '<div class="heroacts">'+(a.hub?'<a class="act primary" target="_blank" rel="noreferrer" href="'+esc(a.hub)+'">🏠 Open their hub</a><button class="act" data-copy="'+esc(a.hub)+'">🔗 Copy hub link</button>':'')+'<a class="act" href="index.html">📅 Book their next shoot</a></div></div>';
     var shelves=['reel','listing','photo','headshot','other'].map(function(k){
       var its=a.items.filter(function(i){ return i.kind===k; }); if(!its.length) return '';
@@ -440,6 +474,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     app.innerHTML=topHTML()+'<div class="wrap fade">'+body+'</div>'+lbHTML();
     var all=[]; agents.forEach(function(a){ a.items.forEach(function(i){ all.push(i); }); });
     paintAll(all);
+    if(state.view==='wall' && cur()) refreshCounts(cur());
     if(state.lb) fillLb();
     try{ localStorage.setItem('vault_view',state.view); if(state.agent) localStorage.setItem('vault_agent',state.agent); }catch(e){}
     var q=document.getElementById('q'); if(q){ q.oninput=function(){ state.q=q.value; var pos=q.selectionStart; render(); var q2=document.getElementById('q'); if(q2){ q2.focus(); try{ q2.setSelectionRange(pos,pos); }catch(e){} } }; }
@@ -451,7 +486,8 @@ button{font:inherit;color:inherit;cursor:pointer}
     var v=t.closest('[data-view]'); if(v){ state.view=v.getAttribute('data-view'); state.filter='all'; state.project=''; render(); return; }
     if(t.closest('[data-back]')){ state.agent=null; state.filter='all'; state.project=''; try{ localStorage.removeItem('vault_agent'); }catch(e2){} render(); return; }
     var ag=t.closest('[data-agent]'); if(ag){ state.agent=ag.getAttribute('data-agent'); state.filter='all'; state.project=''; render(); window.scrollTo({top:0,behavior:'smooth'}); return; }
-    var f=t.closest('[data-filter]'); if(f){ state.filter=f.getAttribute('data-filter'); render(); return; }
+    var f=t.closest('[data-filter]'); if(f){ state.filter=f.getAttribute('data-filter'); state.pcat='all'; render(); return; }
+    var pc=t.closest('[data-pcat]'); if(pc){ state.pcat=pc.getAttribute('data-pcat'); render(); return; }
     var cp=t.closest('[data-copy]'); if(cp){ copy(cp.getAttribute('data-copy')); return; }
     if(t.closest('[data-lbx]')||(t.id==='lb')){ state.lb=null; render(); return; }
     var op=t.closest('[data-open]'); if(op){ var id=op.getAttribute('data-open'); state.lbi=+(op.getAttribute('data-fi')||0); agents.some(function(a){ var it=a.items.find(function(i){ return i.id===id; }); if(it){ state.lb=Object.assign({a:a},it); return true; } }); render(); return; }
