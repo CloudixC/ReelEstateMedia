@@ -2577,6 +2577,7 @@ function App(){
           <button className="btn ghost sm" title="Cloud backups — auto-saved to your own Google Drive" onClick={() => setShowCloud(true)}
             style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
             {(db.settings.inboxUrl && db.settings.inboxToken) ? (cloud.status === 'saving' ? '⛅ …' : cloud.status === 'err' ? '⛅ ⚠' : cloud.last ? '⛅ ✓' : '⛅ ·') : '⛅'}</button>
+          <a className="btn ghost sm" href="vault.html" title="The Vault — every agent and everything you've delivered them">🗄 Vault</a>
           <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
           <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
           <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
@@ -6057,6 +6058,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-4</div>
 </body>
 </html>
