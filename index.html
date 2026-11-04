@@ -758,7 +758,7 @@ function dueDatesOf(d){
 }
 const dueDateOf = d => { const a = dueDatesOf(d); return a.length ? a[a.length - 1].date : null; };
 const promiseMet = d => d.status === 'Delivered' || !!d.reviewDate;
-const isOverdue = d => { const due = dueDateOf(d); return due && !promiseMet(d) && due < today(); };
+const isOverdue = d => { if(d.status === 'Booked') return false; const due = dueDateOf(d); return due && !promiseMet(d) && due < today(); };
 const isoToTime = iso => { try{ const dt = new Date(iso); return String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0'); } catch(e){ return ''; } };
 const fmtTime = t => { try{ return new Date('2000-01-01T' + t).toLocaleTimeString('en-CA', {hour:'numeric', minute:'2-digit'}); } catch(e){ return t; } };
 const timeRange = d => d.shootTime ? fmtTime(d.shootTime) + (d.shootEnd ? ' – ' + fmtTime(d.shootEnd) : '') : '';
@@ -773,6 +773,9 @@ function countdownFor(d){
     const h = Math.round((sd - now) / 3600000);
     return {label: h <= 48 ? `🎬 shoot in ${h}h` : `🎬 shoot in ${Math.round(h/24)}d`, tone: h <= 24 ? 'client-review' : 'scheduled'};
   }
+  /* Nothing has been shot yet while it's still "To Schedule" — the delivery clock
+     only starts once the shoot is scheduled or marked Shot. */
+  if(d.status === 'Booked') return null;
   const due = dueDateOf(d);
   if(!due) return null;
   const dd = new Date(due + 'T17:00');
@@ -6050,6 +6053,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.10.21-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-1</div>
 </body>
 </html>
