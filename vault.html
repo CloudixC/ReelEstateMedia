@@ -84,7 +84,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .av{border-radius:50%;background:var(--panel2) center/cover no-repeat;border:1px solid var(--hair);display:grid;place-items:center;font:700 var(--serif);color:var(--brass);flex:0 0 auto}
 
 /* ---------- WALL ---------- */
-.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;margin-bottom:30px}
+.co{display:flex;align-items:baseline;gap:12px;margin:6px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--hair)}
+.co h2{margin:0;font:700 26px/1 var(--serif)}
+.co span{font:700 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+.rail .rl{flex:0 0 auto;align-self:center;font:700 10px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--brass);padding:0 6px 0 4px;border-left:2px solid var(--hair);margin-left:6px}
+.rail .rl:first-child{border-left:0;margin-left:0}
 .acard{position:relative;border:1px solid var(--hair2);background:linear-gradient(180deg,var(--panel),var(--bg2));border-radius:20px;padding:20px 18px 16px;cursor:pointer;overflow:hidden;transition:.25s;animation:fade .6s both}
 .acard:hover{transform:translateY(-4px);border-color:var(--brass);box-shadow:var(--shadow)}
 .acard::after{content:"";position:absolute;inset:auto -30% -40% auto;width:70%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(242,169,0,.18),transparent 65%);pointer-events:none}
@@ -191,7 +196,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.04-1</div>
+<div id="verstamp" title="App version">VAULT v2026.11.04-2</div>
 <script>
 (function(){
   'use strict';
@@ -229,6 +234,16 @@ button{font:inherit;color:inherit;cursor:pointer}
     return 'reel';
   }
   var KIND={reel:['🎬','Reels'],photo:['📷','Photos'],headshot:['👤','Headshots'],listing:['🏡','Listings'],other:['📦','Other']};
+  /* Which deliveries a chip includes — a photo+video shoot (event recap) sits under both Reels and Photos */
+  function matchFilter(it,f){
+    if(f==='all') return true;
+    if(f==='reel') return it.media!=='photo';
+    if(f==='photo') return it.kind==='photo' || it.media==='both';
+    return it.kind===f;
+  }
+  /* Which files inside the delivery's folder the chip shows: Reels → clips only, photo chips → stills only */
+  function fileOk(f,filter){ if(filter==='reel') return !!f.v; if(filter==='photo'||filter==='headshot'||filter==='listing') return !f.v; return true; }
+  function companyOf(c){ var co=(c.company||'').trim(); if(co) return co; return (c.tier==='partner'||c.tier==='internal')?'Royal LePage Pinnacle':'Independent'; }
   function build(){
     var orders=db.orders||[], dls=db.deliverables||[], clients=(db.clients||[]).filter(function(c){ return c && c.name; });
     var byOrder={}; orders.forEach(function(o){ byOrder[o.id]=o; });
@@ -250,7 +265,8 @@ button{font:inherit;color:inherit;cursor:pointer}
       var delivered=items.filter(function(i){ return i.status==='Delivered'; });
       return {id:c.id, c:c, name:c.name, title:c.agentTitle||c.company||'', orders:os, items:items, delivered:delivered.length, spent:spent, first:first,
         last:(delivered[0]&&delivered[0].date)||(items[0]&&items[0].date)||'', headshot:headshotUrl(c.headshot), hub:hubUrl(c),
-        counts:['reel','photo','headshot','listing'].reduce(function(m,k){ m[k]=items.filter(function(i){ return i.kind===k; }).length; return m; },{})};
+        company:companyOf(c),
+        counts:['reel','photo','headshot','listing'].reduce(function(m,k){ m[k]=items.filter(function(i){ return matchFilter(i,k); }).length; return m; },{})};
     }).filter(function(a){ return a.items.length>0 || a.orders.length>0; });
     agents.sort(function(a,b){ return String(b.last).localeCompare(String(a.last)); });
     return agents;
@@ -282,7 +298,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   function paintThumb(el,it){
     thumbFor(it).then(function(files){
       if(!files.length) return;
-      var f=files.find(function(x){ return !x.v; })||files[0];
+      var f=(it.kind==='reel'?files.find(function(x){ return x.v; }):files.find(function(x){ return !x.v; }))||files[0];
       el.style.backgroundImage='url("'+thumbUrl(f.id,480)+'")';
       var ph=el.querySelector('.ph'); if(ph) ph.remove();
       if(f.v && !el.querySelector('.play')){ var p=document.createElement('span'); p.className='play'; p.textContent='▶'; el.appendChild(p); }
@@ -294,7 +310,9 @@ button{font:inherit;color:inherit;cursor:pointer}
     app.querySelectorAll('.tile[data-exp]').forEach(function(tile){
       var it=map[tile.getAttribute('data-exp')]; if(!it) return;
       thumbFor(it).then(function(files){
-        if(files.length<2 || !tile.parentNode) return;
+        if(!tile.parentNode) return;
+        files=files.filter(function(f){ return fileOk(f,state.filter); });
+        if(!files.length){ if(state.filter!=='all') tile.remove(); return; }
         var frag=document.createDocumentFragment();
         files.forEach(function(f,ix){
           var t=document.createElement('div'); t.className='tile '+(f.v?'v':''); t.setAttribute('data-open',it.id); t.setAttribute('data-fi',String(ix));
@@ -309,6 +327,12 @@ button{font:inherit;color:inherit;cursor:pointer}
   /* ---------------- rendering ---------------- */
   var agents=[];
   function cur(){ return agents.find(function(a){ return a.id===state.agent; })||null; }
+  function groupBy(list){
+    var m={}, out=[];
+    list.forEach(function(a){ var k=a.company; if(!m[k]){ m[k]={name:k,list:[],pieces:0}; out.push(m[k]); } m[k].list.push(a); m[k].pieces+=a.items.length; });
+    out.sort(function(x,y){ return y.pieces-x.pieces || x.name.localeCompare(y.name); });
+    return out;
+  }
   function avHTML(a,cls){ return '<div class="av '+(cls||'')+'" style="'+(a.headshot?'background-image:url(\''+esc(a.headshot)+'\')':'')+'">'+(a.headshot?'':esc(initials(a.name)))+'</div>'; }
   function match(a){ var q=state.q.trim().toLowerCase(); if(!q) return true; return (a.name+' '+a.title+' '+a.orders.map(function(o){ return o.project; }).join(' ')).toLowerCase().indexOf(q)>-1; }
   function actsHTML(it,a){
@@ -337,12 +361,15 @@ button{font:inherit;color:inherit;cursor:pointer}
     if(!a){
       var list=agents.filter(match);
       if(!list.length) return '<div class="empty"><b>Nothing here yet</b>Agents appear once they have an order in the Command Centre.</div>';
-      return '<div class="agrid">'+list.map(function(x,i){
-        return '<div class="acard" data-agent="'+esc(x.id)+'" style="animation-delay:'+(i*40)+'ms">'+(x.last?'<span class="last">'+esc(fmtDate(x.last))+'</span>':'')+avHTML(x)+'<h3>'+esc(x.name)+'</h3><div class="t">'+esc(x.title)+'</div>'+
-          '<div class="n"><div><b>'+x.items.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+(x.counts.photo+x.counts.listing+x.counts.headshot)+'</b>photo sets</div></div></div>';
-      }).join('')+'</div>';
+      return groupBy(list).map(function(g){
+        return '<div class="co"><h2>'+esc(g.name)+'</h2><span>'+g.list.length+' agent'+(g.list.length!==1?'s':'')+' · '+g.pieces+' pieces</span></div>'+
+          '<div class="agrid">'+g.list.map(function(x,i){
+            return '<div class="acard" data-agent="'+esc(x.id)+'" style="animation-delay:'+(i*40)+'ms">'+(x.last?'<span class="last">'+esc(fmtDate(x.last))+'</span>':'')+avHTML(x)+'<h3>'+esc(x.name)+'</h3><div class="t">'+esc(x.title)+'</div>'+
+              '<div class="n"><div><b>'+x.items.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+(x.counts.photo+x.counts.listing+x.counts.headshot)+'</b>photo sets</div></div></div>';
+          }).join('')+'</div>';
+      }).join('');
     }
-    var items=a.items.filter(function(i){ return (state.filter==='all'||i.kind===state.filter)&&(!state.project||i.project===state.project); });
+    var items=a.items.filter(function(i){ return matchFilter(i,state.filter)&&(!state.project||i.project===state.project); });
     var projects=[]; a.items.forEach(function(i){ if(i.project&&projects.indexOf(i.project)<0) projects.push(i.project); });
     return '<button class="back" data-back>← All agents</button>'+
       '<div class="wallhead">'+avHTML(a)+'<div><h2>'+esc(a.name)+'</h2><p>'+esc(a.title)+(a.first?' · with us since '+esc(fmtDate(a.first)):'')+'</p></div></div>'+
@@ -355,7 +382,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   /* --- CABINET --- */
   function cabinetHTML(){
     var list=agents.filter(match); var a=cur()||list[0]; if(a&&!state.agent) state.agent=a.id;
-    var left='<div class="drawer"><div class="hd">Agents · '+list.length+'</div>'+list.map(function(x){ return '<div class="ag '+(a&&x.id===a.id?'on':'')+'" data-agent="'+esc(x.id)+'">'+avHTML(x)+'<div><b>'+esc(x.name)+'</b><span>'+esc(x.title||'—')+(x.last?' · '+esc(fmtDate(x.last)):'')+'</span></div><span class="k">'+x.items.length+'</span></div>'; }).join('')+'</div>';
+    var left='<div class="drawer">'+groupBy(list).map(function(g){ return '<div class="hd">'+esc(g.name)+' · '+g.list.length+'</div>'+g.list.map(function(x){ return '<div class="ag '+(a&&x.id===a.id?'on':'')+'" data-agent="'+esc(x.id)+'">'+avHTML(x)+'<div><b>'+esc(x.name)+'</b><span>'+esc(x.title||'—')+(x.last?' · '+esc(fmtDate(x.last)):'')+'</span></div><span class="k">'+x.items.length+'</span></div>'; }).join(''); }).join('')+'</div>';
     var right;
     if(!a) right='<div class="empty"><b>Pick an agent</b></div>';
     else{
@@ -375,7 +402,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   /* --- DOSSIER --- */
   function dossierHTML(){
     var list=agents.filter(match); var a=cur()||list[0]; if(a&&!state.agent) state.agent=a.id;
-    var rail='<div class="rail">'+list.map(function(x){ return '<button class="'+(a&&x.id===a.id?'on':'')+'" data-agent="'+esc(x.id)+'">'+avHTML(x)+esc(x.name)+'</button>'; }).join('')+'</div>';
+    var rail='<div class="rail">'+groupBy(list).map(function(g){ return '<span class="rl">'+esc(g.name)+'</span>'+g.list.map(function(x){ return '<button class="'+(a&&x.id===a.id?'on':'')+'" data-agent="'+esc(x.id)+'">'+avHTML(x)+esc(x.name)+'</button>'; }).join(''); }).join('')+'</div>';
     if(!a) return rail+'<div class="empty"><b>Pick an agent</b></div>';
     var months=a.first?Math.max(1,Math.round((Date.now()-new Date(a.first+'T12:00'))/2628000000)):0;
     var shoots=a.items.map(function(i){ return i.d.shootDate; }).filter(function(x,i,arr){ return x&&arr.indexOf(x)===i; }).length;
