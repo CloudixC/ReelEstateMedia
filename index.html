@@ -751,6 +751,7 @@ const addBusinessDays = (ds, n) => {
 let TAT = {photo: 3, video: 5};   // delivery promise, in days after the shoot — set from Settings (⏱ button on the Pipeline)
 function dueDatesOf(d){
   if(!d.shootDate) return [];
+  if(d.status === 'Booked') return []; // "To Schedule" — nothing shot yet, so no delivery promise
   const m = mediaOf(d);
   if(m === 'photo') return [{date: addDays(d.shootDate, TAT.photo), kind: 'photo'}];
   if(m === 'video') return [{date: addDays(d.shootDate, TAT.video), kind: 'video'}];
@@ -2812,7 +2813,7 @@ function WeatherBoard({db, updateSettings}){
   const homeBase = db.settings.homeBase || 'Oakville';
   const td = today();
   const shootLocs = [...new Set(db.deliverables
-    .filter(d => d.shootDate === td && d.status !== 'Delivered')
+    .filter(d => d.shootDate === td && d.status !== 'Delivered' && d.status !== 'Booked')
     .map(d => (getBrief(d).location || '').trim()).filter(Boolean))].slice(0, 2);
 
   const geocode = async (q) => {
@@ -2895,7 +2896,7 @@ function WeatherBoard({db, updateSettings}){
         }
       }
       // attach today's shoots to the card of their location, else to home
-      db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered').forEach(d => {
+      db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered' && d.status !== 'Booked').forEach(d => {
         const loc = (getBrief(d).location || '').trim();
         const label = loc && locToLabel[loc];
         const card = cards.find(c => c.label === label) || cards.find(c => c.home) || cards[0];
@@ -3195,7 +3196,7 @@ const shortDate = ds => new Date(ds + 'T12:00').toLocaleDateString('en-CA', {mon
 
 function DigestStrip({db}){
   const td = today();
-  const shoots = db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered');
+  const shoots = db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered' && d.status !== 'Booked');
   const first = shoots.map(d => d.shootTime).filter(Boolean).sort()[0];
   const dueToday = db.deliverables.filter(d => !promiseMet(d) && dueDatesOf(d).some(x => x.date === td));
   const waiting = db.deliverables.filter(d => d.status === 'Booked').length;
@@ -3231,7 +3232,7 @@ function WeekStrip({db, goCalendar}){
     <div style={{marginTop:11}}>
       <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:6}}>
         {days.map((ds, i) => {
-          const shoots = db.deliverables.filter(d => d.shootDate === ds && d.status !== 'Delivered').length;
+          const shoots = db.deliverables.filter(d => d.shootDate === ds && d.status !== 'Delivered' && d.status !== 'Booked').length;
           const dues = db.deliverables.filter(d => !promiseMet(d) && dueDatesOf(d).some(x => x.date === ds)).length;
           const wcode = wx && wx.time ? wx.weathercode[wx.time.indexOf(ds)] : null;
           return (
@@ -3261,7 +3262,7 @@ function ActionQueue({db, openOrderDetail, goCalendar, updateOrder}){
     const late = dayDiff(dueDateOf(d), td);
     items.push({pri: 0, icon: '🔴', txt: `${dlTitle(d)} is ${late}d late`, btn: 'Open →', act: () => openOrderDetail(d.orderId, d.id)});
   });
-  db.deliverables.filter(d => d.shootDate && d.shootDate >= td && d.shootDate <= addDays(td, 1) &&
+  db.deliverables.filter(d => d.status !== 'Booked' && d.shootDate && d.shootDate >= td && d.shootDate <= addDays(td, 1) &&
     ['Booked','Scheduled'].includes(d.status) && !(getBrief(d).topic || '').trim()).forEach(d => {
     const c = clOf(d), o = ordOf(d);
     items.push({pri: 1, icon: '📝', txt: `${dlTitle(d)} shoots ${d.shootDate === td ? 'today' : 'tomorrow'} — no brief yet`,
@@ -3372,7 +3373,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
   const in48 = addDays(td, 2);
-  const todaysShoots = db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered');
+  const todaysShoots = db.deliverables.filter(d => d.shootDate === td && d.status !== 'Delivered' && d.status !== 'Booked');
   const dueSoon = db.deliverables
     .flatMap(d => promiseMet(d) ? [] : dueDatesOf(d).map(x => ({d, date: x.date, kind: x.kind})))
     .filter(x => x.date <= in48)
@@ -3478,7 +3479,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
     <div className="grid-stats">
       <div className="stat"><div className="n">{stats.active}</div><div className="l">Active Orders</div></div>
       <div className="stat"><div className="n">{stats.remaining}</div><div className="l">Deliverables Remaining</div></div>
-      <div className="stat"><div className="n">{db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered').length}</div><div className="l">Shoots Scheduled</div></div>
+      <div className="stat"><div className="n">{db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered' && d.status !== 'Booked').length}</div><div className="l">Shoots Scheduled</div></div>
     </div>
 
     <Collapse title="Active Orders" count={activeOrders.length} defaultOpen={true}>
@@ -4216,10 +4217,13 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
         <button className="btn ghost sm" title="Rename this deliverable" style={{padding:'0 7px', marginLeft:6, fontSize:12}}
           onClick={() => { const n = prompt('Rename this deliverable', d.name); if(n !== null && n.trim() && n.trim() !== d.name) updateDeliverable(d.id, {name: n.trim()}); }}>✎</button>
       </span>
-      <select value={d.status} onChange={e => updateDeliverable(d.id, {status: e.target.value})}>
+      <select value={d.status} onChange={e => updateDeliverable(d.id, e.target.value === 'Booked' ? {status: 'Booked', shootDate: '', shootTime: ''} : {status: e.target.value})}>
         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL(s)}</option>)}
       </select>
-      <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
+      <span style={{display:'inline-flex', alignItems:'center', gap:4}}>
+        <input type="date" value={d.shootDate} onChange={e => updateDeliverable(d.id, {shootDate: e.target.value})}/>
+        {d.shootDate && <button className="arrow" title="Clear the date — not shot yet" onClick={() => updateDeliverable(d.id, {shootDate: '', shootTime: '', shootEnd: ''})}>✕</button>}
+      </span>
       <span className="dl-meta">
       <span className="dl-pills">
         {(() => { const lk = d.briefLock || 'auto'; const locked = lk === 'locked' || (lk !== 'open' && STATUSES.indexOf(d.status) >= 2);
@@ -5113,7 +5117,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
   };
   const icsEsc = s => String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
   const exportIcs = () => {
-    const evs = db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered')
+    const evs = db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered' && d.status !== 'Booked')
       .sort((a, b) => a.shootDate.localeCompare(b.shootDate));
     if(evs.length === 0){ alert('No upcoming shoots to export.'); return; }
     const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Pipeline//EN'];
@@ -5170,7 +5174,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
   const key = d => d.toLocaleDateString('en-CA');
   const td = today();
 
-  const shootsOn = ds => db.deliverables.filter(d => d.shootDate === ds);
+  const shootsOn = ds => db.deliverables.filter(d => d.shootDate === ds && d.status !== 'Booked');
   const duesOn = ds => db.deliverables.flatMap(d => promiseMet(d) ? [] : dueDatesOf(d).filter(x => x.date === ds).map(x => ({d, kind: x.kind})));
 
   return (<>
@@ -5876,7 +5880,7 @@ function DocModal({doc, db, onClose, updateSettings}){
   const clientOf = cid => db.clients.find(c => c.id === cid) || {};
 
   if(doc.kind === 'runsheet'){
-    const shoots = db.deliverables.filter(d => d.shootDate === doc.date).sort((a,b) => (a.shootTime || '99:99').localeCompare(b.shootTime || '99:99'));
+    const shoots = db.deliverables.filter(d => d.shootDate === doc.date && d.status !== 'Booked').sort((a,b) => (a.shootTime || '99:99').localeCompare(b.shootTime || '99:99'));
     return (
     <div className="overlay printwrap" onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{width:'100%', maxWidth:800}}>
@@ -6053,6 +6057,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-2</div>
 </body>
 </html>
