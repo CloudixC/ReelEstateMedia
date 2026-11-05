@@ -939,13 +939,13 @@ function newBrief(name, group){
   b.orientation = isVideoDl(d) ? inferOrient(name + ' ' + group) : '';
   return b;
 }
-function spawnDeliverables(order){
+function spawnDeliverables(order, from){
   const out = [];
   order.items.forEach(item => {
     const s = svc(item.serviceId);
     if(s && s.credits === 0) return;   // billing-only line (e.g. extra event hours) — no deliverables
-    for(let q=0; q<item.qty; q++){
-      const qTag = item.qty > 1 ? ` (#${q+1})` : '';
+    for(let q=(from || 0); q<item.qty; q++){
+      const qTag = (item.qty > 1 || from) ? ` (#${q+1})` : '';
       if(s && s.components){
         s.components.forEach(c => out.push({id:uid(), orderId:order.id, name:`${c}${qTag}`, group:s.name, status:'Booked', shootDate:'', link:'', notes:'', mediaType: inferMedia(c + ' ' + s.name), brief:newBrief(c, s.name)}));
       } else if(s && s.credits > 1){
@@ -1942,9 +1942,55 @@ function App(){
       orders: p.orders.map(x => x.id === orderId ? {...x, items: [...x.items.slice(0,ix), item, ...x.items.slice(ix)]} : x),
       deliverables: [...p.deliverables, ...ds]}))}]);
   };
-  const updateOrderItem = (orderId, ix, patch) => setDb(p => ({...p,
-    orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...patch} : it)} : x)}));
+  const updateOrderItem = (orderId, ix, patch) => {
+    // 🔢 quantity drives the deliverables: more → spawn the extra sets; fewer → drop unstarted sets from the end
+    const o = db.orders.find(x => x.id === orderId); const item = o && o.items[ix];
+    if(item && patch.qty !== undefined && +patch.qty !== +item.qty && +patch.qty >= 1){
+      const s = svc(item.serviceId); const newQty = +patch.qty, oldQty = +item.qty || 1;
+      const groupName = s ? s.name : item.name;
+      const perSet = s ? (s.credits === 0 ? 0 : (s.components ? s.components.length : Math.max(1, s.credits || 1))) : 1;
+      if(perSet > 0 && newQty > oldQty){
+        const ds = spawnDeliverables({id: orderId, items: [{...item, qty: newQty}]}, oldQty);
+        setDb(p => ({...p,
+          orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...patch} : it)} : x),
+          deliverables: [...p.deliverables, ...ds]}));
+        showToast(`+ ${ds.length} deliverable${ds.length !== 1 ? 's' : ''} added for ${groupName}`);
+        return;
+      }
+      if(perSet > 0 && newQty < oldQty){
+        const want = (oldQty - newQty) * perSet;
+        const mine = db.deliverables.filter(d => d.orderId === orderId && d.group === groupName);
+        const spare = mine.filter(d => d.status === 'Booked' && !d.link && !d.dlvFolder).slice(-want);
+        const ids = new Set(spare.map(d => d.id));
+        setDb(p => ({...p,
+          orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...patch} : it)} : x),
+          deliverables: p.deliverables.filter(d => !ids.has(d.id))}));
+        showToast(spare.length ? `− ${spare.length} unstarted deliverable${spare.length !== 1 ? 's' : ''} removed` : 'Quantity updated — started deliverables were kept');
+        return;
+      }
+    }
+    setDb(p => ({...p,
+      orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...patch} : it)} : x)}));
+  };
 
+  // ⟳ one-tap fix for orders whose quantities were raised before quantity drove deliverables
+  const reconcileOrder = (orderId) => {
+    const o = db.orders.find(x => x.id === orderId); if(!o) return;
+    let added = [];
+    o.items.forEach(item => {
+      const s = svc(item.serviceId); if(s && s.credits === 0) return;
+      const groupName = s ? s.name : item.name;
+      const perSet = s ? (s.components ? s.components.length : Math.max(1, s.credits || 1)) : 1;
+      const have = db.deliverables.filter(d => d.orderId === orderId && d.group === groupName).length;
+      const haveSets = Math.ceil(have / perSet);   // a partial set counts as started — never duplicate it
+      const qty = Math.max(1, +item.qty || 1);
+      if(haveSets < qty) added = added.concat(spawnDeliverables({id: orderId, items: [{...item, qty}]}, haveSets));
+    });
+    if(!added.length){ showToast('Deliverables already match the quantities'); return; }
+    setDb(p => ({...p, deliverables: [...p.deliverables, ...added]}));
+    logActivity(`Matched deliverables to quantities on ${o.project || 'order'} (+${added.length})`);
+    showToast(`+ ${added.length} deliverable${added.length !== 1 ? 's' : ''} added to match the quantities`);
+  };
   const rebookOrder = (id) => {
     const o = db.orders.find(x => x.id === id); if(!o) return;
     const project = prompt('Project / property for the new booking:', o.project || '');
@@ -2606,7 +2652,7 @@ function App(){
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom === 'chat'){ setCameFrom(null); if(history.length > 1) history.back(); else window.location.assign('studio-chat.html'); return; } if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({chat:'Chat', dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom === 'chat'){ setCameFrom(null); if(history.length > 1) history.back(); else window.location.assign('studio-chat.html'); return; } if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({chat:'Chat', dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} reconcileOrder={reconcileOrder} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={openOrderDetail} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -3956,7 +4002,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, backLabel, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, backLabel, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, reconcileOrder, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -4029,6 +4075,10 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
                 <option key={s.id} value={s.id}>{s.name} — {s.tbd ? 'TBD' : money(rateFor(clientTier(o.clientId), s))}</option>)}
             </optgroup>))}
         </select>
+        {(() => {
+          const short = o.items.reduce((n, item) => { const s = svc(item.serviceId); if(s && s.credits === 0) return n; const g = s ? s.name : item.name; const per = s ? (s.components ? s.components.length : Math.max(1, s.credits || 1)) : 1; const have = db.deliverables.filter(d => d.orderId === id && d.group === g).length; return n + Math.max(0, Math.max(1, +item.qty || 1) * per - have); }, 0);
+          return short > 0 ? <button className="btn sm" style={{marginTop:6, marginRight:6}} title="The quantities above call for more deliverables than this order has — add the missing ones" onClick={() => reconcileOrder(id)}>⟳ Add {short} missing deliverable{short !== 1 ? 's' : ''} to match quantities</button> : null;
+        })()}
         {o.items.some(i => i.serviceId === 'evt' || /event/i.test(i.name)) &&
           <button className="btn ghost sm" style={{marginTop:6}} title="Event coverage includes 2 hours — each extra hour bills $150 on this order (no deliverables spawned). Tap again for +2, +3…"
             onClick={() => {
@@ -4036,7 +4086,7 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
               if(hx > -1){ updateOrderItem(id, hx, {qty: o.items[hx].qty + 1}); showToast('⏱ ' + (o.items[hx].qty + 1) + ' extra hours on this event — ' + money((o.items[hx].qty + 1) * o.items[hx].price) + ' added to billing'); }
               else { addOrderItem(id, 'evhr'); }
             }}>⏱ ＋1 extra hour · $150</button>}
-        <p className="small faint" style={{marginTop:6}}>Adding a service spawns its deliverables · removing one deletes them (with Undo) · qty and price changes affect billing only.</p>
+        <p className="small faint" style={{marginTop:6}}>Adding a service spawns its deliverables · removing one deletes them (with Undo) · raising the quantity adds the extra sets, lowering it removes unstarted ones · price changes affect billing only.</p>
       </div>
 
       <div className="totalbar">
@@ -5955,7 +6005,7 @@ function DocModal({doc, db, onClose, updateSettings}){
     docDate = fmtDate(o.date);
     billTo = [c.name, companyOf(c) !== 'Independent / Direct' && companyOf(c) !== c.name ? companyOf(c) : '', c.contact].filter(Boolean);
     subtitle = o.project ? 'Re: ' + o.project : '';
-    lines = o.items.map(i => ({l: i.name, q: i.qty, r: money(i.price * i.qty)}));
+    lines = o.items.map(i => ({l: i.name, q: i.qty, u: money(i.price), r: money(i.price * i.qty)}));
     const t = orderTotals(o); sub = t.sub; tax = t.tax; total = t.total;
     isPaid = o.payment === 'paid';
   } else {
@@ -6003,9 +6053,9 @@ function DocModal({doc, db, onClose, updateSettings}){
         {subtitle && <div className="small" style={{color:'#5a5c63', marginTop:4}}>{subtitle}</div>}
 
         <table style={{marginTop:22}}>
-          <thead><tr><th>{doc.kind === 'order' ? 'Service' : 'Order'}</th><th style={{width:100}}>{doc.kind === 'order' ? 'Qty' : 'Date'}</th><th style={{width:120, textAlign:'right'}}>Amount</th></tr></thead>
+          <thead><tr><th>{doc.kind === 'order' ? 'Service' : 'Order'}</th><th style={{width:80}}>{doc.kind === 'order' ? 'Qty' : 'Date'}</th>{doc.kind === 'order' && <th style={{width:110, textAlign:'right'}}>Unit price</th>}<th style={{width:120, textAlign:'right'}}>Amount</th></tr></thead>
           <tbody>
-            {lines.map((ln,i) => <tr key={i}><td>{ln.l}</td><td className="muted">{ln.q}</td><td style={{textAlign:'right'}}>{ln.r}</td></tr>)}
+            {lines.map((ln,i) => <tr key={i}><td>{ln.l}</td><td className="muted">{ln.q}</td>{doc.kind === 'order' && <td className="muted" style={{textAlign:'right'}}>{ln.u}</td>}<td style={{textAlign:'right'}}>{ln.r}</td></tr>)}
           </tbody>
         </table>
 
@@ -6061,6 +6111,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.05-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.05-3</div>
 </body>
 </html>
