@@ -199,7 +199,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.04-3</div>
+<div id="verstamp" title="App version">VAULT v2026.11.05-1</div>
 <script>
 (function(){
   'use strict';
@@ -327,7 +327,7 @@ button{font:inherit;color:inherit;cursor:pointer}
         if(!files.length){ if(state.filter!=='all') tile.remove(); return; }
         var frag=document.createDocumentFragment();
         files.forEach(function(f,ix){
-          var t=document.createElement('div'); t.className='tile '+(f.v?'v':''); t.setAttribute('data-open',it.id); t.setAttribute('data-fi',String(ix));
+          var t=document.createElement('div'); t.className='tile '+(f.v?'v':''); t.setAttribute('data-open',it.id); t.setAttribute('data-fi',String(ix)); t.setAttribute('data-fid',f.id);
           t.innerHTML='<div class="thumb" style="background-image:url(\''+thumbUrl(f.id,480)+'\')">'+(f.v?'<span class="play">▶</span>':'')+'</div><div class="cap">'+esc(it.title)+'<small>'+esc(f.name)+' · '+esc(fmtDate(it.date))+'</small></div>';
           frag.appendChild(t);
         });
@@ -462,8 +462,10 @@ button{font:inherit;color:inherit;cursor:pointer}
   function fillLb(){
     var it=state.lb; var st=document.getElementById('lbst'); if(!it||!st) return;
     thumbFor(it).then(function(files){
+      if(state.view==='wall' && state.filter!=='all'){ var ff=files.filter(function(f){ return fileOk(f,state.filter); }); if(ff.length) files=ff; }
       if(!files.length){ st.innerHTML='<div class="empty"><b>No preview</b>'+(it.links.drive?'Open the Drive folder to see the files.':'No link on this deliverable yet.')+'</div>'; return; }
-      var i=Math.min(state.lbi||0, files.length-1); var render=function(){ var f=files[i]; st.innerHTML=(f.v?'<div class="empty"><b>🎬 '+esc(f.name)+'</b>Video — open in Drive to play.</div>':'<img src="'+thumbUrl(f.id,1600)+'" alt="">')+(files.length>1?'<div style="margin-top:10px;display:flex;gap:8px;align-items:center;color:var(--ink3);font-size:12px"><button class="act" data-prev>‹</button>'+(i+1)+' / '+files.length+'<button class="act" data-next>›</button></div>':''); };
+      var i=files.findIndex(function(f){ return f.id===state.lbFid; }); if(i<0) i=Math.min(state.lbi||0, files.length-1);
+      var render=function(){ var f=files[i]; st.innerHTML=(f.v?'<div class="empty"><b>🎬 '+esc(f.name)+'</b>Video — open in Drive to play.</div>':'<img src="'+thumbUrl(f.id,1600)+'" alt="">')+(files.length>1?'<div style="margin-top:10px;display:flex;gap:8px;align-items:center;color:var(--ink3);font-size:12px"><button class="act" data-prev>‹</button>'+(i+1)+' / '+files.length+'<button class="act" data-next>›</button></div>':''); };
       render();
       st.onclick=function(e){ if(e.target.closest('[data-prev]')){ i=(i-1+files.length)%files.length; render(); } else if(e.target.closest('[data-next]')){ i=(i+1)%files.length; render(); } };
     });
@@ -490,7 +492,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     var pc=t.closest('[data-pcat]'); if(pc){ state.pcat=pc.getAttribute('data-pcat'); render(); return; }
     var cp=t.closest('[data-copy]'); if(cp){ copy(cp.getAttribute('data-copy')); return; }
     if(t.closest('[data-lbx]')||(t.id==='lb')){ state.lb=null; render(); return; }
-    var op=t.closest('[data-open]'); if(op){ var id=op.getAttribute('data-open'); state.lbi=+(op.getAttribute('data-fi')||0); agents.some(function(a){ var it=a.items.find(function(i){ return i.id===id; }); if(it){ state.lb=Object.assign({a:a},it); return true; } }); render(); return; }
+    var op=t.closest('[data-open]'); if(op){ var id=op.getAttribute('data-open'); state.lbi=+(op.getAttribute('data-fi')||0); state.lbFid=op.getAttribute('data-fid')||''; agents.some(function(a){ var it=a.items.find(function(i){ return i.id===id; }); if(it){ state.lb=Object.assign({a:a},it); return true; } }); render(); return; }
   });
   document.addEventListener('keydown', function(e){
     if(!state.lb) return;
