@@ -1879,6 +1879,8 @@ function App(){
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(myTotal * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
+            // 🗄 vault: the delivery's Drive folder id, so the agent's read-only vault can list the files
+            ...((() => { const m = String(d.dlvFolderUrl || d.link || '').match(/\/(?:folders|file\/d)\/([-\w]{20,})/); return m ? {fo: m[1]} : {}; })()),
             ...(d.thumb ? {th: (/drive\.google|docs\.google/.test(String(d.thumb)) ? ((String(d.thumb).match(/[-\w]{25,}/) || [''])[0] || String(d.thumb)) : String(d.thumb))} : {}),
             br: br, lk: brLocked ? 1 : 0,
             ...(d.status === 'Delivered' ? {
@@ -1895,7 +1897,8 @@ function App(){
       const manifest = JSON.stringify({agent: (c.name || '').split(' ')[0], brokerage: co === 'Independent / Direct' ? '' : co, t: pin ? 'pin' : 'rem', email: c.email || c.contact || '', projects,
         pay: db.settings.payUrl || '', svc: svcMenu,
         // 🏡 listing-page profile — the listing builder reads these to fill the agent section
-        an: c.name || '', at: c.agentTitle || '', hd: c.headshot || '', web: c.website || '', lic: c.licenseNo || '', abio: c.bioText || '', ph: c.phone || ''});
+        an: c.name || '', at: c.agentTitle || '', hd: c.headshot || '', web: c.website || '', lic: c.licenseNo || '', abio: c.bioText || '', ph: c.phone || '',
+        ...(db.settings.driveApiKey ? {k: db.settings.driveApiKey} : {})});
       fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'hub', ref: hk, project: c.name, who: 'app', body: manifest})}).catch(() => {});
       // 🤝 keep co-agents on this client's shared shoots in sync too (skipCo guards against recursion)
       if(!skipCo){ const cos = [...new Set(db.orders.filter(o => o.clientId === clientId && o.coAgentId).map(o => o.coAgentId))];
@@ -6058,6 +6061,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.04-4</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.05-1</div>
 </body>
 </html>
