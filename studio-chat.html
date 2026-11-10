@@ -501,6 +501,19 @@
       firstBuild = false;
       agents.forEach(ag => expanded.add('b:' + brokerageName(ag)));
       groupConvos.forEach(c => expanded.add('g:' + c.gid));
+      // 🔗 deep link from the Command Centre: ?c=<hub key>&p=<project label> opens that thread
+      try {
+        const qp = new URLSearchParams(location.search);
+        const ck = qp.get('c'), cp = qp.get('p') || '';
+        if (ck){
+          const ag = agents.find(a => a.key === ck);
+          if (ag){
+            const want = cp ? ag.convos.find(c => c.label === cp) : null;
+            const pick = want || ag.convos.find(c => c.kind === 'direct') || ag.convos[0];
+            if (pick){ activeId = pick.id; expanded.add('a:' + ag.key); expanded.add('b:' + brokerageName(ag)); }
+          }
+        }
+      } catch(e){}
     }
     if (!convoById(activeId)){
       const first = agents[0] && agents[0].convos[0];

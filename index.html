@@ -1145,7 +1145,25 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id) &&
-    !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0)).reverse();
+    !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0) &&
+    // 📤 our own outbound traffic (replies, automated nudges, app pushes) isn't a client submission
+    !(s.kind === 'msg' && (s.from === 'jag' || s.from === 'app' || s.from === 'script' || s.who === 'Reel Estate Media'))).reverse();
+  // 🔗 what does a submission point at? a deliverable (ref = deliverable id), or an agent's hub
+  // thread (ref = hub key) — and from the "Agent — Title" label, the deliverable it talks about.
+  const linkSub = (s) => {
+    const dl = s.ref ? db.deliverables.find(x => x.id === s.ref) : null;
+    const order = dl ? db.orders.find(o => o.id === dl.orderId) : null;
+    let client = order ? db.clients.find(c => c.id === order.clientId) : null;
+    if(!client && s.ref) client = db.clients.find(c => (c.hubKey || c.hubId) === s.ref) || null;
+    let dl2 = dl;
+    if(!dl2 && client){
+      const t = String(s.project || '').split(' — ').slice(1).join(' — ').trim();
+      if(t) dl2 = db.deliverables.find(d => { const o = db.orders.find(x => x.id === d.orderId); return o && (o.clientId === client.id || o.coAgentId === client.id) && (dlTitle(d) === t || d.name === t || shootType(d) === t || (o.project || '') === t); }) || null;
+    }
+    const key = client ? (client.hubKey || client.hubId || '') : '';
+    const chat = key ? 'studio-chat.html?c=' + encodeURIComponent(key) + (s.kind === 'msg' && s.project && s.ref === key ? '&p=' + encodeURIComponent(s.project) : '') : '';
+    return {dl: dl2, client, chat};
+  };
   const testis = subs.filter(s => s.kind === 'testimonial').reverse();
   const wallState = {};
   subs.forEach(s => { if(s.kind === 'wall'){ try{ wallState[s.ref] = !!JSON.parse(s.body).on; }catch(e){} } });
@@ -1194,10 +1212,11 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button></div>
       {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
       {fresh.map(s => {
-        const dl = s.ref ? db.deliverables.find(x => x.id === s.ref) : null;
+        const lk = linkSub(s); const dl = lk.dl;
+        const go = () => { if(dl) openOrderDetail(dl.orderId, dl.id); else if(lk.chat) window.open(lk.chat, '_blank'); };
         return (
         <div key={s.id} className="trow" style={{paddingTop:10}}>
-          <div className="flex">
+          <div className="flex" style={{cursor: (dl || lk.chat) ? 'pointer' : 'default'}} title={dl ? 'Open the deliverable' : lk.chat ? 'Open this conversation in Studio Chat' : ''} onClick={go}>
             <span className={'pill ' + (s.kind === 'brief' ? 'scheduled' : s.kind === 'msg' ? 'delivered' : s.kind === 'rating' ? 'editing' : 'client-review')}>{s.kind === 'brief' ? '📝 Brief' : s.kind === 'msg' ? '💬 Message' : s.kind === 'testimonial' ? '⭐ Testimonial' : s.kind === 'brand' ? '🎨 Brand kit' : s.kind === 'perf' ? '📊 Performance' : s.kind === 'rating' ? (String(s.dname || '').split(':')[0] === 'edit' ? '✂ Edit rating' : '🎥 Shoot rating') : '💬 Feedback'}</span>
             <span style={{fontWeight:700}}>{s.project}{s.dname && s.dname !== s.project ? ' — ' + s.dname : ''}</span>
             <span className="faint small">{s.who}{s.ts ? ' · ' + new Date(s.ts).toLocaleString('en-CA', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : ''}</span>
@@ -1228,7 +1247,8 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
               }}>✓ Save to deliverable notes</button>}
             {s.kind === 'rating' && (+String(s.dname || '').split(':')[1] >= 4) && (s.body || '').trim() &&
               <button className={'btn sm' + (wallState[s.id] ? '' : ' ghost')} title="Put this comment on your public testimonial wall (wall.html)" onClick={() => toggleWall(s)}>{wallState[s.id] ? '🌟 On the wall · remove' : '🌟 Use as testimonial'}</button>}
-            {dl && <button className="btn ghost sm" onClick={() => openOrderDetail(dl.orderId, dl.id)}>Open →</button>}
+            {dl && <button className="btn ghost sm" onClick={() => openOrderDetail(dl.orderId, dl.id)}>📦 Open deliverable →</button>}
+            {lk.chat && <button className="btn ghost sm" title={'Open ' + ((lk.client && lk.client.name) || 'this agent') + '’s thread in Studio Chat'} onClick={() => window.open(lk.chat, '_blank')}>💬 Chat</button>}
             <CopyBtn text={s.body} label="📋 Copy"/>
             <button className="btn ghost sm" onClick={() => markHandled(s.id)}>✕ Done</button>
           </div>
@@ -6140,6 +6160,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.07-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.10-1</div>
 </body>
 </html>
