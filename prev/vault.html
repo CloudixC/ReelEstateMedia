@@ -331,7 +331,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.15-3</div>
+<div id="verstamp" title="App version">VAULT v2026.11.16-1</div>
 <script>
 (function(){
   'use strict';
@@ -876,6 +876,19 @@ body.selmode .tile .ck{display:grid}
     fetch(ENDPOINT+'?hub='+encodeURIComponent(key)).then(function(r){ return r.json(); }).then(function(j){
       var m=j&&j.hub; if(typeof m==='string'){ try{ m=JSON.parse(m); }catch(e){ m=null; } }
       if(!m){ app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Vault not found</h1><p>This link doesn\u2019t match an agent hub. Ask Reel Estate Media for a fresh link.</p></div></div>'; return; }
+      // 🔐 same optional PIN as the hub (one entry unlocks both on this device)
+      var want=String(m.pn||''), PK='rem_hub_pinok_v1:'+key, okPin=''; try{ okPin=localStorage.getItem(PK)||''; }catch(eP){}
+      if(want && okPin!==want && window.crypto && crypto.subtle && !window.__pinPassed){
+        app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Enter your PIN</h1><p>This library is private — once per device.</p><input id="vpin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off"><button id="vpingo">Open</button><p id="vpinmsg" style="min-height:1.3em"></p></div></div>';
+        var vin=document.getElementById('vpin'), vgo=document.getElementById('vpingo'), vmsg=document.getElementById('vpinmsg');
+        var tryPin=function(){ var v=String(vin.value||'').replace(/[^0-9]/g,''); if(!v) return;
+          crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem\u00B7rem-hub\u00B7'+key+'\u00B7'+v)).then(function(buf){
+            var hh=Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+            if(hh===want){ try{ localStorage.setItem(PK, want); }catch(eS){} window.__pinPassed=true; startAgent(); }
+            else { vmsg.textContent='That PIN doesn\u2019t match — try again.'; vin.value=''; vin.focus(); } }); };
+        vgo.onclick=tryPin; vin.onkeydown=function(ev){ if(ev.key==='Enter') tryPin(); }; setTimeout(function(){ try{ vin.focus(); }catch(eF2){} },50);
+        return null;
+      }
       DRIVE_KEY=m.k||'';
       var projs=(m.projects||[]).filter(function(p){ return p.dv; });
       // deliveries whose Drive folder isn't in the manifest yet: resolve it through the review link snapshot

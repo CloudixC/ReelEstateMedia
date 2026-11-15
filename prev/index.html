@@ -450,7 +450,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.15-3) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-1) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1744,6 +1744,35 @@ const itemPer = item => {
   const s = svc(item.serviceId);
   return s ? s.credits === 0 ? 0 : s.components ? s.components.length : Math.max(1, s.credits || 1) : Math.max(1, +item.per || 1);
 };
+const SBX_NAME = 'Test Agent (sandbox)';
+const isSbxClient = c => !!(c && c.sandbox);
+let _rdbIn = null,
+  _rdbOut = null;
+function realDb(db) {
+  if (db === _rdbIn) return _rdbOut;
+  const ids = new Set(db.clients.filter(isSbxClient).map(c => c.id));
+  let out = db;
+  if (ids.size) {
+    const oids = new Set(db.orders.filter(o => ids.has(o.clientId)).map(o => o.id));
+    out = {
+      ...db,
+      clients: db.clients.filter(c => !ids.has(c.id)),
+      orders: db.orders.filter(o => !oids.has(o.id)),
+      deliverables: db.deliverables.filter(d => !oids.has(d.orderId))
+    };
+  }
+  _rdbIn = db;
+  _rdbOut = out;
+  return out;
+}
+const sbxOrder = (db, order) => {
+  const c = db.clients.find(x => x.id === order.clientId);
+  return isSbxClient(c) && String(order.id).indexOf('tst') !== 0 ? {
+    ...order,
+    id: 'tst' + order.id
+  } : order;
+};
+const IS_BETA = !!window.__REM_BETA;
 function orderShortfall(db, o) {
   if (o.retainer || o.billingOnly) return [];
   const groups = {};
@@ -1834,6 +1863,9 @@ function spawnDeliverables(order, from) {
         });
       }
     }
+  });
+  if (String(order.id).indexOf('tst') === 0) out.forEach(d => {
+    d.id = 'tst' + d.id;
   });
   return out;
 }
@@ -2172,14 +2204,39 @@ function SubmissionsInbox({
   const [tk, setTk] = useState('');
   const [vaultOpen, setVaultOpen] = useState(false);
   const cfg = db.settings.inboxUrl && db.settings.inboxToken;
+  const rowsRef = React.useRef({
+    rows: [],
+    last: 0,
+    sig: ''
+  });
   const load = async () => {
     if (!cfg) return;
+    if (document.hidden && rowsRef.current.rows.length) return;
     try {
-      const r = await fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken));
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'fetch failed');
-      setSubs(j.rows || []);
+      const after = rowsRef.current.last;
+      const r = await fetch(db.settings.inboxUrl + '?token=' + encodeURIComponent(db.settings.inboxToken) + (after ? '&after=' + after : ''));
+      const j0 = await r.json();
+      if (!j0.ok) throw new Error(j0.error || 'fetch failed');
+      let rows = j0.rows || [];
+      if (j0.partial && after) {
+        const seen = {};
+        rowsRef.current.rows.forEach(x => {
+          seen[x.id] = 1;
+        });
+        rows = rowsRef.current.rows.concat(rows.filter(x => !seen[x.id]));
+      }
+      const last = rows.reduce((m, x) => Math.max(m, +String(x.id || '').replace(/^r/, '') || 0), 0);
+      const sig = rows.length + ':' + last + ':' + (rows.length ? String(rows[rows.length - 1].ts) : '');
+      rowsRef.current = {
+        rows,
+        last,
+        sig
+      };
       setErr('');
+      const j = {
+        rows
+      };
+      setSubs(j.rows || []);
       window.__remRows = j.rows || [];
       const latestFbId = {};
       (j.rows || []).forEach(r0 => {
@@ -2230,7 +2287,14 @@ function SubmissionsInbox({
     if (!cfg) return;
     load();
     const t = setInterval(load, 5 * 60 * 1000);
-    return () => clearInterval(t);
+    const onVis = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [cfg]);
   if (!cfg) return React.createElement("div", {
     className: "card"
@@ -2331,7 +2395,8 @@ function SubmissionsInbox({
   };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) && !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id) && !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0) && !(s.kind === 'feedback' && /^\s*\u2713 APPROVED/.test(String(s.body || '')) && (db.deliverables.find(x => x.id === s.ref) || {}).status === 'Delivered') && !(s.kind === 'msg' && (s.from === 'jag' || s.from === 'app' || s.from === 'script' || s.who === 'Reel Estate Media'))).reverse();
   const linkSub = s => {
-    const dl = s.ref ? db.deliverables.find(x => x.id === s.ref) : null;
+    const tag = String(s.dname || '').match(/^(?:credit|resched|renew):(.+)$/);
+    const dl = (tag ? db.deliverables.find(x => x.id === tag[1]) : null) || (s.ref ? db.deliverables.find(x => x.id === s.ref) : null) || null;
     const order = dl ? db.orders.find(o => o.id === dl.orderId) : null;
     let client = order ? db.clients.find(c => c.id === order.clientId) : null;
     if (!client && s.ref) client = db.clients.find(c => (c.hubKey || c.hubId) === s.ref) || null;
@@ -3154,7 +3219,18 @@ function LockScreen({
       marginTop: 16,
       lineHeight: 1.5
     }
-  }, "Team passcode — the same one works on every device.")));
+  }, "Team passcode — the same one works on every device."), !/\/(beta|prev)\//.test(location.pathname) && React.createElement("div", {
+    className: "small faint",
+    style: {
+      marginTop: 10
+    }
+  }, React.createElement("a", {
+    href: "prev/index.html",
+    style: {
+      color: 'inherit'
+    },
+    title: "The version that was live before the latest update — same data, older code"
+  }, "Something broken after an update? Open the previous version →"))));
 }
 function AppInner({
   onLock
@@ -3230,7 +3306,8 @@ function AppInner({
       text
     }, ...(p.activity || [])].slice(0, 1000)
   }));
-  const addOrder = order => {
+  const addOrder = order0 => {
+    const order = sbxOrder(db, order0);
     const ds = spawnDeliverables(order);
     setDb(p => ({
       ...p,
@@ -3471,6 +3548,7 @@ function AppInner({
   const cloudSkip = React.useRef(false);
   const bakBusy = React.useRef(false);
   const doBackup = async manual => {
+    if (IS_BETA) return false;
     const inboxUrl = db.settings.inboxUrl,
       inboxToken = db.settings.inboxToken;
     if (!inboxUrl || !inboxToken || bakBusy.current) return false;
@@ -3884,6 +3962,71 @@ function AppInner({
   };
   const opsPullRef = React.useRef(null);
   opsPullRef.current = opsPull;
+  useEffect(() => {
+    const d0 = db;
+    const inbox = d0.settings.inboxUrl,
+      tok = d0.settings.inboxToken;
+    if (!inbox || !tok || IS_BETA) return;
+    const t = setTimeout(async () => {
+      try {
+        const td = today();
+        const rd = realDb(dbRef.current);
+        const cl = d => {
+          const o = rd.orders.find(x => x.id === d.orderId) || {};
+          return ((rd.clients.find(c => c.id === o.clientId) || {}).name || '').split(' ')[0];
+        };
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+          const ds = addDays(td, i);
+          const shoots = rd.deliverables.filter(d => d.shootDate === ds && d.status !== 'Delivered' && d.status !== 'Booked').sort((a, b) => String(a.shootTime || '').localeCompare(String(b.shootTime || ''))).map(d => ({
+            t: d.shootTime ? fmtTime(d.shootTime) : '',
+            n: dlTitle(d),
+            w: cl(d),
+            l: getBrief(d).location || ''
+          }));
+          const due = rd.deliverables.flatMap(d => promiseMet(d) ? [] : dueDatesOf(d).filter(x => x.date === ds).map(() => ({
+            n: dlTitle(d),
+            w: cl(d)
+          })));
+          if (shoots.length || due.length) days.push({
+            d: ds,
+            shoots,
+            due
+          });
+        }
+        let needs = [];
+        try {
+          needs = JSON.parse(localStorage.getItem('rem_needs_lines_v1') || '[]');
+        } catch (e) {}
+        const late = rd.deliverables.filter(isOverdue).length;
+        const brief = {
+          v: 1,
+          days,
+          needs,
+          late
+        };
+        const sig = JSON.stringify(brief);
+        if (localStorage.getItem('rem_brief_sig_v1') === sig) return;
+        const ref = 'cc-brief-' + (await hashText('brief·' + tok)).slice(0, 16);
+        await fetch(inbox, {
+          method: 'POST',
+          body: JSON.stringify({
+            kind: 'review',
+            ref,
+            project: 'Morning brief',
+            dname: '',
+            who: 'cc',
+            body: JSON.stringify({
+              ...brief,
+              at: new Date().toISOString()
+            })
+          })
+        });
+        localStorage.setItem('rem_brief_sig_v1', sig);
+      } catch (e) {}
+    }, 25000);
+    return () => clearTimeout(t);
+  }, [db]);
   window.__opsAdopt = (md, ts) => {
     applyingOps.current = true;
     let ms = Date.now();
@@ -4083,6 +4226,14 @@ function AppInner({
           t: shootType(d),
           p: _desc + (withName ? ' · 🤝 with ' + withName : ''),
           st: STATUS_LABEL(d.status),
+          op: o.project || '',
+          oi: o.id,
+          ...(d.status === 'Scheduled' && d.calRu && !d.calCancelled ? {
+            ru: d.calRu,
+            ...(d.calCu ? {
+              cu: d.calCu
+            } : {})
+          } : {}),
           si: STATUSES.indexOf(d.status),
           sn: STATUSES.length,
           rs: isReviewStage(d.status),
@@ -4138,6 +4289,9 @@ function AppInner({
         lic: c.licenseNo || '',
         abio: c.bioText || '',
         ph: c.phone || '',
+        ...(c.hubPin && c.hubPinHash ? {
+          pn: c.hubPinHash
+        } : {}),
         ...(db.settings.driveApiKey ? {
           k: db.settings.driveApiKey
         } : {})
@@ -4429,13 +4583,13 @@ function AppInner({
     if (!o) return;
     const project = await uiPrompt('Project / property for the new booking:', o.project || '');
     if (project === null) return;
-    const order = {
+    const order = sbxOrder(db, {
       ...o,
       id: uid(),
       project,
       date: today(),
       payment: 'unpaid'
-    };
+    });
     const ds = spawnDeliverables(order);
     setDb(p => ({
       ...p,
@@ -4804,7 +4958,13 @@ function AppInner({
         };
         if (patch.status && next.changeReq && !/^Changes/.test(next.status)) delete next.changeReq;
         if (patch.status && next.approved && !isReviewStage(next.status) && next.status !== 'Delivered') delete next.approved;
-        if (patch.status && patch.status !== d.status) next.stAt = new Date().toISOString();
+        if (patch.status && patch.status !== d.status) {
+          next.stAt = new Date().toISOString();
+          if (!(d.stLog && d.stLog[patch.status])) next.stLog = {
+            ...(d.stLog || {}),
+            [patch.status]: next.stAt
+          };
+        }
         if (patch.status === 'Delivered' && !next.deliveredDate) next.deliveredDate = today();
         if (patch.status && patch.status !== 'Delivered') next.deliveredDate = '';
         if (patch.shootDate && d.status === 'Booked' && !patch.status) next.status = 'Scheduled';
@@ -5453,6 +5613,10 @@ function AppInner({
           b.invitee_email = first.email || '';
           const uc = String(first.tracking && first.tracking.utm_content || '');
           if (uc.indexOf('cr-') === 0) b.credit = uc.slice(3);
+          b.ru = String(first.reschedule_url || '');
+          b.cu = String(first.cancel_url || '');
+          const mo0 = String(first.old_invitee || '').match(/scheduled_events\/([^\/]+)\/invitees/);
+          if (mo0) b.movedFrom = mo0[1];
         } catch (e) {
           b.invitee_name = '';
           b.invitee_email = '';
@@ -5460,6 +5624,22 @@ function AppInner({
         delete b.uri;
       }
       const r = routeIncoming(fresh);
+      try {
+        const known = dbRef.current.deliverables.filter(d => d.calEv && d.status === 'Scheduled' && !d.calCancelled);
+        if (known.length) {
+          const cv = await jf('https://api.calendly.com/scheduled_events?user=' + encodeURIComponent(user) + '&status=canceled&min_start_time=' + encodeURIComponent(new Date(Date.now() - 2 * 86400000).toISOString()) + '&count=100');
+          const gone = new Set((cv.collection || []).map(e => String(e.uri || '').split('/').pop()));
+          const movedFrom = new Set(fresh.map(b => b.movedFrom).filter(Boolean));
+          const hit = new Set(known.filter(d => gone.has(d.calEv) && !movedFrom.has(d.calEv)).map(d => d.id));
+          if (hit.size) setDb(p => ({
+            ...p,
+            deliverables: p.deliverables.map(x => hit.has(x.id) && x.calEv && gone.has(x.calEv) ? {
+              ...x,
+              calCancelled: today()
+            } : x)
+          }));
+        }
+      } catch (eC) {}
       setSyncMsg(fresh.length === 0 ? '✓ Up to date — no new bookings.' : `${r.auto ? '⚡ Auto-booked ' + r.auto + '. ' : ''}${r.manual ? r.manual + ' waiting for review below.' : ''}`.trim());
     } catch (err) {
       console.error('Calendly sync error:', err);
@@ -5629,7 +5809,7 @@ function AppInner({
   const applyBookingNew = (bk, clientId, serviceId) => {
     const s = svc(serviceId);
     const tier = clientTier(clientId);
-    const order = {
+    const order = sbxOrder(db, {
       id: uid(),
       clientId,
       project: `${bk.invitee_name} — ${bk.title}`,
@@ -5644,13 +5824,16 @@ function AppInner({
         price: rateFor(tier, s),
         retail: s.retail
       }]
-    };
+    });
     const ds = spawnDeliverables(order);
     if (ds[0]) {
       ds[0].shootDate = isoToDate(bk.start);
       ds[0].shootTime = isoToTime(bk.start);
       ds[0].shootEnd = bk.end ? isoToTime(bk.end) : '';
       ds[0].status = 'Scheduled';
+      ds[0].calEv = bk.id;
+      ds[0].calRu = bk.ru || '';
+      ds[0].calCu = bk.cu || '';
       ds[0].brief = {
         ...(ds[0].brief || DEFAULT_BRIEF),
         location: bk.location || ''
@@ -5674,9 +5857,36 @@ function AppInner({
       }
     }));
   };
-  const routeIncoming = incoming => {
+  const routeIncoming = incoming0 => {
     const auto = [],
       manual = [];
+    const incoming = incoming0.filter(b => {
+      if (!b.movedFrom) return true;
+      const d = db.deliverables.find(x => x.calEv === b.movedFrom && x.status !== 'Delivered');
+      if (!d) return true;
+      const o = db.orders.find(x => x.id === d.orderId) || {};
+      setDb(p => ({
+        ...p,
+        importedIds: p.importedIds.includes(b.id) ? p.importedIds : [...p.importedIds, b.id],
+        deliverables: p.deliverables.map(x => x.id === d.id ? {
+          ...x,
+          shootDate: isoToDate(b.start),
+          shootTime: isoToTime(b.start),
+          shootEnd: b.end ? isoToTime(b.end) : '',
+          calEv: b.id,
+          calRu: b.ru || '',
+          calCu: b.cu || '',
+          calCancelled: ''
+        } : x)
+      }));
+      logActivity(`↔ Rescheduled on Calendly: ${dlTitle(d)} → ${isoToNice(b.start)}`);
+      showToast(`↔ ${((db.clients.find(c => c.id === o.clientId) || {}).name || 'The agent').split(' ')[0]} moved ${dlTitle(d)} to ${isoToNice(b.start)}`);
+      if (o.clientId) {
+        approveBookingHub(b, o.clientId);
+        setTimeout(() => pushHub(o.clientId), 1200);
+      }
+      return false;
+    });
     incoming.forEach(b => {
       const cid = guessClientId(b, db, true);
       const sid = (db.settings.eventMap || {})[(b.title || '').trim()] || SLUG_TO_SVC[slugify(b.title)];
@@ -5719,6 +5929,10 @@ function AppInner({
         shootTime: isoToTime(bk.start),
         shootEnd: bk.end ? isoToTime(bk.end) : '',
         status: d.status === 'Booked' ? 'Scheduled' : d.status,
+        calEv: bk.id,
+        calRu: bk.ru || '',
+        calCu: bk.cu || '',
+        calCancelled: '',
         brief: {
           ...getBrief(d),
           location: bk.location || getBrief(d).location
@@ -5731,6 +5945,140 @@ function AppInner({
     approveBookingHub(bk, oAt ? oAt.clientId : null);
   };
   window.applyBookingAttach = applyBookingAttach;
+  window.__markSubHandled = markSubHandled;
+  window.__stmtDone = pm => setDb(p => ({
+    ...p,
+    settings: {
+      ...p.settings,
+      stmtDone: pm
+    }
+  }));
+  window.__ccGo = (v, o) => {
+    setView(v);
+    setOpenOrder(null);
+    setCameFrom(null);
+    if (o && o.month) window.__moneyMonth = o.month;
+  };
+  const makeSandbox = mode => {
+    const cur = dbRef.current;
+    const c = cur.clients.find(isSbxClient);
+    if (mode === 'remove') {
+      if (!c) return;
+      const oids = new Set(cur.orders.filter(o => o.clientId === c.id).map(o => o.id));
+      setDb(p => ({
+        ...p,
+        clients: p.clients.filter(x => x.id !== c.id),
+        orders: p.orders.filter(o => !oids.has(o.id)),
+        deliverables: p.deliverables.filter(d => !oids.has(d.orderId))
+      }));
+      logActivity('🧪 Test agent removed');
+      showToast('🧪 Test agent removed');
+      return;
+    }
+    const cid = c ? c.id : 'tst' + uid();
+    const client = c || {
+      id: cid,
+      sandbox: true,
+      name: SBX_NAME,
+      tier: 'partner',
+      company: '🧪 Sandbox',
+      team: '',
+      contact: '',
+      email: '',
+      phone: '',
+      notes: 'Safe to break. Nothing here counts toward revenue, statements or reports.',
+      hubKey: 'tst' + Math.random().toString(36).slice(2, 12),
+      showBalance: true
+    };
+    const s1 = svc('dyn1') || CATALOG[0];
+    const order = {
+      id: 'tst' + uid(),
+      clientId: cid,
+      project: '123 Test Street — sandbox',
+      date: today(),
+      hst: true,
+      notes: 'Sandbox order',
+      payment: 'unpaid',
+      items: [{
+        serviceId: s1.id,
+        name: s1.name,
+        qty: 4,
+        price: rateFor('partner', s1),
+        retail: s1.retail
+      }]
+    };
+    const ds = spawnDeliverables(order);
+    if (ds[2]) ds[2] = {
+      ...ds[2],
+      status: 'Scheduled',
+      shootDate: addDays(today(), 3),
+      shootTime: '14:00'
+    };
+    if (ds[3]) ds[3] = {
+      ...ds[3],
+      status: 'Shot',
+      shootDate: addDays(today(), -1)
+    };
+    setDb(p => {
+      const oldO = new Set(p.orders.filter(o => o.clientId === cid).map(o => o.id));
+      return {
+        ...p,
+        clients: p.clients.some(x => x.id === cid) ? p.clients : [...p.clients, client],
+        orders: [order, ...p.orders.filter(o => !oldO.has(o.id))],
+        deliverables: [...p.deliverables.filter(d => !oldO.has(d.orderId)), ...ds]
+      };
+    });
+    logActivity(c ? '🧪 Test agent reset to a fresh sample order' : '🧪 Test agent created');
+    setTimeout(() => pushHub(cid), 700);
+    showToast(c ? '🧪 Test agent reset — fresh sample order' : '🧪 Test agent created — find it under Clients › 🧪 Sandbox');
+    return cid;
+  };
+  const renewOrder = async (orderId, rowId) => {
+    const o = dbRef.current.orders.find(x => x.id === orderId);
+    if (!o) return;
+    const c = dbRef.current.clients.find(x => x.id === o.clientId) || {};
+    const tot = orderTotals(o).total;
+    const n = (o.items || []).reduce((a, i) => a + (+i.qty || 1), 0);
+    if (!(await uiConfirm(`Create a new order for ${c.name || 'this client'} with the same services as “${o.project || 'the last order'}”?\n\n${n} item${n !== 1 ? 's' : ''} · ${money(tot)} · unpaid until you invoice it.`, {
+      title: '🔁 Renew this package',
+      ok: '＋ Create the order'
+    }))) return;
+    const order = sbxOrder(dbRef.current, {
+      ...o,
+      id: uid(),
+      date: today(),
+      payment: 'unpaid',
+      renewedFrom: o.id
+    });
+    ['invoicedAt', 'paidAt', 'paidSnooze', 'staleSnooze', 'rating', 'feedbackAsked', 'retainer', 'rmonth', 'planAuto'].forEach(k => {
+      delete order[k];
+    });
+    const ds = spawnDeliverables(order);
+    setDb(p => ({
+      ...p,
+      orders: [order, ...p.orders],
+      deliverables: [...p.deliverables, ...ds],
+      subsHandled: rowId ? [...(p.subsHandled || []), rowId] : p.subsHandled || []
+    }));
+    logActivity(`🔁 Renewed for ${c.name || 'client'}: ${o.project || 'order'} · ${ds.length} new deliverable${ds.length !== 1 ? 's' : ''}`);
+    const hk = c.hubKey || c.hubId;
+    const d0 = dbRef.current;
+    if (hk && d0.settings.inboxUrl) fetch(d0.settings.inboxUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: 'msg',
+        ref: String(hk),
+        project: (c.name || 'Agent') + ' — Content Hub',
+        dname: '',
+        who: 'Reel Estate Media',
+        from: 'jag',
+        body: `✅ Renewed — ${ds.length} new shoot${ds.length !== 1 ? 's are' : ' is'} ready to book on your hub. Thank you! 🎬`
+      })
+    }).catch(() => {});
+    if (c.id) setTimeout(() => pushHub(c.id), 900);
+    showToast(`🔁 Renewed — ${ds.length} new deliverable${ds.length !== 1 ? 's' : ''} for ${(c.name || 'them').split(' ')[0]}`);
+  };
+  window.__renewOrder = renewOrder;
   const deleteOrder = async id => {
     if (!(await uiConfirm('Delete this order and all its deliverables?', {
       ok: 'Delete order',
@@ -5763,22 +6111,25 @@ function AppInner({
   TAT.photo = Math.max(1, +db.settings.tatPhoto || 3);
   TAT.video = Math.max(1, +db.settings.tatVideo || 5);
   const stats = useMemo(() => {
-    const active = db.orders.filter(o => orderProgress(o.id).done < orderProgress(o.id).total || orderProgress(o.id).total === 0 && !o.billingOnly);
-    const remaining = db.deliverables.filter(d => d.status !== 'Delivered').length;
-    const mo = today().slice(0, 7);
-    const deliveredThisMo = db.deliverables.filter(d => d.status === 'Delivered').length;
-    const revThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderTotals(o).sub, 0);
-    const owed = db.orders.filter(o => o.payment !== 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
-    const tierOf = cid => (db.clients.find(c => c.id === cid) || {}).tier || 'partner';
-    const marginThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderMargin(o, tierOf(o.clientId)), 0);
-    return {
-      active: active.length,
-      remaining,
-      deliveredThisMo,
-      revThisMo,
-      owed,
-      marginThisMo
+    const calc = db => {
+      const active = db.orders.filter(o => orderProgress(o.id).done < orderProgress(o.id).total || orderProgress(o.id).total === 0 && !o.billingOnly);
+      const remaining = db.deliverables.filter(d => d.status !== 'Delivered').length;
+      const mo = today().slice(0, 7);
+      const deliveredThisMo = db.deliverables.filter(d => d.status === 'Delivered').length;
+      const revThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderTotals(o).sub, 0);
+      const owed = db.orders.filter(o => o.payment !== 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
+      const tierOf = cid => (db.clients.find(c => c.id === cid) || {}).tier || 'partner';
+      const marginThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderMargin(o, tierOf(o.clientId)), 0);
+      return {
+        active: active.length,
+        remaining,
+        deliveredThisMo,
+        revThisMo,
+        owed,
+        marginThisMo
+      };
     };
+    return calc(realDb(db));
   }, [db]);
   return React.createElement("div", {
     className: "shell"
@@ -5993,7 +6344,8 @@ function AppInner({
     orderProgress: orderProgress,
     setEditingClient: setEditingClient,
     pushHub: pushHub,
-    showToast: showToast
+    showToast: showToast,
+    makeSandbox: makeSandbox
   }), view === 'orders' && openOrder && React.createElement(OrderDetail, {
     db: db,
     id: openOrder,
@@ -6074,7 +6426,7 @@ function AppInner({
     orderProgress: orderProgress,
     addClient: addClient
   }))), view === 'money' && React.createElement(Money, {
-    db: db,
+    db: realDb(db),
     clientName: clientName,
     updateOrder: updateOrder,
     updateSettings: updateSettings,
@@ -7609,6 +7961,88 @@ function ActionQueue({
       }
     });
   });
+  db.deliverables.filter(d => d.calCancelled && d.status === 'Scheduled').forEach(d => {
+    items.push({
+      pri: 0,
+      icon: '❌',
+      txt: `${firstOf(clOf(d))} cancelled ${dlTitle(d)} on Calendly${d.shootDate ? ' (was ' + fmtDate(d.shootDate) + ')' : ''}`,
+      btn: 'Resolve',
+      act: async () => {
+        const r = await uiDialog({
+          title: 'Cancelled on Calendly',
+          message: `${dlTitle(d)}${d.shootDate ? ' · ' + fmtDate(d.shootDate) + (d.shootTime ? ' at ' + fmtTime(d.shootTime) : '') : ''}\nThe agent cancelled this booking themselves.`,
+          ok: false,
+          fields: [{
+            key: 'a',
+            type: 'choice',
+            options: [{
+              value: 'back',
+              label: '↩ Back to To Schedule — clear the date, keep the credit for them'
+            }, {
+              value: 'keep',
+              label: 'Keep it on my calendar — I’ve sorted it another way'
+            }]
+          }]
+        });
+        if (!r) return;
+        if (r.a === 'back') updateDeliverable(d.id, {
+          status: 'Booked',
+          shootDate: '',
+          shootTime: '',
+          shootEnd: '',
+          calEv: '',
+          calRu: '',
+          calCu: '',
+          calCancelled: '',
+          _auto: true
+        });else updateDeliverable(d.id, {
+          calCancelled: '',
+          calEv: '',
+          calRu: '',
+          calCu: '',
+          _auto: true
+        });
+      }
+    });
+  });
+  (window.__remRows || []).filter(r => r && r.kind === 'msg' && String(r.dname || '').indexOf('renew:') === 0 && !(db.subsHandled || []).includes(r.id)).forEach(r => {
+    const d = db.deliverables.find(x => x.id === String(r.dname).slice(6));
+    if (!d) return;
+    const o = ordOf(d);
+    if (!o.id || db.orders.some(x => x.renewedFrom === o.id && x.date >= String(r.ts || '').slice(0, 10))) return;
+    items.push({
+      pri: 0,
+      icon: '🔁',
+      txt: `${firstOf(clOf(d))} wants to renew “${o.project || 'their package'}”`,
+      btn: '＋ Renew',
+      act: () => {
+        if (window.__renewOrder) window.__renewOrder(o.id, r.id);
+      }
+    });
+  });
+  (() => {
+    if (+td.slice(8, 10) > 7) return;
+    const pm = addDays(td.slice(0, 8) + '01', -1).slice(0, 7);
+    if (db.settings.stmtDone === pm) return;
+    const open = {};
+    realDb(db).orders.forEach(o => {
+      if (o.date && o.date.slice(0, 7) === pm && o.payment !== 'paid' && orderTotals(o).total > 0) open[o.clientId] = 1;
+    });
+    const n = Object.keys(open).length;
+    if (!n) return;
+    items.push({
+      pri: 2,
+      icon: '🧾',
+      txt: `${monthLabel(pm)} statements — ${n} agent${n !== 1 ? 's' : ''} with an open balance`,
+      btn: 'Open',
+      act: () => {
+        if (window.__ccGo) window.__ccGo('money', {
+          month: pm
+        });
+        if (window.__stmtDone) window.__stmtDone(pm);
+      }
+    });
+  })();
   db.orders.forEach(o => {
     if (o.payment !== 'invoiced') return;
     const since = o.invoicedAt || o.date;
@@ -7812,6 +8246,7 @@ function ActionQueue({
   const ranked = items.sort((a, b) => a.pri - b.pri);
   try {
     localStorage.setItem('rem_needs_count_v1', String(ranked.length));
+    localStorage.setItem('rem_needs_lines_v1', JSON.stringify(ranked.slice(0, 12).map(it => it.icon + ' ' + it.txt)));
   } catch (e) {}
   if (ranked.length === 0) return null;
   const top = showAll ? ranked.slice(0, 30) : ranked.slice(0, 5);
@@ -8160,7 +8595,7 @@ function Dashboard({
     db: db,
     updateSettings: updateSettings
   }))), React.createElement(WinBack, {
-    db: db
+    db: realDb(db)
   }), followN > 0 && React.createElement("div", {
     className: "card today"
   }, React.createElement("h3", null, "Follow-ups"), agedUnpaid.map(o => {
@@ -10862,7 +11297,8 @@ function ClientsPage({
   orderProgress,
   setEditingClient,
   pushHub,
-  showToast
+  showToast,
+  makeSandbox
 }) {
   const companies = [...new Set(db.clients.map(companyOf))].sort((a, b) => a === 'Pinnacle' ? -1 : b === 'Pinnacle' ? 1 : a.localeCompare(b));
   const bdays = db.clients.map(c => ({
@@ -10883,6 +11319,48 @@ function ClientsPage({
   }, "Clients"), React.createElement("span", {
     className: "spacer"
   }), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-sandbox": true,
+    title: "A fake agent with a real hub — run any flow end to end without touching a real client or your numbers",
+    onClick: async () => {
+      const sb = db.clients.find(isSbxClient);
+      if (!sb) {
+        makeSandbox();
+        return;
+      }
+      const hubUrl = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'hub.html?a=' + encodeURIComponent(sb.hubKey || sb.hubId || '') + '&t=pin';
+      const r = await uiDialog({
+        title: '🧪 Test agent',
+        message: 'A sandbox client with its own hub. Use it to try bookings, uploads, reviews, deliveries and invoices for real — none of it counts toward your money or reports.',
+        ok: false,
+        fields: [{
+          key: 'a',
+          type: 'choice',
+          options: [{
+            value: 'hub',
+            label: '🔗 Open its hub (what an agent sees)'
+          }, {
+            value: 'copy',
+            label: '📋 Copy its hub link — open it on your phone'
+          }, {
+            value: 'reset',
+            label: '↺ Reset it to a fresh sample order'
+          }, {
+            value: 'remove',
+            label: '🗑 Remove the test agent'
+          }]
+        }]
+      });
+      if (!r) return;
+      if (r.a === 'hub') window.open(hubUrl, '_blank');else if (r.a === 'copy') {
+        copyText(hubUrl);
+        showToast('📋 Test hub link copied');
+      } else if (r.a === 'reset') makeSandbox('reset');else if (r.a === 'remove' && (await uiConfirm('Remove the test agent and its sample orders?', {
+        ok: 'Remove',
+        danger: true
+      }))) makeSandbox('remove');
+    }
+  }, "🧪 Test agent"), React.createElement("button", {
     className: "btn sm",
     onClick: () => setShowNewClient(true)
   }, "+ Add Client / Agent")), bdays.length > 0 && React.createElement("div", {
@@ -12288,6 +12766,238 @@ function CalendarView({
     }
   }, "Nothing scheduled — a clean day", blocked.includes(drawer) ? ', and protected' : '', "."))));
 }
+function AgentStatements({
+  db,
+  month,
+  label,
+  setPrintDoc,
+  updateOrder
+}) {
+  const rows = useMemo(() => {
+    const m = {};
+    db.orders.forEach(o => {
+      if (!o.date || o.date.slice(0, 7) !== month) return;
+      const t = orderTotals(o);
+      if (!(t.total > 0)) return;
+      const r = m[o.clientId] || (m[o.clientId] = {
+        cid: o.clientId,
+        n: 0,
+        total: 0,
+        open: 0,
+        unpaid: []
+      });
+      r.n++;
+      r.total += t.total;
+      if (o.payment !== 'paid') {
+        r.open += t.total;
+        r.unpaid.push(o);
+      }
+    });
+    return Object.values(m).map(r => ({
+      ...r,
+      c: db.clients.find(c => c.id === r.cid) || {}
+    })).sort((a, b) => b.open - a.open || b.total - a.total);
+  }, [db, month]);
+  if (!rows.length) return null;
+  const send = async r => {
+    const c = r.c;
+    const hk = c.hubKey || c.hubId;
+    const first = (c.name || 'there').split(' ')[0];
+    if (!hk || !db.settings.inboxUrl) {
+      uiAlert('No hub on file for ' + (c.name || 'this client') + ' — print the statement instead.');
+      return;
+    }
+    const pay = db.settings.payUrl || '';
+    const body = `🧾 Hi ${first} — your ${label} statement: ${r.n} order${r.n !== 1 ? 's' : ''}, ${money(r.total)} in total` + (r.open > 0 ? `, ${money(r.open)} still open. ` + (pay ? `Pay online: ${pay} — or e-transfer` : 'E-transfer') + ' to hello@reelestatemedia.com. Thank you! 🙏' : ' — all paid. Thank you! 🙏');
+    if (!(await uiConfirm(body + (r.unpaid.some(o => o.payment === 'unpaid') ? '\n\n(Orders not yet invoiced will be marked Invoiced.)' : ''), {
+      title: 'Send this to ' + first + '’s hub chat?',
+      ok: '✉ Send'
+    }))) return;
+    fetch(db.settings.inboxUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: 'msg',
+        ref: String(hk),
+        project: (c.name || 'Agent') + ' — Content Hub',
+        dname: '',
+        who: 'Reel Estate Media',
+        from: 'jag',
+        body
+      })
+    }).catch(() => {});
+    r.unpaid.filter(o => o.payment === 'unpaid').forEach(o => updateOrder(o.id, {
+      payment: 'invoiced'
+    }));
+    (window.showToast || (() => {}))('✉ ' + label + ' statement sent to ' + first);
+  };
+  return React.createElement("div", {
+    "data-agent-statements": true,
+    style: {
+      margin: '4px 0 14px'
+    }
+  }, React.createElement("div", {
+    className: "small",
+    style: {
+      fontWeight: 700,
+      marginBottom: 6
+    }
+  }, "🧾 Statements by agent — ", label), rows.map(r => React.createElement("div", {
+    key: r.cid,
+    className: "flex trow",
+    "data-stmt": r.cid
+  }, React.createElement("span", {
+    style: {
+      fontWeight: 700
+    }
+  }, r.c.name || 'Client'), React.createElement("span", {
+    className: "faint small"
+  }, r.n, " order", r.n !== 1 ? 's' : '', " · ", money(r.total)), r.open > 0 ? React.createElement("span", {
+    className: "pill unpaid"
+  }, money(r.open), " open") : React.createElement("span", {
+    className: "pill delivered"
+  }, "✓ paid"), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: () => setPrintDoc({
+      kind: 'statement',
+      month,
+      clientId: r.cid
+    })
+  }, "🖨 Statement"), React.createElement("button", {
+    className: "btn ghost sm",
+    title: "Drop the month’s total (and the pay link) in their hub chat",
+    onClick: () => send(r)
+  }, "✉ Send to hub"))));
+}
+function Turnaround({
+  db
+}) {
+  const [days, setDays] = useState(90);
+  const data = useMemo(() => {
+    const since = addDays(today(), -days);
+    const diff = (a, b) => a && b ? Math.max(0, dayDiff(a, b)) : null;
+    const mk = () => ({
+      n: 0,
+      a: [],
+      b: [],
+      c: [],
+      on: 0,
+      onN: 0
+    });
+    const all = mk(),
+      by = {};
+    db.deliverables.forEach(d => {
+      if (d.status !== 'Delivered' || !d.deliveredDate || d.deliveredDate < since || !d.shootDate) return;
+      const o = db.orders.find(x => x.id === d.orderId) || {};
+      const cut = String(d.stLog && d.stLog['Client Review'] || '').slice(0, 10) || d.reviewDate || '';
+      const toCut = cut ? diff(d.shootDate, cut) : null;
+      const withClient = cut ? diff(cut, d.deliveredDate) : null;
+      const total = diff(d.shootDate, d.deliveredDate);
+      const promise = mediaOf(d) === 'photo' ? 3 : 5;
+      [all, by[o.clientId] || (by[o.clientId] = mk())].forEach(g => {
+        g.n++;
+        if (toCut !== null) g.a.push(toCut);
+        if (withClient !== null) g.b.push(withClient);
+        if (total !== null) g.c.push(total);
+        const first = toCut !== null ? toCut : total;
+        if (first !== null) {
+          g.onN++;
+          if (first <= promise) g.on++;
+        }
+      });
+    });
+    const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    const fin = g => ({
+      n: g.n,
+      a: avg(g.a),
+      b: avg(g.b),
+      c: avg(g.c),
+      on: g.onN ? Math.round(g.on / g.onN * 100) : null
+    });
+    return {
+      all: fin(all),
+      rows: Object.keys(by).map(cid => ({
+        cid,
+        name: (db.clients.find(c => c.id === cid) || {}).name || 'Client',
+        ...fin(by[cid])
+      })).sort((x, y) => y.n - x.n)
+    };
+  }, [db, days]);
+  const f = v => v === null ? '—' : Math.round(v * 10) / 10 + 'd';
+  const tone = v => v === null ? '' : v >= 90 ? 'delivered' : v >= 70 ? 'editing' : 'unpaid';
+  return React.createElement("div", {
+    className: "card",
+    "data-turnaround": true
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      marginBottom: 10
+    }
+  }, React.createElement("h3", {
+    style: {
+      marginBottom: 0
+    }
+  }, "⏱ Turnaround"), React.createElement("span", {
+    className: "faint small"
+  }, "delivered in the last"), [30, 90, 365].map(n => React.createElement("button", {
+    key: n,
+    className: 'btn ghost sm' + (days === n ? ' on' : ''),
+    style: days === n ? {
+      borderColor: 'var(--amber)',
+      color: 'var(--cream)'
+    } : {},
+    onClick: () => setDays(n)
+  }, n === 365 ? 'year' : n + ' days'))), data.all.n === 0 ? React.createElement("div", {
+    className: "empty"
+  }, "Nothing delivered in this window yet.") : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "grid-stats",
+    style: {
+      marginBottom: 12
+    }
+  }, React.createElement("div", {
+    className: "stat"
+  }, React.createElement("div", {
+    className: "n"
+  }, f(data.all.a)), React.createElement("div", {
+    className: "l"
+  }, "Shoot → first cut")), React.createElement("div", {
+    className: "stat"
+  }, React.createElement("div", {
+    className: "n"
+  }, f(data.all.b)), React.createElement("div", {
+    className: "l"
+  }, "With the client")), React.createElement("div", {
+    className: "stat"
+  }, React.createElement("div", {
+    className: "n"
+  }, data.all.on === null ? '—' : data.all.on + '%'), React.createElement("div", {
+    className: "l"
+  }, "On time (3d photo · 5d video)"))), React.createElement("table", {
+    className: "cards"
+  }, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "Agent"), React.createElement("th", null, "Pieces"), React.createElement("th", null, "Shoot → first cut"), React.createElement("th", null, "With client"), React.createElement("th", null, "Shoot → delivered"), React.createElement("th", null, "On time"))), React.createElement("tbody", null, data.rows.map(r => React.createElement("tr", {
+    key: r.cid
+  }, React.createElement("td", {
+    "data-l": "Project"
+  }, r.name), React.createElement("td", {
+    "data-l": "Pieces"
+  }, r.n), React.createElement("td", {
+    "data-l": "To first cut"
+  }, f(r.a)), React.createElement("td", {
+    "data-l": "With client"
+  }, f(r.b)), React.createElement("td", {
+    "data-l": "To delivered"
+  }, f(r.c)), React.createElement("td", {
+    "data-l": "On time"
+  }, r.on === null ? '—' : React.createElement("span", {
+    className: 'pill ' + tone(r.on)
+  }, r.on, "%")))))), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 8
+    }
+  }, "“With the client” is the wait between the first cut and final delivery — their review time plus any revision rounds. Stage dates are recorded exactly from this version on; older pieces use their shoot, review and delivery dates.")));
+}
 function Money({
   db,
   clientName,
@@ -12303,7 +13013,11 @@ function Money({
   const hstCollected = db.orders.filter(o => o.payment === 'paid').reduce((a, o) => a + orderTotals(o).tax, 0);
   const tierOf = cid => (db.clients.find(c => c.id === cid) || {}).tier || 'partner';
   const goal = db.settings.pinnacleGoal;
-  const [repMo, setRepMo] = useState(today().slice(0, 7));
+  const [repMo, setRepMo] = useState(() => {
+    const m = window.__moneyMonth;
+    window.__moneyMonth = null;
+    return m || today().slice(0, 7);
+  });
   const shiftMo = n => setRepMo(k => {
     const d = new Date(+k.slice(0, 4), +k.slice(5, 7) - 1 + n, 1);
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
@@ -12360,7 +13074,9 @@ function Money({
     month: 'long',
     year: 'numeric'
   });
-  return React.createElement(React.Fragment, null, React.createElement("div", {
+  return React.createElement(React.Fragment, null, React.createElement(Turnaround, {
+    db: db
+  }), React.createElement("div", {
     className: "card today"
   }, React.createElement("div", {
     className: "flex",
@@ -12392,7 +13108,13 @@ function Money({
   }, "🖨 ", co, " Statement")), moOrders.some(o => o.payment === 'unpaid') && React.createElement("button", {
     className: "btn ghost sm",
     onClick: closeMonth
-  }, "✓ Close Month — invoice all unpaid")), React.createElement("div", {
+  }, "✓ Close Month — invoice all unpaid")), React.createElement(AgentStatements, {
+    db: db,
+    month: repMo,
+    label: repLabel,
+    setPrintDoc: setPrintDoc,
+    updateOrder: updateOrder
+  }), React.createElement("div", {
     className: "grid-stats",
     style: {
       margin: '0 0 14px'
@@ -13644,6 +14366,7 @@ function EditClientModal({
   const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
   const [retainerStart, setRetainerStart] = useState(client.retainerStart || today().slice(0, 7));
   const [plan, setPlan] = useState(Array.isArray(client.plan) ? client.plan : []);
+  const [hubPin, setHubPin] = useState(client.hubPin || '');
   return React.createElement("div", {
     className: "overlay",
     onClick: e => e.target === e.currentTarget && onClose()
@@ -13901,6 +14624,25 @@ function EditClientModal({
       marginTop: 4
     }
   }, "Off = no \"Balance due\" pill ever appears on their page. Pinnacle agents default to off (they settle with Pinnacle, not you); direct clients default to on. Takes effect on the next hub push."))), React.createElement("div", {
+    className: "frow one"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "f"
+  }, "🔐 Hub PIN (optional)"), React.createElement("input", {
+    "data-hubpin": true,
+    inputMode: "numeric",
+    maxLength: "8",
+    placeholder: "e.g. 4821 — leave empty for no PIN",
+    value: hubPin,
+    onChange: e => setHubPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 8)),
+    style: {
+      maxWidth: 260
+    }
+  }), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 4
+    }
+  }, "With a PIN, their hub and library ask for it once per device before showing anything — so a forwarded link doesn’t open on someone else’s phone. Tell them the PIN yourself (text or call). It’s a door lock, not bank security: the link is still the key to their review rooms and chat."))), React.createElement("div", {
     className: "modalfoot"
   }, React.createElement("button", {
     className: "btn ghost",
@@ -13916,12 +14658,23 @@ function EditClientModal({
     onClick: onClose
   }, "Cancel"), React.createElement("button", {
     className: "btn",
-    onClick: () => {
+    onClick: async () => {
       if (!name.trim()) {
         uiAlert('Name required');
         return;
       }
+      if (hubPin && hubPin.length < 4) {
+        uiAlert('A hub PIN needs at least 4 digits (or leave it empty).');
+        return;
+      }
+      const hk0 = client.hubKey || client.hubId || Math.random().toString(36).slice(2, 10);
+      const hubPinHash = hubPin ? await hashText('rem-hub·' + hk0 + '·' + hubPin) : '';
       onSave({
+        hubPin,
+        hubPinHash,
+        ...(client.hubKey || client.hubId ? {} : {
+          hubKey: hk0
+        }),
         name: name.trim(),
         tier,
         company: company.trim(),
@@ -14113,7 +14866,17 @@ function DocModal({
       }
     }, "Delivery promise: photos within 3 days of the shoot · video within 5 days."))));
   }
-  let heading, number, docDate, billTo, subtitle, lines, sub, tax, total, isPaid;
+  let heading,
+    number,
+    docDate,
+    billTo,
+    subtitle,
+    lines,
+    sub,
+    tax,
+    total,
+    isPaid,
+    paidSoFar = 0;
   if (doc.kind === 'order') {
     const o = db.orders.find(x => x.id === doc.orderId);
     if (!o) return null;
@@ -14134,6 +14897,28 @@ function DocModal({
     tax = t.tax;
     total = t.total;
     isPaid = o.payment === 'paid';
+  } else if (doc.clientId) {
+    const c = clientOf(doc.clientId);
+    const moOrders = db.orders.filter(o => o.date && o.date.slice(0, 7) === doc.month && o.clientId === doc.clientId && orderTotals(o).total > 0);
+    heading = 'MONTHLY STATEMENT';
+    number = 'STMT-' + doc.month.replace('-', '') + '-' + String(c.name || 'X').split(/\s+/).map(w => w.charAt(0)).join('').toUpperCase().slice(0, 3);
+    docDate = new Date(+doc.month.slice(0, 4), +doc.month.slice(5, 7) - 1, 15).toLocaleDateString('en-CA', {
+      month: 'long',
+      year: 'numeric'
+    });
+    billTo = [c.name, companyOf(c) !== 'Independent / Direct' && companyOf(c) !== c.name ? companyOf(c) : '', c.contact].filter(Boolean);
+    const openAmt = moOrders.filter(o => o.payment !== 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
+    subtitle = moOrders.length + ' order' + (moOrders.length !== 1 ? 's' : '') + ' · ' + docDate + (openAmt > 0 && openAmt < moOrders.reduce((a, o) => a + orderTotals(o).total, 0) ? ' · ' + money(openAmt) + ' still open' : '');
+    lines = moOrders.flatMap(o => (o.items || []).map(i => ({
+      l: (o.project || 'Untitled') + ' — ' + i.name + (o.payment === 'paid' ? ' (paid)' : ''),
+      q: fmtDate(o.date) + ' · ×' + (i.qty || 1),
+      r: money(i.price * (i.qty || 1))
+    })));
+    sub = moOrders.reduce((a, o) => a + orderTotals(o).sub, 0);
+    tax = moOrders.reduce((a, o) => a + orderTotals(o).tax, 0);
+    total = sub + tax;
+    isPaid = moOrders.length > 0 && moOrders.every(o => o.payment === 'paid');
+    paidSoFar = moOrders.filter(o => o.payment === 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
   } else {
     const moOrders = db.orders.filter(o => o.date && o.date.slice(0, 7) === doc.month && companyOf(clientOf(o.clientId)) === doc.company);
     heading = 'MONTHLY STATEMENT';
@@ -14318,7 +15103,23 @@ function DocModal({
     }
   }, React.createElement("span", {
     className: "muted"
-  }, "HST 13%"), React.createElement("span", null, money(tax))), React.createElement("div", {
+  }, "HST 13%"), React.createElement("span", null, money(tax))), paidSoFar > 0 && !isPaid && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "flex",
+    style: {
+      justifyContent: 'space-between',
+      padding: '3px 0'
+    }
+  }, React.createElement("span", {
+    className: "muted"
+  }, "Total for the month"), React.createElement("span", null, money(total))), React.createElement("div", {
+    className: "flex",
+    style: {
+      justifyContent: 'space-between',
+      padding: '3px 0'
+    }
+  }, React.createElement("span", {
+    className: "muted"
+  }, "Already paid"), React.createElement("span", null, "−", money(paidSoFar)))), React.createElement("div", {
     className: "flex",
     style: {
       justifyContent: 'space-between',
@@ -14337,7 +15138,7 @@ function DocModal({
       fontSize: 18,
       color: 'var(--amber)'
     }
-  }, money(total))))), React.createElement("div", {
+  }, money(isPaid ? total : total - paidSoFar))))), React.createElement("div", {
     className: "small",
     style: {
       color: '#8f9198',
@@ -14413,7 +15214,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.15-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-1</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

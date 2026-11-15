@@ -237,8 +237,8 @@ body.assist #billingwrap{display:none !important}
 @keyframes cfall{to{transform:translateY(106vh) rotate(720deg);opacity:.1}}
 /* ---- shoot countdown ---- */
 .shootline{margin-top:12px;font-size:12.5px;font-weight:600;color:var(--amber);background:rgba(242,169,0,.08);border:1px solid rgba(242,169,0,.24);border-radius:10px;padding:7px 12px;display:inline-block;position:relative;z-index:1}
-.shootline .ics{margin-left:9px;color:var(--txt);opacity:.7;font-weight:600;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s ease}
-.shootline .ics:hover{opacity:1}
+.shootline .ics,.shootline .movebtn{margin-left:9px;color:var(--txt);opacity:.7;font-weight:600;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s ease}
+.shootline .ics:hover,.shootline .movebtn:hover{opacity:1}
 .shootline.pend{border-style:dashed;background:rgba(245,242,233,.03);border-color:var(--line2);color:var(--dim)}
 /* in the Library, everything is delivered — the pill says it, the tracker would just repeat it */
 .card.done .track,.card.done .stageline{display:none}
@@ -632,6 +632,10 @@ body[data-tab="home"] .chatfab{display:none !important}
 .center{min-height:56vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:10px}
 .center .big{font-family:var(--serif);font-weight:440;font-size:24px;max-width:22ch;line-height:1.3}
 .center .sm{color:var(--dim);font-size:13.5px;max-width:38ch}
+.pingate input{font-family:var(--mono,ui-monospace,monospace);font-size:22px;letter-spacing:.35em;text-align:center;width:210px;padding:13px 10px;margin-top:8px;border-radius:14px;border:1px solid var(--line2);background:rgba(245,242,233,.04);color:inherit;outline:none}
+.pingate input:focus{border-color:var(--red)}
+.pingate .pinbtn{font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:14px 22px;border-radius:12px;border:0;background:var(--red);color:#fff;cursor:pointer;min-width:210px}
+.pingate .pinbtn:disabled{opacity:.6}
 .center.slim{min-height:32vh}
 @media(min-width:560px){
   .act{flex-direction:row;justify-content:flex-end}
@@ -923,7 +927,7 @@ function normalize(h){
     url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0, amt: +x.amt || 0,
     cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '', th: x.th || '',
     br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0,
-    fo: x.fo || ''
+    fo: x.fo || '', op: x.op || '', oi: x.oi || '', ru: x.ru || '', cu: x.cu || ''
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
     pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : [],
@@ -1003,7 +1007,8 @@ function shootLine(x){
     : days <= 6 ? 'is ' + d.toLocaleDateString('en-US', {weekday:'long'}) + ' · ' + days + ' days away'
     : 'is ' + d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' · ' + days + ' days away';
   return '<div class="shootline">🎬 Shoot day ' + esc(when) +
-    ' <a class="ics" href="#" data-ics="' + esc(JSON.stringify({t: x.t, d: x.dt})).replace(/"/g, '&quot;') + '">📆 Add to calendar</a></div>';
+    ' <a class="ics" href="#" data-ics="' + esc(JSON.stringify({t: x.t, d: x.dt})).replace(/"/g, '&quot;') + '">📆 Add to calendar</a>' +
+    (ASSIST ? '' : ' <a class="movebtn" href="#" data-mid="' + esc(x.id || '') + '" data-mt="' + esc(x.t || '') + '" data-mw="' + esc(d.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})) + '" data-ru="' + esc(x.ru || '') + '" data-cu="' + esc(x.cu || '') + '">↔ Move or cancel</a>') + '</div>';
 }
 function icsEsc(s){ return String(s == null ? '' : s).replace(/([,;\\])/g, '\\$1'); }
 function downloadIcs(spec){
@@ -1236,6 +1241,12 @@ function credReq(){
   Object.keys(m).forEach(function(k){ if(+m[k] > cut) out[k] = m[k]; });
   return out;
 }
+function renewReq(){
+  var m = {}; try{ m = JSON.parse(localStorage.getItem('rem_hub_renew_v1:' + a)) || {}; }catch(e){}
+  var cut = Date.now() - 30 * 86400000, out = {};
+  Object.keys(m).forEach(function(k){ if(+m[k] > cut) out[k] = m[k]; });
+  return out;
+}
 function credMark(id){ var m = credReq(); m[id] = Date.now(); try{ localStorage.setItem('rem_hub_credreq_v1:' + a, JSON.stringify(m)); }catch(e){} }
 /* Bookings load after the rows render — patch any already-drawn row so the
    whole page tells ONE story while a shoot is pending. */
@@ -1370,13 +1381,27 @@ function render(raw){
     var open = items.filter(function(x){ return !x.dv && phaseOf(x) === 0 && x.id && !req[x.id] && !BOOKPEND[String(x.id)]; });
     if(!open.length) return;
     var groups = [], idx = {};
-    open.forEach(function(x){ var k = x.p || x.t || 'Your order'; if(idx[k] == null){ idx[k] = groups.length; groups.push({p: k, list: []}); } groups[idx[k]].list.push(x); });
+    open.forEach(function(x){ var k = x.oi || x.op || x.p || x.t || 'Your order'; if(idx[k] == null){ idx[k] = groups.length; groups.push({p: x.op || x.p || x.t || 'Your order', list: []}); } groups[idx[k]].list.push(x); });
     html += '<div class="homeblk"><div class="credcard" id="credcard"><div class="crh">🎟 <b>' + open.length + '</b> shoot' + (open.length === 1 ? '' : 's') + ' left to book' +
       '<span>Already part of your order' + (groups.length === 1 ? '' : 's') + ' — pick a time, nothing new to pay.</span></div>' +
       groups.map(function(g){ var x0 = g.list[0];
         return '<div class="crrow"><span class="crn">' + esc(g.p) + '</span><span class="crc">' + g.list.length + ' left</span>' +
           '<button type="button" class="mini credbook" data-cred="' + esc(x0.id) + '" data-ct="' + esc(x0.t || '') + '" data-cp="' + esc(g.p) + '">📅 Book one</button></div>';
       }).join('') + '</div></div>';
+  })();
+  // 🔁 running low: a package with one (or no) shoot left to book can be renewed in a tap
+  (function(){
+    if(ASSIST) return;
+    var req = credReq(), ren = renewReq(), byO = {};
+    items.forEach(function(x){ if(!x.oi) return; var g = byO[x.oi] || (byO[x.oi] = {oi: x.oi, p: x.op || x.p || 'your package', n: 0, left: 0, any: x, last: ''});
+      g.n++; if(!x.dv && phaseOf(x) === 0 && !req[x.id]) g.left++; if(String(x.dt || '') > g.last) g.last = String(x.dt || ''); });
+    var cut = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+    var low = Object.keys(byO).map(function(k){ return byO[k]; }).filter(function(g){ return g.n >= 3 && g.left <= 1 && !ren[g.oi] && (g.left === 1 || g.last >= cut); });
+    if(!low.length) return;
+    html += '<div class="homeblk"><div class="credcard rencard" id="rencard">' + low.slice(0, 2).map(function(g){
+      return '<div class="crrow" style="border-top:0"><span class="crn" style="white-space:normal">' + (g.left === 1 ? '⏳ Last shoot left in ' : '✅ You’ve used every shoot in ') + '<b>' + esc(g.p) + '</b></span>' +
+        '<button type="button" class="mini renewbtn" data-ren="' + esc(g.any.id) + '" data-ro="' + esc(g.oi) + '" data-rp="' + esc(g.p) + '">🔁 Renew it</button></div>';
+    }).join('') + '<div class="crh" style="margin:0 0 6px"><span>Same package again — we’ll confirm it and your new shoots appear here to book.</span></div></div></div>';
   })();
   if(items.length){
     html += '<div class="homeblk"><div class="stats">' +
@@ -1682,7 +1707,8 @@ function loadBookings(){
             '<span class="scacts">' +
             '<a href="#" class="ics" data-ics="' + esc(JSON.stringify({t: it.n, s: it.s, e: it.e})).replace(/"/g, '&quot;') + '">📆 Calendar</a>' +
             ' <a href="#" class="briefbtn" data-bid="' + esc(bid) + '" data-bn="' + esc(it.n) + '" data-bw="' + esc(when) + '" data-dref="' + esc(it.dref || it.id || '') + '" data-br="' + (bm && bm.br ? encodeURIComponent(JSON.stringify(bm.br)) : '') + '" data-lk="' + (bm && bm.lk ? '1' : '0') + '" data-bl="' + esc((AGENTNAME || 'Agent') + ' — ' + it.n) + '">' + ((bm && bm.lk) ? '🔒 View brief' : (briefSent[bid] ? '✓ Brief sent · update' : '📋 Shoot brief')) + '</a>' +
-            (it.rs ? ' <a href="' + esc(it.rs) + '" target="_blank" rel="noopener" title="Something came up? Move it — no guilt.">↔ Reschedule</a>' : '') +
+            (it.rs ? ' <a href="' + esc(it.rs) + '" target="_blank" rel="noopener" title="Something came up? Move it — no guilt.">↔ Reschedule</a>' +
+              (/\/reschedulings\//.test(it.rs) ? ' <a href="' + esc(String(it.rs).replace('/reschedulings/', '/cancellations/')) + '" target="_blank" rel="noopener" title="Can’t make it at all? Cancel here — your credit stays yours.">✕ Cancel</a>' : '') : '') +
             '</span></span>';
         }).join('') + '</div>';
         if(slot) slot.innerHTML = chipsHtml +
@@ -2331,6 +2357,43 @@ function openTele(txt){
   requestAnimationFrame(function(){ teleMeasureBeats(); teleBuildWords(); teleStat(); });
 }
 /* ---- ⚡ next open slots ---- */
+/* ---- ↔ move or cancel a booked shoot ----
+   With a calendar booking behind it: straight to the reschedule / cancel page.
+   Booked by hand: a two-tap request that lands in the studio's inbox, tied to this shoot. */
+function openMove(el){
+  var id = el.getAttribute('data-mid') || '', t = el.getAttribute('data-mt') || 'your shoot', w = el.getAttribute('data-mw') || '';
+  var ru = el.getAttribute('data-ru') || '', cu = el.getAttribute('data-cu') || '';
+  var old = document.getElementById('movedlg'); if(old) old.remove();
+  var m = document.createElement('div'); m.id = 'movedlg';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(8,8,10,.7);display:flex;align-items:flex-end;justify-content:center;padding:14px';
+  var bs = 'display:block;width:100%;text-align:left;font-family:var(--sans);font-weight:600;font-size:14.5px;padding:14px 15px;border-radius:13px;border:1px solid var(--line2);background:rgba(245,242,233,.04);color:inherit;cursor:pointer;margin-top:8px;text-decoration:none;box-sizing:border-box';
+  var h = '<div style="width:100%;max-width:440px;background:var(--bg);border:1px solid var(--line2);border-radius:20px;padding:20px 18px 16px;margin-bottom:env(safe-area-inset-bottom)">' +
+    '<div style="font-weight:700;font-size:18px">' + esc(t) + (w ? ' · ' + esc(w) : '') + '</div>' +
+    '<div style="color:var(--dim);font-size:13px;margin:4px 0 8px">Something came up? No problem — pick one.</div>';
+  if(ru){
+    h += '<a style="' + bs + '" href="' + esc(ru) + '" target="_blank" rel="noopener" data-mvx>↔ Pick a new time</a>' +
+      (cu ? '<a style="' + bs + '" href="' + esc(cu) + '" target="_blank" rel="noopener" data-mvx>✕ Cancel this shoot — keep my credit</a>' : '');
+  } else {
+    h += '<textarea id="mvnote" rows="2" maxlength="300" placeholder="When would work better? (e.g. Friday afternoon, or any day next week)" style="width:100%;box-sizing:border-box;margin-top:6px;font-family:var(--sans);font-size:15px;padding:12px;border-radius:12px;border:1px solid var(--line2);background:rgba(245,242,233,.04);color:inherit"></textarea>' +
+      '<button type="button" style="' + bs + '" data-mvreq="move">↔ Ask to move it</button>' +
+      '<button type="button" style="' + bs + '" data-mvreq="cancel">✕ Ask to cancel it — keep my credit</button>';
+  }
+  h += '<button type="button" style="' + bs + ';text-align:center;border-color:transparent;color:var(--dim)" data-mvx>Never mind</button></div>';
+  m.innerHTML = h; document.body.appendChild(m);
+  m.addEventListener('click', function(ev){
+    var q = ev.target.closest('[data-mvreq]');
+    if(q){
+      var note = (document.getElementById('mvnote') || {}).value || '';
+      var kind = q.getAttribute('data-mvreq');
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({ kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'resched:' + id,
+        who:AGENTNAME || 'Agent', from:'', body: (kind === 'cancel' ? '✕ Could we cancel ' : '↔ Could we move ') + '\u201C' + t + '\u201D' + (w ? ' (' + w + ')' : '') + '?' + (note.trim() ? ' ' + note.trim() : '') }) }).catch(function(){});
+      m.remove();
+      try{ toast('✓ Sent — we’ll confirm in your chat shortly.'); }catch(eT){}
+      return;
+    }
+    if(ev.target === m || ev.target.closest('[data-mvx]')){ if(!ev.target.closest('a')) ev.preventDefault(); m.remove(); }
+  });
+}
 function loadSlots(){
   fetch(ENDPOINT + '?slots=dynamic-shoot').then(function(r){ return r.json(); }).then(function(j){
     if(!j.ok || !(j.slots || []).length) return;
@@ -2635,6 +2698,21 @@ document.addEventListener('click', function(e){
   }
   var sv = e.target.closest ? e.target.closest('.svcbook') : null;
   if(sv){ CREDIT_CTX = null; openCalendly(sv.getAttribute('data-cal') || undefined); return; }
+  var rb = e.target.closest ? e.target.closest('.renewbtn') : null;
+  if(rb){
+    if(rb.disabled) return;
+    rb.disabled = true; rb.textContent = '✓ Requested';
+    var rm = renewReq(); rm[rb.getAttribute('data-ro')] = Date.now();
+    try{ localStorage.setItem('rem_hub_renew_v1:' + a, JSON.stringify(rm)); }catch(eR){}
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({ kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'renew:' + rb.getAttribute('data-ren'),
+      who:AGENTNAME || 'Agent', body:'🔁 I’d like to renew \u201C' + (rb.getAttribute('data-rp') || 'my package') + '\u201D — same again, please!', from:'' }) })
+      .catch(function(){ rb.disabled = false; rb.textContent = '🔁 Renew it'; });
+    try{ confetti(); }catch(eC){}
+    return;
+  }
+  // ↔ move / cancel a shoot
+  var mv = e.target.closest ? e.target.closest('.movebtn') : null;
+  if(mv){ e.preventDefault(); openMove(mv); return; }
   var cb = e.target.closest ? e.target.closest('.credbook') : null;
   if(cb){
     if(cb.disabled) return;
@@ -3210,6 +3288,43 @@ function billingHtml(items){
   h += '<div class="psub" style="margin:12px 0 0">Prefer e-transfer? Send to hello@reelestatemedia.com — your receipt lands in your chat.</div>';
   return h;
 }
+/* 🔐 Optional hub PIN: if the studio set one, this device has to enter it once before anything is shown.
+   A door lock (it stops a forwarded link opening on someone else's phone) — the PIN's hash rides in the hub data. */
+function pinHash(pin){
+  var t = 'rem\u00B7' + 'rem-hub\u00B7' + a + '\u00B7' + pin;
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)).then(function(buf){
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0' + b.toString(16)).slice(-2); }).join(''); });
+}
+function pinGate(h, go){
+  var want = String((h && h.pn) || '');
+  var KEY = 'rem_hub_pinok_v1:' + a, TRY = 'rem_hub_pintry_v1:' + a;
+  var ok = ''; try{ ok = localStorage.getItem(KEY) || ''; }catch(e){}
+  if(!want || ok === want || !(window.crypto && crypto.subtle)){ go(); return; }
+  var first = String(h.agent || '').split(' ')[0];
+  document.getElementById('body').innerHTML = '<div class="center pingate"><div class="big">' + (first ? 'Hi ' + esc(first) + ' — ' : '') + 'enter your PIN<span style="color:var(--red)">.</span></div>' +
+    '<div class="sm">This page is private. You only need to do this once on this device.</div>' +
+    '<input id="pinin" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="PIN" aria-label="Hub PIN">' +
+    '<button type="button" id="pingo" class="pinbtn">Open my hub</button>' +
+    '<div class="sm" id="pinmsg" style="min-height:1.4em"></div>' +
+    '<div class="sm" style="opacity:.75">Forgot it? Text us and we’ll send it over.</div></div>';
+  var inp = document.getElementById('pinin'), btn = document.getElementById('pingo'), msg = document.getElementById('pinmsg');
+  var tries = function(){ var o = {n: 0, t: 0}; try{ o = JSON.parse(localStorage.getItem(TRY)) || o; }catch(e){} return o; };
+  var submit = function(){
+    var tr = tries(), wait = tr.n >= 5 ? Math.ceil((tr.t + 5 * 60000 - Date.now()) / 60000) : 0;
+    if(wait > 0){ msg.textContent = 'Too many tries — wait ' + wait + ' minute' + (wait === 1 ? '' : 's') + ' and try again.'; return; }
+    var v = String(inp.value || '').replace(/[^0-9]/g, ''); if(!v) return;
+    btn.disabled = true;
+    pinHash(v).then(function(hh){
+      btn.disabled = false;
+      if(hh === want){ try{ localStorage.setItem(KEY, want); localStorage.removeItem(TRY); }catch(e){} go(); return; }
+      var n = (tr.n >= 5 ? 0 : tr.n) + 1; try{ localStorage.setItem(TRY, JSON.stringify({n: n, t: Date.now()})); }catch(e){}
+      msg.textContent = 'That PIN doesn’t match — try again.'; inp.value = ''; inp.focus();
+    }).catch(function(){ btn.disabled = false; msg.textContent = 'Couldn’t check the PIN — refresh and try again.'; });
+  };
+  btn.onclick = submit;
+  inp.onkeydown = function(e){ if(e.key === 'Enter') submit(); };
+  setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50);
+}
 function fail(big, sm){
   document.getElementById('body').innerHTML = '<div class="center"><div class="big">' + big + '</div><div class="sm">' + sm + '</div></div>';
 }
@@ -3292,9 +3407,11 @@ else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   .then(j => {
     if(j.ok && j.hub){
       if(j.assist && j.assist.k){ ASSIST = {n: String(j.assist.n || 'Assistant')}; a = String(j.assist.k); document.body.classList.add('assist'); }
-      render(j.hub);
-      loadScripts(); loadSlots();
-      if(!ASSIST){ loadBio(); loadAssists(); }
+      pinGate(j.hub, function(){
+        render(j.hub);
+        loadScripts(); loadSlots();
+        if(!ASSIST){ loadBio(); loadAssists(); }
+      });
     } else fail('We couldn’t find your page.', 'Ask us for a fresh link — it takes ten seconds.');
   })
   .catch(() => fail('Couldn’t load your content.', 'Check your connection and pull to refresh.'));
@@ -3381,7 +3498,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.15-2</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-1</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;

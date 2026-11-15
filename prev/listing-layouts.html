@@ -74,7 +74,18 @@
 <title>Listing Layouts</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;500;600&family=Gilda+Display&family=Libre+Caslon+Display&family=Marcellus&family=Jost:wght@300;400;500;600;700&family=Roboto:wght@500;700;900&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,300;0,400;1,300&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Manrope:wght@300;400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://drive.google.com"><link rel="preconnect" href="https://lh3.googleusercontent.com"><link rel="preconnect" href="https://script.google.com">
+<script>
+/* 🪶 Published pages travel light: a buyer's phone loads only the fonts the chosen design uses
+   (the builder still loads all of them so every design previews correctly). */
+(function(){
+  var q = location.search, pub = /[?&]pub=1/.test(q) || (/[?&]x=/.test(q) && !/[?&]r=/.test(q));
+  window.__LL_FONTS = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;500;600&family=Gilda+Display&family=Libre+Caslon+Display&family=Marcellus&family=Jost:wght@300;400;500;600;700&family=Roboto:wght@500;700;900&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,300;0,400;1,300&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Manrope:wght@300;400;500;600&display=swap";
+  window.__LL_PUB = pub;
+  if(!pub) document.write('<link rel="stylesheet" href="' + window.__LL_FONTS + '">');
+})();
+</script>
 <style>
 /* Listing Showcase system. A chooser of layouts, each rendered live from one listing's details and photos. Layout CSS uses container queries so thumbnails and the phone preview render true to size. */
 :root {
@@ -2046,9 +2057,12 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var R_X = RQP.get('x');
   if(R_X && !RQP.get('r')){
     document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Loading the listing…</div>';
+    // a link that's been opened here before goes straight in — no lookup round-trip
+    var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
+    if(_xq){ location.replace(location.pathname + '?' + _xq); return; }
     fetch('https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec?link=' + encodeURIComponent(R_X))
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(j.ok && j.qs) location.replace(location.pathname + '?' + j.qs); else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
+      .then(function(j){ if(j.ok && j.qs){ try{ localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
       .catch(function(){ document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Couldn’t load — check your connection and refresh.</div>'; });
     return;
   }
@@ -3215,7 +3229,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   function render(keepScroll){
     applyTheme();
     var r=route(), y=window.scrollY;
-    app.innerHTML = (r==='home'?homeView():layoutView(r)) + (ui.drawer?drawerHTML():'');
+    var _html = (r==='home'?homeView():layoutView(r)) + (ui.drawer?drawerHTML():'');
+    if(window.__LL_PUB){ var _n = 0; _html = _html.replace(/<img (?![^>]*\bloading=)/g, function(){ return (++_n > 2) ? '<img loading="lazy" decoding="async" ' : '<img decoding="async" '; }); }
+    app.innerHTML = _html;
     if (r!==lastRoute){ window.scrollTo(0,0); lastRoute=r; } else if (keepScroll) window.scrollTo(0,y);
     fitThumbs(); setStick(); wire(); wireRs();
   }
@@ -3268,7 +3284,10 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           .then(function(j){
             var fl=(j.files||[]).sort(function(a,b){ return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}); });
             if(!fl.length) return;
-            fl.forEach(function(f){ photos.push({url:'https://drive.google.com/thumbnail?id='+f.id+'&sz=w2400', name:f.name.replace(/\.[a-z0-9]+$/i,'')}); });
+            // 📱 photos sized for the screen they're on: a phone gets ~1000–1600px instead of the full 2400px
+            var _need = Math.max(320, window.innerWidth || 1200) * Math.min(window.devicePixelRatio || 1, 3);
+            var _pw = _need <= 1000 ? 1000 : _need <= 1700 ? 1600 : 2400;
+            fl.forEach(function(f){ photos.push({url:'https://drive.google.com/thumbnail?id='+f.id+'&sz=w'+_pw, name:f.name.replace(/\.[a-z0-9]+$/i,'')}); });
             render(true);
           }).catch(function(){});
       });
@@ -3894,6 +3913,20 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     }
 
     if(R_PUB && R_LAY){
+      // 🪶 fonts: only the families this design actually uses (re-checked when the page changes)
+      (function(){
+        var fams = {}, got = {}, seen = {}, t = 0;
+        String(window.__LL_FONTS || '').split('css2?').slice(1).join('').split('&').forEach(function(p){ if(p.indexOf('family=') === 0){ var sp = p.slice(7); fams[sp.split(':')[0].replace(/\+/g, ' ')] = sp; } });
+        function scan(){
+          var els = document.querySelectorAll('body, body *'), add = [];
+          for(var i = 0; i < els.length; i++){ var ff = getComputedStyle(els[i]).fontFamily; if(seen[ff]) continue; seen[ff] = 1;
+            ff.split(',').forEach(function(n){ n = n.replace(/["']/g, '').trim(); if(fams[n] && !got[n]){ got[n] = 1; add.push('family=' + fams[n]); } }); }
+          if(!add.length) return;
+          var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?' + add.join('&') + '&display=swap'; document.head.appendChild(l);
+        }
+        scan();
+        try{ new MutationObserver(function(){ clearTimeout(t); t = setTimeout(scan, 350); }).observe(document.body, {childList: true, subtree: true}); }catch(eM){}
+      })();
       document.body.classList.add('rem-pub');
       window.addEventListener('hashchange', function(){ if((location.hash||'').slice(1) !== R_LAY) location.hash = R_LAY; });
     }
@@ -4050,5 +4083,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.15-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-1</div>
 </body></html>
