@@ -3485,8 +3485,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(PREVIEW || document.body.classList.contains('assist')) return;   // never register the studio/assistant browser as the agent
     await OneSignal.init({
       appId: '5e807c9c-b2b4-450c-99ef-fb78b3b3c3e8',
-      serviceWorkerPath: 'ReelEstateMedia/OneSignalSDKWorker.js',
-      serviceWorkerParam: { scope: '/ReelEstateMedia/' },
+      // the worker sits next to the site's pages, wherever that is (github.io/ReelEstateMedia/ today, the domain root later)
+      serviceWorkerPath: location.pathname.replace(/(?:beta|prev)\/[^\/]*$/, '').replace(/[^\/]*$/, '').replace(/^\//, '') + 'OneSignalSDKWorker.js',
+      serviceWorkerParam: { scope: location.pathname.replace(/(?:beta|prev)\/[^\/]*$/, '').replace(/[^\/]*$/, '') },
       autoResubscribe: true
     });
     window.__OS = OneSignal;
@@ -3498,7 +3499,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-1</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-2</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
