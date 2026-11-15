@@ -38,6 +38,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .search input{width:100%;background:var(--panel);border:1px solid var(--hair2);border-radius:999px;padding:9px 14px 9px 36px;color:var(--ink);font:600 13px var(--sans);outline:none}
 .search input:focus{border-color:var(--brass)}
 .search::before{content:"⌕";position:absolute;left:13px;top:6px;font-size:17px;color:var(--ink3)}
+.remnav{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}.remnav a{font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;color:inherit;border:1px solid rgba(128,128,128,.42);border-radius:9px;padding:8px 12px;white-space:nowrap;line-height:1.2}.remnav a:hover{border-color:#EA002A}.remnav a.on{background:#EA002A;border-color:#EA002A;color:#fff}
+body.agentmode{--serif:'Space Grotesk',system-ui,-apple-system,sans-serif;--sans:'Space Grotesk',system-ui,-apple-system,sans-serif;--brass:#EA002A;--brass2:#c80024;--hair:rgba(255,255,255,.1)}
+html:not([data-theme="light"]) body.agentmode{--bg:#1A1A1A;--bg2:#1f1f1f;--panel:#232323;--panel2:#2a2a2a}
+html[data-theme="light"] body.agentmode{--bg:#FAF8F5}
+body.agentmode .brand b{font-weight:700;letter-spacing:-.01em}
+body.agentmode .brand b i{font-style:normal;font-weight:700;color:#EA002A}
+body.agentmode .top .remnav{margin-left:6px}
 .seg{display:flex;background:var(--panel);border:1px solid var(--hair2);border-radius:999px;padding:3px;margin-left:auto}
 .seg button{border:0;background:transparent;border-radius:999px;padding:7px 14px;font:700 12px var(--sans);letter-spacing:.04em;color:var(--ink2)}
 .seg button.on{background:var(--brass);color:#1a1205}
@@ -252,7 +259,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.15-2</div>
+<div id="verstamp" title="App version">VAULT v2026.11.15-3</div>
 <script>
 (function(){
   'use strict';
@@ -545,7 +552,8 @@ body.selmode .tile .ck{display:grid}
     var pieces=agents.reduce(function(s,a){ return s+a.finals.length; },0);
     if(AGENT_MODE){
       var a=agents[0]||{name:''};
-      return '<div class="top"><div class="brand"><b>The <i>Vault</i></b><span>'+esc(a.company||'Reel Estate Media')+'</span></div>'+
+      return '<div class="top"><div class="brand"><b>My <i>Library</i></b><span>'+esc(a.company||'Reel Estate Media')+'</span></div>'+
+        '<span class="remnav">'+(a.hub?'<a href="'+esc(a.hub)+'">⌂ My hub</a>':'')+'<a class="on" href="#" onclick="return false">🗄 Library</a></span>'+
         '<div class="cnt"><b>'+pieces+'</b>pieces · '+esc(a.name)+'</div>'+
         '<div class="seg">'+[['wall','Wall'],['dossier','Profile']].map(function(v){ return '<button data-view="'+v[0]+'" class="'+(state.view===v[0]?'on':'')+'">'+v[1]+'</button>'; }).join('')+'</div>'+
         '<button class="ico" id="theme" title="Light / dark">◐</button></div>';
@@ -789,6 +797,9 @@ body.selmode .tile .ck{display:grid}
   /* ---------------- agent mode: build from the hub manifest ---------------- */
   function startAgent(){
     var key=QP.get('a'); ENDPOINT=QP.get('e')||ENDPOINT_DEFAULT;
+    // 🧭 agent side wears the hub's look: same type, same ink-and-red, same nav pills
+    document.body.classList.add('agentmode');
+    try{ var gf=document.createElement('link'); gf.rel='stylesheet'; gf.href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap'; document.head.appendChild(gf); }catch(eF){}
     app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Opening your vault…</h1></div></div>';
     fetch(ENDPOINT+'?hub='+encodeURIComponent(key)).then(function(r){ return r.json(); }).then(function(j){
       var m=j&&j.hub; if(typeof m==='string'){ try{ m=JSON.parse(m); }catch(e){ m=null; } }
@@ -807,7 +818,7 @@ body.selmode .tile .ck{display:grid}
         var a={id:'me', c:c, name:c.name, title:c.agentTitle, orders:[], items:items, finals:items, delivered:items.length, spent:0, first:items.length?items[items.length-1].date:'', last:items.length?items[0].date:'', headshot:headshotUrl(c.headshot),
           hub:((QP.get('h')||'')||(location.origin+location.pathname.replace('vault.html','hub.html')))+'?a='+key+'&t='+(m.t||'pin'), hk:key, company:c.company||'Reel Estate Media', pin:m.t==='pin',
           counts:['reel','photo','headshot','listing'].reduce(function(x,k){ x[k]=items.filter(function(i){ return matchFilter(i,k); }).length; return x; },{})};
-        agents=[a]; state.agent='me'; if(state.view!=='dossier') state.view='wall'; document.title=c.name+' · The Vault';
+        agents=[a]; state.agent='me'; if(state.view!=='dossier') state.view='wall'; document.title=c.name+' · My Library';
         render();
       });
     }).catch(function(){ app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Couldn\u2019t open the vault</h1><p>Check your connection and try again.</p></div></div>'; });

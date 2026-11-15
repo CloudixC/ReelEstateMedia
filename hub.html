@@ -276,6 +276,17 @@ a.pill.due2:hover{filter:brightness(1.15)}
 .lthumb{width:44px;height:44px;border-radius:10px;flex:none;overflow:hidden;background:rgba(245,242,233,.05);border:1px solid var(--line);display:grid;place-items:center;font-size:17px}
 .lthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .card .lthumb{width:52px;height:52px;border-radius:12px}
+.credcard{background:linear-gradient(180deg,rgba(22,30,25,.6),rgba(16,20,18,.5) 60%);border:1px solid rgba(76,195,138,.32);border-radius:18px;padding:16px 18px 8px;margin:18px 0 2px}
+.credcard .crh{font-weight:700;font-size:15px;margin-bottom:8px}
+.credcard .crh b{color:#6fd3a0;font-size:18px}
+.credcard .crh span{display:block;font-weight:500;font-size:12.5px;color:var(--dim);margin-top:3px}
+.credcard .crrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.credcard .crn{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.credcard .crc{font-size:12px;color:var(--dim);white-space:nowrap}
+.credcard .credbook{border-color:rgba(76,195,138,.5);color:#6fd3a0;white-space:nowrap}
+.credcard .credbook:disabled{opacity:.6;cursor:default}
+body.light .credcard{background:linear-gradient(180deg,rgba(240,252,246,.95),rgba(248,253,250,.9) 60%)}
+body.light .credcard .crh b,body.light .credcard .credbook{color:#1d8a57}
 .mini{background:rgba(245,242,233,.03);border:1px solid var(--line2);color:var(--dim);border-radius:9px;padding:8px 12px;font-family:var(--sans);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
 .mini:hover{border-color:var(--teal);color:var(--teal)}
 .mini.share:hover{border-color:var(--red2);color:var(--txt)}
@@ -1144,6 +1155,16 @@ function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
 }
 let AGENTNAME = '', AGENTEMAIL = '', PAYURL = '';
 var BOOKPEND = {};   // project/booking ids whose shoot still awaits studio approval
+/* 🎟 credits: a shoot booked against an order is remembered here until the studio schedules it
+   (then the hub manifest moves it out of "to book" on its own). */
+var CREDIT_CTX = null;
+function credReq(){
+  var m = {}; try{ m = JSON.parse(localStorage.getItem('rem_hub_credreq_v1:' + a)) || {}; }catch(e){}
+  var cut = Date.now() - 14 * 86400000, out = {};
+  Object.keys(m).forEach(function(k){ if(+m[k] > cut) out[k] = m[k]; });
+  return out;
+}
+function credMark(id){ var m = credReq(); m[id] = Date.now(); try{ localStorage.setItem('rem_hub_credreq_v1:' + a, JSON.stringify(m)); }catch(e){} }
 /* Bookings load after the rows render — patch any already-drawn row so the
    whole page tells ONE story while a shoot is pending. */
 function syncPendingRows(){
@@ -1185,12 +1206,14 @@ function loadCalendly(){
   });
   return calReady;
 }
-function openCalendly(base){
+function openCalendly(base, extra){
+  if(!extra) CREDIT_CTX = null;   // a normal booking is never mistaken for a credit
+  var u = calUrl(base) + (extra || '');
   loadCalendly().then(function(){
-    Calendly.initPopupWidget({url: calUrl(base)});
+    Calendly.initPopupWidget({url: u});
   }).catch(function(){
     calReady = null;
-    window.open(calUrl(base), '_blank');   // widget blocked? plain Calendly still works
+    window.open(u, '_blank');   // widget blocked? plain Calendly still works
   });
 }
 // When Calendly confirms a booking inside the popup, tell the chat thread.
@@ -1198,11 +1221,19 @@ function onCalendlyBooked(){
   wSet({booked: true});
   WELCOME.book = true;
   updateWelcome();
+  var cx = CREDIT_CTX; CREDIT_CTX = null;
   try{
     fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
-      kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname:'',
-      who:AGENTNAME || 'Agent', body:'📅 Just booked a shoot on your calendar — waiting on your approval! 🤞', from:'' }) });
+      kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname: cx ? 'credit:' + cx.id : '',
+      who:AGENTNAME || 'Agent', body: cx
+        ? '📅 Just booked a shoot from my order \u201C' + cx.p + '\u201D' + (cx.t && cx.t !== cx.p ? ' (' + cx.t + ')' : '') + ' — waiting on your approval! 🤞'
+        : '📅 Just booked a shoot on your calendar — waiting on your approval! 🤞', from:'' }) });
   }catch(e){}
+  if(cx){
+    credMark(cx.id); BOOKPEND[String(cx.id)] = 1; syncPendingRows();
+    var cc = document.getElementById('credcard');
+    if(cc){ var rw = cc.querySelector('[data-cred="' + cx.id + '"]'); if(rw){ rw.disabled = true; rw.textContent = '⏳ Requested'; } }
+  }
   confetti();
 }
 window.addEventListener('message', function(e){
@@ -1261,6 +1292,20 @@ function render(raw){
       recap.join('') + '<li id="recapmsgs" style="display:none"></li></ul></div></div>';
   }
   html += '<div class="homeblk"><div id="welcomeslot"></div><div id="shootsslot"></div></div>';
+  // 🎟 shoots already on an order that haven't been booked yet — book one in a tap, tied to that order
+  (function(){
+    var req = credReq();
+    var open = items.filter(function(x){ return !x.dv && phaseOf(x) === 0 && x.id && !req[x.id] && !BOOKPEND[String(x.id)]; });
+    if(!open.length) return;
+    var groups = [], idx = {};
+    open.forEach(function(x){ var k = x.p || x.t || 'Your order'; if(idx[k] == null){ idx[k] = groups.length; groups.push({p: k, list: []}); } groups[idx[k]].list.push(x); });
+    html += '<div class="homeblk"><div class="credcard" id="credcard"><div class="crh">🎟 <b>' + open.length + '</b> shoot' + (open.length === 1 ? '' : 's') + ' left to book' +
+      '<span>Already part of your order' + (groups.length === 1 ? '' : 's') + ' — pick a time, nothing new to pay.</span></div>' +
+      groups.map(function(g){ var x0 = g.list[0];
+        return '<div class="crrow"><span class="crn">' + esc(g.p) + '</span><span class="crc">' + g.list.length + ' left</span>' +
+          '<button type="button" class="mini credbook" data-cred="' + esc(x0.id) + '" data-ct="' + esc(x0.t || '') + '" data-cp="' + esc(g.p) + '">📅 Book one</button></div>';
+      }).join('') + '</div></div>';
+  })();
   if(items.length){
     html += '<div class="homeblk"><div class="stats">' +
       '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
@@ -2517,7 +2562,15 @@ document.addEventListener('click', function(e){
     return;
   }
   var sv = e.target.closest ? e.target.closest('.svcbook') : null;
-  if(sv){ openCalendly(sv.getAttribute('data-cal') || undefined); return; }
+  if(sv){ CREDIT_CTX = null; openCalendly(sv.getAttribute('data-cal') || undefined); return; }
+  var cb = e.target.closest ? e.target.closest('.credbook') : null;
+  if(cb){
+    if(cb.disabled) return;
+    CREDIT_CTX = {id: cb.getAttribute('data-cred'), t: cb.getAttribute('data-ct') || '', p: cb.getAttribute('data-cp') || ''};
+    // the booking carries the credit's id, so the studio's calendar sync ties it to this order automatically
+    openCalendly(undefined, '&utm_source=hub-credit&utm_content=' + encodeURIComponent('cr-' + CREDIT_CTX.id));
+    return;
+  }
   var ic = e.target.closest ? e.target.closest('.ideacopy') : null;
   if(ic){
     var txt = ic.getAttribute('data-idea');
@@ -3256,7 +3309,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.15-1</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.15-2</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
