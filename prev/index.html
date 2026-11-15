@@ -77,6 +77,19 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reel Estate Media · Production Pipeline</title>
+<script>
+/* 🚪 The site's main address is public. A browser that has never held studio data is sent to the
+   front door (start.html); the Command Centre only opens where it already lives, or when asked for
+   explicitly (index.html?studio=1, or a #setup= link on a new device). */
+(function(){
+  try{
+    if(/\/(beta|prev)\//.test(location.pathname)) return;
+    var mine = localStorage.getItem('rem_pipeline_v1') || localStorage.getItem('rem_setup_v1') || sessionStorage.getItem('rem_unlocked');
+    if(mine || /#setup=/.test(location.hash) || /[?&]studio(=|&|$)/.test(location.search) || /#dl=/.test(location.hash)) return;
+    location.replace('start.html');
+  }catch(e){}
+})();
+</script>
 <link rel="manifest" href="cc.webmanifest">
 <meta name="theme-color" content="#0a0a0c">
 <link rel="apple-touch-icon" href="cc-icon-192.png">
@@ -459,7 +472,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-3) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-4) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -3544,6 +3557,69 @@ function AppInner({
   const [showCloud, setShowCloud] = useState(false);
   const [utilOpen, setUtilOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showCleanup, setShowCleanup] = useState(false);
+  const viewRef = React.useRef(view);
+  viewRef.current = view;
+  useEffect(() => {
+    let pend = null,
+      t = 0;
+    const onClick = e => {
+      try {
+        const el = e.target && e.target.closest ? e.target.closest('button, a.btn, nav.tabs button, .appsw a') : null;
+        if (!el) return;
+        if (el.closest('.cmdk, [data-usage]')) return;
+        let label = el.getAttribute('data-primary') ? 'primary: ' + el.getAttribute('data-primary') : String(el.textContent || el.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+        label = label.replace(/\$[\d,.]+/g, '$#').replace(/\d+/g, '#').slice(0, 32);
+        if (!label) return;
+        const inQueue = !!el.closest('[data-needs-you]'),
+          inRow = !!el.closest('.dl-row');
+        const where = inQueue ? 'Needs you' : inRow ? 'Deliverable row' : el.closest('nav.tabs') ? 'Tabs' : el.closest('header.top') ? 'Header' : el.closest('.modal, .ui-dlg') ? 'Dialog' : viewRef.current;
+        const key = where + ' › ' + (inQueue ? label.replace(/^.*?(\S+\s?\S*)$/, '$1') : label);
+        pend = pend || (() => {
+          try {
+            return JSON.parse(localStorage.getItem('rem_usage_v1') || 'null');
+          } catch (e2) {
+            return null;
+          }
+        })() || {
+          since: today(),
+          n: {}
+        };
+        pend.n[key] = (pend.n[key] || 0) + 1;
+        clearTimeout(t);
+        t = setTimeout(() => {
+          try {
+            localStorage.setItem('rem_usage_v1', JSON.stringify(pend));
+          } catch (e3) {}
+          pend = null;
+        }, 1500);
+      } catch (e1) {}
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, []);
+  useEffect(() => {
+    try {
+      if (/\/(beta|prev)\//.test(location.pathname) || /^(localhost|127\.)/.test(location.hostname)) return;
+      const base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+      const fix = u => {
+        const m = String(u || '').match(/^https?:\/\/[^\/]+\/(?:.*\/)?([\w-]+\.html)$/);
+        return m && u.indexOf(base) !== 0 ? base + m[1] : u;
+      };
+      const st = dbRef.current.settings;
+      const patch = {};
+      ['reviewPageUrl', 'briefFormUrl'].forEach(k => {
+        if (st[k] && fix(st[k]) !== st[k]) patch[k] = fix(st[k]);
+      });
+      if (Object.keys(patch).length) setDb(p => ({
+        ...p,
+        settings: {
+          ...p.settings,
+          ...patch
+        }
+      }));
+    } catch (e) {}
+  }, []);
   useEffect(() => {
     const onK = e => {
       if ((e.metaKey || e.ctrlKey) && !e.altKey && String(e.key).toLowerCase() === 'k') {
@@ -5955,6 +6031,30 @@ function AppInner({
   };
   window.applyBookingAttach = applyBookingAttach;
   window.__markSubHandled = markSubHandled;
+  window.__quietDeliver = (ids, when) => quietDeliver(ids, when);
+  window.__patchDl = (id, patch) => setDb(p => ({
+    ...p,
+    deliverables: p.deliverables.map(x => x.id === id ? {
+      ...x,
+      ...patch
+    } : x)
+  }));
+  window.__removeDl = id => {
+    const cur = dbRef.current.deliverables.find(x => x.id === id);
+    setDb(p => ({
+      ...p,
+      deliverables: p.deliverables.filter(x => x.id !== id)
+    }));
+    if (cur) logActivity(`🧹 Removed ${dlTitle(cur)} in the clean-up`);
+  };
+  window.__patchClient = (id, patch) => setDb(p => ({
+    ...p,
+    clients: p.clients.map(x => x.id === id ? {
+      ...x,
+      ...patch
+    } : x)
+  }));
+  window.__openCleanup = () => setShowCleanup(true);
   window.__restoreField = (id, field, value) => {
     const cur = dbRef.current.deliverables.find(x => x.id === id);
     if (!cur) return;
@@ -6280,7 +6380,10 @@ function AppInner({
   }, utilOpen ? '✕' : '⋯'), React.createElement("button", {
     className: "btn",
     onClick: () => setShowNewOrder(true)
-  }, "+ New Booking"))), showSearch && React.createElement(CommandPalette, {
+  }, "+ New Booking"))), showCleanup && React.createElement(CleanupModal, {
+    db: db,
+    onClose: () => setShowCleanup(false)
+  }), showSearch && React.createElement(CommandPalette, {
     db: db,
     onClose: () => setShowSearch(false),
     openOrderDetail: openOrderDetail,
@@ -7896,7 +7999,215 @@ function CommandPalette({
     className: "cmdk-foot"
   }, React.createElement("span", null, "↑↓ move"), React.createElement("span", null, "↵ open"), React.createElement("span", null, "esc close"))));
 }
+function staleReason(db, d, td) {
+  if (d.status === 'Delivered') return null;
+  if (d.cleanSnooze && daysSince(d.cleanSnooze) < 30) return null;
+  const o = db.orders.find(x => x.id === d.orderId) || {};
+  const due = dueDateOf(d);
+  if (isOverdue(d) && due && dayDiff(due, td) >= 14) return {
+    why: dayDiff(due, td) + ' days past its delivery date',
+    when: due,
+    age: dayDiff(due, td)
+  };
+  if (d.approved && isReviewStage(d.status) && d.approved.ts && daysSince(String(d.approved.ts).slice(0, 10)) >= 7) return {
+    why: 'approved ' + daysSince(String(d.approved.ts).slice(0, 10)) + ' days ago, never marked delivered',
+    when: String(d.approved.ts).slice(0, 10),
+    age: daysSince(String(d.approved.ts).slice(0, 10))
+  };
+  if (d.shootDate && d.shootDate < td && dayDiff(d.shootDate, td) >= 45) return {
+    why: 'shot ' + dayDiff(d.shootDate, td) + ' days ago, still ' + STATUS_LABEL(d.status),
+    when: d.shootDate,
+    age: dayDiff(d.shootDate, td)
+  };
+  if (d.status === 'Booked' && !d.shootDate && o.date && daysSince(o.date) >= 60) return {
+    why: 'booked ' + daysSince(o.date) + ' days ago, never scheduled',
+    when: o.date,
+    age: daysSince(o.date)
+  };
+  return null;
+}
+const staleList = db => {
+  const td = today();
+  const rd = realDb(db);
+  return rd.deliverables.map(d => ({
+    d,
+    r: staleReason(rd, d, td)
+  })).filter(x => x.r).sort((a, b) => b.r.age - a.r.age);
+};
+function CleanupModal({
+  db,
+  onClose
+}) {
+  const list = staleList(db);
+  const cName = d => {
+    const o = db.orders.find(x => x.id === d.orderId) || {};
+    return (db.clients.find(c => c.id === o.clientId) || {}).name || '';
+  };
+  const oName = d => (db.orders.find(x => x.id === d.orderId) || {}).project || '';
+  const done = (ids, when) => window.__quietDeliver && window.__quietDeliver(ids, when);
+  return React.createElement("div", {
+    className: "overlay",
+    onMouseDown: e => {
+      if (e.target === e.currentTarget) onClose();
+    }
+  }, React.createElement("div", {
+    className: "modal",
+    "data-cleanup": true,
+    style: {
+      maxWidth: 720
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      marginBottom: 6
+    }
+  }, React.createElement("h2", {
+    style: {
+      fontSize: 20,
+      marginBottom: 0
+    }
+  }, "🧹 Clean-up — ", list.length, " old piece", list.length !== 1 ? 's' : ''), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: onClose
+  }, "Close")), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginBottom: 10
+    }
+  }, "One decision each. “Delivered” files it as done on the date shown — no message goes to the agent and nothing is re-sent. “Still open” hides it from this list for 30 days. “Remove” deletes the piece."), list.length === 0 && React.createElement("div", {
+    className: "empty"
+  }, "All clear — nothing old is hanging around. ✨"), list.length > 1 && React.createElement("div", {
+    className: "flex",
+    style: {
+      marginBottom: 8
+    }
+  }, React.createElement("button", {
+    className: "btn sm",
+    "data-cleanup-all": true,
+    onClick: async () => {
+      if (!(await uiConfirm(`Mark all ${list.length} as delivered (each on its own date)? Nothing is sent to anyone.`, {
+        title: 'Deliver them all quietly',
+        ok: '✓ Mark all delivered'
+      }))) return;
+      const by = {};
+      list.forEach(x => {
+        (by[x.r.when] = by[x.r.when] || []).push(x.d.id);
+      });
+      Object.keys(by).forEach(w => done(by[w], w));
+    }
+  }, "✓ Mark all ", list.length, " delivered")), React.createElement("div", {
+    style: {
+      maxHeight: '58vh',
+      overflow: 'auto'
+    }
+  }, list.map(({
+    d,
+    r
+  }) => React.createElement("div", {
+    key: d.id,
+    className: "histrow",
+    "data-cleanup-row": d.id
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8
+    }
+  }, React.createElement("span", {
+    style: {
+      minWidth: 0,
+      flex: 1
+    }
+  }, React.createElement("b", null, dlTitle(d)), " ", React.createElement("span", {
+    className: "faint small"
+  }, "· ", cName(d), oName(d) ? ' · ' + oName(d) : ''), React.createElement("br", null), React.createElement("span", {
+    className: "small",
+    style: {
+      color: 'var(--red)'
+    }
+  }, r.why)), React.createElement("button", {
+    className: "btn sm",
+    title: 'File it as delivered on ' + fmtDate(r.when) + ' — nothing is sent',
+    onClick: () => done([d.id], r.when)
+  }, "✓ Delivered"), React.createElement("button", {
+    className: "btn ghost sm",
+    title: "It really is still open — hide it from this list for 30 days",
+    onClick: () => window.__patchDl && window.__patchDl(d.id, {
+      cleanSnooze: today()
+    })
+  }, "Still open"), React.createElement("button", {
+    className: "btn ghost sm",
+    style: {
+      color: 'var(--red)'
+    },
+    title: "Delete this piece",
+    onClick: async () => {
+      if (await uiConfirm('Remove “' + dlTitle(d) + '” for good?', {
+        ok: 'Remove',
+        danger: true
+      })) window.__removeDl && window.__removeDl(d.id);
+    }
+  }, "Remove")))))));
+}
+function UsagePanel() {
+  const [u, setU] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('rem_usage_v1') || 'null');
+    } catch (e) {
+      return null;
+    }
+  });
+  const rows = u && u.n ? Object.keys(u.n).map(k => [k, u.n[k]]).sort((a, b) => b[1] - a[1]) : [];
+  return React.createElement(Collapse, {
+    title: "📊 What you actually use",
+    count: rows.length,
+    defaultOpen: false
+  }, rows.length === 0 ? React.createElement("div", {
+    className: "empty"
+  }, "Nothing counted yet — it fills in as you work.") : React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginBottom: 8
+    }
+  }, "Counted on this device only since ", u.since ? fmtDate(u.since) : 'today', " — nothing is sent anywhere. After a couple of weeks, anything that never shows up here is a candidate to remove."), React.createElement("div", {
+    "data-usage": true,
+    style: {
+      columns: '2 260px',
+      columnGap: 24
+    }
+  }, rows.slice(0, 60).map(([k, n]) => React.createElement("div", {
+    key: k,
+    className: "flex small",
+    style: {
+      padding: '3px 0',
+      breakInside: 'avoid'
+    }
+  }, React.createElement("span", {
+    style: {
+      minWidth: 0,
+      flex: 1,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }
+  }, k), React.createElement("b", null, n)))), React.createElement("button", {
+    className: "btn ghost sm",
+    style: {
+      marginTop: 10
+    },
+    onClick: () => {
+      try {
+        localStorage.removeItem('rem_usage_v1');
+      } catch (e) {}
+      setU(null);
+    }
+  }, "Reset the count")));
+}
 const WHATS_NEW = [{
+  v: '2026.11.16-4',
+  items: [['🧹', 'Clean-up pass', 'Needs you → Clean up: every old piece still marked open, one tap each (delivered quietly, still open, or remove).'], ['🚪', 'Your address shows the front door', 'Anyone who isn’t on one of your devices lands on the public page. On a new device of your own, open index.html?studio=1.'], ['⭐', 'Ask for a review', 'When an agent rates you five stars, Needs you offers a one-tap ask for a line on your wall.'], ['📊', 'What you actually use', 'Home → More: a private count of the buttons you press, on this device only.']]
+}, {
   v: '2026.11.16-3',
   items: [['🕘', 'History on every deliverable', 'Row menu (⋯) → History shows what changed, when and on which device — with one tap to put an old value back.'], ['📴', 'Works without signal', 'Once you’ve opened this version online, the Command Centre opens with no connection (install it from your browser menu for a home-screen icon). Changes sync when you’re back.'], ['⚡', 'Agent pages open faster', 'Hubs, review rooms and listing pages no longer wait on the full inbox sheet.'], ['🚪', 'A front door for new clients', 'start.html — what you do, real reviews, pricing and booking on one page.']]
 }, {
@@ -8379,6 +8690,61 @@ function ActionQueue({
         });
         if (window.__stmtDone) window.__stmtDone(pm);
       }
+    });
+  })();
+  (() => {
+    const n = staleList(db).length;
+    if (n < 3) return;
+    items.push({
+      pri: 1,
+      icon: '🧹',
+      txt: `${n} old pieces are still marked open — two minutes clears them`,
+      btn: 'Clean up',
+      act: () => {
+        if (window.__openCleanup) window.__openCleanup();
+      }
+    });
+  })();
+  (() => {
+    const seen = {};
+    let shown = 0;
+    realDb(db).deliverables.forEach(d => {
+      const r = d.rating || {};
+      const five = r.shoot && +r.shoot.stars === 5 || r.edit && +r.edit.stars === 5;
+      if (!five || shown >= 2) return;
+      const c = clOf(d);
+      if (!c.id || seen[c.id] || c.reviewAsked || !(c.hubKey || c.hubId)) return;
+      seen[c.id] = 1;
+      shown++;
+      items.push({
+        pri: 3,
+        icon: '⭐',
+        txt: `${firstOf(c)} gave you 5 stars — ask for a line for your wall`,
+        btn: '✉ Ask',
+        act: async () => {
+          const body = `⭐ Thank you for the five stars, ${firstOf(c)}! If you have 30 seconds: open your hub, find any delivered piece and tap “★ Loved it? Tell us”. One line from you means a lot — and with your OK it goes on our reviews page. 🙏`;
+          if (!(await uiConfirm(body, {
+            title: 'Send this to ' + firstOf(c) + '’s hub chat?',
+            ok: '✉ Send'
+          }))) return;
+          if (db.settings.inboxUrl) fetch(db.settings.inboxUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              kind: 'msg',
+              ref: String(c.hubKey || c.hubId),
+              project: (c.name || 'Agent') + ' — Content Hub',
+              dname: '',
+              who: 'Reel Estate Media',
+              from: 'jag',
+              body
+            })
+          }).catch(() => {});
+          if (window.__patchClient) window.__patchClient(c.id, {
+            reviewAsked: td
+          });
+          showToast('⭐ Asked ' + firstOf(c) + ' for a review');
+        }
+      });
     });
   })();
   db.orders.forEach(o => {
@@ -8934,7 +9300,7 @@ function Dashboard({
     updateSettings: updateSettings
   }))), React.createElement(WinBack, {
     db: realDb(db)
-  }), followN > 0 && React.createElement("div", {
+  }), React.createElement(UsagePanel, null), followN > 0 && React.createElement("div", {
     className: "card today"
   }, React.createElement("h3", null, "Follow-ups"), agedUnpaid.map(o => {
     const c = clientOf(o.clientId);
@@ -15574,7 +15940,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-4</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
