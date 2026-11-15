@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-8) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-9) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -599,6 +599,15 @@ const CATALOG = [{
   partner: 80,
   credits: 1,
   unit: 'Headshot Session'
+}, {
+  id: 'intv',
+  cat: 'Content Creation',
+  name: 'Interview',
+  retail: 250,
+  pub: 250,
+  partner: 200,
+  credits: 1,
+  unit: 'Interview'
 }, {
   id: 'p20',
   cat: 'Photography',
@@ -1096,7 +1105,7 @@ const UPPANEL = (() => {
 })();
 function inferMedia(txt) {
   const t = (txt || '').toLowerCase();
-  const v = /reel|video|film|tour|b-roll|drone|cut|walkthrough|recap/.test(t);
+  const v = /reel|video|film|tour|b-roll|drone|cut|walkthrough|recap|interview/.test(t);
   const p = /photo|headshot|staging|sheet|floor plan/.test(t);
   if (v && p) return 'both';
   if (p) return 'photo';
@@ -1206,6 +1215,7 @@ function guessServiceId(title, eventMap) {
   if (/dynamic/.test(tl)) return 'dyn1';
   if (/podcast|teleprompter/.test(tl)) return 'pod1';
   if (/you\s*shoot/.test(tl)) return 'ysw1';
+  if (/interview/.test(tl)) return 'intv';
   if (/event|recap/.test(tl)) return 'evt';
   return '';
 }
@@ -8266,6 +8276,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-9',
+  items: [['🎙', 'New service: Interview', 'In the catalogue under Content Creation: $250 to agents (Pinnacle rate), $200 Reel Estate Media rate. One video per interview.']]
+}, {
   v: '2026.11.16-8',
   items: [['🩹', 'Fix: new devices load everything', 'After the move to thecontenthub.ca, a newly set-up device loaded only part of your data (orders without some agents). It now takes the complete copy first, and any device that loaded short repairs itself the next time it opens.']]
 }, {
@@ -16010,7 +16023,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-8</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-9</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
