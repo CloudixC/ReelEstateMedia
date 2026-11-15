@@ -1,0 +1,2177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--REM-STAGE-SHIM--><script>
+/* 🧪 STAGING + FALLBACK
+   /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
+             but the only thing it can WRITE to is the sandbox Test Agent (ids starting "tst").
+             Real agents never receive anything from here; the live app's data is never touched.
+   /prev/  — the version that was live before the latest update. Same data, older code: the fallback. */
+(function(){
+  var path = location.pathname, beta = /\/beta\//.test(path), prev = /\/prev\//.test(path);
+  if(!beta && !prev) return;
+  function ribbon(html, bg){
+    var go = function(){
+      if(document.getElementById('rem-stage-ribbon')) return;
+      var d = document.createElement('div'); d.id = 'rem-stage-ribbon';
+      d.style.cssText = 'position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:2147483646;max-width:96vw;font:600 11.5px/1.35 system-ui,-apple-system,sans-serif;color:#fff;background:' + bg + ';padding:6px 12px;border-radius:0 0 10px 10px;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center';
+      d.innerHTML = html; document.body.appendChild(d);
+    };
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  }
+  var linkCss = 'color:#fff;text-decoration:underline;margin-left:8px;cursor:pointer';
+  var live = path.replace(/\/(beta|prev)\//, '/') + location.search + location.hash;
+  if(prev){
+    ribbon('⏪ Previous version — same data, older code. <a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Back to the current version →</a>', '#8a5a00');
+    return;
+  }
+  window.__REM_BETA = true;
+  var P = 'beta:', SP = Storage.prototype, g = SP.getItem, s = SP.setItem, r = SP.removeItem;
+  try{
+    var fresh = /[?&]betafresh=1/.test(location.search);
+    if(fresh || !g.call(localStorage, P + '__seeded')){
+      var all = [], i, k;
+      for(i = 0; i < localStorage.length; i++){ k = localStorage.key(i); if(k) all.push(k); }
+      all.filter(function(x){ return x.indexOf(P) === 0; }).forEach(function(x){ r.call(localStorage, x); });
+      all.filter(function(x){ return x.indexOf(P) !== 0 && x.indexOf('rem_') === 0 && x !== 'rem_opout_v1'; })
+        .forEach(function(x){ try{ s.call(localStorage, P + x, g.call(localStorage, x)); }catch(e){ window.__REM_BETA_FULL = true; } });
+      s.call(localStorage, P + '__seeded', String(Date.now()));
+      if(fresh){ try{ history.replaceState(null, '', path + location.search.replace(/[?&]betafresh=1/, '').replace(/^&/, '?') + location.hash); }catch(e){} }
+    }
+  }catch(e){}
+  SP.getItem = function(k){ return g.call(this, P + k); };
+  SP.setItem = function(k, v){ return s.call(this, P + k, v); };
+  SP.removeItem = function(k){ return r.call(this, P + k); };
+  SP.clear = function(){ var ks = [], i, k; for(i = 0; i < this.length; i++){ k = this.key(i); if(k && k.indexOf(P) === 0) ks.push(k); } for(i = 0; i < ks.length; i++) r.call(this, ks[i]); };
+  // write guard: only the sandbox agent can receive anything
+  var of = window.fetch, okFolders = {}; window.__betaBlocked = 0;
+  var isTst = function(v){ return String(v == null ? '' : v).indexOf('tst') === 0; };
+  var note = function(){ var n = document.getElementById('rem-stage-n'); if(n) n.textContent = window.__betaBlocked ? ' · ' + window.__betaBlocked + ' send' + (window.__betaBlocked === 1 ? '' : 's') + ' held back' : ''; };
+  window.fetch = function(u, o){
+    var url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+    if(m === 'GET' || m === 'HEAD') return of.apply(this, arguments);
+    var allow = false, d = null;
+    if(/script\.google\.com/.test(url)){
+      try{ d = JSON.parse(o && o.body); }catch(e){ d = null; }
+      if(d) allow = isTst(d.ref) || isTst(d.key) || isTst(d.id) || isTst(d.hub)
+        || (d.kind === 'link' && /(^|&)r=tst/.test(String(d.body || '')))
+        || (d.kind === 'dlvfolder' && /sandbox/i.test(String(d.agent || '')))
+        || !!(d.folder && okFolders[d.folder]);
+    }
+    if(allow){
+      var p = of.apply(this, arguments);
+      if(d && d.kind === 'dlvfolder') p.then(function(x){ return x.clone().json(); }).then(function(j){ if(j && j.id) okFolders[j.id] = 1; }).catch(function(){});
+      return p;
+    }
+    window.__betaBlocked++; note();
+    return Promise.resolve(new Response(JSON.stringify({ok: true, beta: 1, held: 1}), {status: 200, headers: {'Content-Type': 'application/json'}}));
+  };
+  var sep = location.search ? '&' : '?';
+  ribbon('🧪 BETA — a test copy of your data. Only the Test Agent can receive anything from here<span id="rem-stage-n"></span>.' +
+    '<a style="' + linkCss + '" href="' + (path + location.search + sep + 'betafresh=1').replace(/"/g, '&quot;') + '" title="Throw this test copy away and copy your live data again">↻ Fresh copy</a>' +
+    '<a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Live →</a>', '#6a2bd9');
+})();
+</script><!--/REM-STAGE-SHIM-->
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Estate Media — Studio Chat</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  #mic-btn.recording{background:#e11d2a !important;color:#fff !important;animation:recpulse 1.4s ease-in-out infinite}
+  @keyframes recpulse{0%,100%{box-shadow:0 0 0 0 rgba(225,29,42,.5)}50%{box-shadow:0 0 0 8px rgba(225,29,42,0)}}
+
+  html, body { background: #0a0a0a; font-family: 'Inter', sans-serif; }
+  .font-serif-display { font-family: 'Playfair Display', serif; }
+
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #262626; border-radius: 10px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #333333; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(225,29,42,0.6); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(225,29,42,0); }
+  }
+  .status-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+  @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .msg-enter { animation: fade-up 0.35s ease-out both; }
+
+  .send-glow { box-shadow: 0 0 0 1px rgba(225,29,42,0.4), 0 8px 24px -6px rgba(225,29,42,0.55); }
+  .send-glow:hover { box-shadow: 0 0 0 1px rgba(225,29,42,0.6), 0 10px 30px -4px rgba(225,29,42,0.75); }
+
+  .film-grain { background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0); background-size: 22px 22px; }
+
+  .unread-badge { background: #e11d2a; color: #fff; box-shadow: 0 0 0 1px rgba(225,29,42,0.35), 0 4px 12px -3px rgba(225,29,42,0.6); }
+  .date-chip { background: #161616; border: 1px solid #262626; color: #7a7a7a; }
+
+  #sidebar { transition: transform .28s cubic-bezier(.2,.7,.2,1); }
+  #backdrop { transition: opacity .28s ease; }
+
+  .flash { animation: flashring 1.6s ease-out; }
+  @keyframes flashring {
+    0% { box-shadow: 0 0 0 3px rgba(225,29,42,.75); }
+    100% { box-shadow: 0 0 0 14px rgba(225,29,42,0); }
+  }
+</style>
+</head>
+<body class="min-h-screen w-full film-grain flex items-center justify-center p-0 sm:p-6">
+
+  <!-- ============ TOKEN GATE ============ -->
+  <div id="gate" class="w-full max-w-sm bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] p-8 mx-4">
+    <div class="text-center mb-6">
+      <h1 class="font-serif-display text-2xl text-white">Studio <span class="text-[#e11d2a] italic">Chat</span></h1>
+      <p class="text-[12px] text-[#8a8a8a] mt-2">Every agent conversation in one place.<br>Paste your admin token to unlock.</p>
+    </div>
+    <p id="gate-err" class="hidden bg-[#e11d2a]/10 border border-[#e11d2a]/40 text-[#ff8f97] text-[12.5px] rounded-xl px-3.5 py-2.5 mb-4"></p>
+    <input id="gate-token" type="password" placeholder="Your inbox token"
+      class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all mb-3" />
+    <button id="gate-go" class="w-full bg-[#e11d2a] hover:bg-[#c81824] text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.98]">Open chat</button>
+    <p class="text-[11px] text-[#5c5c5c] text-center mt-4">It's the same token as your Command Centre inbox.<br>Saved on this device so next time you're straight in.</p>
+  </div>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="hidden relative w-full max-w-5xl h-screen sm:h-[720px] sm:max-h-[92vh] bg-[#141414] sm:border border-[#262626] sm:rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] flex overflow-hidden">
+
+    <!-- Backdrop (mobile only) -->
+    <div id="backdrop" class="absolute inset-0 z-20 bg-black/60 opacity-0 pointer-events-none sm:hidden"></div>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside id="sidebar" class="absolute sm:static inset-y-0 left-0 z-30 flex flex-col w-80 shrink-0 border-r border-[#262626] bg-[#0f0f0f] -translate-x-full sm:translate-x-0">
+      <nav id="appsw" aria-label="Studio apps" style="display:flex;gap:2px;margin:10px 12px 0;padding:3px;border:1px solid #2a2a2a;border-radius:999px;background:#141414">
+        <a id="appsw-cc" href="index.html" title="Command Centre" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 8px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#a6a49d;text-decoration:none;white-space:nowrap">⌂ Command Centre</a>
+        <a href="studio-chat.html" aria-current="page" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;background:#e11d2a;color:#fff;text-decoration:none;white-space:nowrap">💬 Chat</a>
+        <a id="appsw-vault" href="vault.html" title="The Vault" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#a6a49d;text-decoration:none;white-space:nowrap">🗄 Vault</a>
+      </nav>
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h2 class="font-serif-display text-xl text-white">Mess<span class="text-[#e11d2a] italic">ages</span></h2>
+        <div class="flex items-center gap-2">
+          <span id="total-badge" class="unread-badge text-[11px] font-semibold rounded-full px-2 py-0.5" style="display:none">0</span>
+          <button id="bcast-btn" class="w-8 h-8 grid place-items-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" title="Broadcast a message to your agents" aria-label="Broadcast">
+            <svg class="w-4.5 h-4.5 w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-6v14L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          </button>
+          <button id="close-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white" aria-label="Close">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="px-4 py-3 border-b border-[#262626]">
+        <div class="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3 py-2">
+          <svg class="w-4 h-4 text-[#5c5c5c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="search" type="text" placeholder="Search brokerages, agents, messages" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
+        </div>
+      </div>
+
+      <div id="convo-list" class="flex-1 overflow-y-auto scrollbar-thin"></div>
+
+      <div class="px-5 py-3 border-t border-[#262626] text-[11px] text-[#5c5c5c] flex items-center justify-between">
+        <span id="agent-count"></span>
+        <button id="lock-btn" class="hover:text-white transition-colors" title="Forget token on this device">🔒 Lock</button>
+      </div>
+    </aside>
+
+    <!-- ============ CHAT PANE ============ -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#262626] bg-[#111111]">
+        <div class="flex items-center gap-3 min-w-0">
+          <button id="open-sidebar" class="sm:hidden text-[#7a7a7a] hover:text-white shrink-0" aria-label="Open conversations">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div id="hdr-avatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] flex items-center justify-center text-[#e11d2a] font-serif-display font-semibold text-sm shrink-0"></div>
+          <div class="min-w-0">
+            <h1 id="hdr-name" class="font-serif-display text-lg sm:text-xl text-white leading-tight tracking-wide truncate"></h1>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a] status-dot"></span>
+              <p id="hdr-role" class="text-[10px] uppercase tracking-[0.18em] text-[#7a7a7a] truncate"></p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="proj-link" href="#" target="_blank" rel="noopener" class="hidden items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-3 py-1.5 transition-colors" title="Open this project">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            <span class="hidden sm:inline">Project</span>
+          </a>
+          <button id="grp-edit-btn" class="hidden text-[#7a7a7a] hover:text-white transition-colors" aria-label="Edit group" title="Edit group name, photo & members">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
+          <button id="pin-btn" class="text-[#7a7a7a] hover:text-white transition-colors" aria-label="Pin conversation" title="Pin to top">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="thread" class="flex-1 overflow-y-auto scrollbar-thin px-4 sm:px-6 py-6 space-y-5"></div>
+
+      <div class="border-t border-[#262626] bg-[#111111] px-4 sm:px-5 py-4">
+        <div id="composer-ctx" class="hidden mb-2.5 mx-1 flex items-center gap-3 bg-[#1a1a1a] border border-[#2a2a2a] border-l-2 border-l-[#e11d2a] rounded-xl px-3.5 py-2">
+          <div class="min-w-0 flex-1">
+            <p id="ctx-title" class="text-[10px] uppercase tracking-[0.14em] text-[#e11d2a] font-semibold"></p>
+            <p id="ctx-text" class="text-[12px] text-[#8a8a8a] truncate"></p>
+          </div>
+          <button id="ctx-cancel" class="shrink-0 w-6 h-6 grid place-items-center rounded-full text-[#7a7a7a] hover:text-white" aria-label="Cancel">✕</button>
+        </div>
+        <p id="input-label" class="text-[10px] uppercase tracking-[0.18em] text-[#5c5c5c] mb-2 ml-1"></p>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <input id="file-input" type="file" multiple class="hidden" />
+          <button id="attach-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Attach a file" title="Attach photos, videos or files (up to 24 MB)">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.49"/></svg>
+          </button>
+          <button id="mic-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Record a voice note" title="Record a voice note — tap again to send">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+          <button id="qr-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Quick replies" title="Quick replies">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </button>
+          <button id="poll-btn" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-[#8a8a8a] hover:text-white hover:bg-[#1c1c1c] transition-colors" aria-label="Create a poll" title="Create a poll">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="14"/></svg>
+          </button>
+          <div class="flex-1">
+            <input id="chat-input" type="text" placeholder="Write a message…" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-full pl-4 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all" />
+          </div>
+          <button id="send-btn" class="shrink-0 w-11 h-11 rounded-full bg-[#e11d2a] hover:bg-[#c81824] text-white flex items-center justify-center send-glow transition-all active:scale-95" aria-label="Send message">
+            <svg class="w-5 h-5 translate-x-[1px]" viewBox="0 0 24 24" fill="currentColor"><path d="M2.94 2.94a1.5 1.5 0 0 1 1.62-.33l17 7a1.5 1.5 0 0 1 0 2.78l-17 7a1.5 1.5 0 0 1-2.06-1.85L4.9 12 2.5 5.46a1.5 1.5 0 0 1 .44-2.52z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ============================================================
+  // Studio chat — YOUR side of the agent messages.
+  // ONE chat per agent: every project update folds into their direct
+  // thread wearing a 🎬 context chip — tap the chip to jump straight
+  // to that project in the Command Centre (its ← button brings you
+  // back here). Teams/groups are the only extra rooms.
+  // Unlocks with your admin token; one ?token= fetch returns all rows:
+  //   hub   rows — build the agent list (newest hub per agent wins)
+  //   msg   rows — messages (photos ride inside bodies)
+  //   read  rows — synced read markers (badges + Seen tags)
+  //   react rows — synced emoji reactions
+  // Replies post as from:'jag' → red Reel Estate Media bubbles on the
+  // agent side, and never email you back. Pins stay on this device.
+  // ============================================================
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  const TOKEN_KEY = 'rem_admin_token_v1';   // shared with login.html?admin and the Command Centre button
+  const READ_KEY = 'rem_studio_read_v1';
+  const PIN_KEY = 'rem_studio_pins_v1';
+  const POLL_MS = 30000;
+  const MY_SIDE = 'j';          // reactions ledger: 'a' = agent, 'j' = studio
+
+  const $ = (s) => document.querySelector(s);
+  const convoList = $('#convo-list');
+  const thread = $('#thread');
+  const sidebar = $('#sidebar');
+  const backdrop = $('#backdrop');
+
+  const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const initialsOf = name => String(name).split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join('').toUpperCase() || '•';
+
+  // 🧹 one-time: fold the old per-project read markers into each agent's single
+  // chat so nothing already-read lights up as unread after the merge.
+  try {
+    const st0 = JSON.parse(localStorage.getItem(READ_KEY)) || {};
+    const mx = {};
+    Object.keys(st0).forEach(k => {
+      const i = k.indexOf('|p-');
+      if (i > -1){ const g = k.slice(0, i) + '|general'; if (st0[k] > (mx[g] || '')) mx[g] = st0[k]; }
+    });
+    let ch = false;
+    Object.keys(mx).forEach(g => { if (mx[g] > (st0[g] || '')){ st0[g] = mx[g]; ch = true; } });
+    if (ch) localStorage.setItem(READ_KEY, JSON.stringify(st0));
+  } catch(e){}
+
+  // ---------- state ----------
+  let TOKEN = '';
+  let agents = [];              // {key, name, brokerage, initials, hubIdx, stale, convos:[...]}
+  let groupConvos = [];         // 👥 group chats built from kind:'group' rows
+  let PROJMAP = {};             // project label -> {t, id, url} — context chips + CC deep links
+  let activeId = '';
+  let searchTerm = '';
+  let reactMap = {};            // msgId -> emoji -> {a:0|1, j:0|1}
+  let pinMsg = {};              // convoId -> {m, t, w} — 📌 latest pin per thread
+  let groupReads = {};          // convoId -> {memberKey: readTs} — 👀 seen-by
+  let voteMap = {};             // pollMsgId -> {voterName: optionIndex}
+  let agentSeen = {};           // ref -> last time the agent did anything (msg/read/react)
+  let expanded = new Set();     // 'b:<brokerage>' and 'a:<agent key>'
+  let firstBuild = true;
+  let pollTimer = null;
+
+  function relTime(ts){
+    const d = Date.now() - new Date(ts).getTime();
+    if (isNaN(d) || d < 0) return '';
+    const m = d / 60000;
+    if (m < 1) return 'just now';
+    if (m < 60) return Math.floor(m) + 'm ago';
+    if (m < 1440) return Math.floor(m / 60) + 'h ago';
+    return Math.floor(m / 1440) + 'd ago';
+  }
+  const seenDot = ts => (ts && Date.now() - new Date(ts).getTime() < 600000)
+    ? '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#4cc38a] mr-1"></span>' : '';
+
+  const allConvos = () => agents.flatMap(ag => ag.convos).concat(groupConvos);
+  const convoById = id => allConvos().find(c => c.id === id);
+  const agentOf = c => agents.find(ag => ag.key === c.key);
+  const brokerageName = ag => ag.brokerage || 'Independent';
+
+  // ---------- read state (synced via 'read' rows + local overlay) ----------
+  let serverRead = {};
+  let agentRead = {};
+  function localRead(){ try { return JSON.parse(localStorage.getItem(READ_KEY)) || {}; } catch(e){ return {}; } }
+  const readTs = id => { const l = localRead()[id] || '', s = serverRead[id] || ''; return l > s ? l : s; };
+  const manualUnread = new Set();   // conversations flagged "unread" on purpose
+  function markRead(id){
+    if (manualUnread.has(id)) return;   // don't auto-clear a deliberate flag
+    const c = convoById(id); if (!c || !c.lastTs) return;
+    const hadUnread = unreadOf(c) > 0;
+    const st = localRead();
+    if (c.lastTs > (st[id] || '')){
+      st[id] = c.lastTs;
+      try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+    }
+    if (hadUnread){
+      serverRead[id] = c.lastTs;
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'read', ref: c.key, project: c.label, dname:'',
+        who: 'Reel Estate Media', from:'jag', body: c.lastTs
+      })}).catch(() => {});
+    }
+  }
+  const unreadOf = c => {
+    const since = readTs(c.id);
+    return c.messages.filter(m => m.side === 'in' && m.ts > since).length;
+  };
+  const agentUnread = ag => ag.convos.reduce((s,c) => s + unreadOf(c), 0);
+  function markUnread(id){
+    const c = convoById(id); if (!c) return;
+    const lastIn = c.messages.slice().reverse().find(m => m.side === 'in');
+    if (!lastIn) return;
+    const d = new Date(lastIn.ts);
+    const ts = isNaN(d) ? '' : new Date(d.getTime() - 1).toISOString();
+    const st = localRead(); st[id] = ts;
+    try { localStorage.setItem(READ_KEY, JSON.stringify(st)); } catch(e){}
+    serverRead[id] = ts;
+    manualUnread.add(id);
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'read', ref: c.key, project: c.label, dname:'',
+      who: 'Reel Estate Media', from:'jag', body: ts
+    })}).catch(() => {});
+    renderSidebar();
+  }
+
+  // ---------- pins (personal — this device) ----------
+  function pins(){ try { return JSON.parse(localStorage.getItem(PIN_KEY)) || []; } catch(e){ return []; } }
+  const isPinned = id => pins().indexOf(id) > -1;
+  function togglePin(id){
+    let p = pins();
+    p = p.indexOf(id) > -1 ? p.filter(x => x !== id) : p.concat([id]);
+    try { localStorage.setItem(PIN_KEY, JSON.stringify(p)); } catch(e){}
+    renderSidebar();
+    if (id === activeId) paintPinBtn();
+  }
+  function paintPinBtn(){
+    const btn = $('#pin-btn');
+    const on = isPinned(activeId);
+    btn.classList.toggle('text-[#e11d2a]', on);
+    btn.classList.toggle('text-[#7a7a7a]', !on);
+    btn.querySelector('svg').setAttribute('fill', on ? 'currentColor' : 'none');
+    btn.title = on ? 'Unpin from top' : 'Pin to top';
+  }
+  $('#pin-btn').addEventListener('click', () => togglePin(activeId));
+
+  // ---------- body encoding (photos ride inside msg bodies) ----------
+  function parseBody(body){
+    const s = String(body || '');
+    if (s.charAt(0) === '{'){
+      try { const o = JSON.parse(s); if (o && o.__rc) return { text: String(o.t || ''), atts: o.att || [], q: o.q || null, poll: o.poll || null, brief: o.brief || null }; } catch(e){}
+    }
+    return { text: s, atts: [], q: null, poll: null, brief: null };
+  }
+
+  // ---------- build model from the inbox rows ----------
+  function generalLabel(ag){ return (ag.name || 'Agent') + ' — Content Hub'; }
+  function projectLabel(ag, title){ return (ag.name || 'Agent') + ' — ' + title; }
+
+  function buildFromRows(rows){
+    const rowIdx = r => parseInt(String(r.id || '').slice(1), 10) || 0;
+    const hubs = {};
+    rows.forEach(r => { if (r.kind === 'hub') hubs[String(r.ref)] = r; });
+
+    PROJMAP = {};
+    const byKey = {};
+    Object.keys(hubs).forEach(key => {
+      let man = {};
+      try { man = JSON.parse(String(hubs[key].body || '{}')); } catch(e){}
+      const name = man.agent || man.n || String(hubs[key].project || key);
+      const ag = { key, name, brokerage: man.brokerage || '', initials: initialsOf(name), hubIdx: rowIdx(hubs[key]), convos: [] };
+      ag.convos.push({ id: key + '|general', key, name: ag.name, sub: 'Direct chat', initials: ag.initials, kind: 'direct', label: generalLabel(ag), messages: [], lastTs: '' });
+      // ONE chat per agent — no thread-per-content. Each project's label maps to
+      // its deliverable id so its messages wear a tappable 🎬 chip instead.
+      (man.projects || man.items || []).forEach(x => {
+        const title = x.t != null ? x.t : (x.ttl || '');
+        if (!title) return;
+        PROJMAP[projectLabel(ag, title)] = { t: title, id: String(x.id || ''), url: x.url || '' };
+      });
+      byKey[key] = ag;
+    });
+
+    // ---- 👥 group chats (kind:'group' rows — the latest row per group id wins) ----
+    const gLatest = {};
+    rows.forEach(r => { if (r.kind === 'group'){ try { gLatest[String(r.ref)] = JSON.parse(String(r.body || '{}')); } catch(e){} } });
+    const gMap = {};
+    groupConvos = [];
+    Object.keys(gLatest).forEach(gid => {
+      const g = gLatest[gid] || {};
+      if (g.on === false) return;
+      const members = (g.members || []).map(String);
+      const c = {
+        id: 'g|' + gid, gid, key: gid, kind: 'group', label: '',
+        name: String(g.name || 'Group'), pic: String(g.pic || ''), desc: String(g.desc || ''),
+        members, memberNames: members.map(k => (byKey[k] ? byKey[k].name : k)),
+        sub: '👥 Group · ' + (members.length + 1) + ' people',
+        initials: '👥', messages: [], lastTs: ''
+      };
+      gMap[gid] = c;
+      groupConvos.push(c);
+    });
+
+    serverRead = {}; agentRead = {}; reactMap = {}; pinMsg = {}; groupReads = {}; voteMap = {};
+
+    // Threads whose ref isn't a hub key (e.g. review-page chats) get matched
+    // to the right agent by name and nested under them as a conversation, so
+    // replies land back on the page the agent is actually looking at.
+    const extMap = {};
+    const findByName = who => {
+      const k = String(who || '').trim().toLowerCase();
+      if (!k) return null;
+      let best = null;
+      Object.values(byKey).forEach(ag => {
+        if (ag.hubIdx >= 0 && ag.name.trim().toLowerCase() === k && (!best || ag.hubIdx > best.hubIdx)) best = ag;
+      });
+      return best;
+    };
+    const extName = (label, agName) => {
+      let s = String(label || '').trim();
+      const pre = agName + ' — ';
+      if (s.indexOf(pre) === 0) s = s.slice(pre.length);
+      return s || 'Review chat';
+    };
+    const resolveConvo = r => {
+      const key = String(r.ref);
+      if (gMap[key]) return gMap[key];
+      const label = String(r.project || '');
+      if (byKey[key]){
+        const ag = byKey[key];
+        return ag.convos.find(x => x.label === label && x.key === key) || ag.convos[0];
+      }
+      let host = extMap[key];
+      if (!host && r.from !== 'jag') host = findByName(r.who);
+      if (host){
+        extMap[key] = host;
+        let c = host.convos.find(x => x.key === key && x.label === label);
+        if (!c){
+          const nm = extName(label, host.name);
+          c = { id: key + '|x-' + slug(label || 'chat'), key, name: nm, sub: 'From their review page', initials: initialsOf(nm), kind: 'project', label, messages: [], lastTs: '' };
+          host.convos.push(c);
+        }
+        return c;
+      }
+      const name = String(r.who || key);
+      byKey[key] = { key, name, brokerage: '', initials: initialsOf(name), hubIdx: -1, convos: [
+        { id: key + '|general', key, name, sub: 'Direct chat', initials: initialsOf(name), kind: 'direct', label: '', messages: [], lastTs: '' }
+      ]};
+      return byKey[key].convos[0];
+    };
+
+    const deleted = new Set();
+    const edits = {};
+    agentSeen = {};
+    rows.forEach(r => {
+      if (r.kind !== 'msg' && r.kind !== 'read' && r.kind !== 'react' && r.kind !== 'del' && r.kind !== 'edit' && r.kind !== 'pin' && r.kind !== 'vote') return;
+      if (r.from !== 'jag' && r.ts > (agentSeen[String(r.ref)] || '')) agentSeen[String(r.ref)] = String(r.ts);
+      if (r.kind === 'del'){ deleted.add(String(r.body || '')); return; }
+      if (r.kind === 'edit'){
+        try { const o = JSON.parse(String(r.body || '{}')); if (o.m) edits[String(o.m)] = String(o.b || ''); } catch(e){}
+        return;
+      }
+      const side = r.from === 'jag' ? 'j' : 'a';
+      if (r.kind === 'vote'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (o.m){
+            const ent = (voteMap[String(o.m)] = voteMap[String(o.m)] || {});
+            if (+o.i < 0) delete ent[String(o.w || '')]; else ent[String(o.w || '')] = +o.i;
+          }
+        } catch(e){}
+        return;
+      }
+      if (r.kind === 'react'){
+        try {
+          const o = JSON.parse(String(r.body || '{}'));
+          if (!o.m || !o.e) return;
+          const ent = (reactMap[o.m] = reactMap[o.m] || {});
+          const st = (ent[o.e] = ent[o.e] || {a:0, j:0});
+          st[side] = o.op === '-' ? 0 : 1;
+        } catch(e){}
+        return;
+      }
+      const c = resolveConvo(r);
+      if (r.kind === 'pin'){
+        try { const o = JSON.parse(String(r.body || '{}')); pinMsg[c.id] = (o && o.m) ? o : null; } catch(e){}
+        return;
+      }
+      if (r.kind === 'read'){
+        // rows are chronological — the LAST marker wins, so "mark as unread"
+        // (a marker set slightly back in time) sticks
+        const tgt = side === 'j' ? serverRead : agentRead;
+        tgt[c.id] = String(r.body || '');
+        if (c.kind === 'group' && r.dname) (groupReads[c.id] = groupReads[c.id] || {})[String(r.dname)] = String(r.body || '');
+        return;
+      }
+      const b = parseBody(r.body);
+      c.messages.push({
+        id: String(r.id || ''),
+        ts: String(r.ts || ''),
+        side: side === 'j' ? 'out' : 'in',
+        who: side === 'j' ? 'You' : (r.who || c.name),
+        proj: String(r.project || ''),
+        text: b.text, atts: b.atts, q: b.q, poll: b.poll, brief: b.brief
+      });
+    });
+
+    Object.values(byKey).flatMap(ag => ag.convos).concat(groupConvos).forEach(c => {
+      c.messages = c.messages.filter(m => !deleted.has(m.id));
+      c.messages.forEach(m => {
+        if (edits[m.id] !== undefined){ m.text = edits[m.id]; m.edited = true; }
+      });
+      c.messages.sort((x,y) => x.ts < y.ts ? -1 : 1);
+      if (c.messages.length) c.lastTs = c.messages[c.messages.length - 1].ts;
+    });
+
+    // Dedupe: several hubs sharing one agent name = old pushes. The newest hub
+    // is the live one; older duplicates only stay if they hold real history.
+    const msgCount = ag => ag.convos.reduce((s,c) => s + c.messages.length, 0);
+    const byName = {};
+    Object.values(byKey).forEach(ag => {
+      const k = ag.name.trim().toLowerCase();
+      (byName[k] = byName[k] || []).push(ag);
+    });
+    Object.values(byName).forEach(group => {
+      group.sort((x,y) => y.hubIdx - x.hubIdx);
+      group.forEach((ag, i) => {
+        ag.stale = i > 0;
+        ag.hidden = i > 0 && msgCount(ag) === 0;
+      });
+    });
+
+    const lastOf = ag => ag.convos.reduce((m,c) => c.lastTs > m ? c.lastTs : m, '');
+    agents = Object.values(byKey).filter(ag => !ag.hidden)
+      .sort((x,y) => lastOf(y) < lastOf(x) ? -1 : 1);
+
+    if (firstBuild){
+      firstBuild = false;
+      agents.forEach(ag => expanded.add('b:' + brokerageName(ag)));
+      groupConvos.forEach(c => expanded.add('g:' + c.gid));
+      // 🔗 deep link from the Command Centre: ?c=<hub key>&p=<project label> opens that thread
+      try {
+        const qp = new URLSearchParams(location.search);
+        const ck = qp.get('c'), cp = qp.get('p') || '';
+        if (ck){
+          const ag = agents.find(a => a.key === ck);
+          if (ag){
+            const want = cp ? ag.convos.find(c => c.label === cp) : null;
+            const pick = want || ag.convos.find(c => c.kind === 'direct') || ag.convos[0];
+            if (pick){ activeId = pick.id; expanded.add('a:' + ag.key); expanded.add('b:' + brokerageName(ag)); }
+          }
+        }
+      } catch(e){}
+    }
+    if (!convoById(activeId)){
+      const first = agents[0] && agents[0].convos[0];
+      activeId = first ? first.id : '';
+      if (first){ expanded.add('a:' + agents[0].key); expanded.add('b:' + brokerageName(agents[0])); }
+    }
+  }
+
+  // ---------- time ----------
+  function dayOf(ts){
+    const d = new Date(ts); if (isNaN(d)) return '';
+    const now = new Date();
+    const mid = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = Math.round((mid(now) - mid(d)) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + (d.getFullYear() !== now.getFullYear() ? ', ' + d.getFullYear() : '');
+  }
+  function timeOf(ts){
+    const d = new Date(ts); if (isNaN(d)) return '';
+    let h = d.getHours(); const m = String(d.getMinutes()).padStart(2,'0');
+    const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return h + ':' + m + ' ' + ap;
+  }
+  const sideTime = ts => { const day = dayOf(ts); return day === 'Today' ? timeOf(ts) : day; };
+
+  // ---------- linkify ----------
+  function linkify(text) {
+    if (!text) return '';
+    const urlRe = /((?:https?:\/\/|www\.)[^\s<]+|(?<![@\w.])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|net|org|io|co|media|dev|app|me|tv|xyz|info|biz|us|uk|ca|au|edu|gov|ai|so|to|link|site|online|studio|agency|film|films|video)(?:\/[^\s<]*)?)/gi;
+    let out = '', last = 0, m;
+    while ((m = urlRe.exec(text))) {
+      out += esc(text.slice(last, m.index));
+      let url = m[0], trail = '';
+      const tm = url.match(/[.,!?)\]'"]+$/);
+      if (tm) { trail = tm[0]; url = url.slice(0, url.length - trail.length); }
+      const href = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+      out += `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 break-all font-medium">${esc(url)}</a>` + esc(trail);
+      last = m.index + m[0].length;
+    }
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  // ---------- sidebar: Brokerage ▸ Agent tree ----------
+  const badge = n => n > 0 ? `<span class="unread-badge text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] grid place-items-center px-1 shrink-0">${n}</span>` : '';
+  const chevron = open => `<svg class="w-3.5 h-3.5 shrink-0 transition-transform ${open?'rotate-90':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+  const pinIcon = `<svg class="w-3 h-3 text-[#e11d2a] shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/></svg>`;
+  const buildingIcon = `<svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V7l6-4 6 4v14"/><path d="M10 9h.01M14 9h.01M10 13h.01M14 13h.01M10 17h.01M14 17h.01"/></svg>`;
+
+  function previewOf(c){
+    const last = c.messages[c.messages.length - 1];
+    if (!last) return 'No messages yet';
+    const at = last.atts && last.atts[0];
+    const txt = last.text
+      || (last.brief ? '📋 Shoot brief' + (last.brief.addr ? ' — ' + last.brief.addr : '') : '')
+      || (last.poll ? '🗳 ' + (last.poll.q || 'Poll') : '')
+      || (at ? (at.k === 'image' ? '📷 Photo' : at.k === 'audio' ? '🎙 Voice note' : '📎 ' + (at.n || 'File')) : '');
+    return (last.side === 'out' ? 'You: ' : '') + txt;
+  }
+
+  function convoRow(c, indent){
+    const un = unreadOf(c);
+    const active = c.id === activeId;
+    const ag = agentOf(c) || {};
+    const line2 = indent
+      ? previewOf(c)
+      : (ag.name || '') + (ag.brokerage ? ' · ' + ag.brokerage : '');
+    return `<button data-convo="${esc(c.id)}" class="w-full text-left ${indent ? 'pl-[3.6rem]' : 'pl-4'} pr-3 py-2 flex items-center gap-2.5 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
+      <span class="w-7 h-7 rounded-${c.kind === 'direct' ? 'full' : 'lg'} bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[10px] font-serif-display ${un?'text-[#e11d2a]':'text-[#8a8a8a]'} shrink-0">${esc(c.initials)}</span>
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5">
+          <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.kind === 'direct' && indent ? 'Direct chat' : c.name)}</span>
+          ${isPinned(c.id) ? pinIcon : ''}
+          <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(c.lastTs ? sideTime(c.lastTs) : '')}</span>
+        </span>
+        <span class="flex items-center justify-between gap-2 mt-0.5">
+          <span class="text-[12px] text-[#8a8a8a] truncate">${esc(line2)}</span>${badge(un)}
+        </span>
+      </span>
+    </button>`;
+  }
+
+  const convosSorted = ag => ag.convos.slice().sort((x,y) =>
+    ((isPinned(y.id)?1:0) - (isPinned(x.id)?1:0)) ||
+    ((x.kind==='direct'?1:0) !== (y.kind==='direct'?1:0) ? ((y.kind==='direct'?1:0) - (x.kind==='direct'?1:0)) : 0) ||
+    ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
+
+  // A team = its group chat + each member's individual direct chat, one section.
+  const memberDirects = c => c.members.map(k => {
+    const ag = agents.find(a2 => a2.key === k);
+    return ag && ag.convos.find(x => x.kind === 'direct');
+  }).filter(Boolean);
+
+  function memberRow(m){
+    const un = unreadOf(m);
+    const active = m.id === activeId;
+    const ag = agentOf(m) || {};
+    return `<button data-convo="${esc(m.id)}" class="w-full text-left pl-[3.1rem] pr-3 py-2 flex items-center gap-2.5 transition-colors ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'hover:bg-[#161616] border-l-2 border-transparent'}">
+      <span class="w-6 h-6 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[9px] font-serif-display ${un?'text-[#e11d2a]':'text-[#9a9a9a]'} shrink-0">${esc(ag.initials || m.initials)}</span>
+      <span class="min-w-0 flex-1">
+        <span class="flex items-center gap-1.5">
+          <span class="text-[13px] ${un?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(ag.name || m.name)}</span>
+          <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(m.lastTs ? sideTime(m.lastTs) : '')}</span>
+        </span>
+        <span class="flex items-center justify-between gap-2 mt-0.5">
+          <span class="text-[12px] text-[#8a8a8a] truncate">${esc(previewOf(m))}</span>${badge(un)}
+        </span>
+      </span>
+    </button>`;
+  }
+
+  function groupNode(c){
+    const open = expanded.has('g:' + c.gid);
+    const mems = memberDirects(c);
+    const gUn = unreadOf(c);
+    const totalUn = gUn + mems.reduce((s,m) => s + unreadOf(m), 0);
+    const active = c.id === activeId;
+    const av = c.pic
+      ? `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w80" class="w-7 h-7 rounded-lg object-cover border border-[#2a2a2a] shrink-0" alt="">`
+      : `<span class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[12px] shrink-0">👥</span>`;
+    const firstNames = mems.map(m => ((agentOf(m)||{}).name || '').split(' ')[0]).filter(Boolean).join(', ');
+    const line2 = open ? previewOf(c) : (firstNames || previewOf(c));
+    let html = `<div class="flex items-stretch ${active ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'border-l-2 border-transparent'}">
+      <button data-node="g:${esc(c.gid)}" class="pl-3 pr-1 flex items-center text-[#7a7a7a] hover:text-white transition-colors" aria-label="Toggle team members">${chevron(open)}</button>
+      <button data-convo="${esc(c.id)}" class="flex-1 min-w-0 text-left pr-3 py-2 flex items-center gap-2.5 hover:bg-[#161616] transition-colors" title="${esc(c.name)} — group chat">
+        ${av}
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-1.5">
+            <span class="text-[13px] ${totalUn?'text-white font-semibold':'text-[#c4c4c4]'} truncate">${esc(c.name)}</span>
+            ${isPinned(c.id) ? pinIcon : ''}
+            <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(c.lastTs ? sideTime(c.lastTs) : '')}</span>
+          </span>
+          <span class="flex items-center justify-between gap-2 mt-0.5">
+            <span class="text-[12px] text-[#8a8a8a] truncate">${esc(line2)}</span>${open ? badge(gUn) : badge(totalUn)}
+          </span>
+        </span>
+      </button>
+    </div>`;
+    if (open) html += mems.map(memberRow).join('');
+    return html;
+  }
+
+  function renderSidebar(){
+    const total = agents.reduce((s,ag) => s + agentUnread(ag), 0) + groupConvos.reduce((s,c) => s + unreadOf(c), 0);
+    // share the unread count with the Command Centre + Vault switchers, and show theirs here
+    try {
+      localStorage.setItem('rem_chat_unread_v1', String(total));
+      const badge = (id, n, col) => { const el = document.getElementById(id); if (!el) return; let b = el.querySelector('i'); if (n > 0){ if (!b){ b = document.createElement('i'); b.style.cssText = 'font-style:normal;border-radius:999px;padding:1px 6px;font-size:10px;color:#fff;background:' + col; el.appendChild(b); } b.textContent = n; } else if (b) b.remove(); };
+      badge('appsw-cc', +localStorage.getItem('rem_needs_count_v1') || 0, '#e11d2a');
+      badge('appsw-vault', +localStorage.getItem('rem_vault_warn_v1') || 0, '#7a3a3a');
+    } catch(e){}
+    $('#total-badge').textContent = total;
+    $('#total-badge').style.display = total ? '' : 'none';
+    $('#agent-count').textContent = agents.length + ' agent' + (agents.length === 1 ? '' : 's');
+
+    const term = searchTerm.trim().toLowerCase();
+    if (term){
+      const hits = allConvos().filter(c => {
+        const ag = agentOf(c) || {};
+        return c.name.toLowerCase().includes(term) || (c.sub||'').toLowerCase().includes(term)
+          || (ag.name||'').toLowerCase().includes(term) || (ag.brokerage||'').toLowerCase().includes(term);
+      });
+
+      // search inside the messages themselves too
+      const msgHits = [];
+      allConvos().forEach(c => c.messages.forEach(m => {
+        if (msgHits.length >= 25 || !m.text) return;
+        if (m.text.toLowerCase().includes(term)) msgHits.push({ c, m });
+      }));
+      const snippet = (text) => {
+        const i = text.toLowerCase().indexOf(term);
+        const s = Math.max(0, i - 28);
+        return (s > 0 ? '…' : '') + text.slice(s, i + term.length + 60) + (i + term.length + 60 < text.length ? '…' : '');
+      };
+      const sec = label => `<div class="px-4 pt-3 pb-1 text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">${label}</div>`;
+
+      let html = '';
+      if (hits.length) html += sec('Conversations') + hits.map(c => convoRow(c, false)).join('');
+      if (msgHits.length) html += sec('Messages') + msgHits.map(({c, m}) => {
+        const ag = agentOf(c) || {};
+        return `<button data-goto="${esc(c.id)}" data-gmid="${esc(m.id)}" class="w-full text-left px-4 py-2.5 flex items-start gap-2.5 hover:bg-[#161616] border-l-2 border-transparent transition-colors">
+          <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-[#242424] to-[#141414] border border-[#2a2a2a] grid place-items-center text-[11px] shrink-0">💬</span>
+          <span class="min-w-0 flex-1">
+            <span class="flex items-center gap-1.5">
+              <span class="text-[11px] text-[#8a8a8a] truncate">${esc((m.side === 'out' ? 'You → ' : '') + (ag.name || '') + (c.kind === 'direct' ? '' : ' · ' + c.name))}</span>
+              <span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${esc(sideTime(m.ts))}</span>
+            </span>
+            <span class="block text-[12.5px] text-[#c4c4c4] mt-0.5 leading-snug">${esc(snippet(m.text))}</span>
+          </span>
+        </button>`;
+      }).join('');
+
+      convoList.innerHTML = html
+        || `<div class="px-5 py-10 text-center text-[12px] text-[#6a6a6a] leading-relaxed">No results for<br><span class="text-[#8a8a8a]">"${esc(searchTerm)}"</span></div>`;
+      return;
+    }
+
+    if (!agents.length && !groupConvos.length){
+      convoList.innerHTML = `<div class="px-6 py-12 text-center text-[12.5px] text-[#6a6a6a] leading-relaxed">No agent hubs yet.<br>Push a hub from your Command Centre and it appears here automatically.</div>`;
+      return;
+    }
+
+    // 👥 teams — sit above the brokerage tree; creating one lives here only.
+    // Each team expands into its group chat + every member's direct chat.
+    const gSorted = groupConvos.slice().sort((x,y) =>
+      ((isPinned(y.id)?1:0) - (isPinned(x.id)?1:0)) || ((y.lastTs||'') < (x.lastTs||'') ? -1 : 1));
+    const groupsHtml = `<div class="px-4 pt-3 pb-1 flex items-center justify-between">
+        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">👥 Teams & groups</span>
+        <button id="new-group-btn" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white border border-[#2a2a2a] hover:border-[#e11d2a]/60 rounded-full px-2.5 py-1 transition-colors" title="Create a group — one agent for a project room, or several for a team">＋ New group</button>
+      </div>`
+      + (gSorted.length ? gSorted.map(groupNode).join('') : `<div class="px-4 pb-1 text-[11px] text-[#5c5c5c]">No groups yet — start one with ＋. Agents can also start one from their hub.</div>`)
+      + `<div class="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">Agents</div>`;
+
+    // group agents by brokerage, both levels sorted by pin-presence then recency
+    const lastOfAg = ag => ag.convos.reduce((m,c) => c.lastTs > m ? c.lastTs : m, '');
+    const pinInAg = ag => ag.convos.some(c => isPinned(c.id));
+    const groups = {};
+    agents.forEach(ag => { const b = brokerageName(ag); (groups[b] = groups[b] || []).push(ag); });
+    const brokerageList = Object.keys(groups).sort((x,y) =>
+      ((groups[y].some(pinInAg)?1:0) - (groups[x].some(pinInAg)?1:0)) ||
+      (Math.max(...groups[y].map(a=>lastOfAg(a)||'').map(s=>s||'')) < Math.max(...groups[x].map(a=>lastOfAg(a)||'').map(s=>s||'')) ? -1 : 1));
+
+    convoList.innerHTML = groupsHtml + brokerageList.map(bName => {
+      const bOpen = expanded.has('b:' + bName);
+      const bAgents = groups[bName].slice().sort((x,y) =>
+        ((pinInAg(y)?1:0) - (pinInAg(x)?1:0)) || (lastOfAg(y) < lastOfAg(x) ? -1 : 1));
+      const bUnread = bAgents.reduce((s,ag) => s + agentUnread(ag), 0);
+      let html = `<button data-node="b:${esc(bName)}" class="w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-[#161616] transition-colors text-[#8a8a8a]">
+        ${chevron(bOpen)}
+        ${buildingIcon}
+        <span class="flex-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white truncate">${esc(bName)}</span>
+        ${badge(bUnread)}
+      </button>`;
+      if (bOpen){
+        html += bAgents.map(ag => {
+          const aOpen = expanded.has('a:' + ag.key);
+          const aUn = agentUnread(ag);
+          const main = ag.convos.find(c => c.kind === 'direct');
+          const aActive = main && main.id === activeId;
+          const extras = convosSorted(ag).filter(c => c.kind !== 'direct');
+          let ah = `<div class="flex items-stretch ${aActive ? 'bg-[#1a1a1a] border-l-2 border-[#e11d2a]' : 'border-l-2 border-transparent'}">
+            ${extras.length ? `<button data-node="a:${esc(ag.key)}" class="pl-6 pr-1 flex items-center text-[#7a7a7a] hover:text-white transition-colors" aria-label="Toggle review-page chats">${chevron(aOpen)}</button>` : `<span class="pl-6 pr-1 flex items-center text-transparent">${chevron(false)}</span>`}
+            <button ${main ? `data-convo="${esc(main.id)}"` : ''} class="flex-1 min-w-0 text-left pr-3 py-2 flex items-center gap-2 hover:bg-[#161616] transition-colors" title="${esc(ag.name)} — direct chat">
+              <span class="w-6 h-6 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[9px] font-serif-display ${aUn?'text-[#e11d2a]':'text-[#9a9a9a]'} shrink-0">${esc(ag.initials)}</span>
+              <span class="flex-1 min-w-0 flex items-center gap-1.5">
+                <span class="text-[13px] ${aUn?'text-white':'text-[#c4c4c4]'} truncate">${esc(ag.name)}</span>
+                ${ag.stale ? '<span class="text-[9px] uppercase tracking-[0.1em] text-[#6a6a6a] border border-[#2a2a2a] rounded px-1 shrink-0">old</span>' : ''}
+                ${(main && isPinned(main.id)) ? pinIcon : ''}
+                ${agentSeen[ag.key] ? `<span class="ml-auto text-[10px] text-[#5c5c5c] shrink-0">${seenDot(agentSeen[ag.key])}${esc(relTime(agentSeen[ag.key]))}</span>` : ''}
+              </span>
+              ${badge(aUn)}
+            </button>
+          </div>`;
+          if (aOpen) ah += extras.map(c => convoRow(c, true)).join('');
+          return ah;
+        }).join('');
+      }
+      return html;
+    }).join('');
+  }
+
+  function goToMessage(cid, mid){
+    $('#search').value = '';
+    searchTerm = '';
+    selectConversation(cid);
+    setTimeout(() => {
+      const el = thread.querySelector('.react-bubble[data-mid="' + mid + '"]');
+      if (el){
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 1800);
+      }
+    }, 120);
+  }
+
+  let suppressClick = false;
+  convoList.addEventListener('click', e => {
+    if (suppressClick) { suppressClick = false; return; }
+    if (e.target.closest('#new-group-btn')){ openGroupModal(null); return; }
+    const gm = e.target.closest('[data-gmid]');
+    if (gm){ goToMessage(gm.dataset.goto, gm.dataset.gmid); return; }
+    const node = e.target.closest('[data-node]');
+    if (node && !e.target.closest('[data-convo]')){
+      const key = node.dataset.node;
+      if (expanded.has(key)) expanded.delete(key); else expanded.add(key);
+      renderSidebar();
+      return;
+    }
+    const b = e.target.closest('[data-convo]');
+    if (b) selectConversation(b.dataset.convo);
+  });
+
+  // Right-click / long-press / swipe-right to pin.
+  const ctxMenu = document.createElement('div');
+  ctxMenu.id = 'ctx-menu';
+  ctxMenu.className = 'fixed z-[70] hidden min-w-[168px] bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] py-1';
+  document.body.appendChild(ctxMenu);
+  let ctxTargetId = null;
+  function openContextMenu(id, x, y){
+    ctxTargetId = id;
+    const on = isPinned(id);
+    const c = convoById(id);
+    const canUnread = c && c.messages.some(m => m.side === 'in') && unreadOf(c) === 0;
+    ctxMenu.innerHTML = `<button class="ctx-pin w-full text-left px-3 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2.5">
+      <svg class="w-4 h-4 ${on?'text-[#e11d2a]':'text-[#8a8a8a]'}" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>
+      ${on ? 'Unpin from top' : 'Pin to top'}
+    </button>` + (canUnread ? `<button class="ctx-unread w-full text-left px-3 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2.5">
+      <svg class="w-4 h-4 text-[#8a8a8a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.17L4 17.17V4z"/><circle cx="18" cy="6" r="3" fill="#e11d2a" stroke="none"/></svg>
+      Mark as unread
+    </button>` : '');
+    ctxMenu.classList.remove('hidden');
+    ctxMenu.style.left = Math.min(x, window.innerWidth - ctxMenu.offsetWidth - 8) + 'px';
+    ctxMenu.style.top = Math.min(y, window.innerHeight - ctxMenu.offsetHeight - 8) + 'px';
+  }
+  function closeContextMenu(){ ctxMenu.classList.add('hidden'); ctxTargetId = null; }
+  ctxMenu.addEventListener('click', e => {
+    if (e.target.closest('.ctx-pin')) { togglePin(ctxTargetId); closeContextMenu(); return; }
+    if (e.target.closest('.ctx-unread')) { markUnread(ctxTargetId); closeContextMenu(); return; }
+  });
+  document.addEventListener('click', e => { if (!ctxMenu.classList.contains('hidden') && !e.target.closest('#ctx-menu')) closeContextMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeContextMenu(); });
+  window.addEventListener('resize', closeContextMenu);
+  convoList.addEventListener('scroll', closeContextMenu);
+  convoList.addEventListener('contextmenu', e => {
+    const row = e.target.closest('[data-convo]');
+    if (!row) return;
+    e.preventDefault();
+    openContextMenu(row.dataset.convo, e.clientX, e.clientY);
+  });
+  let touchStart = null, lpTimer = null;
+  convoList.addEventListener('touchstart', e => {
+    const row = e.target.closest('[data-convo]');
+    if (!row) return;
+    const tt = e.touches[0];
+    touchStart = { x: tt.clientX, y: tt.clientY, id: row.dataset.convo };
+    lpTimer = setTimeout(() => { suppressClick = true; openContextMenu(row.dataset.convo, tt.clientX, tt.clientY); lpTimer = null; }, 500);
+  }, { passive: true });
+  convoList.addEventListener('touchmove', e => {
+    if (!touchStart) return;
+    const tt = e.touches[0];
+    if (Math.abs(tt.clientX - touchStart.x) > 10 || Math.abs(tt.clientY - touchStart.y) > 10) { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+  }, { passive: true });
+  convoList.addEventListener('touchend', e => {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    if (!touchStart) return;
+    const ch = e.changedTouches[0];
+    const dx = ch.clientX - touchStart.x, dy = ch.clientY - touchStart.y;
+    if (dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { suppressClick = true; togglePin(touchStart.id); }
+    touchStart = null;
+  });
+
+  // ---------- reactions ----------
+  function chipData(msgId){
+    const ent = reactMap[msgId] || {};
+    const out = [];
+    Object.keys(ent).forEach(e => {
+      const n = (ent[e].a ? 1 : 0) + (ent[e].j ? 1 : 0);
+      if (n > 0) out.push({ e, n, mine: !!ent[e][MY_SIDE] });
+    });
+    return out;
+  }
+  function reactionChips(m){
+    if (!m.id) return '';
+    const chips = chipData(m.id);
+    if (!chips.length) return '';
+    const align = m.side === 'in' ? '' : 'justify-end';
+    return `<div class="flex flex-wrap gap-1 mt-1.5 ${align}">` + chips.map(c =>
+      `<button class="reaction-chip flex items-center gap-1 rounded-full px-2 py-[3px] text-[12px] border transition-colors ${c.mine ? 'border-[#e11d2a] bg-[#e11d2a]/20 text-white' : 'border-[#2a2a2a] bg-[#1a1a1a] text-[#c4c4c4] hover:border-[#3a3a3a]'}" data-mid="${esc(m.id)}" data-emoji="${c.e}"><span>${c.e}</span>${c.n > 1 ? `<span class="text-[11px] text-[#8a8a8a]">${c.n}</span>` : ''}</button>`
+    ).join('') + `</div>`;
+  }
+  function applyReaction(msgId, emoji){
+    const c = convoById(activeId); if (!c || !msgId) return;
+    const ent = (reactMap[msgId] = reactMap[msgId] || {});
+    const st = (ent[emoji] = ent[emoji] || {a:0, j:0});
+    const nowOn = !st[MY_SIDE];
+    st[MY_SIDE] = nowOn ? 1 : 0;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'react', ref: c.key, project: c.label, dname:'',
+      who: 'Reel Estate Media', from:'jag',
+      body: JSON.stringify({ m: msgId, e: emoji, op: nowOn ? '+' : '-' })
+    })}).catch(() => {});
+  }
+
+  // ---------- messages ----------
+  function fmtSize(b){
+    if (b == null || isNaN(b)) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+  const thumbOf = at => at.d || ('https://drive.google.com/thumbnail?id=' + at.id + '&sz=w900');
+  const fullOf = at => at.d || ('https://drive.google.com/thumbnail?id=' + at.id + '&sz=w2048');
+
+  function attachmentsHTML(atts, inSide){
+    return (atts || []).map(at => {
+      if (at.k === 'audio' && at.id){
+        const cap = inSide ? 'text-[#8a8a8a]' : 'text-white/75';
+        return `<div class="min-w-[220px] max-w-[280px]"><div class="text-[11px] ${cap} mb-1">\u{1F399} Voice note${at.sec ? ' · ' + at.sec + 's' : ''}</div><audio controls preload="none" class="w-full h-10 rounded-lg" src="https://drive.google.com/uc?export=download&id=${esc(at.id)}"></audio></div>`;
+      }
+      if (at.k === 'image' && (at.d || at.id)){
+        return `<button type="button" class="attach-image block w-full" data-url="${esc(fullOf(at))}"><img src="${esc(thumbOf(at))}" alt="${esc(at.n || 'photo')}" class="rounded-xl w-full max-h-60 object-cover cursor-zoom-in"></button>`;
+      }
+      if (at.id){
+        const pill = inSide ? 'bg-[#111] border-[#2a2a2a]' : 'bg-black/15 border-white/25';
+        const icon = inSide ? 'bg-[#1c1c1c] text-[#e11d2a]' : 'bg-black/25 text-white';
+        const sub = inSide ? 'text-[#8a8a8a]' : 'text-white/70';
+        return `<a href="https://drive.google.com/file/d/${esc(at.id)}/view" target="_blank" rel="noopener" class="flex items-center gap-2.5 rounded-xl border ${pill} px-2.5 py-2 min-w-[180px] max-w-[260px]">
+          <span class="w-9 h-9 grid place-items-center rounded-lg ${icon} shrink-0"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+          <span class="min-w-0"><span class="block text-[13px] text-white truncate">${esc(at.n || 'file')}</span><span class="block text-[11px] ${sub}">${fmtSize(at.s)}</span></span>
+        </a>`;
+      }
+      return '';
+    }).join('');
+  }
+
+  // @mentions — bold + red on incoming, bold + underline on your red bubbles
+  const mentionize = (html, inSide) => html.replace(/(^|[\s>(])@([A-Za-z][\w'’-]*)/g,
+    (mm, pre, nm) => pre + '<span class="font-bold ' + (inSide ? 'text-[#e11d2a]' : 'underline underline-offset-2') + '">@' + nm + '</span>');
+
+  // 🗳 poll bubble — tap an option to vote, tap again to retract
+  function pollBlock(m, inSide){
+    const votes = voteMap[m.id] || {};
+    const voters = Object.keys(votes);
+    const opts = (m.poll && m.poll.o) || [];
+    const mine = votes['Reel Estate Media'];
+    const bar = inSide ? 'bg-[#e11d2a]/25' : 'bg-white/25';
+    const line = inSide ? 'border-[#2e2e2e]' : 'border-white/25';
+    return `<div class="min-w-[220px] max-w-[300px] px-1 pt-1">
+      <div class="text-[13px] font-semibold ${inSide ? 'text-white' : ''} mb-1.5">🗳 ${esc((m.poll && m.poll.q) || 'Poll')}</div>
+      ${opts.map((o, i) => {
+        const who = voters.filter(w => votes[w] === i);
+        const pct = voters.length ? Math.round(who.length * 100 / voters.length) : 0;
+        return `<button type="button" class="poll-opt relative block w-full text-left mb-1 rounded-lg border ${line} px-2.5 py-1.5 overflow-hidden" data-mid="${esc(m.id || '')}" data-i="${i}">
+          <span class="absolute inset-y-0 left-0 ${bar}" style="width:${pct}%"></span>
+          <span class="relative flex items-center justify-between gap-2 text-[12.5px]"><span>${mine === i ? '✓ ' : ''}${esc(o)}</span><span class="text-[11px] opacity-75">${who.length || ''}</span></span>
+          ${who.length ? `<span class="relative block text-[10px] opacity-60 truncate">${esc(who.map(w => w === 'Reel Estate Media' ? 'You' : w.split(' ')[0]).join(', '))}</span>` : ''}
+        </button>`;
+      }).join('')}
+      <div class="text-[10px] opacity-60 pb-0.5">${voters.length ? voters.length + ' vote' + (voters.length === 1 ? '' : 's') : 'No votes yet — tap an option'}</div>
+    </div>`;
+  }
+
+  // 📋 shoot brief card — the hub posts these before shoot day
+  function briefBlock(m, inSide){
+    const b = m.brief || {};
+    const lbl = inSide ? 'text-[#8a8a8a]' : 'text-white/70';
+    const row = (ic, l, v) => v ? `<div class="flex gap-2 text-[12.5px] leading-snug mb-1"><span class="shrink-0">${ic}</span><span class="min-w-0"><span class="${lbl}">${l}: </span>${esc(v)}</span></div>` : '';
+    return `<div class="min-w-[230px] max-w-[320px] px-1 pt-1">
+      <div class="text-[13px] font-semibold ${inSide ? 'text-white' : ''} mb-1.5">📋 Shoot brief${b.when ? ' <span class="font-normal ' + lbl + '">· ' + esc(b.when) + '</span>' : ''}</div>
+      ${row('📍','Address', b.addr)}${row('🔑','Access', b.access)}${row('🏠','Seller', b.seller)}${row('⭐','Must-shoot', b.feats)}${row('🚫','Avoid', b.avoid)}${row('📝','Notes', b.notes)}
+    </div>`;
+  }
+
+  function buildMessage(m, seen){
+    const inSide = m.side === 'in';
+    const colAlign = inSide ? 'items-start' : 'items-end ml-auto';
+    const rowDir = inSide ? '' : 'flex-row-reverse';
+    const bubbleCls = inSide
+      ? 'bg-[#1c1c1c] border border-[#262626] text-[#b3b3b3] rounded-2xl rounded-tl-md shadow-sm'
+      : 'bg-[#e11d2a] text-white rounded-2xl rounded-tr-md shadow-[0_6px_20px_-6px_rgba(225,29,42,0.5)]';
+    const timeAlign = inSide ? 'ml-1' : 'mr-1';
+    const hasAtt = m.atts && m.atts.length;
+    const quote = m.q
+      ? `<button type="button" class="quote-jump block w-full text-left mb-1.5 px-2.5 py-1.5 rounded-lg border ${inSide ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-black/20 border-white/20'}" data-qmid="${esc(m.q.m || '')}">
+          <span class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'}">${esc(m.q.w || '')}</span>
+          <span class="block text-[11.5px] ${inSide ? 'text-[#8a8a8a]' : 'text-white/70'} truncate">${esc(m.q.t || '')}</span>
+        </button>`
+      : '';
+    // 🎬 context chip — which project this message is about. Tap → that project
+    // opens in the Command Centre; its ← Back to Chat button returns here.
+    const pjInfo = m.proj && PROJMAP[m.proj] ? PROJMAP[m.proj] : null;
+    const pjChip = pjInfo
+      ? (pjInfo.id
+        ? `<a href="index.html#dl=${esc(pjInfo.id)}" class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'} mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''} underline underline-offset-2" title="Open this project in your Command Centre — its ← button brings you back here">🎬 ${esc(pjInfo.t)}</a>`
+        : `<span class="block text-[10px] font-semibold ${inSide ? 'text-[#e11d2a]' : 'text-white/85'} mb-0.5 ${hasAtt ? 'px-2 pt-1' : ''}">🎬 ${esc(pjInfo.t)}</span>`)
+      : '';
+    const inner = m.brief
+      ? `<div class="flex flex-col gap-1 min-w-[200px]">${pjChip ? `<div class="px-1 pt-1">${pjChip}</div>` : ''}${quote}${briefBlock(m, inSide)}</div>`
+      : m.poll
+      ? `<div class="flex flex-col gap-1 min-w-[180px]">${pjChip ? `<div class="px-1 pt-1">${pjChip}</div>` : ''}${quote}${pollBlock(m, inSide)}</div>`
+      : hasAtt
+      ? `<div class="flex flex-col gap-1.5 min-w-[140px]">${pjChip}${quote}${attachmentsHTML(m.atts, inSide)}${m.text ? `<div class="px-2 pb-0.5">${mentionize(linkify(m.text), inSide)}</div>` : ''}</div>`
+      : m.q
+      ? `<div class="flex flex-col gap-0.5 min-w-0 max-w-[74vw] sm:max-w-[360px]">${pjChip}${quote}<div class="min-w-0 break-words">${mentionize(linkify(m.text), inSide)}</div></div>`
+      : pjChip + quote + mentionize(linkify(m.text), inSide);
+    const pad = (m.poll || m.brief) ? 'px-2 py-2' : hasAtt ? 'p-1.5' : (m.q ? 'px-3 py-2.5' : 'px-4 py-3');
+    const hoverBtn = (cls, mid, title, svg) =>
+      `<button class="${cls} opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all shrink-0 w-7 h-7 grid place-items-center rounded-full bg-[#1a1a1a] border border-[#2a2a2a] text-[#8a8a8a] hover:text-white" data-mid="${esc(mid)}" title="${title}" aria-label="${title}">${svg}</button>`;
+    const trigger = m.id ? hoverBtn('react-trigger', m.id, 'Add reaction', '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>') : '';
+    const replyBtn = m.id ? hoverBtn('reply-trigger', m.id, 'Reply', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>') : '';
+    const pinBtn = m.id ? hoverBtn('pin-trigger', m.id, 'Pin this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 7 3 3v2H7v-2l3-3-1-7z"/><line x1="12" y1="16" x2="12" y2="21"/></svg>') : '';
+    const editBtn = (m.id && m.side === 'out') ? hoverBtn('edit-trigger', m.id, 'Edit this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>') : '';
+    const delBtn = (m.id && m.side === 'out') ? hoverBtn('del-trigger', m.id, 'Delete this message', '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>') : '';
+    const bubble = `<div class="react-bubble ${bubbleCls} ${pad} text-[14px] leading-relaxed ${m.id ? 'cursor-pointer' : ''} select-none" data-mid="${esc(m.id || '')}">${inner}</div>`;
+    return `<div class="group flex flex-col ${colAlign} max-w-[80%] msg-enter">
+      <div class="flex items-center gap-1.5 ${rowDir}">${bubble}${replyBtn}${trigger}${pinBtn}${editBtn}${delBtn}</div>
+      ${reactionChips(m)}
+      <span class="text-[10px] text-[#5c5c5c] mt-1.5 ${timeAlign} tracking-wide">${esc((inSide && m.who ? m.who + ' · ' : '') + timeOf(m.ts))}${m.edited ? ' · edited' : ''}${seen ? ' · <span class="text-[#e11d2a] font-semibold">' + esc(seen) + '</span>' : ''}</span>
+    </div>`;
+  }
+
+  function renderThread(){
+    const c = convoById(activeId);
+    if (!c){ thread.innerHTML = ''; return; }
+    const ag = agentOf(c) || {};
+    const parts = c.name.split(' ');
+    $('#hdr-name').innerHTML = esc(parts[0]) + (parts.length > 1 ? ' <span class="text-[#e11d2a] italic">' + esc(parts.slice(1).join(' ')) + '</span>' : '');
+    const lastSeen = agentSeen[ag.key];
+    if (c.kind === 'group'){
+      const who = ['You'].concat(c.memberNames || []);
+      $('#hdr-role').textContent = (c.desc ? c.desc + '  ·  ' : '') + '👥 ' + who.join(' · ');
+      $('#hdr-role').title = (c.desc ? c.desc + ' — ' : '') + who.join(', ');
+      $('#hdr-avatar').innerHTML = c.pic
+        ? `<img src="https://drive.google.com/thumbnail?id=${esc(c.pic)}&sz=w96" class="w-10 h-10 rounded-full object-cover" alt="">`
+        : '👥';
+      $('#input-label').textContent = 'Messaging as Reel Estate Media · ' + c.name;
+      $('#chat-input').placeholder = 'Message ' + c.name + '…';
+    } else {
+      $('#hdr-role').textContent = c.kind === 'direct'
+        ? ((ag.brokerage ? ag.brokerage + ' · ' : '') + (lastSeen ? 'active ' + relTime(lastSeen) : 'Direct chat'))
+        : (ag.name + (c.sub ? ' · ' + c.sub : '') + (lastSeen ? ' · active ' + relTime(lastSeen) : ''));
+      $('#hdr-avatar').textContent = c.initials;
+      $('#input-label').textContent = 'Replying as Reel Estate Media · ' + (c.kind === 'direct' ? ag.name : ag.name + ' — ' + c.name);
+      $('#chat-input').placeholder = 'Message ' + (c.kind === 'direct' ? ag.name : ag.name + ' about ' + c.name) + '…';
+    }
+    $('#grp-edit-btn').classList.toggle('hidden', c.kind !== 'group');
+    const pl = $('#proj-link');
+    if (c.url){ pl.href = c.url; pl.classList.remove('hidden'); pl.classList.add('flex'); }
+    else { pl.classList.add('hidden'); pl.classList.remove('flex'); }
+    paintPinBtn();
+
+    const since = readTs(c.id);
+    const unreadCount = c.messages.filter(m => m.side === 'in' && m.ts > since).length;
+    let html = '', curDay = null, unreadShown = false;
+
+    if (!c.messages.length){
+      html = `<div class="h-full flex flex-col items-center justify-center text-center gap-2 py-16">
+        <div class="w-12 h-12 rounded-full bg-[#1a1a1a] border border-[#262626] grid place-items-center text-[#e11d2a] font-serif-display text-lg">${esc(c.initials)}</div>
+        <p class="text-[13px] text-[#8a8a8a] max-w-[34ch]">${c.kind === 'group' ? 'No messages yet — say hi. Everyone in the group sees what you send.' : `No messages yet — anything you send lands on ${esc(ag.name || 'the agent')}'s hub as Reel Estate Media.`}</p>
+      </div>`;
+    } else {
+      const theirTs = agentRead[c.id] || '';
+      let lastOut = -1;
+      c.messages.forEach((m,i) => { if (m.side === 'out') lastOut = i; });
+      const seenLabel = m => {
+        if (c.kind === 'group'){
+          const gr = groupReads[c.id] || {};
+          const names = (c.members || [])
+            .filter(k => (gr[k] || '') >= m.ts)
+            .map((k) => { const ag = agents.find(a2 => a2.key === k); return ((ag && ag.name) || k).split(' ')[0]; });
+          return names.length ? 'Seen by ' + names.join(' · ') : '';
+        }
+        return (!!theirTs && theirTs >= m.ts) ? 'Seen' : '';
+      };
+      c.messages.forEach((m, i) => {
+        const d = dayOf(m.ts);
+        if (d !== curDay){
+          curDay = d;
+          html += `<div class="flex items-center gap-3"><div class="flex-1 h-px bg-[#262626]"></div><span class="text-[10px] uppercase tracking-[0.18em] date-chip rounded-full px-3 py-1">${esc(d)}</span><div class="flex-1 h-px bg-[#262626]"></div></div>`;
+        }
+        if (!unreadShown && unreadCount && m.side === 'in' && m.ts > since){
+          unreadShown = true;
+          html += `<div class="flex items-center gap-3"><div class="flex-1 h-px" style="background:linear-gradient(90deg,transparent,rgba(225,29,42,0.5))"></div><span class="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#e11d2a] flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#e11d2a]"></span>${unreadCount} unread message${unreadCount>1?'s':''}</span><div class="flex-1 h-px" style="background:linear-gradient(90deg,rgba(225,29,42,0.5),transparent)"></div></div>`;
+        }
+        html += buildMessage(m, i === lastOut ? seenLabel(m) : '');
+      });
+    }
+    // 📌 pinned message banner — sticks to the top of the thread
+    const pn = pinMsg[c.id];
+    let pinBanner = '';
+    if (pn && pn.m){
+      const pm = c.messages.find(mm => mm.id === pn.m);
+      const ptxt = pm ? (pm.text || (pm.poll ? '🗳 ' + (pm.poll.q || 'Poll') : '📎 attachment')) : String(pn.t || 'Pinned message');
+      pinBanner = `<div class="sticky top-0 z-10"><div class="flex items-center gap-2.5 bg-[#1a1a1a]/95 backdrop-blur border border-[#2a2a2a] border-l-2 border-l-[#e11d2a] rounded-xl px-3 py-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]">
+        <span class="shrink-0 text-[#e11d2a] text-[13px]">📌</span>
+        <button class="pin-jump flex-1 min-w-0 text-left" data-pjump="${esc(pn.m)}">
+          <span class="block text-[10px] uppercase tracking-[0.14em] text-[#e11d2a] font-semibold">Pinned${pn.w ? ' by ' + esc(pn.w === 'Reel Estate Media' ? 'you' : pn.w) : ''}</span>
+          <span class="block text-[12.5px] text-[#c4c4c4] truncate">${esc(String(ptxt).slice(0, 140))}</span>
+        </button>
+        <button class="pin-clear shrink-0 w-6 h-6 grid place-items-center rounded-full text-[#7a7a7a] hover:text-white" title="Unpin">✕</button>
+      </div></div>`;
+    }
+    thread.innerHTML = pinBanner + html;
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function expandPathTo(id){
+    const c = convoById(id); if (!c) return;
+    const ag = agentOf(c); if (!ag) return;
+    expanded.add('a:' + ag.key);
+    expanded.add('b:' + brokerageName(ag));
+  }
+  function deleteMessage(msgId){
+    const c = convoById(activeId); if (!c || !msgId) return;
+    c.messages = c.messages.filter(m => m.id !== msgId);
+    c.lastTs = c.messages.length ? c.messages[c.messages.length - 1].ts : '';
+    renderThread();
+    renderSidebar();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'del', ref: c.key, project: c.label, dname:'',
+      who: 'Reel Estate Media', from:'jag', body: msgId
+    })}).catch(() => {});
+  }
+
+  function selectConversation(id){
+    if (activeId && convoById(activeId)) markRead(activeId);
+    activeId = id;
+    manualUnread.delete(id);   // opening it on purpose clears the unread flag
+    expandPathTo(id);
+    renderThread();
+    markRead(id);
+    renderSidebar();
+    closeDrawer();
+    $('#chat-input').focus();
+  }
+
+  // ---------- mobile drawer ----------
+  function openDrawer(){ sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('opacity-0','pointer-events-none'); }
+  function closeDrawer(){
+    if (window.innerWidth >= 640) return;
+    sidebar.classList.add('-translate-x-full'); backdrop.classList.add('opacity-0','pointer-events-none');
+  }
+  $('#open-sidebar').addEventListener('click', openDrawer);
+  $('#close-sidebar').addEventListener('click', closeDrawer);
+  backdrop.addEventListener('click', closeDrawer);
+
+  // ---------- toast ----------
+  const toast = document.createElement('div');
+  toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] hidden bg-[#1a1a1a] border border-[#2a2a2a] text-white text-[13px] rounded-full px-4 py-2 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.85)]';
+  document.body.appendChild(toast);
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.add('hidden'), 2600);
+  }
+
+  // ---------- composer context (reply / edit) ----------
+  let composerMode = null;   // {type:'quote', m, t, w} | {type:'edit', m}
+  function showCtx(title, text){
+    $('#ctx-title').textContent = title;
+    $('#ctx-text').textContent = text;
+    $('#composer-ctx').classList.remove('hidden');
+    $('#composer-ctx').classList.add('flex');
+  }
+  function clearCtx(){
+    composerMode = null;
+    $('#composer-ctx').classList.add('hidden');
+    $('#composer-ctx').classList.remove('flex');
+  }
+  $('#ctx-cancel').addEventListener('click', () => { if (composerMode && composerMode.type === 'edit') $('#chat-input').value = ''; clearCtx(); });
+  function startQuote(mid){
+    const c = convoById(activeId); if (!c) return;
+    const msg = c.messages.find(m => m.id === mid); if (!msg) return;
+    composerMode = { type:'quote', m: mid, t: (msg.text || '📎 attachment').slice(0, 120), w: msg.side === 'out' ? 'Reel Estate Media' : msg.who };
+    showCtx('Replying to ' + composerMode.w, composerMode.t);
+    $('#chat-input').focus();
+  }
+  function startEdit(mid){
+    const c = convoById(activeId); if (!c) return;
+    const msg = c.messages.find(m => m.id === mid);
+    if (!msg || msg.side !== 'out') return;
+    composerMode = { type:'edit', m: mid };
+    $('#chat-input').value = msg.text;
+    showCtx('Editing message', 'Send to save your change — attachments stay as they are.');
+    $('#chat-input').focus();
+  }
+
+  // ---------- send ----------
+  function postMsg(c, body){
+    return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'msg', ref: c.key, project: c.label || '', dname:'',
+      who: 'Reel Estate Media', from:'jag', body
+    })});
+  }
+  function sendMessage(){
+    const input = $('#chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const c = convoById(activeId); if (!c) return;
+    const mode = composerMode;
+    input.value = '';
+    clearCtx();
+    if (mode && mode.type === 'edit'){
+      const msg = c.messages.find(m => m.id === mode.m);
+      if (msg){ msg.text = text; msg.edited = true; }
+      renderThread(); renderSidebar();
+      fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+        kind:'edit', ref: c.key, project: c.label || '', dname:'',
+        who: 'Reel Estate Media', from:'jag', body: JSON.stringify({ m: mode.m, b: text })
+      })}).then(() => setTimeout(() => loadAll().catch(()=>{}), 1500)).catch(() => {});
+      return;
+    }
+    const q = (mode && mode.type === 'quote') ? { m: mode.m, t: mode.t, w: mode.w } : null;
+    const now = new Date().toISOString();
+    c.messages.push({ id:'', ts: now, side:'out', who:'You', text, atts: [], q });
+    c.lastTs = now;
+    markRead(activeId);
+    renderThread();
+    renderSidebar();
+    const body = q ? JSON.stringify({ __rc:1, t: text, q }) : text;
+    postMsg(c, body).then(() => setTimeout(() => loadAll().catch(()=>{}), 1500)).catch(() => {});
+  }
+  $('#send-btn').addEventListener('click', sendMessage);
+  $('#chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+
+  // ---------- attachments (photos, compressed to fit the backend) ----------
+  function compressImage(file){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const steps = [[900, 0.72], [640, 0.6], [440, 0.5], [320, 0.42]];
+        for (let i = 0; i < steps.length; i++){
+          const maxW = steps[i][0], qual = steps[i][1];
+          const scale = Math.min(1, maxW / Math.max(img.width, img.height));
+          const cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(img.width * scale));
+          cv.height = Math.max(1, Math.round(img.height * scale));
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          const d = cv.toDataURL('image/jpeg', qual);
+          if (d.length < 42000) return resolve(d);
+        }
+        reject(new Error('too big'));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+      img.src = url;
+    });
+  }
+  async function uploadToDrive(f){
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(',')[1] || '');
+      r.onerror = () => rej(new Error('read failed'));
+      r.readAsDataURL(f);
+    });
+    const j = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'file', name: f.name, mime: f.type || 'application/octet-stream', data: b64
+    })}).then(r => r.json());
+    if (!j.ok || !j.id) throw new Error(j.error || 'upload failed');
+    return j.id;
+  }
+
+  // ---------- \u{1F399} voice notes ----------
+  let vRec = null, vChunks = [], vT0 = 0, vTimer = null;
+  const micBtn = $('#mic-btn');
+  if (!navigator.mediaDevices || !window.MediaRecorder) micBtn.style.display = 'none';
+  micBtn.addEventListener('click', async () => {
+    if (vRec && vRec.state === 'recording'){ vRec.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+                 : MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+      vRec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      vChunks = [];
+      vRec.ondataavailable = e => { if (e.data && e.data.size) vChunks.push(e.data); };
+      vRec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(vTimer);
+        micBtn.classList.remove('recording');
+        micBtn.title = 'Record a voice note — tap again to send';
+        const secs = Math.round((Date.now() - vT0) / 1000);
+        const blob = new Blob(vChunks, { type: (vRec && vRec.mimeType) || 'audio/webm' });
+        vRec = null;
+        if (blob.size < 1200 || secs < 1){ showToast('Voice note was too short — hold the thought and try again.'); return; }
+        await sendVoiceNote(blob, secs);
+      };
+      vRec.start();
+      vT0 = Date.now();
+      micBtn.classList.add('recording');
+      vTimer = setInterval(() => { micBtn.title = 'Recording ' + Math.round((Date.now() - vT0) / 1000) + 's — tap to send'; }, 500);
+      showToast('\u{1F399} Recording… tap the mic again to send.');
+    } catch(e){ showToast('Microphone unavailable — check your browser permissions.'); }
+  });
+  async function sendVoiceNote(blob, secs){
+    const c = convoById(activeId); if (!c) return;
+    const ext = (blob.type || '').indexOf('mp4') > -1 ? 'm4a' : 'webm';
+    const f = new File([blob], 'voice-note-' + secs + 's.' + ext, { type: blob.type || 'audio/webm' });
+    let att;
+    try {
+      showToast('Sending voice note…');
+      const id = await uploadToDrive(f);
+      att = { k: 'audio', id, n: f.name, s: f.size, m: f.type || 'audio/webm', sec: secs };
+    } catch(e){ showToast("Couldn't send the voice note — try again in a moment."); return; }
+    const body = JSON.stringify({ __rc: 1, t: '', att: [att] });
+    const now = new Date().toISOString();
+    c.messages.push({ id: '', ts: now, side: 'out', who: 'Reel Estate Media', text: '', atts: [att], q: null });
+    c.lastTs = now;
+    renderThread(); renderSidebar();
+    await postMsg(c, body);
+    markRead(activeId);
+    setTimeout(loadAll, 1200);
+  }
+
+  const MAX_UPLOAD = 24 * 1024 * 1024;
+  const fileInput = $('#file-input');
+  $('#attach-btn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async () => {
+    if (!fileInput.files.length) return;
+    const c = convoById(activeId); if (!c) return;
+    const files = [...fileInput.files];
+    fileInput.value = '';
+    const caption = $('#chat-input').value.trim();
+    $('#chat-input').value = '';
+    const mode = composerMode;
+    clearCtx();
+    const q = (mode && mode.type === 'quote') ? { m: mode.m, t: mode.t, w: mode.w } : null;
+    let first = true;
+    for (const f of files){
+      if (f.size > MAX_UPLOAD){ showToast(f.name + ' is over 24 MB — share it via a Drive link instead.'); continue; }
+      const isImg = (f.type || '').startsWith('image/');
+      let att = null;
+      try {
+        showToast('Uploading ' + f.name + '…');
+        const id = await uploadToDrive(f);
+        att = { k: isImg ? 'image' : 'file', id, n: f.name, s: f.size, m: f.type || '' };
+      } catch(e){
+        if (isImg){
+          try { att = { k:'image', n: f.name, d: await compressImage(f) }; showToast('Sent a compressed copy of ' + f.name + '.'); }
+          catch(e2){ showToast("Couldn't send " + f.name + '.'); continue; }
+        } else { showToast("Couldn't upload " + f.name + ' — try again in a moment.'); continue; }
+      }
+      const body = JSON.stringify({ __rc:1, t: first ? caption : '', att: [att], q: first ? q : null });
+      const now = new Date().toISOString();
+      c.messages.push({ id:'', ts: now, side:'out', who:'You', text: first ? caption : '', atts: [att], q: first ? q : null });
+      c.lastTs = now;
+      first = false;
+      renderThread(); renderSidebar();
+      await postMsg(c, body);
+    }
+    markRead(activeId);
+    setTimeout(() => loadAll().catch(()=>{}), 1500);
+  });
+
+  // ---------- lightbox ----------
+  const lightbox = document.createElement('div');
+  lightbox.id = 'lightbox';
+  lightbox.className = 'fixed inset-0 z-[60] hidden items-center justify-center bg-black/90 p-6';
+  lightbox.innerHTML = `
+    <button id="lightbox-close" class="absolute top-4 right-4 w-10 h-10 grid place-items-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors" aria-label="Close">
+      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <img id="lightbox-img" class="max-w-full max-h-full rounded-lg object-contain" alt="" />`;
+  document.body.appendChild(lightbox);
+  function openLightbox(url){
+    lightbox.querySelector('#lightbox-img').src = url;
+    lightbox.classList.remove('hidden');
+    lightbox.classList.add('flex');
+  }
+  function closeLightbox(){
+    lightbox.classList.add('hidden');
+    lightbox.classList.remove('flex');
+    lightbox.querySelector('#lightbox-img').src = '';
+  }
+  lightbox.addEventListener('click', e => { if (e.target === lightbox || e.target.closest('#lightbox-close')) closeLightbox(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+  // ---------- emoji picker + panel ----------
+  const REACT_EMOJIS = ['👍','❤️','😂','🔥','🎬','✅'];
+  const EMOJI_CATEGORIES = [
+    { name:'Smileys', items:[
+      ['😀','grin happy smile'],['😃','happy smile joy'],['😄','happy laugh smile'],['😁','grin beam'],['😆','laugh haha'],['😅','sweat laugh nervous'],['🤣','rofl laughing'],['😂','joy tears laugh cry'],['🙂','slight smile'],['🙃','upside down silly'],['😉','wink'],['😊','blush smile happy'],['😇','angel innocent'],['🥰','love hearts adore'],['😍','heart eyes love'],['🤩','star struck wow'],['😘','kiss blow'],['😗','kiss'],['😚','kiss closed'],['😋','yum tasty'],['😛','tongue'],['😜','wink tongue silly'],['🤪','zany crazy'],['😝','tongue squint'],['🤗','hug hands'],['🤭','giggle oops'],['🤫','shh quiet'],['🤔','thinking hmm'],['😐','neutral meh'],['😑','expressionless'],['😶','no mouth speechless'],['😏','smirk'],['😒','unamused'],['🙄','eye roll'],['😬','grimace awkward'],['😌','relieved calm'],['😔','sad pensive'],['😪','sleepy tired'],['🤤','drool'],['😴','sleep zzz'],['😷','mask sick'],['🤒','sick thermometer'],['🤕','hurt bandage'],['🥳','party celebrate'],['🥺','pleading puppy'],['😢','cry sad tear'],['😭','sob crying'],['😤','huff steam'],['😠','angry'],['😡','rage mad red'],['🤬','swearing curse'],['😳','flushed shock'],['🥵','hot heat'],['🥶','cold freeze'],['😨','fear scared'],['😰','anxious sweat'],['😱','scream shock'],['🤯','mind blown'],['😎','cool sunglasses'],['🤓','nerd geek'],['🧐','monocle inspect'],
+    ]},
+    { name:'Gestures', items:[
+      ['👍','thumbs up like yes good approve'],['👎','thumbs down dislike no'],['👌','ok okay perfect'],['🤌','pinch chef italian'],['🤏','pinch small tiny'],['✌️','peace victory'],['🤞','fingers crossed luck'],['🤟','love you'],['🤘','rock horns metal'],['🤙','call me shaka'],['👈','left point'],['👉','right point'],['👆','up point'],['👇','down point'],['☝️','up index'],['✋','hand stop high five'],['🤚','back hand'],['🖐️','hand fingers'],['🖖','vulcan spock'],['👋','wave hello bye hi'],['🤝','handshake deal agree'],['🙏','pray thanks please'],['✍️','write hand'],['💪','muscle strong flex'],['👏','clap applause bravo'],['🙌','raise hands praise'],['👐','open hands'],['🤲','palms up'],['🫶','heart hands love'],
+    ]},
+    { name:'Hearts', items:[
+      ['❤️','red heart love'],['🧡','orange heart'],['💛','yellow heart'],['💚','green heart'],['💙','blue heart'],['💜','purple heart'],['🖤','black heart'],['🤍','white heart'],['🤎','brown heart'],['💔','broken heart'],['❣️','heart exclamation'],['💕','two hearts'],['💞','revolving hearts'],['💓','beating heart'],['💗','growing heart'],['💖','sparkling heart'],['💘','heart arrow cupid'],['💝','heart gift'],['💟','heart decoration'],['❤️‍🔥','heart fire burning love'],
+    ]},
+    { name:'Production', items:[
+      ['🎬','clapper film shoot action movie'],['🎥','movie camera film'],['📽️','projector film'],['🎞️','film strip reel'],['📸','camera flash photo'],['📷','camera photo'],['🎦','cinema'],['📹','video camera'],['🎙️','mic studio record'],['🎧','headphones audio'],['💻','laptop computer'],['🖥️','desktop monitor'],['📱','phone mobile'],['📝','memo note edit'],['✏️','pencil write'],['📌','pin'],['📎','paperclip attach'],['📁','folder'],['📅','calendar date'],['⏰','alarm clock time'],['⏱️','stopwatch timer'],['🔔','bell notify'],['🚀','rocket launch ship fast'],['✅','check done complete yes tick'],['☑️','checkbox ticked'],['✔️','check mark tick'],['❌','cross no wrong x'],['⭐','star'],['🌟','glowing star sparkle'],['💥','boom collision'],['⚡','lightning fast bolt'],['🔥','fire lit hot flame'],['💯','hundred perfect'],['🎉','party tada celebrate'],['🎊','confetti'],['🏆','trophy win award'],['🥇','gold medal first'],
+    ]},
+    { name:'Symbols', items:[
+      ['👀','eyes look watch'],['🙈','see no evil monkey'],['💡','idea bulb light'],['💬','speech bubble chat'],['💭','thought bubble'],['❓','question'],['❗','exclamation'],['‼️','double exclamation'],['⁉️','interrobang'],['💤','zzz sleep'],['🆗','ok button'],['🆒','cool button'],['🆕','new button'],['🔴','red circle'],['🟠','orange circle'],['🟡','yellow circle'],['🟢','green circle'],['🔵','blue circle'],['🟣','purple circle'],['⚫','black circle'],['⚪','white circle'],
+    ]},
+  ];
+
+  const picker = document.createElement('div');
+  picker.id = 'reaction-picker';
+  picker.className = 'fixed z-50 hidden items-center gap-0.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-2 py-1.5 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.85)]';
+  picker.innerHTML = REACT_EMOJIS.map(e => `<button class="picker-emoji w-8 h-8 grid place-items-center rounded-full hover:bg-[#262626] transition-colors text-[18px] leading-none" data-emoji="${e}" aria-label="React ${e}">${e}</button>`).join('')
+    + `<span class="w-px h-5 bg-[#2a2a2a] mx-0.5"></span>`
+    + `<button class="picker-more w-8 h-8 grid place-items-center rounded-full hover:bg-[#262626] text-[#8a8a8a] hover:text-white transition-colors" aria-label="More emojis"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>`;
+  document.body.appendChild(picker);
+
+  const emojiPanel = document.createElement('div');
+  emojiPanel.id = 'emoji-panel';
+  emojiPanel.className = 'fixed z-50 hidden flex-col w-[320px] max-w-[92vw] h-[300px] bg-[#141414] border border-[#2a2a2a] rounded-2xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden';
+  emojiPanel.innerHTML = `
+    <div class="p-2 border-b border-[#262626] shrink-0">
+      <div class="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-full px-3 py-1.5">
+        <svg class="w-4 h-4 text-[#5c5c5c] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="emoji-search" type="text" placeholder="Search emoji" class="w-full bg-transparent outline-none text-[13px] text-white placeholder-[#5c5c5c]" />
+      </div>
+    </div>
+    <div id="emoji-grid" class="flex-1 overflow-y-auto scrollbar-thin p-2"></div>`;
+  document.body.appendChild(emojiPanel);
+
+  const emojiBtn = e => `<button class="panel-emoji h-8 grid place-items-center rounded-lg hover:bg-[#262626] transition-colors text-[18px] leading-none" data-emoji="${e}" aria-label="React ${e}">${e}</button>`;
+  function renderEmojiGrid(qq){
+    const grid = emojiPanel.querySelector('#emoji-grid');
+    const query = (qq || '').trim().toLowerCase();
+    if (query){
+      const matches = [];
+      EMOJI_CATEGORIES.forEach(cat => cat.items.forEach(([e, k]) => { if (k.includes(query) || e === qq) matches.push(e); }));
+      grid.innerHTML = matches.length
+        ? `<div class="grid grid-cols-8 gap-0.5">${matches.map(emojiBtn).join('')}</div>`
+        : `<div class="py-12 text-center text-[12px] text-[#6a6a6a]">No emoji found</div>`;
+    } else {
+      grid.innerHTML = EMOJI_CATEGORIES.map(cat =>
+        `<div class="px-1 pt-2 pb-1 text-[10px] uppercase tracking-[0.15em] text-[#6a6a6a]">${cat.name}</div><div class="grid grid-cols-8 gap-0.5">${cat.items.map(([e]) => emojiBtn(e)).join('')}</div>`
+      ).join('');
+    }
+  }
+  emojiPanel.querySelector('#emoji-search').addEventListener('input', e => renderEmojiGrid(e.target.value));
+
+  let targetMid = null;
+  function place(el, anchorEl){
+    const r = anchorEl.getBoundingClientRect();
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - el.offsetWidth - 8);
+    let top = r.top - el.offsetHeight - 8;
+    if (top < 8) top = Math.min(r.bottom + 8, window.innerHeight - el.offsetHeight - 8);
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+  }
+  function openPicker(mid, anchorEl){ targetMid = mid; emojiPanel.classList.add('hidden'); emojiPanel.classList.remove('flex'); picker.classList.remove('hidden'); picker.classList.add('flex'); place(picker, anchorEl); }
+  function openPanel(anchorEl){
+    picker.classList.add('hidden'); picker.classList.remove('flex');
+    const search = emojiPanel.querySelector('#emoji-search');
+    search.value = ''; renderEmojiGrid('');
+    emojiPanel.classList.remove('hidden'); emojiPanel.classList.add('flex');
+    place(emojiPanel, anchorEl);
+    search.focus();
+  }
+  function closeReactUI(){ picker.classList.add('hidden'); picker.classList.remove('flex'); emojiPanel.classList.add('hidden'); emojiPanel.classList.remove('flex'); targetMid = null; }
+
+  picker.addEventListener('click', e => {
+    if (e.target.closest('.picker-more')) { openPanel(e.target.closest('.picker-more')); return; }
+    const b = e.target.closest('.picker-emoji');
+    if (!b) return;
+    if (targetMid) applyReaction(targetMid, b.dataset.emoji);
+    closeReactUI();
+  });
+  emojiPanel.addEventListener('click', e => {
+    const b = e.target.closest('.panel-emoji');
+    if (!b) return;
+    if (targetMid) applyReaction(targetMid, b.dataset.emoji);
+    closeReactUI();
+  });
+
+  thread.addEventListener('click', e => {
+    if (e.target.closest('a')) return;
+    const qj = e.target.closest('.quote-jump');
+    if (qj && qj.dataset.qmid){
+      const el = thread.querySelector('.react-bubble[data-mid="' + qj.dataset.qmid + '"]');
+      if (el){ el.scrollIntoView({ block:'center', behavior:'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1800); }
+      return;
+    }
+    const rep = e.target.closest('.reply-trigger');
+    if (rep) { startQuote(rep.dataset.mid); return; }
+    const ed = e.target.closest('.edit-trigger');
+    if (ed) { startEdit(ed.dataset.mid); return; }
+    const img = e.target.closest('.attach-image');
+    if (img) { openLightbox(img.dataset.url); return; }
+    const del = e.target.closest('.del-trigger');
+    if (del) {
+      if (del.dataset.armed){ deleteMessage(del.dataset.mid); }
+      else {
+        del.dataset.armed = '1';
+        del.classList.add('text-[#e11d2a]','border-[#e11d2a]','opacity-100');
+        del.title = 'Tap again to delete';
+        setTimeout(() => { delete del.dataset.armed; del.classList.remove('text-[#e11d2a]','border-[#e11d2a]','opacity-100'); del.title = 'Delete this message'; }, 2600);
+      }
+      return;
+    }
+    const pj = e.target.closest('.pin-jump');
+    if (pj && pj.dataset.pjump){
+      const el = thread.querySelector('.react-bubble[data-mid="' + pj.dataset.pjump + '"]');
+      if (el){ el.scrollIntoView({ block:'center', behavior:'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1800); }
+      return;
+    }
+    if (e.target.closest('.pin-clear')) { clearPin(); return; }
+    const pt = e.target.closest('.pin-trigger');
+    if (pt) { pinMessage(pt.dataset.mid); return; }
+    const po = e.target.closest('.poll-opt');
+    if (po) { if (po.dataset.mid) votePoll(po.dataset.mid, +po.dataset.i); return; }
+    const trig = e.target.closest('.react-trigger');
+    if (trig) { openPicker(trig.dataset.mid, trig); return; }
+    const chip = e.target.closest('.reaction-chip');
+    if (chip) { applyReaction(chip.dataset.mid, chip.dataset.emoji); return; }
+    const bub = e.target.closest('.react-bubble');
+    if (bub && bub.dataset.mid) { openPicker(bub.dataset.mid, bub); return; }
+  });
+  document.addEventListener('click', e => {
+    if (picker.classList.contains('hidden') && emojiPanel.classList.contains('hidden')) return;
+    if (e.target.closest('#reaction-picker') || e.target.closest('#emoji-panel') || e.target.closest('.react-trigger') || e.target.closest('.react-bubble')) return;
+    closeReactUI();
+  });
+  window.addEventListener('resize', closeReactUI);
+  thread.addEventListener('scroll', closeReactUI);
+
+  // ---------- quick replies ----------
+  const QR_KEY = 'rem_quick_replies_v1';
+  const QR_DEFAULTS = [
+    'On it — I’ll get back to you shortly. 🎬',
+    'First cut lands tomorrow.',
+    'Approved and moving to finals ✅',
+    'Can you approve by end of day so we stay on schedule?',
+    'Thanks — received! 🙌'
+  ];
+  function quickReplies(){
+    try { const v = JSON.parse(localStorage.getItem(QR_KEY)); return Array.isArray(v) ? v : QR_DEFAULTS.slice(); }
+    catch(e){ return QR_DEFAULTS.slice(); }
+  }
+  function saveQuickReplies(list){ try { localStorage.setItem(QR_KEY, JSON.stringify(list)); } catch(e){} }
+
+  const qrPanel = document.createElement('div');
+  qrPanel.id = 'qr-panel';
+  qrPanel.className = 'fixed z-50 hidden flex-col w-[340px] max-w-[92vw] max-h-[320px] bg-[#141414] border border-[#2a2a2a] rounded-2xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden';
+  document.body.appendChild(qrPanel);
+  function renderQrPanel(){
+    const list = quickReplies();
+    qrPanel.innerHTML = `
+      <div class="px-4 py-3 border-b border-[#262626] flex items-center justify-between shrink-0">
+        <span class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold">⚡ Quick replies</span>
+      </div>
+      <div class="flex-1 overflow-y-auto scrollbar-thin py-1">${list.length ? list.map((t, i) => `
+        <div class="group/qr flex items-center gap-1 pr-2 hover:bg-[#1a1a1a]">
+          <button class="qr-use flex-1 min-w-0 text-left px-4 py-2.5 text-[13px] text-[#c4c4c4]" data-i="${i}"><span class="block truncate">${esc(t)}</span></button>
+          <button class="qr-del opacity-0 group-hover/qr:opacity-100 w-6 h-6 grid place-items-center rounded-full text-[#6a6a6a] hover:text-[#e11d2a]" data-i="${i}" title="Remove">✕</button>
+        </div>`).join('') : '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No quick replies yet — add one below.</p>'}
+      </div>
+      <div class="p-2 border-t border-[#262626] flex gap-2 shrink-0">
+        <input id="qr-new" type="text" placeholder="Add a reply…" class="flex-1 min-w-0 bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-full px-3.5 py-2 focus:outline-none focus:border-[#e11d2a]/60">
+        <button id="qr-add" class="shrink-0 bg-[#e11d2a] hover:bg-[#c81824] text-white text-[11px] font-bold uppercase tracking-[0.1em] rounded-full px-4">Add</button>
+      </div>`;
+  }
+  function openQrPanel(anchorEl){
+    renderQrPanel();
+    qrPanel.classList.remove('hidden'); qrPanel.classList.add('flex');
+    place(qrPanel, anchorEl);
+  }
+  function closeQrPanel(){ qrPanel.classList.add('hidden'); qrPanel.classList.remove('flex'); }
+  $('#qr-btn').addEventListener('click', e => {
+    if (qrPanel.classList.contains('hidden')) openQrPanel(e.currentTarget); else closeQrPanel();
+  });
+  qrPanel.addEventListener('click', e => {
+    const use = e.target.closest('.qr-use');
+    if (use){
+      const t = quickReplies()[+use.dataset.i] || '';
+      const input = $('#chat-input');
+      input.value = input.value ? input.value.trimEnd() + ' ' + t : t;
+      closeQrPanel();
+      input.focus();
+      return;
+    }
+    const del = e.target.closest('.qr-del');
+    if (del){
+      const list = quickReplies();
+      list.splice(+del.dataset.i, 1);
+      saveQuickReplies(list);
+      renderQrPanel();
+      return;
+    }
+    if (e.target.closest('#qr-add')){
+      const inp = qrPanel.querySelector('#qr-new');
+      const t = inp.value.trim();
+      if (!t) return;
+      const list = quickReplies();
+      list.push(t);
+      saveQuickReplies(list);
+      renderQrPanel();
+      qrPanel.querySelector('#qr-new').focus();
+    }
+  });
+  qrPanel.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.id === 'qr-new'){ qrPanel.querySelector('#qr-add').click(); }
+  });
+  document.addEventListener('click', e => {
+    if (qrPanel.classList.contains('hidden')) return;
+    if (e.target.closest('#qr-panel') || e.target.closest('#qr-btn')) return;
+    closeQrPanel();
+  });
+  window.addEventListener('resize', closeQrPanel);
+
+  // ---------- broadcast (mass message) ----------
+  const bcast = document.createElement('div');
+  bcast.id = 'bcast';
+  bcast.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  bcast.innerHTML = `
+    <div class="w-full max-w-md bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col max-h-[88vh]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">Broad<span class="text-[#e11d2a] italic">cast</span></h3>
+        <button id="bcast-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="px-5 pt-4 pb-1 flex items-center justify-between">
+        <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a]">Send to</p>
+        <button id="bcast-all" class="text-[11px] font-semibold text-[#8a8a8a] hover:text-white"></button>
+      </div>
+      <div id="bcast-chips" class="px-5 pb-2 flex flex-wrap gap-1.5"></div>
+      <div id="bcast-list" class="px-3 pb-2 overflow-y-auto scrollbar-thin" style="max-height:220px"></div>
+      <div class="px-5 py-4 border-t border-[#262626]">
+        <textarea id="bcast-text" rows="3" placeholder="Write one message — it lands in every selected agent's direct chat…"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#e11d2a]/60 focus:border-[#e11d2a]/40 transition-all resize-none"></textarea>
+        <button id="bcast-send" class="mt-3 w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">Send broadcast</button>
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">Sends as Reel Estate Media, one direct message per agent.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(bcast);
+
+  const bcastSel = new Set();
+  const bcastTargets = () => agents.filter(ag => ag.hubIdx >= 0 && !ag.stale);
+  function renderBcastList(){
+    const list = bcast.querySelector('#bcast-list');
+    const targets = bcastTargets();
+
+    // per-brokerage quick-select chips (only worth showing with 2+ brokerages)
+    const chipsEl = bcast.querySelector('#bcast-chips');
+    const groups = {};
+    targets.forEach(ag => { const b = brokerageName(ag); (groups[b] = groups[b] || []).push(ag); });
+    const bNames = Object.keys(groups).sort();
+    chipsEl.innerHTML = bNames.length > 1 ? bNames.map(b => {
+      const allOn = groups[b].every(ag => bcastSel.has(ag.key));
+      return `<button data-brokerage="${esc(b)}" class="text-[11px] font-semibold rounded-full px-3 py-1.5 border transition-colors ${allOn
+        ? 'bg-[#e11d2a]/15 border-[#e11d2a]/60 text-white'
+        : 'bg-[#1a1a1a] border-[#2a2a2a] text-[#8a8a8a] hover:border-[#3a3a3a] hover:text-white'}">${esc(b)} · ${groups[b].length}</button>`;
+    }).join('') : '';
+    list.innerHTML = targets.map(ag => `
+      <label class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1a1a1a] cursor-pointer">
+        <input type="checkbox" data-key="${esc(ag.key)}" ${bcastSel.has(ag.key) ? 'checked' : ''} class="accent-[#e11d2a] w-4 h-4 shrink-0">
+        <span class="w-7 h-7 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[10px] font-serif-display text-[#9a9a9a] shrink-0">${esc(ag.initials)}</span>
+        <span class="min-w-0">
+          <span class="block text-[13px] text-[#d4d4d4] truncate">${esc(ag.name)}</span>
+          <span class="block text-[11px] text-[#6a6a6a] truncate">${esc(ag.brokerage || 'Independent')}</span>
+        </span>
+      </label>`).join('') || '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No agents yet.</p>';
+    const allOn = targets.length && targets.every(ag => bcastSel.has(ag.key));
+    bcast.querySelector('#bcast-all').textContent = allOn ? 'Deselect all' : 'Select all';
+    const n = [...bcastSel].filter(k => targets.some(ag => ag.key === k)).length;
+    bcast.querySelector('#bcast-send').textContent = n ? `Send to ${n} agent${n === 1 ? '' : 's'}` : 'Send broadcast';
+    bcast.querySelector('#bcast-send').disabled = !n;
+  }
+  function openBroadcast(){
+    bcastSel.clear();
+    bcastTargets().forEach(ag => bcastSel.add(ag.key));   // everyone by default
+    renderBcastList();
+    bcast.querySelector('#bcast-text').value = '';
+    bcast.classList.remove('hidden');
+    bcast.classList.add('flex');
+    bcast.querySelector('#bcast-text').focus();
+  }
+  function closeBroadcast(){ bcast.classList.add('hidden'); bcast.classList.remove('flex'); }
+  $('#bcast-btn').addEventListener('click', openBroadcast);
+  bcast.querySelector('#bcast-close').addEventListener('click', closeBroadcast);
+  bcast.addEventListener('click', e => { if (e.target === bcast) closeBroadcast(); });
+  bcast.querySelector('#bcast-all').addEventListener('click', () => {
+    const targets = bcastTargets();
+    const allOn = targets.length && targets.every(ag => bcastSel.has(ag.key));
+    bcastSel.clear();
+    if (!allOn) targets.forEach(ag => bcastSel.add(ag.key));
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-chips').addEventListener('click', e => {
+    const chip = e.target.closest('[data-brokerage]');
+    if (!chip) return;
+    const members = bcastTargets().filter(ag => brokerageName(ag) === chip.dataset.brokerage);
+    const allOn = members.every(ag => bcastSel.has(ag.key));
+    members.forEach(ag => allOn ? bcastSel.delete(ag.key) : bcastSel.add(ag.key));
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-list').addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"]');
+    if (!cb) return;
+    cb.checked ? bcastSel.add(cb.dataset.key) : bcastSel.delete(cb.dataset.key);
+    renderBcastList();
+  });
+  bcast.querySelector('#bcast-send').addEventListener('click', async () => {
+    const text = bcast.querySelector('#bcast-text').value.trim();
+    const targets = bcastTargets().filter(ag => bcastSel.has(ag.key));
+    if (!text || !targets.length) return;
+    const btn = bcast.querySelector('#bcast-send');
+    btn.disabled = true;
+    let sent = 0, failed = 0;
+    for (const ag of targets){
+      btn.textContent = 'Sending ' + (sent + failed + 1) + ' / ' + targets.length + '…';
+      const c = ag.convos.find(x => x.kind === 'direct') || ag.convos[0];
+      try {
+        const res = await fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+          kind:'msg', ref: ag.key, project: (c && c.label) || generalLabel(ag), dname:'',
+          who: 'Reel Estate Media', from:'jag', body: text
+        })}).then(r => r.json());
+        if (!res.ok) throw new Error(res.error || 'failed');
+        if (c){
+          const now = new Date().toISOString();
+          c.messages.push({ id:'', ts: now, side:'out', who:'You', text, atts: [] });
+          c.lastTs = now;
+          markRead(c.id);
+        }
+        sent++;
+      } catch(e){ failed++; }
+    }
+    btn.disabled = false;
+    closeBroadcast();
+    renderSidebar(); renderThread();
+    showToast(failed ? `Sent to ${sent} agent${sent === 1 ? '' : 's'} — ${failed} failed, try them again` : `📣 Sent to ${sent} agent${sent === 1 ? '' : 's'}`);
+    setTimeout(() => loadAll().catch(()=>{}), 1500);
+  });
+
+  // ---------- 👥 groups: create + edit name / photo / members ----------
+  const grpModal = document.createElement('div');
+  grpModal.id = 'grp-modal';
+  grpModal.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  document.body.appendChild(grpModal);
+  let grpEditing = null;        // null = creating a new group; convo object = editing
+  let grpPicId = '';            // Drive file id of the chosen group photo
+  const grpTargets = () => agents.filter(ag => ag.hubIdx >= 0 && !ag.stale);
+
+  const grpAvatarHtml = () => grpPicId
+    ? `<img src="https://drive.google.com/thumbnail?id=${esc(grpPicId)}&sz=w160" class="w-16 h-16 rounded-2xl object-cover border border-[#2e2e2e]" alt="">`
+    : `<span class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[26px]">👥</span>`;
+
+  function grpRefreshFooter(){
+    const n = grpModal.querySelectorAll('input[data-key]:checked').length;
+    const cEl = grpModal.querySelector('#grp-count');
+    if (cEl) cEl.textContent = n ? n + ' selected · ' + (n + 1) + ' incl. you' : 'none selected';
+  }
+  function renderGrpModal(){
+    const editing = !!grpEditing;
+    const sel = new Set(editing ? grpEditing.members : []);
+    grpModal.innerHTML = `
+    <div class="w-full max-w-md bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)] flex flex-col max-h-[88vh]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">${editing ? 'Edit <span class="text-[#e11d2a] italic">group</span>' : 'New <span class="text-[#e11d2a] italic">group</span>'}</h3>
+        <button id="grp-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="px-5 py-4 flex items-center gap-4">
+        <button id="grp-pic-btn" class="relative shrink-0" title="Set a group photo">
+          <span id="grp-pic-wrap">${grpAvatarHtml()}</span>
+          <span class="absolute -bottom-1 -right-1 w-6 h-6 grid place-items-center rounded-full bg-[#e11d2a] text-white text-[11px] border-2 border-[#141414]">📷</span>
+        </button>
+        <input id="grp-pic-input" type="file" accept="image/*" class="hidden">
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Group name</p>
+          <input id="grp-name" type="text" maxlength="48" placeholder="e.g. Leadership Interviews, Pinnacle Power Team" value="${editing ? esc(grpEditing.name) : ''}" class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+        </div>
+      </div>
+      <div class="px-5 pb-3">
+        <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a] font-semibold mb-1.5">Description <span class="normal-case tracking-normal font-normal">(optional — everyone sees it)</span></p>
+        <input id="grp-desc" type="text" maxlength="140" placeholder="What's this group for? e.g. King West condo launches" value="${editing ? esc(grpEditing.desc || '') : ''}"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+      </div>
+      <div class="px-5 pb-1 flex items-center justify-between">
+        <p class="text-[10px] uppercase tracking-[0.18em] text-[#6a6a6a]">Members</p>
+        <span id="grp-count" class="text-[11px] text-[#8a8a8a]"></span>
+      </div>
+      <div id="grp-list" class="px-3 pb-2 overflow-y-auto scrollbar-thin" style="max-height:210px">
+        ${grpTargets().map(ag => `
+        <label class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1a1a1a] cursor-pointer">
+          <input type="checkbox" data-key="${esc(ag.key)}" ${sel.has(ag.key) ? 'checked' : ''} class="accent-[#e11d2a] w-4 h-4 shrink-0">
+          <span class="w-7 h-7 rounded-full bg-gradient-to-br from-[#262626] to-[#141414] border border-[#2e2e2e] grid place-items-center text-[10px] font-serif-display text-[#9a9a9a] shrink-0">${esc(ag.initials)}</span>
+          <span class="min-w-0">
+            <span class="block text-[13px] text-[#d4d4d4] truncate">${esc(ag.name)}</span>
+            <span class="block text-[11px] text-[#6a6a6a] truncate">${esc(ag.brokerage || 'Independent')}</span>
+          </span>
+        </label>`).join('') || '<p class="text-[12px] text-[#6a6a6a] text-center py-6">No agents yet — push a hub first.</p>'}
+      </div>
+      <div class="px-5 py-4 border-t border-[#262626]">
+        <button id="grp-save" class="w-full bg-[#e11d2a] hover:bg-[#c81824] disabled:opacity-50 text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">${editing ? 'Save changes' : 'Create group'}</button>
+        ${editing ? '<button id="grp-off" class="w-full mt-2 text-[11px] font-semibold text-[#6a6a6a] hover:text-[#e11d2a] py-1.5 transition-colors">Delete this group</button>' : ''}
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">${editing ? 'Everyone in the group can rename it or change its photo — members are yours to manage.' : 'One agent = a project room for them; several = a team chat. Agents can also start one from their hub.'}</p>
+      </div>
+    </div>`;
+    grpRefreshFooter();
+  }
+  function openGroupModal(c){
+    grpEditing = c || null;
+    grpPicId = c ? (c.pic || '') : '';
+    renderGrpModal();
+    grpModal.classList.remove('hidden');
+    grpModal.classList.add('flex');
+    const nm = grpModal.querySelector('#grp-name');
+    if (nm && !c) nm.focus();
+  }
+  function closeGrpModal(){ grpModal.classList.add('hidden'); grpModal.classList.remove('flex'); grpEditing = null; }
+
+  function postGroup(gid, meta){
+    return fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'group', ref: gid, project:'', dname:'',
+      who: 'Reel Estate Media', from:'jag', body: JSON.stringify(meta)
+    })});
+  }
+  async function grpSave(){
+    const name = (grpModal.querySelector('#grp-name').value || '').trim();
+    const desc = (grpModal.querySelector('#grp-desc').value || '').trim();
+    const members = [...grpModal.querySelectorAll('input[data-key]:checked')].map(x => x.dataset.key);
+    if (!name){ showToast('Give the group a name first.'); return; }
+    if (!members.length){ showToast('Pick at least one agent for the group.'); return; }
+    const editing = grpEditing;
+    const gid = editing ? editing.gid : 'grp-' + Math.random().toString(36).slice(2, 10);
+    const btn = grpModal.querySelector('#grp-save');
+    btn.disabled = true; btn.textContent = editing ? 'Saving…' : 'Creating…';
+    try { await postGroup(gid, { name, desc, pic: grpPicId, members, on: true }); } catch(e){}
+    const nameOf = k => { const ag = agents.find(a2 => a2.key === k); return ag ? ag.name : k; };
+    if (editing){
+      editing.name = name; editing.pic = grpPicId; editing.desc = desc;
+      editing.members = members; editing.memberNames = members.map(nameOf);
+      editing.sub = '👥 Group · ' + (members.length + 1) + ' people';
+      closeGrpModal();
+      showToast('👥 Group updated');
+      renderSidebar(); renderThread();
+    } else {
+      const c = { id: 'g|' + gid, gid, key: gid, kind: 'group', label: '',
+        name, pic: grpPicId, desc, members, memberNames: members.map(nameOf),
+        sub: '👥 Group · ' + (members.length + 1) + ' people',
+        initials: '👥', messages: [], lastTs: '' };
+      groupConvos.push(c);
+      expanded.add('g:' + gid);
+      closeGrpModal();
+      showToast("👥 Group created — it's live in every member's hub");
+      selectConversation(c.id);
+    }
+    setTimeout(() => loadAll().catch(()=>{}), 1500);
+  }
+  grpModal.addEventListener('click', async e => {
+    if (e.target === grpModal || e.target.closest('#grp-close')){ closeGrpModal(); return; }
+    if (e.target.closest('#grp-pic-btn')){ grpModal.querySelector('#grp-pic-input').click(); return; }
+    if (e.target.closest('#grp-save')){ grpSave(); return; }
+    const off = e.target.closest('#grp-off');
+    if (off){
+      if (!off.dataset.armed){
+        off.dataset.armed = '1';
+        off.textContent = 'Tap again to delete — the group chat disappears for everyone';
+        off.classList.add('text-[#e11d2a]');
+        setTimeout(() => { delete off.dataset.armed; off.textContent = 'Delete this group'; off.classList.remove('text-[#e11d2a]'); }, 3000);
+        return;
+      }
+      const g = grpEditing;
+      closeGrpModal();
+      if (g){
+        try { await postGroup(g.gid, { name: g.name, desc: g.desc || '', pic: g.pic, members: g.members, on: false }); } catch(e2){}
+        groupConvos = groupConvos.filter(x => x.gid !== g.gid);
+        if (activeId === g.id){ const first = allConvos()[0]; activeId = first ? first.id : ''; }
+        showToast('Group deleted');
+        renderSidebar(); renderThread();
+        setTimeout(() => loadAll().catch(()=>{}), 1500);
+      }
+      return;
+    }
+  });
+  grpModal.addEventListener('change', async e => {
+    if (e.target.closest('input[data-key]')){ grpRefreshFooter(); return; }
+    const inp = e.target.closest('#grp-pic-input');
+    if (inp && inp.files && inp.files.length){
+      const f = inp.files[0];
+      inp.value = '';
+      const wrap = grpModal.querySelector('#grp-pic-wrap');
+      try {
+        showToast('Uploading photo…');
+        grpPicId = await uploadToDrive(f);
+        if (wrap) wrap.innerHTML = grpAvatarHtml();
+        showToast('Photo set — save to apply');
+      } catch(e2){ showToast("Couldn't upload that photo — try another one."); }
+    }
+  });
+  grpModal.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'grp-name') grpSave(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !grpModal.classList.contains('hidden')) closeGrpModal(); });
+  $('#grp-edit-btn').addEventListener('click', () => {
+    const c = convoById(activeId);
+    if (c && c.kind === 'group') openGroupModal(c);
+  });
+
+  // ---------- 📌 pins ----------
+  function pinMessage(mid){
+    const c = convoById(activeId); if (!c || !mid) return;
+    const msg = c.messages.find(m => m.id === mid); if (!msg) return;
+    const meta = { m: mid, t: String(msg.text || (msg.poll ? '🗳 ' + (msg.poll.q || 'Poll') : (msg.atts && msg.atts.length ? '📎 ' + (msg.atts[0].n || 'attachment') : ''))).slice(0, 140), w: 'Reel Estate Media' };
+    pinMsg[c.id] = meta;
+    renderThread();
+    showToast('📌 Pinned — everyone in this chat sees it at the top');
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'pin', ref: c.key, project: c.label || '', dname:'',
+      who: 'Reel Estate Media', from:'jag', body: JSON.stringify(meta)
+    })}).catch(() => {});
+  }
+  function clearPin(){
+    const c = convoById(activeId); if (!c) return;
+    pinMsg[c.id] = null;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'pin', ref: c.key, project: c.label || '', dname:'',
+      who: 'Reel Estate Media', from:'jag', body: JSON.stringify({ m:'' })
+    })}).catch(() => {});
+  }
+
+  // ---------- 🗳 polls ----------
+  function votePoll(mid, i){
+    const c = convoById(activeId); if (!c || !mid) return;
+    const me = 'Reel Estate Media';
+    const ent = (voteMap[mid] = voteMap[mid] || {});
+    const retract = ent[me] === i;
+    if (retract) delete ent[me]; else ent[me] = i;
+    renderThread();
+    fetch(ENDPOINT, { method:'POST', body: JSON.stringify({
+      kind:'vote', ref: c.key, project: c.label || '', dname:'',
+      who: me, from:'jag', body: JSON.stringify({ m: mid, i: retract ? -1 : i, w: me })
+    })}).catch(() => {});
+  }
+
+  const pollModal = document.createElement('div');
+  pollModal.id = 'poll-modal';
+  pollModal.className = 'fixed inset-0 z-[75] hidden items-center justify-center bg-black/70 p-4';
+  pollModal.innerHTML = `
+    <div class="w-full max-w-sm bg-[#141414] border border-[#262626] rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9)]">
+      <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
+        <h3 class="font-serif-display text-lg text-white">New <span class="text-[#e11d2a] italic">poll</span></h3>
+        <button id="poll-close" class="text-[#7a7a7a] hover:text-white" aria-label="Close">✕</button>
+      </div>
+      <div class="px-5 py-4 space-y-2.5">
+        <input id="poll-q" type="text" maxlength="120" placeholder="Ask the question — e.g. Which shoot day works?"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[14px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#e11d2a]/60">
+        ${[1,2,3,4].map(i => `<input data-opt="${i}" type="text" maxlength="60" placeholder="Option ${i}${i > 2 ? ' (optional)' : ''}"
+          class="w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white placeholder-[#5c5c5c] text-[13px] rounded-xl px-4 py-2 focus:outline-none focus:border-[#e11d2a]/60">`).join('')}
+      </div>
+      <div class="px-5 pb-5">
+        <button id="poll-send" class="w-full bg-[#e11d2a] hover:bg-[#c81824] text-white text-[12px] font-bold uppercase tracking-[0.14em] rounded-xl py-3 send-glow transition-all active:scale-[0.99]">Send poll</button>
+        <p class="text-[11px] text-[#5c5c5c] text-center mt-2.5">One tap to vote, tap again to change — results update live for everyone.</p>
+      </div>
+    </div>`;
+  document.body.appendChild(pollModal);
+  function openPollModal(){
+    pollModal.querySelector('#poll-q').value = '';
+    pollModal.querySelectorAll('[data-opt]').forEach(x => x.value = '');
+    pollModal.classList.remove('hidden'); pollModal.classList.add('flex');
+    pollModal.querySelector('#poll-q').focus();
+  }
+  function closePollModal(){ pollModal.classList.add('hidden'); pollModal.classList.remove('flex'); }
+  $('#poll-btn').addEventListener('click', openPollModal);
+  pollModal.addEventListener('click', e => {
+    if (e.target === pollModal || e.target.closest('#poll-close')){ closePollModal(); return; }
+    if (e.target.closest('#poll-send')){
+      const c = convoById(activeId); if (!c) return;
+      const q2 = pollModal.querySelector('#poll-q').value.trim();
+      const opts = [...pollModal.querySelectorAll('[data-opt]')].map(x => x.value.trim()).filter(Boolean);
+      if (!q2){ showToast('Give the poll a question first.'); return; }
+      if (opts.length < 2){ showToast('A poll needs at least two options.'); return; }
+      closePollModal();
+      const poll = { q: q2, o: opts };
+      const now = new Date().toISOString();
+      c.messages.push({ id:'', ts: now, side:'out', who:'You', text:'', atts: [], q: null, poll });
+      c.lastTs = now;
+      renderThread(); renderSidebar();
+      postMsg(c, JSON.stringify({ __rc:1, t:'', poll })).then(() => setTimeout(() => loadAll().catch(()=>{}), 1500)).catch(() => {});
+    }
+  });
+
+  // ---------- @ mention picker (group chats) ----------
+  const mentionPop = document.createElement('div');
+  mentionPop.id = 'mention-pop';
+  mentionPop.className = 'fixed z-50 hidden flex-col min-w-[200px] max-w-[280px] bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-[0_16px_40px_-10px_rgba(0,0,0,0.85)] overflow-hidden py-1';
+  document.body.appendChild(mentionPop);
+  function closeMentionPop(){ mentionPop.classList.add('hidden'); mentionPop.classList.remove('flex'); }
+  function refreshMentionPop(){
+    const c = convoById(activeId);
+    const input = $('#chat-input');
+    if (!c || c.kind !== 'group'){ closeMentionPop(); return; }
+    const mm = input.value.match(/@([\w]*)$/);
+    if (!mm){ closeMentionPop(); return; }
+    const part = mm[1].toLowerCase();
+    const cands = (c.memberNames || []).concat(['everyone']).filter(n => !part || n.toLowerCase().indexOf(part) === 0 || n.split(' ')[0].toLowerCase().indexOf(part) === 0);
+    if (!cands.length){ closeMentionPop(); return; }
+    mentionPop.innerHTML = cands.map(n => `<button class="mention-pick w-full text-left px-3.5 py-2 text-[13px] text-white hover:bg-[#262626] flex items-center gap-2" data-name="${esc(n)}">
+      <span class="text-[#e11d2a] font-bold">@</span>${esc(n === 'everyone' ? 'everyone — nudge the whole team' : n)}</button>`).join('');
+    mentionPop.classList.remove('hidden'); mentionPop.classList.add('flex');
+    place(mentionPop, input);
+  }
+  $('#chat-input').addEventListener('input', refreshMentionPop);
+  mentionPop.addEventListener('click', e => {
+    const b = e.target.closest('.mention-pick');
+    if (!b) return;
+    const input = $('#chat-input');
+    const nm = b.dataset.name === 'everyone' ? 'everyone' : b.dataset.name.split(' ')[0];
+    input.value = input.value.replace(/@[\w]*$/, '@' + nm + ' ');
+    closeMentionPop();
+    input.focus();
+  });
+  document.addEventListener('click', e => {
+    if (mentionPop.classList.contains('hidden')) return;
+    if (e.target.closest('#mention-pop') || e.target.closest('#chat-input')) return;
+    closeMentionPop();
+  });
+
+  // ---------- data loading ----------
+  function loadAll(){
+    return fetch(ENDPOINT + '?token=' + encodeURIComponent(TOKEN))
+      .then(r => r.json())
+      .then(j => {
+        if (!j.ok) throw new Error(j.error || 'load failed');
+        buildFromRows(j.rows || []);
+        renderSidebar();
+        renderThread();
+      });
+  }
+
+  // ---------- gate ----------
+  function unlock(){
+    const tok = $('#gate-token').value.trim();
+    if (!tok){ gateErr('Paste your token first — it\'s the one from your inbox script.'); return; }
+    $('#gate-go').textContent = 'Opening…';
+    TOKEN = tok;
+    loadAll()
+      .then(() => {
+        try { localStorage.setItem(TOKEN_KEY, TOKEN); } catch(e){}
+        $('#gate').classList.add('hidden');
+        $('#app').classList.remove('hidden');
+        if (activeId) markRead(activeId);
+        renderSidebar();
+        if (!pollTimer) pollTimer = setInterval(() => loadAll().catch(()=>{}), POLL_MS);
+      })
+      .catch(err => {
+        $('#gate-go').textContent = 'Open chat';
+        gateErr(String(err.message || err) === 'bad token'
+          ? "That token isn't right — copy it from the top of your inbox script."
+          : "Couldn't reach the server — check your connection and try again.");
+      });
+  }
+  function gateErr(t){ const e = $('#gate-err'); e.textContent = t; e.classList.remove('hidden'); }
+  $('#gate-go').addEventListener('click', unlock);
+  $('#gate-token').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+
+  $('#lock-btn').addEventListener('click', () => {
+    try { localStorage.removeItem(TOKEN_KEY); } catch(e){}
+    location.reload();
+  });
+
+  $('#search').addEventListener('input', e => { searchTerm = e.target.value; renderSidebar(); });
+
+  // Auto-unlock if the token is already on this device (saved here, via
+  // login.html?admin, or handed over by the Command Centre's 💬 Chat button)
+  try {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved){ $('#gate-token').value = saved; unlock(); }
+  } catch(e){}
+</script>
+<div id="verstamp" title="App version" style="position:fixed;bottom:4px;right:6px;z-index:60;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.6);background:rgba(128,128,128,.12);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CHAT v2026.11.16-1</div>
+<script>
+/* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
+(function(){
+  var el = document.getElementById('verstamp'); if(!el) return;
+  var cur = (el.textContent || '').trim(); if(!cur) return;
+  var path = (location.pathname.split('/').pop() || 'index.html');
+  function show(v){
+    if(document.getElementById('upd-banner')) return;
+    var b = document.createElement('div'); b.id = 'upd-banner'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:999px;padding:8px 8px 8px 16px;font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:94vw';
+    var t = document.createElement('span'); t.textContent = '✨ A new version is ready'; b.appendChild(t);
+    var r = document.createElement('button'); r.type = 'button'; r.textContent = 'Refresh'; r.title = v;
+    r.style.cssText = 'appearance:none;border:0;background:#F2A900;color:#1a1205;font:700 12px/1 inherit;padding:8px 14px;border-radius:999px;cursor:pointer';
+    r.onclick = function(){ location.reload(); }; b.appendChild(r);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'appearance:none;border:0;background:transparent;color:#b7afa1;font:600 13px/1 inherit;padding:6px 8px;cursor:pointer';
+    x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  function check(){
+    fetch(path + '?vc=' + Date.now(), {cache: 'no-store'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+      var m = t && t.match(/id="verstamp"[^>]*>([^<]+)</);
+      if(m && m[1].trim() && m[1].trim() !== cur) show(m[1].trim());
+    }).catch(function(){});
+  }
+  setTimeout(check, 15000);
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
+})();
+</script>
+</body>
+</html>
