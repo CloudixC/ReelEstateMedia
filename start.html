@@ -43,7 +43,15 @@ a{color:inherit}
 .nav a{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;text-decoration:none;padding:9px 12px;border-radius:999px;color:var(--mist)}
 .nav a:hover{color:var(--txt)}
 .nav a.pill{background:var(--red);color:#fff}
-@media(max-width:560px){.nav a:not(.pill){display:none}}
+.nav a.login{border:1px solid var(--line2);color:var(--txt);white-space:nowrap}
+.nav a.login:hover{border-color:var(--amber);color:var(--amber)}
+.nav a.login .lg{display:none}
+@media(max-width:560px){
+  .nav a:not(.pill):not(.login){display:none}
+  .nav a.pill{display:none}                       /* the big "Book a shoot" button sits right below on a phone */
+  .nav a.login .sm{display:none} .nav a.login .lg{display:inline}
+  .brand small{letter-spacing:.07em}
+}
 
 /* hero */
 .hero{position:relative;padding:clamp(34px,8vw,84px) 0 clamp(30px,6vw,60px)}
@@ -135,6 +143,7 @@ footer .sp{margin-right:auto}
       <a href="#work">What we make</a>
       <a href="wall.html">Reviews</a>
       <a href="pricing.html">Pricing</a>
+      <a class="login" href="login.html" title="Agents: sign in to your hub"><span class="sm">Agent login</span><span class="lg">Log in</span></a>
       <a class="pill" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a>
     </nav>
   </header>
@@ -221,7 +230,7 @@ footer .sp{margin-right:auto}
 
 <div class="wrap"><footer>
   <span class="sp">The Content Hub · powered by Reel Estate Media</span>
-  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
+  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="login.html" title="Agents: sign in to your hub">Agent login</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
 </footer></div>
 
 <script>
