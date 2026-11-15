@@ -252,7 +252,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.15-1</div>
+<div id="verstamp" title="App version">VAULT v2026.11.15-2</div>
 <script>
 (function(){
   'use strict';
@@ -310,6 +310,45 @@ body.selmode .tile .ck{display:grid}
   function fileOk(f,filter){ if(filter==='reel') return !!f.v; if(filter==='photo'||filter==='headshot'||filter==='listing') return !f.v; return true; }
   function companyOf(c){ var co=(c.company||'').trim(); if(co) return co; return (c.tier==='partner'||c.tier==='internal')?'Royal LePage Pinnacle':'Independent'; }
   function isPin(c){ return c.tier==='partner'||c.tier==='internal'||/pinnacle/i.test(c.company||''); }
+  /* ✅ The Vault shows APPROVED content only: for each delivery, the version the agent approved —
+     not every draft that was uploaded along the way. */
+  var APPR={};   // deliverable id → approved version number (from the review-room feedback)
+  try{ APPR=JSON.parse(localStorage.getItem('vault_appr')||'{}')||{}; }catch(e){ APPR={}; }
+  function approvedVer(body, nVers){
+    var cur=0, best=0;
+    String(body||'').split(/\n/).forEach(function(line){
+      var m=line.match(/^\s*Version\s+(\d+)\s*:/i); if(m){ cur=+m[1]; return; }
+      if(/^\s*\u2713 APPROVED/.test(line)) best=Math.max(best, cur||nVers||1);
+    });
+    return best;
+  }
+  function finalSource(d, media){
+    var vers=d.reviewVersions||[];
+    var src=(d.approved&&d.approved.src)||'';
+    if(!src && APPR[d.id] && vers.length) src=vers[Math.min(APPR[d.id], vers.length)-1]||'';
+    var first=String(src).split(',').map(function(p){ return p.trim(); }).filter(function(p){ return /drive\.google|docs\.google/.test(p); })[0]||'';
+    if(first && /\/file\/d\//.test(first)) return {file:driveId(first), folder:''};           // the approved cut itself
+    if(first && isFolder(first)) return {file:'', folder:driveId(first)};
+    if(media==='video' && /\/file\/d\//.test(d.link||'')) return {file:driveId(d.link), folder:''};   // a single final file on record
+    var folder=driveId(d.dlvFolderUrl||'')||(isFolder(d.link)?driveId(d.link):'');
+    return {file:(!folder && /\/file\/d\//.test(d.link||''))?driveId(d.link):'', folder:folder};
+  }
+  /* Inside a folder, drafts of the same clip (Name.mp4, Name_V2.mp4, NameV2_b.mp4, "Name final") collapse to the newest one. Photos are never collapsed. */
+  function clipBase(name){
+    return String(name||'').replace(/\.[A-Za-z0-9]{2,4}$/,'')
+      .replace(/[\s_\-]*\(\d+\)$/,'').replace(/[\s_\-]+copy$/i,'')
+      .replace(/[\s_\-]+(?:final|updated|revised|fixed|new)\d*$/i,'')
+      .replace(/([a-z0-9])V\d+(?:[\s_\-]?[A-Za-z])?$/,'$1')
+      .replace(/[\s_\-]+v(?:er(?:sion)?)?[\s_\-]?\d+(?:[\s_\-]?[A-Za-z])?$/i,'')
+      .replace(/[\s_\-]+(?:final|updated|revised|fixed|new)\d*$/i,'')
+      .replace(/[\s_\-]+$/,'').toLowerCase();
+  }
+  function collapseVersions(files){
+    var newest={};
+    files.forEach(function(f, ix){ if(!f.v) return; var b=clipBase(f.name); var cur=newest[b]; var key=(f.t||'')+'|'+String(ix).padStart(4,'0'); if(!cur || key>cur.key) newest[b]={key:key,id:f.id}; });
+    return files.filter(function(f){ return !f.v || newest[clipBase(f.name)].id===f.id; });
+  }
+  function isFinal(it){ return it.status==='Delivered' || !!(it.d && it.d.approved) || !!APPR[it.id]; }
   function mkItem(o){
     var folder=o.folder||'', file=o.file||'';
     return {id:o.id, agentId:o.agentId||'', d:o.d||{}, o:o.o||{}, title:o.title, project:o.project||'', group:o.group||'', date:o.date||'', shootDate:o.shootDate||'',
@@ -322,10 +361,10 @@ body.selmode .tile .ck{display:grid}
       var items=[];
       os.forEach(function(o){
         dls.filter(function(d){ return d.orderId===o.id; }).forEach(function(d){
-          var folder=driveId(d.dlvFolderUrl||'')|| (isFolder(d.link)?driveId(d.link):'');
-          var file=(!folder && /\/file\/d\//.test(d.link||''))?driveId(d.link):'';
+          var media=d.mediaType||inferMedia((d.name||'')+' '+(d.group||''));
+          var fs=finalSource(d, media), folder=fs.folder, file=fs.file;
           items.push(mkItem({id:d.id, agentId:c.id, d:d, o:o, title:(d.brief&&d.brief.topic)||d.name, project:o.project||d.group||'', group:d.group||'', date:d.deliveredDate||d.shootDate||o.date||'', shootDate:d.shootDate||'',
-            kind:kindOf(d,o), status:d.status||'Booked', folder:folder, file:file, media:d.mediaType||inferMedia((d.name||'')+' '+(d.group||'')),
+            kind:kindOf(d,o), status:d.status||'Booked', folder:folder, file:file, media:media,
             links:{drive:d.dlvFolderUrl||d.link||'', video:d.linkVideo||'', hq:d.linkHQ||'', review:d.reviewUrl||''}}));
         });
       });
@@ -333,10 +372,11 @@ body.selmode .tile .ck{display:grid}
       var spent=os.reduce(function(s,o){ return s+(o.items||[]).reduce(function(x,i){ return x+(+i.price||0)*(+i.qty||1); },0); },0);
       var first=os.map(function(o){ return o.date; }).filter(Boolean).sort()[0]||'';
       var delivered=items.filter(function(i){ return i.status==='Delivered'; });
-      return {id:c.id, c:c, name:c.name, title:c.agentTitle||c.company||'', orders:os, items:items, delivered:delivered.length, spent:spent, first:first,
+      var finals=items.filter(isFinal);   // what the Wall, Dossier and feeds show — approved / delivered work only
+      return {id:c.id, c:c, name:c.name, title:c.agentTitle||c.company||'', orders:os, items:items, finals:finals, delivered:delivered.length, spent:spent, first:first,
         last:(delivered[0]&&delivered[0].date)||(items[0]&&items[0].date)||'', headshot:headshotUrl(c.headshot), hub:hubUrl(c), hk:c.hubKey||c.hubId||'',
         company:companyOf(c), pin:isPin(c),
-        counts:['reel','photo','headshot','listing'].reduce(function(m,k){ m[k]=items.filter(function(i){ return matchFilter(i,k); }).length; return m; },{})};
+        counts:['reel','photo','headshot','listing'].reduce(function(m,k){ m[k]=finals.filter(function(i){ return matchFilter(i,k); }).length; return m; },{})};
     }).filter(function(a){ return a.items.length>0 || a.orders.length>0; });
     agents.sort(function(a,b){ return String(b.last).localeCompare(String(a.last)); });
     return agents;
@@ -355,14 +395,14 @@ body.selmode .tile .ck{display:grid}
   function filesIn(folderId){
     if(!folderId) return Promise.resolve([]);
     if(folderCache[folderId]) return folderCache[folderId];
-    var key=DRIVE_KEY, ck='vault_f_'+folderId, cached=null;
+    var key=DRIVE_KEY, ck='vault_f2_'+folderId, cached=null;
     try{ cached=JSON.parse(localStorage.getItem(ck)||'null'); }catch(e){}
     var fetchIt=function(){
       if(!key) return Promise.resolve(cached?cached.files:[]);
-      var u='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("'"+folderId+"' in parents and trashed=false")+'&key='+encodeURIComponent(key)+'&fields=files(id,name,mimeType)&pageSize=200&orderBy=name';
+      var u='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent("'"+folderId+"' in parents and trashed=false")+'&key='+encodeURIComponent(key)+'&fields=files(id,name,mimeType,createdTime)&pageSize=200&orderBy=name';
       return fetch(u).then(function(r){ return r.json(); }).then(function(j){
         if(j.error){ AUDIT['f:'+folderId]='folder'; return cached?cached.files:[]; }
-        var files=(j.files||[]).filter(function(f){ return /^(image|video)\//.test(f.mimeType||''); }).map(function(f){ return {id:f.id,name:f.name,v:/^video\//.test(f.mimeType)}; });
+        var files=(j.files||[]).filter(function(f){ return /^(image|video)\//.test(f.mimeType||''); }).map(function(f){ return {id:f.id,name:f.name,v:/^video\//.test(f.mimeType),t:f.createdTime||''}; });
         if(!files.length) AUDIT['f:'+folderId]='empty';
         try{ localStorage.setItem(ck, JSON.stringify({t:Date.now(), files:files})); }catch(e){}
         return files;
@@ -377,7 +417,23 @@ body.selmode .tile .ck{display:grid}
     folderCache[folderId]=fetchIt();
     return folderCache[folderId];
   }
-  function thumbFor(it){ return it.file ? Promise.resolve([{id:it.file,name:it.d.name||it.title,v:it.media==='video'}]) : filesIn(it.folder); }
+  var fileCache={};
+  function fileMeta(id, fallbackName, fallbackVideo){
+    if(fileCache[id]) return fileCache[id];
+    var ck='vault_m_'+id, cached=null; try{ cached=JSON.parse(localStorage.getItem(ck)||'null'); }catch(e){}
+    if(cached){ fileCache[id]=Promise.resolve([cached]); return fileCache[id]; }
+    var fb=[{id:id,name:fallbackName,v:fallbackVideo}];
+    if(!DRIVE_KEY){ fileCache[id]=Promise.resolve(fb); return fileCache[id]; }
+    fileCache[id]=fetch('https://www.googleapis.com/drive/v3/files/'+encodeURIComponent(id)+'?fields=id,name,mimeType,createdTime&key='+encodeURIComponent(DRIVE_KEY)).then(function(r){ return r.json(); }).then(function(j){
+      if(!j || j.error || !j.id) return fb;
+      var f={id:j.id,name:j.name||fallbackName,v:/^video\//.test(j.mimeType||'')||(!/^image\//.test(j.mimeType||'')&&fallbackVideo),t:j.createdTime||''};
+      try{ localStorage.setItem(ck, JSON.stringify(f)); }catch(e){}
+      return [f];
+    }).catch(function(){ return fb; });
+    return fileCache[id];
+  }
+  /* the files a delivery contributes: its approved cut, or its folder with drafts collapsed */
+  function thumbFor(it){ return it.file ? fileMeta(it.file, it.d.name||it.title, it.media!=='photo') : filesIn(it.folder).then(collapseVersions); }
   function flagOf(it){ if(it.flag) return it.flag; var a=AUDIT['f:'+it.folder]; return a||''; }
   var FLAG_TXT={nolink:'No link', folder:'Folder not shared', empty:'Folder empty'};
   /* lazy backgrounds */
@@ -434,6 +490,17 @@ body.selmode .tile .ck{display:grid}
     return fetch(ENDPOINT+'?review=vault-stars').then(function(r){ return r.json(); }).then(function(j){ var st=j&&j.state; if(st&&st.stars){ var lt=0; try{ lt=+(localStorage.getItem('vault_stars_at')||0); }catch(e){} if((+st.at||0)>=lt){ STARS=st.stars; try{ localStorage.setItem('vault_stars',JSON.stringify(STARS)); }catch(e){} } } }).catch(function(){});
   }
 
+  function loadApprovals(){
+    var s=db.settings||{}; if(!s.inboxUrl || !s.inboxToken) return;
+    fetch(s.inboxUrl+'?token='+encodeURIComponent(s.inboxToken)).then(function(r){ return r.json(); }).then(function(j){
+      if(!j || !j.ok) return;
+      var latest={}; (j.rows||[]).forEach(function(r){ if(r.kind==='feedback' && r.ref) latest[r.ref]=r; });
+      var next={}; (db.deliverables||[]).forEach(function(d){ var r=latest[d.id]; if(!r) return; var n=approvedVer(r.body, (d.reviewVersions||[]).length); if(n) next[d.id]=n; });
+      if(JSON.stringify(next)===JSON.stringify(APPR)) return;
+      APPR=next; try{ localStorage.setItem('vault_appr', JSON.stringify(APPR)); }catch(e){}
+      folderCache={}; agents=build(); render();
+    }).catch(function(){});
+  }
   /* ---------------- performance signals (listing-page views + leads) ---------------- */
   var PERF={};
   function perfFor(it){
@@ -455,7 +522,7 @@ body.selmode .tile .ck{display:grid}
   function cur(){ return agents.find(function(a){ return a.id===state.agent; })||null; }
   function groupBy(list){
     var m={}, out=[];
-    list.forEach(function(a){ var k=a.company; if(!m[k]){ m[k]={name:k,list:[],pieces:0}; out.push(m[k]); } m[k].list.push(a); m[k].pieces+=a.items.length; });
+    list.forEach(function(a){ var k=a.company; if(!m[k]){ m[k]={name:k,list:[],pieces:0}; out.push(m[k]); } m[k].list.push(a); m[k].pieces+=a.finals.length; });
     out.sort(function(x,y){ return y.pieces-x.pieces || x.name.localeCompare(y.name); });
     return out;
   }
@@ -475,7 +542,7 @@ body.selmode .tile .ck{display:grid}
   function auditCount(list){ var n=0; list.forEach(function(a){ a.items.forEach(function(i){ if(flagOf(i)) n++; }); }); return n; }
 
   function topHTML(){
-    var pieces=agents.reduce(function(s,a){ return s+a.items.length; },0);
+    var pieces=agents.reduce(function(s,a){ return s+a.finals.length; },0);
     if(AGENT_MODE){
       var a=agents[0]||{name:''};
       return '<div class="top"><div class="brand"><b>The <i>Vault</i></b><span>'+esc(a.company||'Reel Estate Media')+'</span></div>'+
@@ -503,7 +570,7 @@ body.selmode .tile .ck{display:grid}
     return '<div class="card '+(it.kind==='reel'?'v':'')+'" data-open="'+esc(it.id)+'" data-agent-ctx="'+esc(a.id)+'">'+thumbHTML(it)+'<div class="cb"><b>'+esc(it.title)+'</b><span>'+esc(it.project)+' · '+esc(fmtDate(it.date))+'</span>'+perfHTML(it)+(withWho?'<div class="who">'+avHTML(a)+esc(a.name)+'</div>':'')+'</div></div>';
   }
   function recentHTML(list,days,title){
-    var rows=[]; list.forEach(function(a){ a.items.forEach(function(i){ if(i.status!=='Booked' && daysAgo(i.date)<=days) rows.push({it:i,a:a}); }); });
+    var rows=[]; list.forEach(function(a){ a.finals.forEach(function(i){ if(daysAgo(i.date)<=days) rows.push({it:i,a:a}); }); });
     rows.sort(function(x,y){ return String(y.it.date).localeCompare(String(x.it.date)); });
     if(!rows.length) return '';
     var ags={}; rows.forEach(function(r){ ags[r.a.id]=1; });
@@ -522,12 +589,12 @@ body.selmode .tile .ck{display:grid}
           '<div class="agrid">'+g.list.map(function(x,i){
             var cv=starCover(x);
             return '<div class="acard '+(cv?'hascover':'')+'" data-agent="'+esc(x.id)+'" style="animation-delay:'+(i*40)+'ms">'+(cv?'<div class="cover" style="background-image:url(\''+esc(cv)+'\')"></div>':'')+(x.last?'<span class="last">'+esc(fmtDate(x.last))+'</span>':'')+avHTML(x)+'<h3>'+esc(x.name)+'</h3><div class="t">'+esc(x.title)+'</div>'+
-              '<div class="n"><div><b>'+x.items.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+x.counts.photo+'</b>photo sets</div></div></div>';
+              '<div class="n"><div><b>'+x.finals.length+'</b>pieces</div><div><b>'+x.counts.reel+'</b>reels</div><div><b>'+x.counts.photo+'</b>photo sets</div></div></div>';
           }).join('')+'</div>';
       }).join('');
     }
-    var items=a.items.filter(wallMatch);
-    var projects=[]; a.items.forEach(function(i){ if(i.project&&projects.indexOf(i.project)<0) projects.push(i.project); });
+    var items=a.finals.filter(wallMatch);
+    var projects=[]; a.finals.forEach(function(i){ if(i.project&&projects.indexOf(i.project)<0) projects.push(i.project); });
     var tile=function(it,i){ return '<div class="tile '+(it.kind==='reel'?'v':'')+'" data-open="'+esc(it.id)+'" data-exp="'+esc(it.id)+'" style="animation-delay:'+(i*25)+'ms">'+thumbHTML(it)+'<div class="cap">'+esc(it.title)+'<small>'+esc(it.project)+' · '+esc(fmtDate(it.date))+'</small></div></div>'; };
     var body;
     if(!items.length) body='<div class="empty"><b>Empty shelf</b>No pieces match that filter.</div>';
@@ -538,7 +605,7 @@ body.selmode .tile .ck{display:grid}
     }
     var nsel=Object.keys(state.selected).length;
     return (AGENT_MODE?'':'<button class="back" data-back>← All agents</button>')+
-      '<div class="wallhead">'+avHTML(a)+'<div><h2>'+esc(a.name)+'</h2><p>'+esc(a.title)+(a.first?' · with us since '+esc(fmtDate(a.first)):'')+'</p></div>'+
+      '<div class="wallhead">'+avHTML(a)+'<div><h2>'+esc(a.name)+'</h2><p>'+esc(a.title)+(a.first?' · with us since '+esc(fmtDate(a.first)):'')+' · approved work only</p></div>'+
         '<div class="acts">'+(AGENT_MODE?'':(a.hub?'<a class="act" target="_blank" rel="noreferrer" href="'+esc(a.hub)+'">🏠 Hub</a>':'')+(a.hk?'<button class="act" data-copy="'+esc(vaultLink(a))+'" data-copymsg="Their vault link copied — read-only, just their content">🔗 Their vault link</button>':''))+'</div></div>'+
       '<div class="chips">'+[['all','Everything'],['reel','🎬 Reels'],['photo','📷 Photos']].map(function(f){ return '<button class="chip '+(state.filter===f[0]?'on':'')+'" data-filter="'+f[0]+'">'+f[1]+(f[0]!=='all'?'<small data-cnt="'+f[0]+'">…</small>':'')+'</button>'; }).join('')+
         (projects.length>1?'<select class="chip" id="proj"><option value="">All projects</option>'+projects.map(function(p){ return '<option '+(state.project===p?'selected':'')+' value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('')+'</select>':'')+
@@ -547,7 +614,7 @@ body.selmode .tile .ck{display:grid}
       body+(state.sel ? selbarHTML(a) : '');
   }
   function refreshCounts(a){
-    Promise.all(a.items.map(function(it){ return thumbFor(it).then(function(files){ return {it:it,files:files}; }); })).then(function(rows){
+    Promise.all(a.finals.map(function(it){ return thumbFor(it).then(function(files){ return {it:it,files:files}; }); })).then(function(rows){
       if(cur()!==a) return;
       var n=function(pred,fk){ return rows.reduce(function(s,r){ return pred(r.it) ? s + r.files.filter(function(f){ return fileOk(f,fk); }).length : s; },0); };
       var set=function(key,val){ app.querySelectorAll('[data-cnt="'+key+'"]').forEach(function(el){ el.textContent=val; var ch=el.closest('.chip'); if(ch && /^p:(?!all)/.test(key)) ch.style.display = val ? '' : 'none'; }); };
@@ -564,8 +631,8 @@ body.selmode .tile .ck{display:grid}
   function officeHTML(){
     var list=agents.filter(function(a){ return a.company===state.office; });
     if(!list.length){ state.office=''; return wallHTML(); }
-    var pieces=list.reduce(function(s,a){ return s+a.items.length; },0);
-    var q=list.reduce(function(s,a){ return s+a.items.filter(function(i){ return i.status!=='Booked' && daysAgo(i.date)<=92; }).length; },0);
+    var pieces=list.reduce(function(s,a){ return s+a.finals.length; },0);
+    var q=list.reduce(function(s,a){ return s+a.finals.filter(function(i){ return daysAgo(i.date)<=92; }).length; },0);
     var spent=list.reduce(function(s,a){ return s+a.spent; },0);
     var reels=list.reduce(function(s,a){ return s+a.counts.reel; },0), photos=list.reduce(function(s,a){ return s+a.counts.photo; },0);
     var warn=auditCount(list);
@@ -575,7 +642,7 @@ body.selmode .tile .ck{display:grid}
       '<div class="ostats"><div><b>'+list.length+'</b>Agents</div><div><b>'+active+'</b>Active last 60d</div><div><b>'+pieces+'</b>Pieces</div><div><b>'+q+'</b>This quarter</div><div><b>'+reels+'</b>Reels</div><div><b>'+photos+'</b>Photo sets</div><div><b>'+money(spent)+'</b>Invested</div>'+(warn?'<div><b style="color:#ff6b84">'+warn+'</b>Need attention</div>':'')+'</div></div>'+
       recentHTML(list,30,'Latest from '+state.office)+
       '<table class="otable"><thead><tr><th>Agent</th><th>Title</th><th>Pieces</th><th>Reels</th><th>Photo sets</th><th>Last delivery</th><th>Invested</th></tr></thead><tbody>'+
-      list.map(function(a){ return '<tr data-agent="'+esc(a.id)+'"><td>'+avHTML(a)+'<b>'+esc(a.name)+'</b></td><td style="color:var(--ink3)">'+esc(a.title)+'</td><td>'+a.items.length+'</td><td>'+a.counts.reel+'</td><td>'+a.counts.photo+'</td><td>'+esc(fmtDate(a.last)||'—')+'</td><td>'+money(a.spent)+'</td></tr>'; }).join('')+'</tbody></table>';
+      list.map(function(a){ return '<tr data-agent="'+esc(a.id)+'"><td>'+avHTML(a)+'<b>'+esc(a.name)+'</b></td><td style="color:var(--ink3)">'+esc(a.title)+'</td><td>'+a.finals.length+'</td><td>'+a.counts.reel+'</td><td>'+a.counts.photo+'</td><td>'+esc(fmtDate(a.last)||'—')+'</td><td>'+money(a.spent)+'</td></tr>'; }).join('')+'</tbody></table>';
   }
 
   /* --- CABINET --- */
@@ -605,7 +672,7 @@ body.selmode .tile .ck{display:grid}
     var rail=AGENT_MODE?'':'<div class="rail">'+groupBy(list).map(function(g){ return '<span class="rl">'+esc(g.name)+'</span>'+g.list.map(function(x){ return '<button class="'+(a&&x.id===a.id?'on':'')+'" data-agent="'+esc(x.id)+'">'+avHTML(x)+esc(x.name)+'</button>'; }).join(''); }).join('')+'</div>';
     if(!a) return rail+'<div class="empty"><b>Pick an agent</b></div>';
     var months=a.first?Math.max(1,Math.round((Date.now()-new Date(a.first+'T12:00'))/2628000000)):0;
-    var shoots=a.items.map(function(i){ return i.shootDate; }).filter(function(x,i,arr){ return x&&arr.indexOf(x)===i; }).length;
+    var shoots=a.finals.map(function(i){ return i.shootDate; }).filter(function(x,i,arr){ return x&&arr.indexOf(x)===i; }).length;
     var c=a.c||{}; var cv=starCover(a);
     var hero='<div class="hero fade">'+(cv?'<div class="bgimg" style="background-image:url(\''+esc(cv)+'\')"></div>':'')+avHTML(a)+'<div><div class="eyebrow">'+esc(a.company)+(c.tier&&!AGENT_MODE?' · '+esc(c.tier):'')+'</div><h2>'+esc(a.name)+'</h2><div style="color:var(--ink2);font-weight:700">'+esc(a.title)+'</div>'+
       (c.bioText?'<div class="bio">'+esc(c.bioText)+'</div>':'')+
@@ -613,13 +680,13 @@ body.selmode .tile .ck{display:grid}
       '<div class="stats"><div><b>'+shoots+'</b>Shoots</div><div><b>'+a.counts.reel+'</b>Reels</div><div><b>'+a.counts.photo+'</b>Photo sets</div><div><b>'+a.counts.headshot+'</b>Headshots</div><div><b>'+months+'</b>Months</div>'+(AGENT_MODE?'':'<div><b>'+money(a.spent)+'</b>Invested</div>')+(ENDPOINT&&a.counts.listing?'<div><b data-sum="views">…</b>Page views</div><div><b data-sum="leads">…</b>Leads</div>':'')+'</div>'+
       '<div class="heroacts">'+(AGENT_MODE?(a.hub?'<a class="act primary" target="_blank" rel="noreferrer" href="'+esc(a.hub)+'">🏠 Open my hub</a>':''):((a.hub?'<a class="act primary" target="_blank" rel="noreferrer" href="'+esc(a.hub)+'">🏠 Open their hub</a><button class="act" data-copy="'+esc(a.hub)+'">🔗 Copy hub link</button>':'')+(a.hk?'<button class="act" data-copy="'+esc(vaultLink(a))+'" data-copymsg="Their vault link copied">🗄 Their vault link</button>':'')+'<a class="act" href="index.html">📅 Book their next shoot</a>'))+'</div></div>';
     var shelves=['reel','listing','photo','headshot','other'].map(function(k){
-      var its=a.items.filter(function(i){ return i.kind===k; }); if(!its.length) return '';
+      var its=a.finals.filter(function(i){ return i.kind===k; }); if(!its.length) return '';
       return '<div class="shelf"><div class="sh"><h3>'+KIND[k][0]+' '+KIND[k][1]+'</h3><span>'+its.length+' piece'+(its.length!==1?'s':'')+'</span></div><div class="strip">'+its.map(function(it){ return cardHTML(it,a,false); }).join('')+'</div></div>';
     }).join('');
     return rail+hero+(shelves||'<div class="empty"><b>Nothing delivered yet</b></div>');
   }
   function sumPerf(a){
-    var ls=a.items.filter(function(i){ return i.kind==='listing'; }); if(!ls.length||!ENDPOINT) return;
+    var ls=a.finals.filter(function(i){ return i.kind==='listing'; }); if(!ls.length||!ENDPOINT) return;
     Promise.all(ls.map(perfFor)).then(function(ps){ var v=0,l=0; ps.forEach(function(p){ if(p){ v+=p.views; l+=p.leads; } }); app.querySelectorAll('[data-sum="views"]').forEach(function(el){ el.textContent=v; }); app.querySelectorAll('[data-sum="leads"]').forEach(function(el){ el.textContent=l; }); });
   }
 
@@ -734,10 +801,10 @@ body.selmode .tile .ck{display:grid}
         var c={name:m.an||m.agent||'Agent', agentTitle:m.at||'', company:m.brokerage||'', headshot:m.hd||'', bioText:m.abio||'', phone:m.ph||'', email:m.email||'', website:m.web||'', tier:m.t==='pin'?'partner':'direct', hubKey:key};
         var items=projs.map(function(p){
           var media=inferMedia(p.t+' '+p.p); var d={name:p.t, group:'', mediaType:media};
-          return mkItem({id:p.id, agentId:'me', d:d, o:{project:p.p}, title:p.t, project:p.p||'', group:'', date:p.dt||'', shootDate:p.dt||'', kind:kindOf(d,{project:p.p}), status:'Delivered', folder:p.fo||'', file:'', media:media, links:{drive:p.fo?'https://drive.google.com/drive/folders/'+p.fo:(p.dl||''), review:p.url||''}});
+          return mkItem({id:p.id, agentId:'me', d:d, o:{project:p.p}, title:p.t, project:p.p||'', group:'', date:p.dt||'', shootDate:p.dt||'', kind:kindOf(d,{project:p.p}), status:'Delivered', folder:p.af?'':(p.fo||''), file:p.af||'', media:media, links:{drive:p.fo?'https://drive.google.com/drive/folders/'+p.fo:(p.dl||''), review:p.url||''}});
         });
         items.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
-        var a={id:'me', c:c, name:c.name, title:c.agentTitle, orders:[], items:items, delivered:items.length, spent:0, first:items.length?items[items.length-1].date:'', last:items.length?items[0].date:'', headshot:headshotUrl(c.headshot),
+        var a={id:'me', c:c, name:c.name, title:c.agentTitle, orders:[], items:items, finals:items, delivered:items.length, spent:0, first:items.length?items[items.length-1].date:'', last:items.length?items[0].date:'', headshot:headshotUrl(c.headshot),
           hub:((QP.get('h')||'')||(location.origin+location.pathname.replace('vault.html','hub.html')))+'?a='+key+'&t='+(m.t||'pin'), hk:key, company:c.company||'Reel Estate Media', pin:m.t==='pin',
           counts:['reel','photo','headshot','listing'].reduce(function(x,k){ x[k]=items.filter(function(i){ return matchFilter(i,k); }).length; return x; },{})};
         agents=[a]; state.agent='me'; if(state.view!=='dossier') state.view='wall'; document.title=c.name+' · The Vault';
@@ -755,6 +822,7 @@ body.selmode .tile .ck{display:grid}
     ENDPOINT=(db.settings||{}).inboxUrl||''; DRIVE_KEY=(db.settings||{}).driveApiKey||'';
     agents=build(); render();
     loadStars().then(function(){ render(); });
+    loadApprovals();
   }
   if(AGENT_MODE){ startAgent(); }
   else {

@@ -958,6 +958,28 @@ const LISTING_LAYOUTS = {
   showcase:{name:'Showcase', tier:'Classic', price:20}, split:{name:'Split Gallery', tier:'Classic', price:20}, cover:{name:'Cover Story', tier:'Classic', price:20},
   meridian:{name:'Meridian', tier:'Signature', price:40}, linden:{name:'Linden', tier:'Signature', price:40}, westbrook:{name:'Westbrook', tier:'Signature', price:40},
   residence:{name:'Residence', tier:'Private Collection', price:80}, monograph:{name:'Monograph', tier:'Private Collection', price:80}, pavilion:{name:'Pavilion', tier:'Private Collection', price:80}};
+/* ✅ Which version did the agent approve? The review room's feedback reads "Version 2:\n✓ APPROVED…". */
+function approvedVerOf(body, nVers){
+  let cur = 0, best = 0;
+  String(body || '').split(/\n/).forEach(line => {
+    const m = line.match(/^\s*Version\s+(\d+)\s*:/i); if(m){ cur = +m[1]; return; }
+    if(/^\s*\u2713 APPROVED/.test(line)) best = Math.max(best, cur || nVers || 1);
+  });
+  return best;
+}
+/* The final, approved source for a deliverable — a single Drive file ({af}) or a folder ({fo}).
+   The agent's Vault and hub show only this, never the drafts that came before it. */
+function finalRefOf(d){
+  const idOf = u => { const m = String(u || '').match(/\/(?:folders|file\/d)\/([-\w]{20,})/); return m ? m[1] : ''; };
+  const isFile = u => /\/file\/d\//.test(String(u || '')), isFold = u => /\/drive\/(?:u\/\d+\/)?folders\//.test(String(u || ''));
+  const first = String((d.approved && d.approved.src) || '').split(',').map(p => p.trim()).filter(p => /drive\.google|docs\.google/.test(p))[0] || '';
+  if(first && isFile(first)) return {af: idOf(first)};
+  if(first && isFold(first)) return {fo: idOf(first)};
+  if(mediaOf(d) === 'video' && isFile(d.link)) return {af: idOf(d.link)};
+  const fo = idOf(d.dlvFolderUrl) || (isFold(d.link) ? idOf(d.link) : '');
+  if(fo) return {fo};
+  return isFile(d.link) ? {af: idOf(d.link)} : {};
+}
 const monthLabel = ym => { try{ return new Date(ym + '-15T12:00').toLocaleDateString('en-CA', {month:'long', year:'numeric'}); }catch(e){ return ym; } };
 const stripTags = t => String(t || '').replace(/^\[\[[A-Z-]+(?::[a-z]+)?\]\]\s*/, '');
 /* Which deliverable group an order line feeds, and how many credits one unit of it spawns.
@@ -1159,7 +1181,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
         }
         // 🔧 review feedback: auto-move the deliverable to its Changes stage, carrying the request
         if(r2.kind === 'feedback' && r2.ref && applyFeedback){
-          if(applyApproval && String(r2.body || '').indexOf('\u2713 APPROVED') > -1 && latestFbId[r2.ref] === r2.id) applyApproval(r2.ref, r2.ts, r2.who);
+          if(applyApproval && String(r2.body || '').indexOf('\u2713 APPROVED') > -1 && latestFbId[r2.ref] === r2.id) applyApproval(r2.ref, r2.ts, r2.who, r2.body);
           else applyFeedback(r2.ref, r2.body, r2.ts, r2.who);
           return; }
         // ⭐ ratings: dname carries "<phase>:<stars>", body is the comment
@@ -2020,8 +2042,8 @@ function App(){
             rs: isReviewStage(d.status), dv: d.status === 'Delivered',
             du: owing ? 1 : 0, amt: owing ? Math.round(myTotal * 100) / 100 : 0,
             url: (d.reviewUrl || ''), dt: (d.deliveredDate || d.reviewDate || d.shootDate || ''),
-            // 🗄 vault: the delivery's Drive folder id, so the agent's read-only vault can list the files
-            ...((() => { const m = String(d.dlvFolderUrl || d.link || '').match(/\/(?:folders|file\/d)\/([-\w]{20,})/); return m ? {fo: m[1]} : {}; })()),
+            // 🗄 vault: the approved final for this delivery — one file (af) or a folder (fo) — so the agent's vault shows only that
+            ...finalRefOf(d),
             ...(d.thumb ? {th: (/drive\.google|docs\.google/.test(String(d.thumb)) ? ((String(d.thumb).match(/[-\w]{25,}/) || [''])[0] || String(d.thumb)) : String(d.thumb))} : {}),
             br: br, lk: brLocked ? 1 : 0,
             ...(d.status === 'Delivered' ? {
@@ -2522,16 +2544,36 @@ function App(){
   // ✅ Agent approved the cut in the review room. If the finals are already in place (photos with a
   // link, or a video with its high-quality master attached) the piece delivers itself; otherwise it's
   // flagged "approved" and waits in the Needs-you queue for one tap.
-  const applyApproval = (dref, ts, who) => {
+  const hubQueue = React.useRef(new Set());
+  const queueHubPush = (clientId) => {   // several approvals can land at once — one hub refresh per client
+    if(!clientId) return; hubQueue.current.add(clientId);
+    clearTimeout(window.__hubQT); window.__hubQT = setTimeout(() => { const ids = [...hubQueue.current]; hubQueue.current.clear(); ids.forEach((cid, i) => setTimeout(() => pushHub(cid), i * 400)); }, 1500);
+  };
+  const applyApproval = (dref, ts, who, body) => {
     if(!dref) return;
-    const d = db.deliverables.find(x => x.id === dref);
-    if(!d || !isReviewStage(d.status)) return;
+    const cur0 = dbRef.current || db;   // always the freshest state — the inbox poller holds an old closure
+    const d = cur0.deliverables.find(x => x.id === dref); if(!d) return;
     const t = String(ts || ''); const ms = v => { const n = new Date(v).getTime(); return isNaN(n) ? 0 : n; };
-    if(d.approved && ms(d.approved.ts) >= ms(t)) return;            // already recorded
+    const vers = d.reviewVersions || [];
+    const ver = approvedVerOf(body, vers.length);
+    const src = ver && vers.length ? (vers[Math.min(ver, vers.length) - 1] || '') : '';
+    const known = !!(d.approved && ms(d.approved.ts) >= ms(t));
+    const stamp = x => ({...x, approved: {...(known ? x.approved : {ts: t || new Date().toISOString(), w: who || ''}), ...(ver ? {ver, src} : {})}});
+    const cOf = () => { const o = cur0.orders.find(x => x.id === d.orderId) || {}; const c = cur0.clients.find(x => x.id === o.clientId); return c && (c.hubKey || c.hubId) && cur0.settings.inboxUrl ? c.id : ''; };
+    if(known || d.status === 'Delivered'){
+      // nothing to act on — just remember WHICH version was approved (the Vault and their hub show only that one)
+      if(ver && !(d.approved && d.approved.ver === ver && d.approved.src === src)){
+        setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? stamp(x) : x)}));
+        queueHubPush(cOf());
+      }
+      return;
+    }
+    if(!isReviewStage(d.status)) return;
     if(d.stAt ? !(ms(t) > ms(d.stAt)) : (d.reviewDate && ms(t) < ms(d.reviewDate + 'T00:00'))) return;   // approval predates this review round
     const finalsReady = isVideoDl(d) ? !!String(d.linkHQ || '').trim() : !!(d.dlvFolder || String(d.link || '').trim());
-    setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? {...x, approved: {ts: t || new Date().toISOString(), w: who || ''}} : x)}));
-    logActivity('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d));
+    setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? stamp(x) : x)}));
+    queueHubPush(cOf());
+    logActivity('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (ver && vers.length > 1 ? ' (V' + ver + ')' : ''));
     const fresh = Date.now() - ms(t) < 3 * 86400000;   // older approvals wait for one tap rather than messaging the agent out of the blue
     if(finalsReady && fresh) setTimeout(() => updateDeliverableRef.current && updateDeliverableRef.current(dref, {status: 'Delivered', _auto: true}), 400);
     else showToast('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (finalsReady ? ' — one tap to deliver' : ' — add the final and deliver') + ' (it\u2019s in your Needs-you queue)');
@@ -6512,7 +6554,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.15-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.15-2</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
