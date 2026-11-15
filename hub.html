@@ -327,6 +327,12 @@ body.haspreview{padding-top:44px}
 #themefab .auto{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;letter-spacing:.1em;background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;display:none}
 #themefab.isauto .auto{display:block}
 /* ---- 📑 bottom tab bar ---- */
+.vaultlink{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:13px 16px;border:1px solid rgba(128,128,128,.28);border-radius:14px;text-decoration:none;color:inherit;background:rgba(128,128,128,.08)}
+.vaultlink:hover{border-color:var(--red)}
+a.tbtn,a.mini{text-decoration:none}
+.vaultlink b{display:block;font-size:14px}
+.vaultlink i{display:block;font-style:normal;font-size:12px;opacity:.65;margin-top:2px}
+.vaultlink em{font-style:normal;font-weight:700;font-size:12px;color:var(--red);white-space:nowrap}
 #tabbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;justify-content:center;gap:2px;
   background:rgba(20,20,22,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--line);padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
@@ -833,10 +839,12 @@ function normalize(h){
     dv: x.dv != null ? !!x.dv : String(x.st || '').toLowerCase() === 'delivered',
     url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0, amt: +x.amt || 0,
     cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '', th: x.th || '',
-    br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0
+    br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0,
+    fo: x.fo || ''
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
-    pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : []};
+    pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : [],
+    k: String(h.k || ''), an: String(h.an || '')};
 }
 // Round-aware label — movement instead of a generic "Review & polish" for weeks.
 function stageLabel(x){
@@ -951,6 +959,16 @@ function downloadIcs(spec){
 }
 /* ---- share kit + performance pulse + library ---- */
 var SHARE = {}, PERFT = {};
+var DRIVEK = '', AGENTFULL = '';
+// 🗄 one front door: the full library (every photo & clip) and the listing-page builder open from here
+function vaultUrl(){ return 'vault.html?a=' + encodeURIComponent(a) + '&t=' + (pin ? 'pin' : 'rem'); }
+function isListingItem(x){ return /listing|propert|estate|walk ?through|virtual tour|iguide|hdr|drone|aerial|twilight|house|home|condo|open house/i.test(String(x.t || '') + ' ' + String(x.p || '')); }
+function listingUrl(x){
+  if(!x.fo || !isListingItem(x)) return '';
+  var p = new URLSearchParams({ r: x.id || '', p: x.p || '', d: x.t || '', e: ENDPOINT, k: DRIVEK, ag: AGENTFULL, addr: x.p || '', ph: 'https://drive.google.com/drive/folders/' + x.fo, hk: a, an: AGENTFULL, t: pin ? 'pin' : 'rem' });
+  return 'listing-layouts.html?' + p.toString();
+}
+function listingBtn(x, cls){ var u = listingUrl(x); return u ? '<a class="' + (cls || 'mini') + '" href="' + esc(u) + '" title="Build or open the listing page for this property">🏡 Listing page</a>' : ''; }
 function shareItem(sid, btn){
   var o = SHARE[sid] || {};
   var caption = '🎬 “' + (o.t || 'New content') + '” — fresh listing content is live! Shot by Reel Estate Media 🎥';
@@ -982,6 +1000,7 @@ function librow(x, di, sid){
     '<span class="lt"><b><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span>' + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
     '<span class="lract">' +
     (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
+    listingBtn(x) +
     '<button class="mini postbtn2" data-post="' + sid + '" title="Copy caption &amp; open Instagram">📲 Post</button>' +
     '<button class="mini share sharebtn" data-sh="' + sid + '">↗ Share</button></span></div>';
 }
@@ -1197,6 +1216,7 @@ function render(raw){
   try{ window.BRIEFMETA = {}; items.forEach(function(x){ if(x.id) window.BRIEFMETA[x.id] = {br: x.br || null, lk: x.lk ? 1 : 0}; }); }catch(eM){}
   AGENTNAME = h.agent || '';
   PAYURL = h.pay || '';
+  DRIVEK = h.k || ''; AGENTFULL = h.an || h.agent || '';
   SVC = h.svc || [];
   TESTI = {};
   document.title = (h.agent ? h.agent + ' — ' : '') + 'My Content';
@@ -1277,6 +1297,7 @@ function render(raw){
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
     html += '<div class="fileguide"><b>Which file goes where?</b> &nbsp;📱 Vertical reel → Instagram · TikTok · FB/IG Story &nbsp;·&nbsp; 🖥 Horizontal video → YouTube · MLS · listing sites &nbsp;·&nbsp; 📷 Photos → MLS &amp; print &nbsp;·&nbsp; 🔇 Need a music-free (MLS-safe) cut? Ask in chat.</div>';
+    html += '<a class="vaultlink" href="' + esc(vaultUrl()) + '"><span><b>🗄 Browse every photo &amp; clip</b><i>Your full vault — everything we’ve shot for you, in one gallery, with downloads.</i></span><em>Open →</em></a>';
     if(done.length > 5) html += '<div class="libsearch"><input id="libsearch" type="search" placeholder="🔎 Search your library…"></div>';
     SHARE = {}; PERFT = {};
     dsorted.forEach((x, di) => {
@@ -1291,7 +1312,7 @@ function render(raw){
           ? '<a class="pill due2" href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Tap to pay online — or e-transfer to hello@reelestatemedia.com. Your receipt lands in chat.">💳 Balance due' + duAmt + ' — Pay now</a> '
           : '<span class="pill due2" title="Balance owing — e-transfer to hello@reelestatemedia.com, or message us for the invoice.">💰 Balance due' + duAmt + '</span> ') : '';
         html += card(x, i++, 'done', duPill + '<span class="pill done">✓ Delivered' + (x.dt ? ' · ' + libDate(x.dt).replace('Delivered ', '') : '') + '</span>', 'View finals', true,
-          tb.line + perfRow(x, 'pf' + di), postBits(sid) + shareBtn + tb.btn,
+          tb.line + perfRow(x, 'pf' + di), listingBtn(x, 'tbtn') + postBits(sid) + shareBtn + tb.btn,
           String(x.t + ' ' + (x.p || '')).toLowerCase());
       } else {
         html += librow(x, di, sid);
@@ -3235,4 +3256,34 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.10.20-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.15-1</div></div><script>
+/* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
+(function(){
+  var el = document.getElementById('verstamp'); if(!el) return;
+  var cur = (el.textContent || '').trim(); if(!cur) return;
+  var path = (location.pathname.split('/').pop() || 'index.html');
+  function show(v){
+    if(document.getElementById('upd-banner')) return;
+    var b = document.createElement('div'); b.id = 'upd-banner'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:999px;padding:8px 8px 8px 16px;font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:94vw';
+    var t = document.createElement('span'); t.textContent = '✨ A new version is ready'; b.appendChild(t);
+    var r = document.createElement('button'); r.type = 'button'; r.textContent = 'Refresh'; r.title = v;
+    r.style.cssText = 'appearance:none;border:0;background:#F2A900;color:#1a1205;font:700 12px/1 inherit;padding:8px 14px;border-radius:999px;cursor:pointer';
+    r.onclick = function(){ location.reload(); }; b.appendChild(r);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'appearance:none;border:0;background:transparent;color:#b7afa1;font:600 13px/1 inherit;padding:6px 8px;cursor:pointer';
+    x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  function check(){
+    fetch(path + '?vc=' + Date.now(), {cache: 'no-store'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+      var m = t && t.match(/id="verstamp"[^>]*>([^<]+)</);
+      if(m && m[1].trim() && m[1].trim() !== cur) show(m[1].trim());
+    }).catch(function(){});
+  }
+  setTimeout(check, 15000);
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
+})();
+</script>
+</body></html>

@@ -45,6 +45,11 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cnt{font:700 11px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);white-space:nowrap}
 .cnt b{color:var(--brass);font-size:13px;margin-right:4px}
 .cnt .warn{color:#ff6b84;margin-left:8px}
+.appsw{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--hair2);border-radius:999px;background:var(--panel)}
+.appsw a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font:700 11px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);text-decoration:none;white-space:nowrap}
+.appsw a:hover{color:var(--ink)}
+.appsw a.on{background:var(--brass);color:#1a1205}
+.appsw i{font-style:normal;background:var(--red);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px}
 
 /* ---------- lock ---------- */
 .lock{min-height:100vh;display:grid;place-items:center;padding:24px;position:relative;z-index:1}
@@ -247,7 +252,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.05-2</div>
+<div id="verstamp" title="App version">VAULT v2026.11.15-1</div>
 <script>
 (function(){
   'use strict';
@@ -483,7 +488,13 @@ body.selmode .tile .ck{display:grid}
       '<div class="search"><input id="q" placeholder="Search agents, projects, shoots…" value="'+esc(state.q)+'"></div>'+
       '<div class="cnt"><b>'+agents.length+'</b>agents · <b>'+pieces+'</b>pieces'+(warn?'<span class="warn" title="Deliveries with a missing link or an unshared Drive folder — open the Cabinet to see them">⚠ '+warn+'</span>':'')+'</div>'+
       '<div class="seg">'+[['wall','Wall'],['cabinet','Cabinet'],['dossier','Dossier']].map(function(v){ return '<button data-view="'+v[0]+'" class="'+(state.view===v[0]?'on':'')+'">'+v[1]+'</button>'; }).join('')+'</div>'+
-      '<button class="ico" id="theme" title="Light / dark">◐</button><a class="ico" href="index.html" title="Command Centre">⌂</a></div>';
+      '<button class="ico" id="theme" title="Light / dark">◐</button>'+appSwitcher()+'</div>';
+  }
+  /* shared studio switcher — same three apps, same order, on every admin page */
+  function appSwitcher(){
+    var n=0,c=0; try{ n=+localStorage.getItem('rem_needs_count_v1')||0; c=+localStorage.getItem('rem_chat_unread_v1')||0; }catch(e){}
+    try{ localStorage.setItem('rem_vault_warn_v1', String(auditCount(agents))); }catch(e){}
+    return '<nav class="appsw" aria-label="Studio apps"><a href="index.html" title="Command Centre">⌂ Command Centre'+(n>0?'<i>'+n+'</i>':'')+'</a><a href="studio-chat.html" title="Chat with your agents">💬 Chat'+(c>0?'<i>'+c+'</i>':'')+'</a><a class="on" href="vault.html" aria-current="page">🗄 Vault</a></nav>';
   }
   function starCover(a){ var s=starsOf(a)[0]; return s ? thumbUrl(s.fid,800) : ''; }
 
@@ -754,6 +765,36 @@ body.selmode .tile .ck{display:grid}
       document.getElementById('lockf').onsubmit=function(e){ e.preventDefault(); var v=document.getElementById('pc').value; hashText(v).then(function(h){ if(h===LOCK_HASH){ try{ sessionStorage.setItem('rem_unlocked','1'); }catch(e2){} start(); } else { document.getElementById('err').textContent='Wrong passcode.'; document.getElementById('pc').value=''; } }); };
     }
   }
+})();
+</script>
+<script>
+/* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
+(function(){
+  var el = document.getElementById('verstamp'); if(!el) return;
+  var cur = (el.textContent || '').trim(); if(!cur) return;
+  var path = (location.pathname.split('/').pop() || 'index.html');
+  function show(v){
+    if(document.getElementById('upd-banner')) return;
+    var b = document.createElement('div'); b.id = 'upd-banner'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:999px;padding:8px 8px 8px 16px;font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:94vw';
+    var t = document.createElement('span'); t.textContent = '✨ A new version is ready'; b.appendChild(t);
+    var r = document.createElement('button'); r.type = 'button'; r.textContent = 'Refresh'; r.title = v;
+    r.style.cssText = 'appearance:none;border:0;background:#F2A900;color:#1a1205;font:700 12px/1 inherit;padding:8px 14px;border-radius:999px;cursor:pointer';
+    r.onclick = function(){ location.reload(); }; b.appendChild(r);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'appearance:none;border:0;background:transparent;color:#b7afa1;font:600 13px/1 inherit;padding:6px 8px;cursor:pointer';
+    x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  function check(){
+    fetch(path + '?vc=' + Date.now(), {cache: 'no-store'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+      var m = t && t.match(/id="verstamp"[^>]*>([^<]+)</);
+      if(m && m[1].trim() && m[1].trim() !== cur) show(m[1].trim());
+    }).catch(function(){});
+  }
+  setTimeout(check, 15000);
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
 })();
 </script>
 </body>

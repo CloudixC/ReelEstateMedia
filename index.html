@@ -153,7 +153,18 @@
   .dl-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   .dl-pills:empty{display:none}
   .dl-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .rowmenu-wrap{position:relative;display:inline-flex}
+  .rowmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:230px;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,.55);display:flex;flex-direction:column}
+  .rowmenu button{appearance:none;background:none;border:0;color:var(--cream);font:600 13px/1.2 inherit;font-family:inherit;text-align:left;padding:9px 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .rowmenu button:hover{background:var(--panel2)}
+  .rowmenu button.danger{color:var(--red)}
   .utilrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .appsw{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line2);border-radius:999px;background:var(--panel)}
+  .appsw a{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--cream-dim);text-decoration:none;white-space:nowrap}
+  .appsw a:hover{color:var(--cream)}
+  .appsw a.on{background:var(--amber);color:#fff}
+  .appsw i{font-style:normal;background:var(--amber);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px}
+  .appsw i.w{background:transparent;border:1px solid var(--red);color:var(--red)}
   .utilmore{display:none}
   .dl-row:last-child{border-bottom:none}
   .brief{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:2px 0 12px}
@@ -709,6 +720,7 @@ function migrate(d){
     if(!d.expenses) d.expenses = [];
     if(!d.subsHandled) d.subsHandled = [];
     if(!d.blockedDays) d.blockedDays = [];
+    if(!d.recurring) d.recurring = [];   // 🏡 monthly listing-page hosting, one record per approved page
     if(d.deliverables) d.deliverables = d.deliverables.map(x =>
       (x.status === 'Client Review' && !x.reviewDate) ? {...x, reviewDate: today()} : x);
     if(d.deliverables && d.orders){
@@ -941,12 +953,24 @@ function newBrief(name, group){
 }
 /* Per-group credit shortfall: expected = Σ qty × credits-per-set over the order's lines in that
    group; have = Σ credits of the deliverables already in the group (a combined reel counts its credits). */
+/* 🏡 Listing-page designs (listing-layouts.html) and what each costs per month once approved */
+const LISTING_LAYOUTS = {
+  showcase:{name:'Showcase', tier:'Classic', price:20}, split:{name:'Split Gallery', tier:'Classic', price:20}, cover:{name:'Cover Story', tier:'Classic', price:20},
+  meridian:{name:'Meridian', tier:'Signature', price:40}, linden:{name:'Linden', tier:'Signature', price:40}, westbrook:{name:'Westbrook', tier:'Signature', price:40},
+  residence:{name:'Residence', tier:'Private Collection', price:80}, monograph:{name:'Monograph', tier:'Private Collection', price:80}, pavilion:{name:'Pavilion', tier:'Private Collection', price:80}};
+const monthLabel = ym => { try{ return new Date(ym + '-15T12:00').toLocaleDateString('en-CA', {month:'long', year:'numeric'}); }catch(e){ return ym; } };
+const stripTags = t => String(t || '').replace(/^\[\[[A-Z-]+(?::[a-z]+)?\]\]\s*/, '');
+/* Which deliverable group an order line feeds, and how many credits one unit of it spawns.
+   Catalogue services use the service name; custom lines keep the group they were created with
+   (so renaming the billing label never orphans their deliverables). Billing-only lines spawn nothing. */
+const itemGroup = item => { const s = svc(item.serviceId); return s ? s.name : (item.group || item.name); };
+const itemPer = item => { if(item.billing) return 0; const s = svc(item.serviceId);
+  return s ? (s.credits === 0 ? 0 : (s.components ? s.components.length : Math.max(1, s.credits || 1))) : Math.max(1, +item.per || 1); };
 function orderShortfall(db, o){
   const groups = {};
   (o.items || []).forEach(item => {
-    const s = svc(item.serviceId); if(s && s.credits === 0) return;
-    const name = s ? s.name : item.name;
-    const per = s ? (s.components ? s.components.length : Math.max(1, s.credits || 1)) : 1;
+    const s = svc(item.serviceId); const per = itemPer(item); if(!per) return;
+    const name = itemGroup(item);
     if(!groups[name]) groups[name] = {name, s, item, per, expected: 0};
     groups[name].expected += Math.max(1, +item.qty || 1) * per;
   });
@@ -959,10 +983,14 @@ function spawnDeliverables(order, from){
   const out = [];
   order.items.forEach(item => {
     const s = svc(item.serviceId);
-    if(s && s.credits === 0) return;   // billing-only line (e.g. extra event hours) — no deliverables
+    if(!itemPer(item)) return;   // billing-only line (e.g. extra event hours, listing-page hosting) — no deliverables
     for(let q=(from || 0); q<item.qty; q++){
       const qTag = (item.qty > 1 || from) ? ` (#${q+1})` : '';
-      if(s && s.components){
+      if(!s){
+        // ✨ custom line: its own group, 1+ deliverables per unit
+        const g = itemGroup(item), per = itemPer(item), unit = item.unit || item.name;
+        for(let i=1; i<=per; i++) out.push({id:uid(), orderId:order.id, name:`${unit}${per > 1 ? ` ${i} of ${per}` : ''}${qTag}`, group:g, status:'Booked', shootDate:'', link:'', notes:'', mediaType: item.mediaType || inferMedia(unit + ' ' + g), brief:newBrief(unit, g)});
+      } else if(s && s.components){
         s.components.forEach(c => out.push({id:uid(), orderId:order.id, name:`${c}${qTag}`, group:s.name, status:'Booked', shootDate:'', link:'', notes:'', mediaType: inferMedia(c + ' ' + s.name), brief:newBrief(c, s.name)}));
       } else if(s && s.credits > 1){
         for(let i=1; i<=s.credits; i++) out.push({id:uid(), orderId:order.id, name:`${s.unit} ${i} of ${s.credits}${qTag}`, group:s.name, status:'Booked', shootDate:'', link:'', notes:'', mediaType: inferMedia(s.unit + ' ' + s.name), brief:newBrief(s.unit, s.name)});
@@ -1043,7 +1071,7 @@ function ThreadPanelButton({db, d, order, client}){
           onKeyDown={async e => { if(e.key === 'Enter' && txt.trim()){ 
             const body = txt.trim(); setTxt('');
             try { await fetch(url, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id, project: (order && order.project) || d.group, dname: dlTitle(d), who: 'Jag', from: 'jag', body})});
-              setTimeout(load, 800); } catch(err){ alert('Send failed'); }
+              setTimeout(load, 800); } catch(err){ uiAlert('Send failed'); }
           }}}/>
         <span className="small faint">↵ to send</span>
       </div>
@@ -1051,8 +1079,59 @@ function ThreadPanelButton({db, d, order, client}){
   </>);
 }
 
+/* ---------------- In-app dialogs (replace the browser's prompt / confirm / alert) ---------------- */
+function uiDialog(opts){
+  return new Promise(resolve => {
+    const o = opts || {};
+    const prevFocus = document.activeElement;
+    const ov = document.createElement('div'); ov.className = 'overlay ui-dlg';
+    ov.style.cssText = 'z-index:300;align-items:center;padding:20px 16px';
+    const md = document.createElement('div'); md.className = 'modal'; md.setAttribute('role', 'dialog'); md.setAttribute('aria-modal', 'true');
+    md.style.cssText = 'max-width:' + (o.width || 470) + 'px;padding:22px 22px 18px';
+    if(o.title){ const h = document.createElement('h2'); h.style.cssText = 'font-size:20px;margin-bottom:10px'; h.textContent = o.title; md.appendChild(h); }
+    if(o.message){ const p = document.createElement('div'); p.style.cssText = 'white-space:pre-wrap;line-height:1.55;font-size:14px;color:var(--cream);margin-bottom:14px;max-height:46vh;overflow:auto'; p.textContent = o.message; md.appendChild(p); }
+    const inputs = {}; let done = false;
+    const close = (v) => { if(done) return; done = true; document.removeEventListener('keydown', onKey, true); ov.remove(); try{ prevFocus && prevFocus.focus && prevFocus.focus(); }catch(e){} resolve(v); };
+    const collect = () => { const out = {}; Object.keys(inputs).forEach(k => { out[k] = inputs[k].value; }); return out; };
+    const submit = () => close((o.fields && o.fields.length) ? collect() : true);
+    (o.fields || []).forEach(f => {
+      if(f.label){ const l = document.createElement('label'); l.className = 'f'; l.style.marginTop = '8px'; l.textContent = f.label; md.appendChild(l); }
+      if(f.type === 'choice'){
+        const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-bottom:12px';
+        (f.options || []).forEach(op => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ghost'; b.style.cssText = 'text-align:left;text-transform:none;letter-spacing:0;font-size:14px;padding:11px 14px';
+          b.textContent = op.label; b.setAttribute('data-choice', String(op.value)); b.onclick = () => { const out = collect(); out[f.key] = op.value; close(out); }; wrap.appendChild(b); });
+        md.appendChild(wrap); return;
+      }
+      const el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      if(f.type === 'textarea') el.rows = f.rows || 4; else el.type = f.type || 'text';
+      el.value = f.value == null ? '' : String(f.value); if(f.placeholder) el.placeholder = f.placeholder;
+      el.setAttribute('data-field', f.key); el.style.cssText = 'width:100%;margin-bottom:10px';
+      if(f.readOnly){ el.readOnly = true; }
+      inputs[f.key] = el; md.appendChild(el);
+    });
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px';
+    if(o.cancel !== false){ const c = document.createElement('button'); c.type = 'button'; c.className = 'btn ghost sm'; c.textContent = o.cancelLabel || 'Cancel'; c.setAttribute('data-dlg', 'cancel'); c.onclick = () => close(null); row.appendChild(c); }
+    if(o.ok !== false){ const k = document.createElement('button'); k.type = 'button'; k.className = 'btn sm' + (o.danger ? ' danger' : ''); k.textContent = o.ok || 'OK'; k.setAttribute('data-dlg', 'ok'); k.onclick = submit; row.appendChild(k); }
+    md.appendChild(row); ov.appendChild(md);
+    ov.addEventListener('mousedown', e => { if(e.target === ov && o.cancel !== false) close(null); });
+    const onKey = e => {
+      if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); close(o.cancel === false ? true : null); }
+      else if(e.key === 'Enter' && !(e.target && e.target.tagName === 'TEXTAREA' && !e.metaKey && !e.ctrlKey) && o.ok !== false){ e.preventDefault(); e.stopPropagation(); submit(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(ov);
+    const first = md.querySelector('[data-field]:not([readonly])') || md.querySelector('[data-field]') || md.querySelector('[data-dlg="ok"]') || md.querySelector('button');
+    setTimeout(() => { try{ first && first.focus(); if(first && first.select && first.tagName === 'INPUT') first.select(); }catch(e){} }, 30);
+  });
+}
+const uiAlert = (msg, title) => uiDialog({title: title || '', message: String(msg == null ? '' : msg), cancel: false, ok: 'Got it'});
+const uiConfirm = (msg, o) => uiDialog({title: (o && o.title) || '', message: String(msg == null ? '' : msg), ok: (o && o.ok) || 'Yes', cancelLabel: (o && o.cancel) || 'Cancel', danger: !!(o && o.danger)}).then(r => !!r);
+const uiPrompt = (msg, def, o) => uiDialog({title: (o && o.title) || '', message: String(msg == null ? '' : msg), ok: (o && o.ok) || 'Save', cancelLabel: (o && o.cancel) || 'Cancel',
+  fields: [{key: 'v', value: def == null ? '' : def, type: (o && o.type) || 'text', placeholder: (o && o.placeholder) || '', rows: o && o.rows, readOnly: !!(o && o.readOnly)}]}).then(r => r ? r.v : null);
+window.uiDialog = uiDialog; window.uiAlert = uiAlert; window.uiConfirm = uiConfirm; window.uiPrompt = uiPrompt;
+
 /* ---------------- Client Submissions Inbox ---------------- */
-function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating, applyFeedback}){
+function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetail, markHandled, applyAgentBrief, applyRating, applyFeedback, applyApproval, applySiteApproval, approveSiteRequest}){
   const [subs, setSubs] = useState([]);
   const [err, setErr] = useState('');
   const [u, setU] = useState(''); const [tk, setTk] = useState('');
@@ -1065,6 +1144,12 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       const j = await r.json();
       if(!j.ok) throw new Error(j.error || 'fetch failed');
       setSubs(j.rows || []); setErr('');
+      const latestFbId = {}; (j.rows || []).forEach(r0 => { if(r0.kind === 'feedback' && r0.ref) latestFbId[r0.ref] = r0.id; });
+      // 🏡 listing-page approvals (made here or on the page itself) start the monthly hosting record
+      if(applySiteApproval){ const reqLay = {};
+        (j.rows || []).forEach(r0 => { if(r0.kind !== 'msg') return; const b0 = String(r0.body || '');
+          const mq = b0.match(/^\[\[SITE-REQ:([a-z]+)\]\]/); if(mq){ reqLay[r0.ref] = mq[1]; return; }
+          if(r0.from === 'jag' && b0.indexOf('[[SITE-OK') === 0){ const mo = b0.match(/^\[\[SITE-OK:([a-z]+)\]\]/); const lay = mo ? mo[1] : reqLay[r0.ref]; if(lay) applySiteApproval(r0.ref, lay, r0.ts); } }); }
       // auto-apply any agent shoot briefs straight into the matching deliverable's brief
       (j.rows || []).forEach(r2 => {
         if(r2.kind === 'msg' || r2.kind === 'brief'){
@@ -1073,7 +1158,10 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
           return;
         }
         // 🔧 review feedback: auto-move the deliverable to its Changes stage, carrying the request
-        if(r2.kind === 'feedback' && r2.ref && applyFeedback){ applyFeedback(r2.ref, r2.body, r2.ts, r2.who); return; }
+        if(r2.kind === 'feedback' && r2.ref && applyFeedback){
+          if(applyApproval && String(r2.body || '').indexOf('\u2713 APPROVED') > -1 && latestFbId[r2.ref] === r2.id) applyApproval(r2.ref, r2.ts, r2.who);
+          else applyFeedback(r2.ref, r2.body, r2.ts, r2.who);
+          return; }
         // ⭐ ratings: dname carries "<phase>:<stars>", body is the comment
         if(r2.kind === 'rating' && r2.ref && applyRating){
           const parts = String(r2.dname || '').split(':');
@@ -1139,13 +1227,15 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
                 o.head ? 'Headshot: https://drive.google.com/file/d/' + o.head + '/view' : '',
                 o.colors && o.colors.length ? 'Colours: ' + o.colors.join(' · ') : '',
                 o.ig ? 'Instagram: ' + o.ig : '', o.notes ? 'Notes: ' + o.notes : ''].filter(Boolean).join('\n') || s.body;
-      }catch(e){ return s.body; }
+      }catch(e){ return stripTags(s.body); }
     }
-    return s.body;
+    return stripTags(s.body);
   };
   const fresh = subs.filter(s => FEED_KINDS[s.kind] && !(db.subsHandled || []).includes(s.id) &&
     !(s.kind === 'feedback' && s.ref && latestFb[s.ref] !== s.id) &&
     !(s.kind === 'msg' && String(s.body || '').indexOf('[[REL]]') === 0) &&
+    // ✅ an approval that already delivered itself needs nothing from you
+    !(s.kind === 'feedback' && /^\s*\u2713 APPROVED/.test(String(s.body || '')) && (db.deliverables.find(x => x.id === s.ref) || {}).status === 'Delivered') &&
     // 📤 our own outbound traffic (replies, automated nudges, app pushes) isn't a client submission
     !(s.kind === 'msg' && (s.from === 'jag' || s.from === 'app' || s.from === 'script' || s.who === 'Reel Estate Media'))).reverse();
   // 🔗 what does a submission point at? a deliverable (ref = deliverable id), or an agent's hub
@@ -1173,7 +1263,7 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
       await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'wall', ref: s.id, project: 'Testimonial wall', dname: '', who: 'Jag',
         body: JSON.stringify({on: !cur, q: s.body, w: s.who || 'Agent', b: 'Royal LePage Pinnacle'}), from: 'jag'})});
       load();
-    } catch(e){ alert('Couldn’t update the wall — check connection.'); }
+    } catch(e){ uiAlert('Couldn’t update the wall — check connection.'); }
   };
   const vault = testis.length > 0 && (
     <div className="card">
@@ -1196,18 +1286,18 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
   return (<>
     {(fresh.length > 0 || err) && <div className="card today">
       <div className="flex"><h3 style={{fontSize:18, marginBottom:0}}>📥 Client Submissions</h3><span className="spacer"></span>
-        <button className="btn ghost sm" title="Fix the inbox connection — re-enter the web app URL and secret token" onClick={() => {
-          const u2 = prompt('Web app URL (…/exec):', db.settings.inboxUrl || '');
+        <button className="btn ghost sm" title="Fix the inbox connection — re-enter the web app URL and secret token" onClick={async () => {
+          const u2 = await uiPrompt('Web app URL (…/exec):', db.settings.inboxUrl || '');
           if(u2 === null) return;
-          const t2 = prompt('Secret token (paste it — spaces and capitals are cleaned up automatically):', '');
+          const t2 = await uiPrompt('Secret token (paste it — spaces and capitals are cleaned up automatically):', '');
           if(t2 === null) return;
           if(u2.trim() && t2.trim()){ updateSettings({inboxUrl: u2.trim(), inboxToken: cleanTok(t2)}); setTimeout(load, 400); }
         }}>⚙</button>
-        <button className="btn ghost sm" title="Copy a one-tap setup link for your phone or another device — no typing the token" onClick={() => {
+        <button className="btn ghost sm" title="Copy a one-tap setup link for your phone or another device — no typing the token" onClick={async () => {
           const link = makeSetupLink(db.settings.inboxUrl, db.settings.inboxToken);
-          const done = () => alert('🔗 Setup link copied.\n\nText or email it to yourself, open it on the other device, unlock with your passcode — connected. Keep the link private: it contains your admin token.');
-          if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => prompt('Copy this setup link (keep it private):', link));
-          else prompt('Copy this setup link (keep it private):', link);
+          const done = () => uiAlert('🔗 Setup link copied.\n\nText or email it to yourself, open it on the other device, unlock with your passcode — connected. Keep the link private: it contains your admin token.');
+          if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, () => uiPrompt('Copy this setup link (keep it private):', link, {readOnly: true, ok: 'Done', cancel: 'Close'}));
+          else await uiPrompt('Copy this setup link (keep it private):', link);
         }}>🔗</button>
         <button className="btn ghost sm" title="Check for new items now" onClick={load}>⟳</button></div>
       {err && <p className="small" style={{color:'var(--red)', marginTop:8}}>{err}</p>}
@@ -1226,19 +1316,25 @@ function SubmissionsInbox({db, updateSettings, updateDeliverable, openOrderDetai
             {s.kind === 'brief' && dl &&
               <button className="btn sm" onClick={() => {
                 const parsed = parseBriefBlob(s.body);
-                if(Object.keys(parsed).length === 0){ alert('Nothing parseable in this one — open it and copy manually.'); return; }
+                if(Object.keys(parsed).length === 0){ uiAlert('Nothing parseable in this one — open it and copy manually.'); return; }
                 updateDeliverable(dl.id, {brief: {...getBrief(dl), ...parsed}});
                 markHandled(s.id);
               }}>✓ Apply to brief — {dlTitle(dl)}</button>}
+            {s.kind === 'msg' && approveSiteRequest && /^\[\[SITE-REQ:[a-z]+\]\]/.test(String(s.body || '')) && (() => {
+              const lay = String(s.body).match(/^\[\[SITE-REQ:([a-z]+)\]\]/)[1]; const info = LISTING_LAYOUTS[lay] || {name: lay, price: 0};
+              return <button className="btn sm" title={'Unlocks publishing on their page and starts ' + money(info.price) + '/month hosting'} onClick={async () => {
+                const dref = await approveSiteRequest(s); if(!dref) return;
+                fresh.filter(x => x.kind === 'msg' && String(x.body || '').indexOf('[[SITE-REQ:' + lay + ']]') === 0 && (x.ref === dref || String(x.body).indexOf('r=' + dref) > -1 || x.id === s.id)).forEach(x => markHandled(x.id));
+              }}>✅ Approve {info.name} · {money(info.price)}/mo</button>; })()}
             {s.kind === 'msg' &&
-              <button className="btn sm" onClick={async () => {
-                const reply = prompt('Reply to ' + (s.who || 'agent') + ':');
+              <button className={'btn sm' + (/^\[\[SITE-REQ:/.test(String(s.body || '')) ? ' ghost' : '')} onClick={async () => {
+                const reply = await uiPrompt('', '', {title: 'Reply to ' + (s.who || 'agent'), type: 'textarea', rows: 4, ok: '↩ Send reply', placeholder: 'Type your reply…'});
                 if(reply === null || !reply.trim()) return;
                 try {
                   await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: s.ref, project: s.project, dname: s.dname, who: 'Jag', from: 'jag', body: reply.trim()})});
                   markHandled(s.id);
                   showToast('↩ Reply sent — they\u2019ll see it on their page');
-                } catch(e){ alert('Couldn\u2019t send — check connection.'); }
+                } catch(e){ uiAlert('Couldn\u2019t send — check connection.'); }
               }}>↩ Reply</button>}
             {s.kind === 'feedback' && dl &&
               <button className="btn sm" onClick={() => {
@@ -1300,7 +1396,7 @@ const makeSetupLink = (u, t) => location.origin + location.pathname + '#setup=' 
    wins (not newest device). The snapshot system (ccbak) keeps running
    underneath as the Stage-1 safety net and the fresh-device bootstrap. */
 const OPS_COLLECTIONS = ['clients', 'orders', 'deliverables'];
-const OPS_LISTS = ['pendingBookings', 'importedIds', 'expenses', 'subsHandled', 'blockedDays'];   // activity stays snapshot-only (noisy + cosmetic)
+const OPS_LISTS = ['pendingBookings', 'importedIds', 'expenses', 'subsHandled', 'blockedDays', 'recurring'];   // activity stays snapshot-only (noisy + cosmetic)
 const devId = () => { try{ let v = localStorage.getItem('rem_dev_v1'); if(!v){ v = Math.random().toString(36).slice(2, 10); localStorage.setItem('rem_dev_v1', v); } return v; }catch(e){ return 'mem'; } };
 const opStamps = () => { try{ return JSON.parse(localStorage.getItem('rem_opmt_v1') || '{}'); }catch(e){ return {}; } };
 const saveStamps = m => { try{ localStorage.setItem('rem_opmt_v1', JSON.stringify(m)); }catch(e){} };
@@ -1393,7 +1489,7 @@ function CloudModal({db, onClose, cloud, adoptRemote, doBackup}){
               <span className="small" style={{flex:1}}>{fmtTs(it.ts)}
                 <span className="faint"> · {(it.meta && it.meta.c) || 0} clients · {(it.meta && it.meta.o) || 0} orders · {Math.round(((it.meta && it.meta.b) || 0) / 1024)} KB</span></span>
               <button className="btn ghost sm" disabled={busy} onClick={async () => {
-                if(!confirm('Replace everything in this Command Centre with the backup from ' + fmtTs(it.ts) + '?\n\nA fresh backup of the current state is taken first, so you can always come back.')) return;
+                if(!await uiConfirm('Replace everything in this Command Centre with the backup from ' + fmtTs(it.ts) + '?\n\nA fresh backup of the current state is taken first, so you can always come back.')) return;
                 setBusy(true); setErr('');
                 try{
                   await doBackup(true);   // safety net: snapshot current state before replacing it
@@ -1445,6 +1541,7 @@ function App(){
   const openOrderDetail = (id, dlId) => { setCameFrom(view); window.__pipeBack = dlId || null; setOpenOrder(id); setFocusDl(dlId || null); setView('orders'); };   // __pipeBack: which card the Pipeline board scrolls back to
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [showNewClient, setShowNewClient] = useState(false);
+  const [welcomeId, setWelcomeId] = useState(null);
   const [pipeClient, setPipeClient] = useState('all');
 
   useEffect(() => { localStorage.setItem(LS_KEY, JSON.stringify(db)); }, [db]);
@@ -1530,21 +1627,20 @@ function App(){
       fn: () => setDb(p => { const arr = p.deliverables.filter(x => x.id !== photo.id && x.id !== video.id); arr.splice(Math.min(origIdx, arr.length), 0, d); return {...p, deliverables: arr}; })}]);
   };
   // ⊕ Combine: fold a spare reel slot into this reel → one longer reel that records the credits it used
-  const combineDeliverable = (id) => {
+  const combineDeliverable = async (id) => {
     const d = db.deliverables.find(x => x.id === id);
     if(!d || !isReelDl(d)) return;
     const cands = db.deliverables.filter(x => x.orderId === d.orderId && x.id !== id && isReelDl(x) && x.status !== 'Delivered');
-    if(!cands.length){ alert('No spare reel slot to fold in — add another reel credit to this order (＋ Add item below), then combine.'); return; }
+    if(!cands.length){ uiAlert('No spare reel slot to fold in — add another reel credit to this order (＋ Add item below), then combine.'); return; }
     const sameGroup = cands.filter(x => x.group === d.group);
     let pool = sameGroup.length ? sameGroup : cands;   // prefer a slot from the same package
     // 🧩 several packages on this order (e.g. Tier 1 + Tier 2)? let Jag pick which one to fold in
     const groups = [...new Set(cands.map(x => x.group))];
     if(groups.length > 1){
-      const ans = prompt('Fold in a reel slot from which package?\n' + groups.map((g, i) => `${i + 1}) ${g} — ${cands.filter(x => x.group === g).length} spare`).join('\n') + '\n\nType the number:', String(groups.indexOf(d.group) + 1 || 1));
-      if(ans === null) return;
-      const gi = parseInt(ans, 10) - 1;
-      if(!(gi >= 0 && gi < groups.length)){ alert('Pick a number from the list.'); return; }
-      pool = cands.filter(x => x.group === groups[gi]);
+      const ans = await uiDialog({title: '⊕ Combine — fold in a slot from which package?', message: 'The reel keeps its place and grows by one credit; one spare slot from the package you pick is used up.', ok: false,
+        fields: [{key: 'g', type: 'choice', options: groups.map((g, i) => ({value: i, label: `${g} — ${cands.filter(x => x.group === g).length} spare`}))}]});
+      if(!ans) return;
+      pool = cands.filter(x => x.group === groups[ans.g]);
     }
     const sib = pool[pool.length - 1];
     const newCredits = dlCredits(d) + dlCredits(sib);
@@ -1567,7 +1663,7 @@ function App(){
     const d = db.deliverables.find(x => x.id === id);
     if(!d || !isReelDl(d)) return;
     const n = dlCredits(d);
-    if(n <= 1){ alert('This reel is a single credit — nothing to peel off.'); return; }
+    if(n <= 1){ uiAlert('This reel is a single credit — nothing to peel off.'); return; }
     const newCredits = n - 1;
     const looksDefault = /credits|up to \d+s|\bof\b|^\s*(reel|video|clip)\b/i.test(d.name || '') || !d.name;
     const newName = looksDefault ? (newCredits > 1 ? `Reel · ${newCredits} credits (up to ${newCredits * SEC_PER_CREDIT}s)` : 'Reel') : d.name;
@@ -1589,13 +1685,13 @@ function App(){
       fn: () => setDb(p => ({...p, deliverables: p.deliverables.filter(x => x.id !== fresh.id).map(x => x.id === id ? {...x, credits: prevCredits, name: prevName} : x)}))}]);
   };
 
-  const deleteClient = (id) => {
+  const deleteClient = async (id) => {
     const c = db.clients.find(x => x.id === id); if(!c) return;
     const os = db.orders.filter(o => o.clientId === id);
     const msg = os.length
       ? `Delete ${c.name}? Their ${os.length} order${os.length !== 1 ? 's' : ''} will stay but show no client until reassigned. This can be undone from the toast.`
       : `Delete ${c.name}?`;
-    if(!confirm(msg)) return;
+    if(!await uiConfirm(msg, {ok: 'Delete', danger: true})) return;
     setDb(p => ({...p, clients: p.clients.filter(x => x.id !== id)}));
     setEditingClient(null);
     logActivity(`Deleted client: ${c.name}`);
@@ -1642,7 +1738,7 @@ function App(){
   };
   const adoptRemote = (row) => {
     const md = migrate(row.data);
-    if(!md){ alert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
+    if(!md){ uiAlert('Cloud copy looks empty or invalid — keeping this device\u2019s data.'); return; }
     cloudSkip.current = true;
     if(window.__opsAdopt) window.__opsAdopt(md, row.updated_at);
     setDb(md);
@@ -1970,14 +2066,17 @@ function App(){
     logActivity(`Added ${s.name} to ${o.project || 'order'}`);
     showToast(s.credits === 0 ? `+ ${s.name} — billing only, no deliverables` : `+ ${s.name} — ${ds.length} deliverable${ds.length !== 1 ? 's' : ''} added`);
   };
-  const removeOrderItem = (orderId, ix) => {
+  const removeOrderItem = async (orderId, ix) => {
     const o = db.orders.find(x => x.id === orderId); if(!o) return;
     const item = o.items[ix]; if(!item) return;
     const s = svc(item.serviceId);
-    const groupName = s ? s.name : item.name;
-    const ds = db.deliverables.filter(d => d.orderId === orderId && d.group === groupName);
+    const groupName = itemGroup(item);
+    // two lines can share a group (same service, renamed) — only this line's share goes with it
+    const sharing = o.items.filter((it, j) => j !== ix && itemGroup(it) === groupName).length > 0;
+    const mineAll = db.deliverables.filter(d => d.orderId === orderId && d.group === groupName);
+    const ds = sharing ? mineAll.filter(d => d.status === 'Booked' && !d.link && !d.dlvFolder).slice(-(itemPer(item) * Math.max(1, +item.qty || 1))) : mineAll;
     const deliveredN = ds.filter(d => d.status === 'Delivered').length;
-    if(!confirm(`Remove "${item.name}" from this order?\nThis also removes its ${ds.length} deliverable${ds.length !== 1 ? 's' : ''}${deliveredN ? ` (${deliveredN} already delivered)` : ''}.`)) return;
+    if(!await uiConfirm(`Remove "${item.name}" from this order?\nThis also removes its ${ds.length} deliverable${ds.length !== 1 ? 's' : ''}${deliveredN ? ` (${deliveredN} already delivered)` : ''}.`, {title: 'Remove this service?', ok: 'Remove', danger: true})) return;
     const dsIds = new Set(ds.map(d => d.id));
     setDb(p => ({...p,
       orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.filter((_,j) => j !== ix)} : x),
@@ -1992,8 +2091,8 @@ function App(){
     const o = db.orders.find(x => x.id === orderId); const item = o && o.items[ix];
     if(item && patch.qty !== undefined && +patch.qty !== +item.qty && +patch.qty >= 1){
       const s = svc(item.serviceId); const newQty = +patch.qty, oldQty = +item.qty || 1;
-      const groupName = s ? s.name : item.name;
-      const perSet = s ? (s.credits === 0 ? 0 : (s.components ? s.components.length : Math.max(1, s.credits || 1))) : 1;
+      const groupName = itemGroup(item);
+      const perSet = itemPer(item);
       if(perSet > 0 && newQty > oldQty){
         const ds = spawnDeliverables({id: orderId, items: [{...item, qty: newQty}]}, oldQty);
         setDb(p => ({...p,
@@ -2015,7 +2114,25 @@ function App(){
       }
     }
     setDb(p => ({...p,
-      orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...patch} : it)} : x)}));
+      orders: p.orders.map(x => x.id === orderId ? {...x, items: x.items.map((it,j) => j === ix ? {...it, ...(patch.name !== undefined && !svc(it.serviceId) && !it.group ? {group: it.name} : {}), ...patch} : it)} : x)}));
+  };
+  // ✨ a custom line: its own name, price and deliverables — never shares a group with a catalogue service
+  const addCustomItem = async (orderId) => {
+    const o = db.orders.find(x => x.id === orderId); if(!o) return;
+    const r = await uiDialog({title: '✨ Custom service', message: 'A one-off line with its own name and price. It gets its own deliverables, counted separately from the catalogue services.', ok: 'Add to order', fields: [
+      {key: 'name', label: 'Name (shows on the invoice)', placeholder: 'e.g. Dynamic Shoot (Tier 1)'},
+      {key: 'price', label: 'Price per unit ($)', type: 'number', value: ''},
+      {key: 'qty', label: 'Quantity', type: 'number', value: 1},
+      {key: 'per', label: 'Deliverables per unit (0 = billing only)', type: 'number', value: 1}]});
+    if(!r) return;
+    const name = String(r.name || '').trim(); if(!name){ uiAlert('Give the service a name.'); return; }
+    if(o.items.some(it => itemGroup(it) === name)){ uiAlert('This order already has a "' + name + '" line — change its quantity instead, or pick a different name.'); return; }
+    const per = Math.max(0, Math.round(+r.per || 0)), qty = Math.max(1, Math.round(+r.qty || 1));
+    const item = {serviceId: '', custom: true, name, group: name, unit: /reel|dynamic|podcast|video/i.test(name) ? 'Reel' : name, qty, price: +r.price || 0, retail: +r.price || 0, per, ...(per === 0 ? {billing: true} : {})};
+    const ds = spawnDeliverables({id: orderId, items: [item]});
+    setDb(p => ({...p, orders: p.orders.map(x => x.id === orderId ? {...x, items: [...x.items, item]} : x), deliverables: [...p.deliverables, ...ds]}));
+    logActivity(`Added custom service ${name} to ${o.project || 'order'}`);
+    showToast(per === 0 ? `+ ${name} — billing only` : `+ ${name} — ${ds.length} deliverable${ds.length !== 1 ? 's' : ''} added`);
   };
 
   // ⟳ one-tap fix for orders whose quantities were raised before quantity drove deliverables.
@@ -2031,7 +2148,7 @@ function App(){
         added = added.concat(spawnDeliverables({id: orderId, items: [{...g.item, qty: Math.ceil(have / g.per) + Math.ceil(g.short / g.per)}]}, Math.ceil(have / g.per)));
       } else {
         const start = db.deliverables.filter(d => d.orderId === orderId && d.group === g.name).length;
-        const unit = g.s ? g.s.unit : g.item.name;
+        const unit = g.s ? g.s.unit : (g.item.unit || g.item.name);
         for(let k = 0; k < g.short; k++) added.push({id:uid(), orderId, name:`${unit} (#${start + k + 1})`, group:g.name, status:'Booked', shootDate:'', link:'', notes:'', mediaType: inferMedia(unit + ' ' + g.name), brief:newBrief(unit, g.name)});
       }
     });
@@ -2040,9 +2157,9 @@ function App(){
     logActivity(`Matched deliverables to quantities on ${o.project || 'order'} (+${added.length})`);
     showToast(`+ ${added.length} deliverable${added.length !== 1 ? 's' : ''} added to match the quantities`);
   };
-  const rebookOrder = (id) => {
+  const rebookOrder = async (id) => {
     const o = db.orders.find(x => x.id === id); if(!o) return;
-    const project = prompt('Project / property for the new booking:', o.project || '');
+    const project = await uiPrompt('Project / property for the new booking:', o.project || '');
     if(project === null) return;
     const order = {...o, id: uid(), project, date: today(), payment: 'unpaid'};
     const ds = spawnDeliverables(order);
@@ -2051,11 +2168,11 @@ function App(){
     setOpenOrder(order.id);
     showToast('⟳ Rebooked — fresh deliverables created');
   };
-  const deleteDeliverable = (id) => {
+  const deleteDeliverable = async (id) => {
     const cur = db.deliverables.find(x => x.id === id);
     if(!cur) return;
     const o = db.orders.find(x => x.id === cur.orderId);
-    if(!confirm(`Remove "${dlTitle(cur)}"${cur.status === 'Delivered' ? ' (already delivered)' : ''}?\nIt disappears from the pipeline and from the agent's hub.`)) return;
+    if(!await uiConfirm(`Remove "${dlTitle(cur)}"${cur.status === 'Delivered' ? ' (already delivered)' : ''}?\nIt disappears from the pipeline and from the agent's hub.`, {ok: 'Remove', danger: true})) return;
     setDb(p => ({...p, deliverables: p.deliverables.filter(d => d.id !== id)}));
     logActivity(`Removed deliverable: ${dlTitle(cur)}${o && o.project ? ' · ' + o.project : ''}`);
     showToast('Deliverable removed', [{label: 'Undo', fn: () => {
@@ -2109,9 +2226,18 @@ function App(){
       }
       // 3 — thumbnail from the first photo, then tell the hub
       if(firstImg) setDb(p => ({...p, deliverables: p.deliverables.map(d => d.id === dlId ? {...d, thumb: firstImg} : d)}));
+      // ⏩ files are up → the piece moves itself to Editing (only ever forward, never back)
+      let movedTo = '';
+      setDb(p => ({...p, deliverables: p.deliverables.map(d => {
+        if(d.id !== dlId || STATUSES.indexOf(d.status) >= STATUSES.indexOf('Editing')) return d;
+        movedTo = 'Editing';
+        return {...d, status: 'Editing', shootDate: d.shootDate || today(), stAt: new Date().toISOString()};
+      })}));
+      const wasEarly = STATUSES.indexOf(cur.status) < STATUSES.indexOf('Editing');
+      if(wasEarly) logActivity(`${dlTitle(cur)} → Editing (files uploaded)`);
       if(c.id) setTimeout(() => pushHub(c.id), 900);
-      UPPANEL.finish('✅ ' + okCount + ' file' + (okCount === 1 ? '' : 's') + ' up — link saved' + (firstImg ? ' · thumbnail set' : '') + '. Set the status whenever you’re ready.', true);
-      if(!firstImg) setTimeout(() => { if(confirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 900);
+      UPPANEL.finish('✅ ' + okCount + ' file' + (okCount === 1 ? '' : 's') + ' up — link saved' + (firstImg ? ' · thumbnail set' : '') + (wasEarly ? ' · moved to Editing.' : '.'), true);
+      if(!firstImg) setTimeout(async () => { if(await uiConfirm('🖼 No photo in that batch — add a Library thumbnail image?')) pickThumbFor(dlId); }, 900);
     }catch(err){
       const wasCancelled = ctl.cancelled || /cancelled/.test(String(err && err.message));
       if(c.id && cur.dlvFolder !== undefined) setTimeout(() => pushHub(c.id), 900);
@@ -2174,22 +2300,24 @@ function App(){
     inp.click();
   };
   window.pickThumbFor = pickThumbFor;   // 🖼 backfill from any deliverable row
-  const updateDeliverable = (id, patch) => {
+  const updateDeliverable = async (id, patch) => {
     const cur = db.deliverables.find(x => x.id === id);
+    const auto = !!(patch && patch._auto);   // automatic transition — never stop to ask anything
+    if(auto){ patch = {...patch}; delete patch._auto; }
     if(patch.shootDate && (db.blockedDays || []).includes(patch.shootDate) &&
-       !confirm('🚫 ' + patch.shootDate + ' is a blocked day. Schedule anyway?')) return;
+       !await uiConfirm('🚫 ' + patch.shootDate + ' is a blocked day. Schedule anyway?')) return;
     if(cur && patch.status === 'Delivered' && cur.status !== 'Delivered'){
       // Files usually arrive earlier via the 📦 Upload button on the deliverable —
       // if a link is already on file, flipping the status stays a one-click affair.
-      if(!(cur.dlvFolder || String(cur.link || '').trim())){
+      if(!auto && !(cur.dlvFolder || String(cur.link || '').trim())){
         const isB = mediaOf(cur) === 'both';
-        const l = prompt(isB ? '📷 Photos link? OK to save — blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)' : '📦 Delivery link (Drive / Frame.io)? OK to save — blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)', cur.link || '');
+        const l = await uiPrompt(isB ? '📷 Photos link? Leave blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)' : '📦 Delivery link (Drive / Frame.io)? Leave blank to skip. (Tip: the 📦 Upload button on the deliverable does this for you.)', cur.link || '', {title: 'Marking delivered', placeholder: 'https://…'});
         if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
-        if(isB){ const lv = prompt('🎬 Video link? OK to save — blank to skip.', cur.linkVideo || '');
+        if(isB){ const lv = await uiPrompt('🎬 Video link? Leave blank to skip.', cur.linkVideo || '', {title: 'Marking delivered', placeholder: 'https://…'});
           if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
       }
       // 🖼 Library thumbnail — only asks if one isn't set yet
-      if(!cur.thumb && confirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.\n\n(Cancel to skip — their Library shows a 🎬 tile instead)')){
+      if(!auto && !cur.thumb && await uiConfirm('🖼 Add a Library thumbnail? Pick any image — it uploads & shares itself, no Drive step.\n\nSkip and their Library shows a 🎬 tile instead.', {title: 'Library thumbnail', ok: '🖼 Pick an image', cancel: 'Skip'})){
         setTimeout(() => pickThumbFor(id), 250);
       }
     }
@@ -2234,11 +2362,11 @@ function App(){
           }
         }
       } catch(e){}
-      if(!cur.dlvFolder){   // files already uploaded via 📦? then Client Review is one click — no prompts
+      if(!auto && !cur.dlvFolder && !String(cur.link || '').trim()){   // files or a link already on file? then Client Review is one click — no prompts
         const isB = mediaOf(cur) === 'both';
-        const l = prompt(isB ? '📷 Photos review link? OK to save — blank to skip.' : '👀 Review link (Frame.io / Drive draft)? OK to save — leave blank to skip.', cur.link || '');
+        const l = await uiPrompt(isB ? '📷 Photos review link? Leave blank to skip.' : '👀 Review link (Frame.io / Drive draft)? Leave blank to skip.', cur.link || '', {title: 'Sending to review', placeholder: 'https://…'});
         if(l !== null && l.trim()) patch = {...patch, link: l.trim()};
-        if(isB){ const lv = prompt('🎬 Video review link? OK to save — blank to skip.', cur.linkVideo || '');
+        if(isB){ const lv = await uiPrompt('🎬 Video review link? Leave blank to skip.', cur.linkVideo || '', {title: 'Sending to review', placeholder: 'https://…'});
           if(lv !== null && lv.trim()) patch = {...patch, linkVideo: lv.trim()}; }
       }
     }
@@ -2246,6 +2374,8 @@ function App(){
       if(d.id !== id) return d;
       const next = {...d, ...patch};
       if(patch.status && next.changeReq && !/^Changes/.test(next.status)) delete next.changeReq;   // changes addressed → pill comes off
+      if(patch.status && next.approved && !isReviewStage(next.status) && next.status !== 'Delivered') delete next.approved;
+      if(patch.status && patch.status !== d.status) next.stAt = new Date().toISOString();
       if(patch.status === 'Delivered' && !next.deliveredDate) next.deliveredDate = today();
       if(patch.status && patch.status !== 'Delivered') next.deliveredDate = '';
       if(patch.shootDate && d.status === 'Booked' && !patch.status) next.status = 'Scheduled';
@@ -2313,6 +2443,68 @@ function App(){
       if(c3 && c3.id && (c3.hubKey || c3.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c3.id), 700);
     }
   };
+  const updateDeliverableRef = React.useRef(null); updateDeliverableRef.current = updateDeliverable;
+  // 🤫 record-keeping only: mark old work delivered without messaging anyone
+  const quietDeliver = (ids, date) => {
+    const set = new Set(ids); const when = date || today();
+    setDb(p => ({...p, deliverables: p.deliverables.map(d => set.has(d.id) ? {...d, status: 'Delivered', shootDate: d.shootDate || when, deliveredDate: d.deliveredDate || when, stAt: new Date().toISOString()} : d)}));
+    logActivity(`Marked ${ids.length} older deliverable${ids.length !== 1 ? 's' : ''} delivered (no messages sent)`);
+    showToast(`✓ ${ids.length} marked delivered — nothing was sent to the agent`);
+  };
+  // 🏡 a listing-page design was approved → start (or update) its monthly hosting record. Idempotent per delivery.
+  const applySiteApproval = (dref, lay, ts) => {
+    const info = LISTING_LAYOUTS[lay]; if(!dref || !info) return;
+    const at = new Date(ts || Date.now()).getTime() || Date.now();
+    setDb(p => {
+      const d = p.deliverables.find(x => x.id === dref); if(!d) return p;
+      const o = p.orders.find(x => x.id === d.orderId) || {};
+      const list = p.recurring || []; const ex = list.find(r => r.dref === dref);
+      if(ex && (ex.layout === lay || +(ex.at || 0) >= at)) return p;
+      const rec = {id: ex ? ex.id : uid(), dref, clientId: o.clientId || '', layout: lay, name: info.name, tier: info.tier, price: info.price,
+        label: o.project || d.name || 'Listing page', start: ex ? ex.start : today(), lastBilled: ex ? ex.lastBilled : '', active: true, at};
+      return {...p, recurring: ex ? list.map(r => r.dref === dref ? rec : r) : [...list, rec],
+        activity: [{t: Date.now(), text: `🏡 Listing page approved: ${info.name} for ${rec.label} — ${money(info.price)}/month hosting ${ex ? 'updated' : 'started'}`}, ...(p.activity || [])].slice(0, 1000)};
+    });
+  };
+  // ✅ approve a listing-design request straight from the Command Centre (same marker the listing page posts)
+  const approveSiteRequest = async (sub) => {
+    const body = String(sub.body || ''); const m = body.match(/^\[\[SITE-REQ:([a-z]+)\]\]/); if(!m) return null;
+    const lay = m[1]; const info = LISTING_LAYOUTS[lay] || {name: lay, price: 0};
+    const um = body.match(/[?&]r=([^&\s#]+)/);
+    const dref = db.deliverables.some(d => d.id === sub.ref) ? sub.ref : (um ? decodeURIComponent(um[1]) : '');
+    const d = db.deliverables.find(x => x.id === dref);
+    if(!d || !db.settings.inboxUrl){ uiAlert('Couldn\u2019t tell which delivery this request is for — open the page from the message and approve it there.'); return null; }
+    const o = db.orders.find(x => x.id === d.orderId) || {}; const c = db.clients.find(x => x.id === o.clientId) || {};
+    if(!await uiConfirm(`Approve the ${info.name} design for ${o.project || d.name}?\n\nThis unlocks publishing on ${(c.name || 'the agent').split(' ')[0]}\u2019s page and starts ${money(info.price)}/month hosting on their account.`, {title: '🏡 Listing page', ok: '✅ Approve ' + info.name})) return null;
+    try{
+      await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: dref, project: sub.ref === dref ? sub.project : (o.project || ''), dname: sub.ref === dref ? sub.dname : (d.name || ''),
+        who: 'Reel Estate Media', from: 'jag', body: `[[SITE-OK:${lay}]] ✅ Your ${info.name} design is approved — Sign-in mode and publishing are now unlocked on your page.`})});
+      const hk = c.hubKey || c.hubId;
+      if(hk) fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk), project: (c.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag',
+        body: `✅ Your ${info.name} listing page for \u201C${o.project || d.name}\u201D is approved — open it and tap 🚀 Publish to get your live link.`})}).catch(() => {});
+      applySiteApproval(dref, lay, Date.now());
+      showToast(`✅ ${info.name} approved — ${money(info.price)}/month hosting started`);
+      return dref;
+    }catch(e){ uiAlert('Couldn\u2019t reach the inbox — check the connection and try again.'); return null; }
+  };
+  // 💵 this month's hosting → its own billing-only order (no deliverables), ready to invoice
+  const billRecurring = async (recId) => {
+    const r = (db.recurring || []).find(x => x.id === recId); if(!r) return;
+    const c = db.clients.find(x => x.id === r.clientId) || {}; const ym = today().slice(0, 7);
+    const ans = await uiDialog({title: '🏡 ' + r.name + ' listing page — ' + (c.name || 'client'), message: `${r.label}\n${money(r.price)}/month hosting · running since ${fmtDate(r.start)}`, ok: false, fields: [{key: 'a', type: 'choice', options: [
+      {value: 'bill', label: `💵 Bill ${money(r.price)} for ${monthLabel(ym)}`},
+      {value: 'skip', label: 'Skip this month (don\u2019t charge)'},
+      {value: 'stop', label: 'Page taken down — stop billing'}]}]});
+    if(!ans) return;
+    if(ans.a === 'stop'){ setDb(p => ({...p, recurring: (p.recurring || []).map(x => x.id === recId ? {...x, active: false, ended: today()} : x)})); showToast('Listing-page billing stopped'); return; }
+    if(ans.a === 'skip'){ setDb(p => ({...p, recurring: (p.recurring || []).map(x => x.id === recId ? {...x, lastBilled: ym} : x)})); showToast('Skipped ' + monthLabel(ym)); return; }
+    const line = `Listing page hosting — ${r.name} (${monthLabel(ym)})`;
+    const order = {id: uid(), clientId: r.clientId, project: 'Listing page — ' + r.label, date: today(), hst: true, notes: '', payment: 'unpaid', billingOnly: true,
+      items: [{serviceId: '', custom: true, billing: true, per: 0, name: line, group: line, qty: 1, price: r.price, retail: r.price}]};
+    setDb(p => ({...p, orders: [order, ...p.orders], recurring: (p.recurring || []).map(x => x.id === recId ? {...x, lastBilled: ym} : x)}));
+    logActivity(`💵 Billed ${money(r.price)} listing-page hosting (${r.name}) to ${c.name || 'client'} for ${monthLabel(ym)}`);
+    showToast(`💵 ${money(r.price)} added for ${monthLabel(ym)}`, [{label: '🖨 Invoice', fn: () => setPrintDoc({kind: 'order', orderId: order.id})}]);
+  };
   // 🔧 Agent sent review feedback → the card moves itself to the matching Changes stage and carries the request
   const applyFeedback = (dref, body, ts, who) => {
     if(!dref) return;
@@ -2326,6 +2518,23 @@ function App(){
     setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? {...x, status: nxt, changeReq: {t: txt.slice(0, 2000), ts: String(ts || new Date().toISOString()), w: who || ''}} : x)}));
     logActivity('🔧 ' + (who || 'Agent') + ' requested changes on ' + dlTitle(d) + (nxt !== d.status ? ' → ' + nxt : ''));
     showToast('🔧 ' + (who || 'Agent') + ' asked for changes on ' + dlTitle(d) + ' — card moved to ' + STATUS_LABEL(nxt));
+  };
+  // ✅ Agent approved the cut in the review room. If the finals are already in place (photos with a
+  // link, or a video with its high-quality master attached) the piece delivers itself; otherwise it's
+  // flagged "approved" and waits in the Needs-you queue for one tap.
+  const applyApproval = (dref, ts, who) => {
+    if(!dref) return;
+    const d = db.deliverables.find(x => x.id === dref);
+    if(!d || !isReviewStage(d.status)) return;
+    const t = String(ts || ''); const ms = v => { const n = new Date(v).getTime(); return isNaN(n) ? 0 : n; };
+    if(d.approved && ms(d.approved.ts) >= ms(t)) return;            // already recorded
+    if(d.stAt ? !(ms(t) > ms(d.stAt)) : (d.reviewDate && ms(t) < ms(d.reviewDate + 'T00:00'))) return;   // approval predates this review round
+    const finalsReady = isVideoDl(d) ? !!String(d.linkHQ || '').trim() : !!(d.dlvFolder || String(d.link || '').trim());
+    setDb(p => ({...p, deliverables: p.deliverables.map(x => x.id === dref ? {...x, approved: {ts: t || new Date().toISOString(), w: who || ''}} : x)}));
+    logActivity('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d));
+    const fresh = Date.now() - ms(t) < 3 * 86400000;   // older approvals wait for one tap rather than messaging the agent out of the blue
+    if(finalsReady && fresh) setTimeout(() => updateDeliverableRef.current && updateDeliverableRef.current(dref, {status: 'Delivered', _auto: true}), 400);
+    else showToast('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (finalsReady ? ' — one tap to deliver' : ' — add the final and deliver') + ' (it\u2019s in your Needs-you queue)');
   };
   // 📝 Agent filled the shoot brief → drop it straight into this deliverable's brief (idempotent per submission time).
   const applyAgentBrief = (dref, cc, ts, who) => {
@@ -2412,12 +2621,12 @@ function App(){
   const importDataFile = (e) => {
     const f = e.target.files[0]; if(!f) return;
     const r = new FileReader();
-    r.onload = () => { try {
+    r.onload = async () => { try {
         const d = JSON.parse(r.result);
         if(!d.clients || !d.orders) throw new Error('bad');
-        if(confirm('Replace ALL current data with this backup? This cannot be undone.'))
+        if(await uiConfirm('Replace ALL current data with this backup? This cannot be undone.', {ok: 'Replace everything', danger: true}))
           setDb({...seed, ...d, settings: {...seed.settings, ...(d.settings || {})}});
-      } catch(err){ alert("That file doesn't look like a pipeline backup."); } };
+      } catch(err){ uiAlert("That file doesn't look like a pipeline backup."); } };
     r.readAsText(f); e.target.value = '';
   };
   const updateClient = (id, patch) => { setDb(p => ({...p, clients: p.clients.map(c => c.id === id ? {...c, ...patch} : c)})); setEditingClient(null);
@@ -2617,8 +2826,8 @@ function App(){
     finishBooking(bk, null);
     approveBookingHub(bk, oAt ? oAt.clientId : null);
   };
-  const deleteOrder = (id) => {
-    if(!confirm('Delete this order and all its deliverables?')) return;
+  const deleteOrder = async (id) => {
+    if(!await uiConfirm('Delete this order and all its deliverables?', {ok: 'Delete order', danger: true})) return;
     const order = db.orders.find(o => o.id === id);
     const ds = db.deliverables.filter(d => d.orderId === id);
     setDb(p => ({...p, orders: p.orders.filter(o => o.id !== id), deliverables: p.deliverables.filter(d => d.orderId !== id)}));
@@ -2635,7 +2844,7 @@ function App(){
 
   /* ---- stats ---- */
   const stats = useMemo(() => {
-    const active = db.orders.filter(o => orderProgress(o.id).done < orderProgress(o.id).total || orderProgress(o.id).total === 0);
+    const active = db.orders.filter(o => orderProgress(o.id).done < orderProgress(o.id).total || (orderProgress(o.id).total === 0 && !o.billingOnly));
     const remaining = db.deliverables.filter(d => d.status !== 'Delivered').length;
     const mo = today().slice(0,7);
     const deliveredThisMo = db.deliverables.filter(d => d.status === 'Delivered').length;
@@ -2663,19 +2872,19 @@ function App(){
           </button>)}
       </nav>
       <div className="flex hdr-actions" style={{gap:8}}>
+        {(() => { let cu = 0, vw = 0; try{ cu = +localStorage.getItem('rem_chat_unread_v1') || 0; vw = +localStorage.getItem('rem_vault_warn_v1') || 0; }catch(e){}
+          // Hand the chat page your inbox token so it opens straight into the conversations.
+          const handoff = () => { try{ if(db.settings.inboxToken) localStorage.setItem('rem_admin_token_v1', db.settings.inboxToken); }catch(e){} };
+          return <nav className="appsw" aria-label="Studio apps">
+            <a className="on" href="index.html" aria-current="page">⌂ Command Centre</a>
+            <a href="studio-chat.html" onClick={handoff} title="Chat with your agents">💬 Chat{cu > 0 && <i>{cu}</i>}</a>
+            <a href="vault.html" title="The Vault — every agent and everything you've delivered them">🗄 Vault{vw > 0 && <i className="w">{vw}</i>}</a>
+          </nav>; })()}
         <div className={'utilrow' + (utilOpen ? ' open' : '')}>
-          <button className="btn ghost sm" title="Chat with your agents — opens in a new tab, already unlocked"
-            style={{borderColor:'var(--amber)', color:'var(--amber)'}}
-            onClick={() => {
-              // Hand the chat page your inbox token so it opens straight into the conversations.
-              try{ if(db.settings.inboxToken) localStorage.setItem('rem_admin_token_v1', db.settings.inboxToken); }catch(e){}
-              window.open('studio-chat.html', '_blank');
-            }}>💬 Chat</button>
           <button className="btn ghost sm" title="Your public testimonial wall — what visitors see" onClick={() => window.open('wall.html', '_blank')}>⭐ Wall</button>
           <button className="btn ghost sm" title="Cloud backups — auto-saved to your own Google Drive" onClick={() => setShowCloud(true)}
             style={cloud.status === 'err' ? {borderColor:'var(--red)', color:'var(--red)'} : {}}>
             {(db.settings.inboxUrl && db.settings.inboxToken) ? (cloud.status === 'saving' ? '⛅ …' : cloud.status === 'err' ? '⛅ ⚠' : cloud.last ? '⛅ ✓' : '⛅ ·') : '⛅'}</button>
-          <a className="btn ghost sm" href="vault.html" title="The Vault — every agent and everything you've delivered them">🗄 Vault</a>
           <button className="btn ghost sm" title="Lock the app" onClick={() => { sessionStorage.removeItem('rem_unlocked'); setLocked(true); }}>🔒</button>
           <button className="btn ghost sm" title="Download a backup of all data" onClick={exportData}>⬇ Backup{backupDue ? ' ●' : ''}</button>
           <label className="btn ghost sm" style={{cursor:'pointer'}} title="Restore from a backup file">⬆ Restore<input type="file" accept=".json" style={{display:'none'}} onChange={importDataFile}/></label>
@@ -2695,13 +2904,13 @@ function App(){
       </div>
     </div>}
     {view === 'dashboard' && <Dashboard db={db} stats={stats} clientName={clientName} orderProgress={orderProgress}
-        openOrderDetail={openOrderDetail} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback} />}
+        openOrderDetail={openOrderDetail} updateDeliverable={updateDeliverable} setPrintDoc={setPrintDoc} openNewBooking={() => setShowNewOrder(true)} updateSettings={updateSettings} updateOrder={updateOrder} openShootMode={setShootModeId} markSubHandled={markSubHandled} goCalendar={() => {setView('calendar'); setOpenOrder(null);}} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback} applyApproval={applyApproval} applySiteApproval={applySiteApproval} approveSiteRequest={approveSiteRequest} reconcileOrder={reconcileOrder} quietDeliver={quietDeliver} billRecurring={billRecurring} />}
     {view === 'pipeline' && <Pipeline db={db} clientName={clientName} moveStatus={moveStatus} pipeClient={pipeClient} setPipeClient={setPipeClient} updateDeliverable={updateDeliverable} splitDeliverable={splitDeliverable} openOrderDetail={openOrderDetail} updateSettings={updateSettings} />}
     {view === 'orders' && !openOrder && <Orders db={db} clientName={clientName} orderProgress={orderProgress} setOpenOrder={setOpenOrder} openNewBooking={() => setShowNewOrder(true)} />}
     {view === 'clients' && <ClientsPage db={db} setShowNewClient={setShowNewClient} orderProgress={orderProgress} setEditingClient={setEditingClient} pushHub={pushHub} showToast={showToast} />}
     {view === 'orders' && openOrder && <OrderDetail db={db} id={openOrder} clientName={clientName} clientTier={clientTier}
         orderDeliverables={orderDeliverables} orderProgress={orderProgress} updateDeliverable={updateDeliverable} deleteDeliverable={deleteDeliverable}
-        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom === 'chat'){ setCameFrom(null); if(history.length > 1) history.back(); else window.location.assign('studio-chat.html'); return; } if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({chat:'Chat', dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} reconcileOrder={reconcileOrder} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
+        updateOrder={updateOrder} deleteOrder={deleteOrder} back={() => {setOpenOrder(null); setFocusDl(null); if(cameFrom === 'chat'){ setCameFrom(null); if(history.length > 1) history.back(); else window.location.assign('studio-chat.html'); return; } if(cameFrom){ setView(cameFrom); setCameFrom(null); }}} backLabel={cameFrom ? ({chat:'Chat', dashboard:'Home', calendar:'Calendar', pipeline:'Pipeline', review:'Review', clients:'Clients', money:'Money'}[cameFrom] || null) : null} moveStatus={moveStatus} focusDl={focusDl} setPrintDoc={setPrintDoc} rebookOrder={rebookOrder} addOrderItem={addOrderItem} addCustomItem={addCustomItem} removeOrderItem={removeOrderItem} updateOrderItem={updateOrderItem} reconcileOrder={reconcileOrder} updateSettings={updateSettings} splitDeliverable={splitDeliverable} combineDeliverable={combineDeliverable} uncombineDeliverable={uncombineDeliverable} markImported={markImported} pushHub={pushHub} />}
     {view === 'review' && <ReviewTab db={db} clientName={clientName} pushHub={pushHub}
         openOrderDetail={openOrderDetail} showToast={showToast} />}
     {view === 'calendar' && <>
@@ -2715,7 +2924,14 @@ function App(){
     {view === 'money' && <Money db={db} clientName={clientName} updateOrder={updateOrder} updateSettings={updateSettings} stats={stats} setPrintDoc={setPrintDoc} addExpense={addExpense} deleteExpense={deleteExpense} />}
 
     {showNewOrder && <NewOrderModal db={db} onClose={() => setShowNewOrder(false)} onSave={addOrder} addClient={addClient} />}
-    {showNewClient && <NewClientModal db={db} onClose={() => setShowNewClient(false)} onSave={addClient} />}
+    {showNewClient && <NewClientModal db={db} onClose={() => setShowNewClient(false)} onSave={(c, opts) => {
+      const isNew = !(findAgentDup(db, c) && !(opts && opts.force));
+      const cid = addClient(c, opts);
+      if(isNew && cid) setTimeout(() => setWelcomeId(cid), 350);   // 👋 walk through hub link → welcome → profile
+    }} />}
+    {welcomeId && (() => { const wc = db.clients.find(x => x.id === welcomeId);
+      return wc ? <WelcomeAgentModal client={wc} db={db} pushHub={pushHub} onClose={() => setWelcomeId(null)}
+        onEditProfile={() => { setWelcomeId(null); setEditingClient(wc); }} onBook={() => { setWelcomeId(null); setShowNewOrder(true); }} /> : null; })()}
     {editingClient && <EditClientModal client={editingClient} inboxUrl={db.settings.inboxUrl || ''} onClose={() => setEditingClient(null)} onSave={patch => updateClient(editingClient.id, patch)} onDelete={deleteClient} />}
     {printDoc && <DocModal doc={printDoc} db={db} onClose={() => setPrintDoc(null)} updateSettings={updateSettings} />}
     {shootModeId && (() => {
@@ -3006,7 +3222,7 @@ function WeatherBoard({db, updateSettings}){
   };
   useEffect(() => { load(); const t = setInterval(load, 30 * 60 * 1000); return () => clearInterval(t); }, [homeBase, shootLocs.join('|')]);
 
-  const editHome = () => { const v = prompt('Home base city for weather:', homeBase); if(v && v.trim()) updateSettings({homeBase: v.trim()}); };
+  const editHome = async () => { const v = await uiPrompt('Home base city for weather:', homeBase); if(v && v.trim()) updateSettings({homeBase: v.trim()}); };
 
   if(wx.loading) return <div className="wxstrip"><span className="wxchip faint">Fetching weather…</span></div>;
   if(wx.error) return <div className="wxstrip"><span className="wxchip clickable" onClick={editHome}>⚠ {wx.error}</span><button className="btn ghost sm" onClick={load}>Retry</button></div>;
@@ -3180,7 +3396,7 @@ function ReviewTab({db, clientName, pushHub, openOrderDetail, showToast}){
       try {
         await fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id, project: o.project || d.group, dname: dlTitle(d), who: 'Jag', from: 'jag', body})});
         setTimeout(load, 900);
-      } catch(e){ alert('Send failed — check connection.'); }
+      } catch(e){ uiAlert('Send failed — check connection.'); }
     };
     return (<>
       {header(dlTitle(d), () => setDlId(null))}
@@ -3225,7 +3441,7 @@ function ReviewTab({db, clientName, pushHub, openOrderDetail, showToast}){
       {header((c ? c.name : 'Agent'), () => setCid(null))}
       <div className="flex" style={{marginBottom:10}}>
         <button className="btn ghost sm" title="Copy this agent's permanent portal link — all their projects, one URL, no login"
-          onClick={() => { const u = pushHub(cid); if(u){ copyText(u); showToast('🔗 Agent hub link copied — ' + u); } else alert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); }}>
+          onClick={() => { const u = pushHub(cid); if(u){ copyText(u); showToast('🔗 Agent hub link copied — ' + u); } else uiAlert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); }}>
           🏠 Copy agent hub link</button>
       </div>
       <div className="card">
@@ -3351,12 +3567,60 @@ function WeekStrip({db, goCalendar}){
     </div>);
 }
 
-function ActionQueue({db, openOrderDetail, goCalendar, updateOrder}){
+function ActionQueue({db, openOrderDetail, goCalendar, updateOrder, updateDeliverable, reconcileOrder, quietDeliver, billRecurring, setPrintDoc}){
   const [showAll, setShowAll] = useState(false);
   const td = today();
   const ordOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const clOf = d => db.clients.find(c => c.id === ordOf(d).clientId) || {};
+  const firstOf = c => ((c && c.name) || 'Client').split(' ')[0];
   const items = [];
+  // ✅ the agent approved — one tap delivers the finals
+  db.deliverables.filter(d => d.approved && isReviewStage(d.status)).forEach(d => {
+    items.push({pri: 0, icon: '✅', txt: `${firstOf(clOf(d))} approved ${dlTitle(d)} — deliver the finals`, btn: '✓ Deliver', act: () => updateDeliverable(d.id, {status: 'Delivered'})});
+  });
+  // 🧩 quantities call for more deliverables than the order has
+  db.orders.forEach(o => {
+    const short = orderShortfall(db, o).reduce((n, g) => n + Math.max(0, g.short), 0);
+    if(short > 0 && o.date && daysSince(o.date) <= 45) items.push({pri: 1, icon: '🧩', txt: `\u201C${o.project || 'Order'}\u201D is ${short} deliverable${short !== 1 ? 's' : ''} short of its quantities`, btn: '＋ Add ' + short, act: () => reconcileOrder(o.id)});
+  });
+  // 🏡 listing-page hosting due this month
+  const ym = td.slice(0, 7);
+  (db.recurring || []).filter(r => r.active !== false && r.lastBilled !== ym).forEach(r => {
+    const c = db.clients.find(x => x.id === r.clientId) || {};
+    items.push({pri: 1, icon: '🏡', txt: `${firstOf(c)}: ${r.name} listing page — ${money(r.price)} hosting due for ${monthLabel(ym)}`, btn: '💵 Bill it', act: () => billRecurring(r.id)});
+  });
+  // 💵 direct clients with work delivered (or a week old) that hasn't been invoiced
+  db.orders.forEach(o => {
+    if(o.payment !== 'unpaid') return;
+    const c = db.clients.find(x => x.id === o.clientId); if(!c || isPinnacle(c)) return;
+    const ods = db.deliverables.filter(d => d.orderId === o.id);
+    if(!(ods.some(d => d.status === 'Delivered') || o.billingOnly || (o.date && daysSince(o.date) >= 7))) return;
+    const tot = orderTotals(o).total; if(!(tot > 0)) return;
+    items.push({pri: 2, icon: '💵', txt: `${firstOf(c)}: \u201C${o.project || 'Order'}\u201D — ${money(tot)} not invoiced yet`, btn: '🖨 Invoice', act: () => {
+      setPrintDoc({kind: 'order', orderId: o.id}); updateOrder(o.id, {payment: 'invoiced'});
+      showToast('Marked Invoiced', [{label: 'Undo', fn: () => updateOrder(o.id, {payment: 'unpaid'})}]); }});
+  });
+  // 💤 booked a month ago and still "To Schedule" — delivered already, or genuinely open?
+  db.orders.forEach(o => {
+    if(!o.date || daysSince(o.date) < 30 || (o.staleSnooze && daysSince(o.staleSnooze) < 30)) return;
+    const stale = db.deliverables.filter(d => d.orderId === o.id && d.status === 'Booked' && !d.shootDate);
+    if(!stale.length) return;
+    const c = db.clients.find(x => x.id === o.clientId) || {};
+    items.push({pri: 3, icon: '💤', txt: `${firstOf(c)}: ${stale.length} piece${stale.length !== 1 ? 's' : ''} of \u201C${o.project || 'order'}\u201D still To Schedule after ${daysSince(o.date)} days`, btn: 'Resolve', act: async () => {
+      const r = await uiDialog({title: 'Delivered already, or still open?', message: `${stale.length} deliverable${stale.length !== 1 ? 's' : ''} on \u201C${o.project || 'this order'}\u201D (booked ${fmtDate(o.date)}) ${stale.length !== 1 ? 'are' : 'is'} still marked To Schedule.`, ok: false,
+        fields: [{key: 'a', type: 'choice', options: [
+          {value: 'done', label: `✓ Already delivered — mark ${stale.length === 1 ? 'it' : 'all ' + stale.length} delivered (nothing is sent to the agent)`},
+          {value: 'open', label: 'Still open — remind me in 30 days'},
+          {value: 'view', label: 'Open the order'}]}]});
+      if(!r) return;
+      if(r.a === 'done') quietDeliver(stale.map(d => d.id), o.date);
+      else if(r.a === 'open') updateOrder(o.id, {staleSnooze: td});
+      else openOrderDetail(o.id, stale[0].id);
+    }});
+  });
+  // ⚠ recently delivered with no files on record
+  (() => { const bare = db.deliverables.filter(d => d.status === 'Delivered' && !d.dlvFolder && !String(d.link || '').trim() && d.deliveredDate && daysSince(d.deliveredDate) <= 60);
+    if(bare.length) items.push({pri: 4, icon: '⚠', txt: `${bare.length} delivered piece${bare.length !== 1 ? 's have' : ' has'} no files link — the agent can\u2019t open ${bare.length !== 1 ? 'them' : 'it'}`, btn: bare.length === 1 ? 'Open →' : '🗄 Vault', act: () => bare.length === 1 ? openOrderDetail(bare[0].orderId, bare[0].id) : window.location.assign('vault.html')}); })();
   db.deliverables.filter(isOverdue).forEach(d => {
     const late = dayDiff(dueDateOf(d), td);
     items.push({pri: 0, icon: '🔴', txt: `${dlTitle(d)} is ${late}d late`, btn: 'Open →', act: () => openOrderDetail(d.orderId, d.id)});
@@ -3387,7 +3651,7 @@ function ActionQueue({db, openOrderDetail, goCalendar, updateOrder}){
   db.orders.forEach(o => {
     const waiting = db.deliverables.filter(d => d.orderId === o.id && d.status === 'Booked');
     const hasUpcoming = db.deliverables.some(d => d.orderId === o.id && d.shootDate && d.shootDate >= td);
-    if(waiting.length >= 1 && !hasUpcoming){
+    if(waiting.length >= 1 && !hasUpcoming && !(o.date && daysSince(o.date) >= 30)){   // month-old ones get the 💤 "delivered or still open?" check instead
       const c = db.clients.find(x => x.id === o.clientId) || {};
       items.push({pri: 4, icon: '💳', txt: `${(c.name || 'Client').split(' ')[0]}: ${waiting.length} credit${waiting.length > 1 ? 's' : ''} unscheduled`, btn: 'Open →', act: () => openOrderDetail(o.id, waiting[0].id)});
     }
@@ -3411,16 +3675,17 @@ function ActionQueue({db, openOrderDetail, goCalendar, updateOrder}){
           body: '🎉 ' + first + ' — that wraps \u201C' + o.project + '\u201D, everything\u2019s delivered! The agents who win keep content rolling every month. Tap \uD83D\uDCC5 Book on your hub and let\u2019s lock in your next package before the calendar fills. \uD83C\uDFAC'})}).catch(() => {});
         updateOrder(o.id, {rebookOffered: new Date().toISOString()});
       } else {
-        alert('No hub chat for ' + (c.name || 'this client') + ' yet — add their hub key on the Clients tab first.');
+        uiAlert('No hub chat for ' + (c.name || 'this client') + ' yet — add their hub key on the Clients tab first.');
       }
     }});
   });
   const ranked = items.sort((a, b) => a.pri - b.pri);
+  try{ localStorage.setItem('rem_needs_count_v1', String(ranked.length)); }catch(e){}
   if(ranked.length === 0) return null;
-  const top = showAll ? ranked.slice(0, 14) : ranked.slice(0, 5);
+  const top = showAll ? ranked.slice(0, 30) : ranked.slice(0, 5);
   return (
-    <div className="card">
-      <h3 style={{fontSize:17, marginBottom:6}}>⚡ Action Queue</h3>
+    <div className="card" data-needs-you>
+      <div className="flex" style={{marginBottom:6}}><h3 style={{fontSize:17, marginBottom:0}}>⚡ Needs you</h3><span className="pill unpaid" title="Things waiting on you — each has one action">{ranked.length}</span></div>
       {top.map((it, i) => (
         <div key={i} className="flex" style={{padding:'8px 0', borderTop: i ? '1px solid var(--line)' : 'none'}}>
           <span>{it.icon}</span>
@@ -3467,7 +3732,7 @@ function WinBack({db}){
     </div>);
 }
 
-function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating, applyFeedback}){
+function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updateDeliverable, setPrintDoc, openNewBooking, updateSettings, updateOrder, openShootMode, markSubHandled, goCalendar, applyAgentBrief, applyRating, applyFeedback, applyApproval, applySiteApproval, approveSiteRequest, reconcileOrder, quietDeliver, billRecurring}){
   const [showArchive, setShowArchive] = useState(false);
   const orderOf = d => db.orders.find(o => o.id === d.orderId) || {};
   const td = today();
@@ -3477,7 +3742,7 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
     .flatMap(d => promiseMet(d) ? [] : dueDatesOf(d).map(x => ({d, date: x.date, kind: x.kind})))
     .filter(x => x.date <= in48)
     .sort((a,b) => a.date.localeCompare(b.date));
-  const activeOrders = db.orders.filter(o => { const p = orderProgress(o.id); return p.done < p.total || p.total === 0; });
+  const activeOrders = db.orders.filter(o => { const p = orderProgress(o.id); return p.done < p.total || (p.total === 0 && !o.billingOnly); });
   const upcoming = db.deliverables.filter(d => d.shootDate && d.status !== 'Delivered' && d.shootDate > td)
     .sort((a,b) => a.shootDate.localeCompare(b.shootDate)).slice(0,6);
   const dueLater = db.deliverables
@@ -3513,7 +3778,8 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
       <DigestStrip db={db}/>
       <WeekStrip db={db} goCalendar={goCalendar}/>
     </div>
-    <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar}updateOrder={updateOrder} />
+    <ActionQueue db={db} openOrderDetail={openOrderDetail} goCalendar={goCalendar} updateOrder={updateOrder} updateDeliverable={updateDeliverable} reconcileOrder={reconcileOrder} quietDeliver={quietDeliver} billRecurring={billRecurring} setPrintDoc={setPrintDoc} />
+    <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback} applyApproval={applyApproval} applySiteApproval={applySiteApproval} approveSiteRequest={approveSiteRequest}/>
     <WinBack db={db}/>
     <div className="card today">
       <div className="flex" style={{marginBottom:10}}>
@@ -3522,7 +3788,6 @@ function Dashboard({db, stats, clientName, orderProgress, openOrderDetail, updat
         {todaysShoots.length > 0 && <button className="btn ghost sm" onClick={() => setPrintDoc({kind:'runsheet', date: td})}>🖨 Run Sheet</button>}
       </div>
       <WxBoundary><WeatherBoard db={db} updateSettings={updateSettings}/></WxBoundary>
-      <SubmissionsInbox db={db} updateSettings={updateSettings} updateDeliverable={updateDeliverable} openOrderDetail={openOrderDetail} markHandled={markSubHandled} applyAgentBrief={applyAgentBrief} applyRating={applyRating} applyFeedback={applyFeedback}/>
       <NextShootCountdown db={db} openOrderDetail={openOrderDetail}/>
       {todaysShoots.length === 0 && dueSoon.length === 0 && agedUnpaid.length === 0 && bdaySoon.length === 0 && feedbackDue.length === 0 &&
         <div className="empty">Clear runway — nothing shooting today, nothing due in the next 48 hours.
@@ -3946,10 +4211,10 @@ function Pipeline({db, clientName, moveStatus, pipeClient, setPipeClient, openOr
       <h3 className="serif" style={{fontSize:21}}>Deliverable Pipeline</h3>
       <span className="spacer"></span>
       <button className="btn ghost sm" title="Delivery promise — days after the shoot that photos / videos are due. Powers every countdown pill and late flag."
-        onClick={() => {
-          const ph = prompt('Photos due how many days after the shoot?', String(TAT.photo));
+        onClick={async () => {
+          const ph = await uiPrompt('Photos due how many days after the shoot?', String(TAT.photo));
           if(ph === null) return;
-          const vi = prompt('Videos due how many days after the shoot?', String(TAT.video));
+          const vi = await uiPrompt('Videos due how many days after the shoot?', String(TAT.video));
           if(vi === null) return;
           if(updateSettings) updateSettings({tatPhoto: Math.max(1, +ph || 3), tatVideo: Math.max(1, +vi || 5)});
         }}>⏱ {TAT.photo}d / {TAT.video}d</button>
@@ -4051,7 +4316,7 @@ function Orders({db, clientName, orderProgress, setOpenOrder, openNewBooking}){
 }
 
 /* ---------------- Order detail ---------------- */
-function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, backLabel, focusDl, setPrintDoc, rebookOrder, addOrderItem, removeOrderItem, updateOrderItem, reconcileOrder, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
+function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderProgress, updateDeliverable, deleteDeliverable, updateOrder, deleteOrder, back, backLabel, focusDl, setPrintDoc, rebookOrder, addOrderItem, addCustomItem, removeOrderItem, updateOrderItem, reconcileOrder, updateSettings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, pushHub}){
   const [picker, setPicker] = useState('');
   const o = db.orders.find(x => x.id === id);
   if(!o) return null;
@@ -4060,13 +4325,13 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
   const ds = orderDeliverables(id);
   const groups = [...new Set(ds.map(d => d.group))];
   // 🎬 reel-credit tally: slots booked vs credits currently allocated (combining changes the count, not the total)
-  const reelBooked = (o.items || []).reduce((a, i) => { const s = svc(i.serviceId); return a + (s && s.unit === 'Reel' ? (s.credits > 1 ? s.credits : 1) * (i.qty || 1) : 0); }, 0);
+  const reelBooked = (o.items || []).reduce((a, i) => { const s = svc(i.serviceId); return a + (s && s.unit === 'Reel' ? (s.credits > 1 ? s.credits : 1) * (i.qty || 1) : (!s && i.unit === 'Reel' ? itemPer(i) * (i.qty || 1) : 0)); }, 0);
   const reelUsed = ds.filter(isReelDl).reduce((a, d) => a + dlCredits(d), 0);
-  const changeClient = (newId) => {
+  const changeClient = async (newId) => {
     if(newId === o.clientId) return;
     const newTier = clientTier(newId);
     const newName = (db.clients.find(c => c.id === newId) || {}).name || 'the new client';
-    const reprice = confirm(`Reassign this order to ${newName}. Also update line-item prices to their rate (${TIER_LABEL[newTier]})?\n\nOK = reprice items · Cancel = keep current prices`);
+    const reprice = await uiConfirm(`Reassign this order to ${newName}. Also update line-item prices to their rate (${TIER_LABEL[newTier]})?`, {title: 'Reassign order', ok: 'Reprice items', cancel: 'Keep current prices'});
     const items = reprice
       ? o.items.map(i => { const s = svc(i.serviceId); return s && !s.tbd ? {...i, price: rateFor(newTier, s), retail: s.retail} : i; })
       : o.items;
@@ -4116,8 +4381,9 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
             <input type="number" min="0" step="5" value={i.price} onChange={e => updateOrderItem(id, ix, {price: +e.target.value || 0})}/>
             <button title="Close" className="x" onClick={() => removeOrderItem(id, ix)}>✕</button>
           </div>))}
-        <select value={picker} onChange={e => { if(e.target.value){ addOrderItem(id, e.target.value); setPicker(''); } }} style={{marginTop:4}}>
+        <select value={picker} onChange={e => { if(e.target.value === '__custom'){ addCustomItem(id); setPicker(''); } else if(e.target.value){ addOrderItem(id, e.target.value); setPicker(''); } }} style={{marginTop:4}}>
           <option value="">＋ Add a service…</option>
+          <option value="__custom">✨ Custom service — your own name, price and deliverables…</option>
           {CATS.map(cat => (
             <optgroup key={cat} label={cat}>
               {CATALOG.filter(s => s.cat === cat).map(s =>
@@ -4231,6 +4497,27 @@ function OrderDetail({db, id, clientName, clientTier, orderDeliverables, orderPr
 }
 
 /* ---------------- Deliverable row + production brief ---------------- */
+/* ⋯ menu — the secondary actions for a row, out of the way until wanted */
+function RowMenu({items}){
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  useEffect(() => {
+    if(!open) return;
+    const h = e => { if(ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const k = e => { if(e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', h); document.addEventListener('keydown', k);
+    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k); };
+  }, [open]);
+  const list = (items || []).filter(Boolean);
+  if(!list.length) return null;
+  return (
+    <span ref={ref} className="rowmenu-wrap">
+      <button className="btn ghost sm" title="More actions" aria-haspopup="menu" aria-expanded={open} style={{padding:'6px 10px'}} onClick={() => setOpen(o => !o)}>⋯</button>
+      {open && <div className="rowmenu" role="menu">
+        {list.map((it, i) => <button key={i} type="button" role="menuitem" className={it.danger ? 'danger' : ''} title={it.title || ''} onClick={() => { setOpen(false); it.act(); }}>{it.label}</button>)}
+      </div>}
+    </span>);
+}
 function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, order, client, siblings, splitDeliverable, combineDeliverable, uncombineDeliverable, markImported, db, updateSettings}){
   const [showImport, setShowImport] = useState(false);
   const [importTxt, setImportTxt] = useState('');
@@ -4317,8 +4604,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
       <span style={{fontWeight:600, fontSize:14}}>{b.topic ? b.topic : d.name}{b.topic && <span className="faint small"> · {d.name}</span>}
         <span className="faint small"> · {MEDIA_LABEL[mediaOf(d)]}</span>{b.orientation && <span className="faint small"> · {b.orientation === 'Vertical' ? '9:16 Vertical' : b.orientation === 'Horizontal' ? '16:9 Horizontal' : '9:16 + 16:9'}</span>}
         {isReelDl(d) && <span className={'pill ' + (dlCredits(d) > 1 ? 'editing' : 'booked')} style={{marginLeft:6}} title={dlCredits(d) > 1 ? `Combined ${dlCredits(d)} credits into one longer reel` : 'One credit · up to 30s'}>{dlCredits(d) > 1 ? `${dlCredits(d)} credits · up to ${reelSeconds(d)}s` : 'up to 30s'}</span>}
-        <button className="btn ghost sm" title="Rename this deliverable" style={{padding:'0 7px', marginLeft:6, fontSize:12}}
-          onClick={() => { const n = prompt('Rename this deliverable', d.name); if(n !== null && n.trim() && n.trim() !== d.name) updateDeliverable(d.id, {name: n.trim()}); }}>✎</button>
+
       </span>
       <select value={d.status} onChange={e => updateDeliverable(d.id, e.target.value === 'Booked' ? {status: 'Booked', shootDate: '', shootTime: ''} : {status: e.target.value})}>
         {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL(s)}</option>)}
@@ -4346,14 +4632,33 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           {prep.done === prep.total ? '✓ Ready' : `Prep ${prep.done}/${prep.total}`}</span>}
       </span>
       <span className="dl-acts">
-        {d.status === 'Delivered' && <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>}
-        {combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && <button className="btn ghost sm" title="Combine — fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)" style={{padding:'0 8px'}} onClick={() => combineDeliverable(d.id)}>⊕ Combine</button>}
-        {uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && <button className="btn ghost sm" title="Uncombine — peel one credit back out into its own reel slot" style={{padding:'0 8px'}} onClick={() => uncombineDeliverable(d.id)}>⊟ Uncombine</button>}
-        <button className="btn ghost sm" title={d.dlvFolder ? 'Upload more files into this project’s Drive folder — same folder, same link, any day' : 'Upload the photo/video files — creates the organized Drive folder (shoot type → agent → date · project), shares it, and saves the link here. Change the status whenever you’re ready.'} style={{padding:'0 8px'}} onClick={() => window.deliverFilesFor && window.deliverFilesFor(d.id)}>📦 Upload</button>
-        <button className="btn ghost sm" title={d.thumb ? 'Replace this piece’s Library thumbnail' : 'Add a Library thumbnail — pick any image, it uploads & shares itself (great for backfilling older deliveries)'} style={{padding:'0 7px'}} onClick={() => window.pickThumbFor && window.pickThumbFor(d.id)}>🖼</button>
-        {d.dlvFolderUrl && <button className="btn ghost sm" title="Open this project’s delivery folder in Drive" style={{padding:'0 7px'}} onClick={() => window.open(d.dlvFolderUrl, '_blank')}>🗂</button>}
+        {(() => {
+          // one primary action for the stage this piece is in — everything else lives under ⋯
+          const st = d.status;
+          const hasFiles = !!(d.dlvFolder || String(d.link || '').trim());
+          const up = () => window.deliverFilesFor && window.deliverFilesFor(d.id);
+          if(st === 'Booked') return <button className="btn sm" data-primary="schedule" title="Pick the shoot date and time" onClick={async () => {
+            const r = await uiDialog({title: '📅 Schedule ' + dlTitle(d), ok: 'Schedule', fields: [
+              {key: 'd', label: 'Shoot date', type: 'date', value: today()}, {key: 't', label: 'Time', type: 'time', value: '16:00'}]});
+            if(r && r.d) updateDeliverable(d.id, {shootDate: r.d, shootTime: r.t || '', status: 'Scheduled'}); }}>📅 Schedule</button>;
+          if(st === 'Scheduled') return <button className="btn sm" data-primary="shot" title="The shoot is done" onClick={() => updateDeliverable(d.id, {status: 'Shot'})}>✓ Mark shot</button>;
+          if(st === 'Shot' || (st === 'Editing' && !hasFiles)) return <button className="btn sm" data-primary="upload" title="Upload the files — creates the Drive folder, saves the link and moves this to Editing" onClick={up}>📦 Upload files</button>;
+          if(st === 'Editing') return <button className="btn sm" data-primary="review" title="Send it to the client — builds the review room link and copies the message" onClick={() => updateDeliverable(d.id, {status: 'Client Review'})}>👀 Send to review</button>;
+          if(st === 'Changes' || st === 'Changes 2') return <button className="btn sm" data-primary="rereview" title="Changes are done — back to the client" onClick={() => updateDeliverable(d.id, {status: st === 'Changes' ? 'Review 2' : 'Review 3'})}>👀 Back to review</button>;
+          if(isReviewStage(st)) return <button className="btn sm" data-primary="deliver" title="Approved — deliver the finals" onClick={() => updateDeliverable(d.id, {status: 'Delivered'})}>✓ Deliver</button>;
+          return <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Msg"/>;
+        })()}
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? 'Close' : 'Brief'}</button>
-        {deleteDeliverable && <button className="btn ghost sm" title="Remove this deliverable" style={{color:'var(--cream-faint)'}} onClick={() => deleteDeliverable(d.id)}>✕</button>}
+        <RowMenu items={[
+          {label: d.dlvFolder ? '📦 Upload more files' : '📦 Upload files', title: 'Upload the photo/video files into this piece’s Drive folder', act: () => window.deliverFilesFor && window.deliverFilesFor(d.id)},
+          d.dlvFolderUrl && {label: '🗂 Open Drive folder', act: () => window.open(d.dlvFolderUrl, '_blank')},
+          {label: d.thumb ? '🖼 Replace Library thumbnail' : '🖼 Add Library thumbnail', act: () => window.pickThumbFor && window.pickThumbFor(d.id)},
+          combineDeliverable && isReelDl(d) && d.status !== 'Delivered' && {label: '⊕ Combine with another credit', title: 'Fold a spare reel credit into this one for a longer reel (e.g. 45s = 2 credits)', act: () => combineDeliverable(d.id)},
+          uncombineDeliverable && isReelDl(d) && dlCredits(d) > 1 && d.status !== 'Delivered' && {label: '⊟ Uncombine one credit', act: () => uncombineDeliverable(d.id)},
+          {label: '✎ Rename', act: async () => { const n = await uiPrompt('', d.name, {title: 'Rename this deliverable'}); if(n !== null && n.trim() && n.trim() !== d.name) updateDeliverable(d.id, {name: n.trim()}); }},
+          d.status !== 'Delivered' && {label: '✉ Copy delivery message', act: () => { copyText(deliveryMsg(d, order, client)); (window.showToast || (() => {}))('✉ Delivery message copied'); }},
+          deleteDeliverable && {label: '✕ Remove deliverable', danger: true, act: () => deleteDeliverable(d.id)}
+        ]}/>
       </span>
       </span>
     </div>
@@ -4382,10 +4687,10 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
             🖼 Headshot proofs are watermarked — their {HEADSHOT_PICKS} picks unlock free.
             {released ? ' ✓ Extras released.' : ' Extras (' + '$' + HEADSHOT_XPRICE + ' each) unlock when you release them after payment.'}
           </span>
-          <button className="btn sm" title="Once you've received payment for the extra images, this unlocks them on the client's review page" onClick={() => {
+          <button className="btn sm" title="Once you've received payment for the extra images, this unlocks them on the client's review page" onClick={async () => {
             const hk = client && (client.hubKey || client.hubId);
-            if(!db.settings.inboxUrl){ alert('Connect the inbox first (Settings) so the release can reach their review page.'); return; }
-            if(!confirm((released ? 'Send the unlock again' : 'Release the extra images') + ' for ' + dlTitle(d) + '?\nThis unlocks the paid extras on ' + ((client && client.name) || 'the client') + "'s review page for download.")) return;
+            if(!db.settings.inboxUrl){ uiAlert('Connect the inbox first (Settings) so the release can reach their review page.'); return; }
+            if(!await uiConfirm((released ? 'Send the unlock again' : 'Release the extra images') + ' for ' + dlTitle(d) + '?\nThis unlocks the paid extras on ' + ((client && client.name) || 'the client') + "'s review page for download.")) return;
             fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: d.id,
               project: ((client && client.name) || '') + ' — ' + chatTitle(d, o), dname:'', who:'Reel Estate Media', from:'jag',
               body: '[[REL]]🔓 Payment received — your extra headshots are unlocked! Open “⭐ My picks” on your review page to download them.'})}).catch(() => {});
@@ -4456,22 +4761,22 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           <div className="flex" style={{gap:8, marginTop:6, flexWrap:'wrap'}}>
             <button className="btn ghost sm" onClick={async () => {
               const hk = client && (client.hubKey || client.hubId);
-              if(!db.settings.inboxUrl || !hk){ alert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
+              if(!db.settings.inboxUrl || !hk){ uiAlert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
               try{
                 const j = await fetch(db.settings.inboxUrl + '?scripts=' + encodeURIComponent(hk)).then(r => r.json());
                 const items = j.items || [];
                 const hit = items.find(x => x.p === (order ? order.project : '') && x.d === dlTitle(d)) || items.find(x => x.d === dlTitle(d));
-                if(hit && hit.t){ setBrief({scriptText: hit.t, script: hit.st === 'Approved' ? 'Approved' : 'Drafted'}); (window.showToast || alert)('⟳ Pulled their latest — ' + hit.st.toLowerCase() + (hit.by === 'studio' ? ' (your own version)' : ' by the agent')); }
-                else (window.showToast || alert)('No script on their hub yet for this deliverable.');
-              }catch(e){ alert("Couldn't reach the inbox — check the connection."); }
+                if(hit && hit.t){ setBrief({scriptText: hit.t, script: hit.st === 'Approved' ? 'Approved' : 'Drafted'}); (window.showToast || uiAlert)('⟳ Pulled their latest — ' + hit.st.toLowerCase() + (hit.by === 'studio' ? ' (your own version)' : ' by the agent')); }
+                else (window.showToast || uiAlert)('No script on their hub yet for this deliverable.');
+              }catch(e){ uiAlert("Couldn't reach the inbox — check the connection."); }
             }}>⟳ Pull latest from their hub</button>
             <button className="btn ghost sm" onClick={() => {
               const txt = (b.scriptText || '').trim();
               const hk = client && (client.hubKey || client.hubId);
-              if(!txt){ alert('Write the script first.'); return; }
-              if(!db.settings.inboxUrl || !hk){ alert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
+              if(!txt){ uiAlert('Write the script first.'); return; }
+              if(!db.settings.inboxUrl || !hk){ uiAlert('This client has no hub yet — tap 🏠 Hub on their client card first.'); return; }
               fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'script', ref: hk, project: order ? order.project : (d.group || ''), dname: dlTitle(d), who: 'Reel Estate Media', from: 'jag', body: JSON.stringify({t: txt, st: b.script === 'Approved' ? 'Approved' : 'Drafted', by: 'studio'})})}).catch(() => {});
-              (window.showToast || alert)('📤 Script sent to their hub — they can read, tweak or approve it there.');
+              (window.showToast || uiAlert)('📤 Script sent to their hub — they can read, tweak or approve it there.');
             }}>📤 Send to their hub</button>
           </div>
         </div>
@@ -4549,10 +4854,10 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
           <div className="flex" style={{gap:6, marginTop:6, flexWrap:'wrap'}}>
             <CopyBtn text={reviewMsg(d, order, client)} label="✉ Review message"/>
             <CopyBtn text={deliveryMsg(d, order, client)} label="✉ Delivery message"/>
-            <button className="btn ghost sm" onClick={() => {
+            <button className="btn ghost sm" onClick={async () => {
               let base = db.settings.briefFormUrl;
               if(!base){
-                base = prompt('One-time setup — where is brief-form.html hosted?\n(e.g. https://cloudixc.github.io/brief-form.html — I gave you this file to upload.)', 'https://');
+                base = await uiPrompt('One-time setup — where is brief-form.html hosted?\n(e.g. https://cloudixc.github.io/brief-form.html — I gave you this file to upload.)', 'https://');
                 if(!base || base === 'https://') return;
                 updateSettings({briefFormUrl: base.trim()});
               }
@@ -4581,17 +4886,17 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               window.open(u, '_blank');
             }}>🔗 Copy + open form link</button>
             {db.settings.briefFormUrl &&
-              <button className="btn ghost sm" title="Change hosted form URL" onClick={() => {
-                const v = prompt('Hosted form URL:', db.settings.briefFormUrl);
+              <button className="btn ghost sm" title="Change hosted form URL" onClick={async () => {
+                const v = await uiPrompt('Hosted form URL:', db.settings.briefFormUrl);
                 if(v && v.trim()) updateSettings({briefFormUrl: v.trim()});
               }}>⚙</button>}
             <button className="btn ghost sm" onClick={() => downloadBriefForm(d, order, client)}>📝 Form file</button>
-            <button className="btn ghost sm" onClick={() => {
+            <button className="btn ghost sm" onClick={async () => {
               const srcs = [(d.link || '').trim(), mediaOf(d) === 'both' ? (d.linkVideo || '').trim() : ''].filter(Boolean);
-              if(srcs.length === 0){ alert('Put the content link(s) in first — Drive folder / file, Dropbox, MP4, or comma-separated image links. They become the latest version.'); return; }
+              if(srcs.length === 0){ uiAlert('Put the content link(s) in first — Drive folder / file, Dropbox, MP4, or comma-separated image links. They become the latest version.'); return; }
               let base = db.settings.reviewPageUrl;
               if(!base){
-                base = prompt('One-time setup — where is review.html hosted?', 'https://cloudixc.github.io/ReelEstateMedia/review.html');
+                base = await uiPrompt('One-time setup — where is review.html hosted?', 'https://cloudixc.github.io/ReelEstateMedia/review.html');
                 if(!base) return;
                 updateSettings({reviewPageUrl: base.trim()});
               }
@@ -4601,9 +4906,9 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               // button (no re-picking / no "confirm extras" bar), and optionally unlock paid extras.
               let approveExtra = '';
               if(isHeadshotDl(d) && (d.reviewVersions || []).length >= 1){
-                if(confirm('Is this the CHANGES / approval round?\n\nOK  = she already picked — the review shows only her chosen shots + an Approve button (no re-picking, no "confirm extras" bar).\nCancel = normal pick round.')){
+                if(await uiConfirm('Is this the CHANGES / approval round?\n\nApproval round: she already picked — the review shows only her chosen shots + an Approve button (no re-picking, no "confirm extras" bar).', {title: 'Headshot review', ok: 'Approval round', cancel: 'Normal pick round'})){
                   approveExtra = '&approve=1';
-                  if(confirm('Has she already PAID for her extra images?\n\nOK  = unlock all her picks for download now.\nCancel = keep the extras locked until you release them.')) approveExtra += '&paid=1';
+                  if(await uiConfirm('Has she already PAID for her extra images?\n\nPaid unlocks all her picks for download now; otherwise the extras stay locked until you release them.', {title: 'Extra images', ok: 'Paid — unlock all', cancel: 'Keep extras locked'})) approveExtra += '&paid=1';
                 }
               }
               // Reuse the existing short link only if the media is unchanged AND (for headshots) it already
@@ -4618,7 +4923,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               const vers = [...(d.reviewVersions || [])];
               if(!vers.includes(entry)) vers.push(entry);
               if(/\/drive\/(?:u\/\d+\/)?folders\//.test(d.link) && !db.settings.driveApiKey){
-                const k = prompt('Optional, one-time: a Google Drive API key lets the review room show folder photos in a branded gallery with per-photo comments. Paste it here, or Cancel to use the plain folder view.\n\n(console.cloud.google.com → enable Drive API → Credentials → API key)');
+                const k = await uiPrompt('Optional, one-time: a Google Drive API key lets the review room show folder photos in a branded gallery with per-photo comments. Paste it here, or Cancel to use the plain folder view.\n\n(console.cloud.google.com → enable Drive API → Credentials → API key)');
                 if(k && k.trim()) updateSettings({driveApiKey: k.trim()});
               }
               updateDeliverable(d.id, {reviewVersions: vers});
@@ -4673,7 +4978,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
                     showToast(prevX ? '♻ Same link, updated — their original link now shows the new round' : '✅ Link copied with the project name & opened'); })
                   .catch(() => { if(w) w.location = u;
                     updateDeliverable(d.id, {reviewUrl: u, reviewSig: entry, reviewHQ: hqLink, reviewPick: isHeadshotDl(d), reviewPin: pinC, reviewDe: dlSub(d, order)}); copyText(reviewShareText(d, order, client, u));
-                    alert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
+                    uiAlert('Couldn\u2019t save the short link — the full link is on your clipboard instead.'); });
               } else {
                 updateDeliverable(d.id, {reviewUrl: u});
                 copyText(reviewShareText(d, order, client, u));
@@ -4692,7 +4997,7 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
               <button className="btn sm" onClick={() => {
                 const parsed = parseBriefBlob(importTxt);
                 const keys = Object.keys(parsed);
-                if(keys.length === 0){ alert('No recognizable fields found — expected lines like "topic: …"'); return; }
+                if(keys.length === 0){ uiAlert('No recognizable fields found — expected lines like "topic: …"'); return; }
                 updateDeliverable(d.id, {brief: {...b, ...parsed}});
                 setImportTxt(''); setShowImport(false);
               }}>✓ Apply to brief</button>
@@ -4704,9 +5009,9 @@ function DeliverableRow({d, updateDeliverable, deleteDeliverable, defaultOpen, o
       <div className="flex" style={{marginTop:12}}>
         <span className="small faint">Copies media type, format, style, song, location, post & delivery specs — topics and scripts stay per-reel.</span>
         <span className="spacer"></span>
-        <button className="btn ghost sm" onClick={() => {
+        <button className="btn ghost sm" onClick={async () => {
           const others = siblings.filter(s => s.id !== d.id);
-          if(!confirm(`Apply this brief to the other ${others.length} in "${d.group}"?`)) return;
+          if(!await uiConfirm(`Apply this brief to the other ${others.length} in "${d.group}"?`)) return;
           others.forEach(s => updateDeliverable(s.id, {mediaType: mediaOf(d),
             brief: {...getBrief(s), orientation: b.orientation, style: b.style, song: b.song, location: b.location, post: b.post, delivery: b.delivery}}));
         }}>⧉ Apply to all {siblings.length} in this pack</button>
@@ -4791,7 +5096,7 @@ function ClientsPage({db, setShowNewClient, orderProgress, setEditingClient, pus
                 }}>🔗 Bio</button>}
                 <button className="btn ghost sm" title="Copy this agent's permanent hub link — one page with all their content, no login" onClick={() => {
                   const link = pushHub(c.id);
-                  if(!link){ alert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); return; }
+                  if(!link){ uiAlert('Set the review page URL + inbox first (tap 🎬 on any deliverable once).'); return; }
                   copyText(link);
                   showToast('🏠 Hub updated & link copied — it\u2019s permanent, tell them to bookmark it');
                 }}>🏠 Hub</button>
@@ -5011,8 +5316,8 @@ function Inbox({db, syncing, syncMsg, syncCalendly, importBookings, clientTier, 
         <span className="spacer"></span>
         {db.settings.calendlyToken && <>
           <span className={'pill ' + (syncBad ? 'unpaid' : 'delivered')} title={syncBad ? 'Connected, but the last sync hit an error — see the note below. It retries automatically.' : ''}>{syncBad ? '⚡ Connected · last sync failed' : '⚡ Connected · auto-syncs every 20 min'}</span>
-          <button className="btn ghost sm" title="Change or remove token" onClick={() => {
-            const v = prompt('Calendly Personal Access Token (clear the field to disconnect):', '········');
+          <button className="btn ghost sm" title="Change or remove token" onClick={async () => {
+            const v = await uiPrompt('Calendly Personal Access Token (clear the field to disconnect):', '········');
             if(v === null) return;
             updateSettings(v.trim() && v.trim() !== '········' ? {calendlyToken: v.trim(), calendlyUser: ''} : (v.trim() === '' ? {calendlyToken: '', calendlyUser: '', reviewPageUrl: '', driveApiKey: '', inboxUrl: '', inboxToken: ''} : {}));
           }}>⚙</button>
@@ -5207,11 +5512,12 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
   const [drawer, setDrawer] = useState(null);
   const blocked = db.blockedDays || [];
   const navUrl = loc => 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(loc);
-  const reschedule = (d) => {
-    const nd = prompt('New shoot date (YYYY-MM-DD):', d.shootDate || today());
-    if(nd === null || !nd.trim()) return;
-    const nt = prompt('Time (HH:MM, 24h):', d.shootTime || '16:00');
-    if(nt === null) return;
+  const reschedule = async (d) => {
+    const rs = await uiDialog({title: '🕐 Reschedule ' + dlTitle(d), ok: 'Reschedule', fields: [
+      {key: 'd', label: 'New shoot date', type: 'date', value: d.shootDate || today()},
+      {key: 't', label: 'Time', type: 'time', value: d.shootTime || '16:00'}]});
+    if(!rs || !String(rs.d || '').trim()) return;
+    const nd = String(rs.d), nt = String(rs.t || '');
     updateDeliverable(d.id, {shootDate: nd.trim(), shootTime: (nt || '').trim(), status: d.status === 'Booked' ? 'Scheduled' : d.status});
     const o = orderOf(d); const c = db.clients.find(x => x.id === o.clientId) || {};
     const first = (c.name || '').split(' ')[0];
@@ -5222,7 +5528,7 @@ function CalendarView({db, clientName, setPrintDoc, updateDeliverable, toggleBlo
   const exportIcs = () => {
     const evs = db.deliverables.filter(d => d.shootDate && d.shootDate >= today() && d.status !== 'Delivered' && d.status !== 'Booked')
       .sort((a, b) => a.shootDate.localeCompare(b.shootDate));
-    if(evs.length === 0){ alert('No upcoming shoots to export.'); return; }
+    if(evs.length === 0){ uiAlert('No upcoming shoots to export.'); return; }
     const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reel Estate Media//Pipeline//EN'];
     evs.forEach(d => {
       const o = orderOf(d); const c = db.clients.find(x => x.id === o.clientId) || {};
@@ -5384,10 +5690,10 @@ function Money({db, clientName, updateOrder, updateSettings, stats, setPrintDoc,
     return [...ys].sort((a,b) => b - a); })();
   const yoy = (cur, prev) => prev > 0 ? Math.round((cur - prev) / prev * 100) : null;
   const [xDesc, setXDesc] = useState(''); const [xAmt, setXAmt] = useState(''); const [xDate, setXDate] = useState(today());
-  const closeMonth = () => {
+  const closeMonth = async () => {
     const unpaid = moOrders.filter(o => o.payment === 'unpaid');
     if(unpaid.length === 0) return;
-    if(!confirm(`Close ${repLabel}: mark ${unpaid.length} unpaid order${unpaid.length !== 1 ? 's' : ''} as Invoiced and open the statement?`)) return;
+    if(!await uiConfirm(`Close ${repLabel}: mark ${unpaid.length} unpaid order${unpaid.length !== 1 ? 's' : ''} as Invoiced and open the statement?`)) return;
     unpaid.forEach(o => updateOrder(o.id, {payment: 'invoiced'}));
     const cos = [...new Set(unpaid.map(o => companyOf(clientOf(o.clientId))))];
     setPrintDoc({kind: 'statement', month: repMo, company: cos[0]});
@@ -5625,7 +5931,7 @@ function NewOrderModal({db, onClose, onSave, addClient}){
   const [qTeam, setQTeam] = useState('');
   const [qContact, setQContact] = useState('');
   const quickCreate = () => {
-    if(!qName.trim()){ alert('Name required'); return; }
+    if(!qName.trim()){ uiAlert('Name required'); return; }
     const c = {id: uid(), name: qName.trim(), tier: qTier, company: qCo.trim(), team: qTeam.trim(), contact: qContact, email: qContact, notes: ''};
     setClientId(addClient(c));
     setShowQuick(false); setQName(''); setQContact(''); setQTeam('');
@@ -5647,7 +5953,7 @@ function NewOrderModal({db, onClose, onSave, addClient}){
   const tax = hst ? sub * HST : 0;
 
   const save = () => {
-    if(!clientId || items.length === 0){ alert('Pick a client and at least one service.'); return; }
+    if(!clientId || items.length === 0){ uiAlert('Pick a client and at least one service.'); return; }
     onSave({id: uid(), clientId, project, date, hst, notes, payment:'unpaid', items});
   };
 
@@ -5767,6 +6073,51 @@ function PlanBuilder({plan, setPlan}){
 }
 
 /* ---------------- New Client Modal ---------------- */
+/* 👋 New-agent wizard — after the record is created: their hub link, a welcome message, their profile, their first booking */
+function WelcomeAgentModal({client, db, pushHub, onClose, onEditProfile, onBook}){
+  const [url, setUrl] = useState('');
+  const [sent, setSent] = useState(false);
+  const first = (client.name || 'there').split(' ')[0];
+  useEffect(() => { const t = setTimeout(() => { try{ const u = pushHub(client.id); if(u) setUrl(u); }catch(e){} }, 250); return () => clearTimeout(t); }, [client.id]);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { if(url && !msg) setMsg(`Hi ${first}! Welcome to Reel Estate Media 🎬\n\nYour content hub is ready — your shoots, review links, finished library, chat and booking all live in one place:\n${url}\n\nSave it to your home screen and you\u2019re set.`); }, [url]);
+  const hk = (db.clients.find(x => x.id === client.id) || client).hubKey || client.hubId || '';
+  const hasProfile = !!(client.headshot || client.agentTitle || client.bioText);
+  const step = (n, done, title, body) => (
+    <div className="flex" style={{alignItems:'flex-start', gap:12, padding:'12px 0', borderTop: n > 1 ? '1px solid var(--line)' : 'none'}}>
+      <span className={'pill ' + (done ? 'delivered' : 'booked')} style={{minWidth:26, justifyContent:'center'}}>{done ? '✓' : n}</span>
+      <div style={{flex:1, minWidth:0}}><div style={{fontWeight:700, marginBottom:4}}>{title}</div>{body}</div>
+    </div>);
+  return (
+  <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal" style={{maxWidth:560}} data-welcome>
+      <div className="flex" style={{justifyContent:'space-between'}}>
+        <h2 style={{marginBottom:0}}>👋 {client.name} is in</h2>
+        <button title="Close" className="x" onClick={onClose}>✕</button>
+      </div>
+      <p className="small muted" style={{margin:'6px 0 8px'}}>Four quick steps and they’re fully set up. Skip any of them — everything here is on their client card later.</p>
+      {step(1, !!url, 'Their hub', url
+        ? <div className="flex" style={{gap:8, flexWrap:'wrap'}}><code className="small" style={{wordBreak:'break-all', flex:1, minWidth:200}}>{url}</code><CopyBtn text={url} label="🔗 Copy link"/></div>
+        : <div className="small faint">{db.settings.inboxUrl ? 'Creating their hub…' : 'Connect the inbox (Home → Client Submissions ⚙) and their hub link appears here.'}</div>)}
+      {step(2, sent, 'Welcome message', <>
+        <textarea rows="6" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Their welcome message appears once the hub link is ready." style={{width:'100%'}}/>
+        <div className="flex" style={{gap:8, marginTop:6, flexWrap:'wrap'}}>
+          <CopyBtn text={msg} label="📋 Copy to text / email"/>
+          {hk && db.settings.inboxUrl && <button className="btn ghost sm" disabled={sent || !msg.trim()} title="Also leaves it in their hub chat, so it’s waiting when they first open the hub" onClick={() => {
+            fetch(db.settings.inboxUrl, {method:'POST', body: JSON.stringify({kind:'msg', ref: String(hk), project: (client.name || 'Agent') + ' — Content Hub', dname: '', who: 'Reel Estate Media', from: 'jag', body: msg.trim()})})
+              .then(() => { setSent(true); (window.showToast || (() => {}))('💬 Welcome is waiting in their hub chat'); }).catch(() => uiAlert('Couldn\u2019t reach the inbox — check the connection.'));
+          }}>{sent ? '✓ In their hub chat' : '💬 Leave it in their hub chat'}</button>}
+        </div></>)}
+      {step(3, hasProfile, 'Profile for their listing pages', <div className="flex" style={{gap:8, flexWrap:'wrap'}}>
+        <span className="small faint" style={{flex:1, minWidth:180}}>Headshot, title, bio and licence # fill in their listing pages and their Vault profile automatically.</span>
+        <button className="btn ghost sm" onClick={onEditProfile}>🪪 Add headshot &amp; profile →</button></div>)}
+      {step(4, false, 'First shoot', <div className="flex" style={{gap:8, flexWrap:'wrap'}}>
+        <span className="small faint" style={{flex:1, minWidth:180}}>Book it now and it shows up on their hub straight away.</span>
+        <button className="btn sm" onClick={onBook}>＋ New booking</button></div>)}
+      <div className="modalfoot"><button className="btn ghost" onClick={onClose}>Done</button></div>
+    </div>
+  </div>);
+}
 function NewClientModal({db, onClose, onSave}){
   const [name, setName] = useState('');
   const [dupAgent, setDupAgent] = useState(null);
@@ -5783,7 +6134,7 @@ function NewClientModal({db, onClose, onSave}){
   const build = () => ({id: uid(), name: name.trim(), tier, company: company.trim(), team: team.trim(), contact: contact.trim(), email: contact.trim(), phone: phone.trim(), birthday, notes:'', ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})});
   // Save = reuse an existing agent's hub if one matches; only warn+offer a second hub on a real name/email clash.
   const attempt = () => {
-    if(!name.trim()){ alert('Name required'); return; }
+    if(!name.trim()){ uiAlert('Name required'); return; }
     const obj = build();
     const dup = db && findAgentDup(db, obj);
     if(dup){ setDupAgent(dup); return; }
@@ -5864,7 +6215,7 @@ function EditClientModal({client, inboxUrl, onClose, onSave, onDelete}){
   const hsThumb = u => { const m = String(u || '').match(/[-\w]{25,}/); return (/drive\.google|docs\.google/.test(String(u)) && m) ? 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w120' : u; };
   const uploadHeadshot = (file) => {
     if(!file) return;
-    if(!inboxUrl){ alert('Connect your inbox (Settings) first — the photo uploads straight into your Drive through it.'); return; }
+    if(!inboxUrl){ uiAlert('Connect your inbox (Settings) first — the photo uploads straight into your Drive through it.'); return; }
     setHsBusy('⏳ Uploading…');
     const fr = new FileReader();
     fr.onload = () => {
@@ -5971,7 +6322,7 @@ function EditClientModal({client, inboxUrl, onClose, onSave, onDelete}){
         <button className="btn ghost" style={{color:'var(--red)', borderColor:'rgba(215,33,42,.4)'}} onClick={() => onDelete(client.id)}>🗑 Delete</button>
         <span className="spacer"></span>
         <button className="btn ghost" onClick={onClose}>Cancel</button>
-        <button className="btn" onClick={() => { if(!name.trim()){alert('Name required'); return;}
+        <button className="btn" onClick={() => { if(!name.trim()){uiAlert('Name required'); return;}
           onSave({name: name.trim(), tier, company: company.trim(), team: team.trim(), email: email.trim(), contact: email.trim(), phone: phone.trim(), birthday, instagram: instagram.trim(), agentTitle: agentTitle.trim(), headshot: headshot.trim(), website: website.trim(), licenseNo: licenseNo.trim(), bioText: bioText.trim(), notes, showBalance, ...(tier === 'unlimited' ? {retainer: +retainer || 0, retainerStart: retainerStart || today().slice(0, 7), plan} : {})}); }}>Save Changes</button>
       </div>
     </div>
@@ -6121,6 +6472,7 @@ function DocModal({doc, db, onClose, updateSettings}){
 
         <div className="small" style={{color:'#8f9198', marginTop:34, borderTop:'1px solid #e6e2db', paddingTop:12}}>
           Thank you for your business. Please remit payment to hello@reelestatemedia.com · All prices subject to 13% HST as shown.
+          {db.settings.payUrl && doc.kind === 'order' && !isPaid && <div style={{marginTop:8, color:'#1a1a1a', fontWeight:700}}>💳 Pay online: <a href={db.settings.payUrl} target="_blank" rel="noreferrer" style={{color:'var(--amber)'}}>{db.settings.payUrl}</a></div>}
         </div>
       </div>
     </div>
@@ -6160,6 +6512,36 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.10-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.15-1</div>
+<script>
+/* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
+(function(){
+  var el = document.getElementById('verstamp'); if(!el) return;
+  var cur = (el.textContent || '').trim(); if(!cur) return;
+  var path = (location.pathname.split('/').pop() || 'index.html');
+  function show(v){
+    if(document.getElementById('upd-banner')) return;
+    var b = document.createElement('div'); b.id = 'upd-banner'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:999px;padding:8px 8px 8px 16px;font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:94vw';
+    var t = document.createElement('span'); t.textContent = '✨ A new version is ready'; b.appendChild(t);
+    var r = document.createElement('button'); r.type = 'button'; r.textContent = 'Refresh'; r.title = v;
+    r.style.cssText = 'appearance:none;border:0;background:#F2A900;color:#1a1205;font:700 12px/1 inherit;padding:8px 14px;border-radius:999px;cursor:pointer';
+    r.onclick = function(){ location.reload(); }; b.appendChild(r);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'appearance:none;border:0;background:transparent;color:#b7afa1;font:600 13px/1 inherit;padding:6px 8px;cursor:pointer';
+    x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  function check(){
+    fetch(path + '?vc=' + Date.now(), {cache: 'no-store'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+      var m = t && t.match(/id="verstamp"[^>]*>([^<]+)</);
+      if(m && m[1].trim() && m[1].trim() !== cur) show(m[1].trim());
+    }).catch(function(){});
+  }
+  setTimeout(check, 15000);
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
+})();
+</script>
 </body>
 </html>

@@ -69,6 +69,11 @@
 
     <!-- ============ SIDEBAR ============ -->
     <aside id="sidebar" class="absolute sm:static inset-y-0 left-0 z-30 flex flex-col w-80 shrink-0 border-r border-[#262626] bg-[#0f0f0f] -translate-x-full sm:translate-x-0">
+      <nav id="appsw" aria-label="Studio apps" style="display:flex;gap:2px;margin:10px 12px 0;padding:3px;border:1px solid #2a2a2a;border-radius:999px;background:#141414">
+        <a id="appsw-cc" href="index.html" title="Command Centre" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 8px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#a6a49d;text-decoration:none;white-space:nowrap">⌂ Command Centre</a>
+        <a href="studio-chat.html" aria-current="page" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;background:#e11d2a;color:#fff;text-decoration:none;white-space:nowrap">💬 Chat</a>
+        <a id="appsw-vault" href="vault.html" title="The Vault" style="display:flex;align-items:center;justify-content:center;gap:5px;padding:6px 10px;border-radius:999px;font:700 10.5px/1 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#a6a49d;text-decoration:none;white-space:nowrap">🗄 Vault</a>
+      </nav>
       <div class="px-5 py-4 border-b border-[#262626] flex items-center justify-between">
         <h2 class="font-serif-display text-xl text-white">Mess<span class="text-[#e11d2a] italic">ages</span></h2>
         <div class="flex items-center gap-2">
@@ -659,6 +664,13 @@
 
   function renderSidebar(){
     const total = agents.reduce((s,ag) => s + agentUnread(ag), 0) + groupConvos.reduce((s,c) => s + unreadOf(c), 0);
+    // share the unread count with the Command Centre + Vault switchers, and show theirs here
+    try {
+      localStorage.setItem('rem_chat_unread_v1', String(total));
+      const badge = (id, n, col) => { const el = document.getElementById(id); if (!el) return; let b = el.querySelector('i'); if (n > 0){ if (!b){ b = document.createElement('i'); b.style.cssText = 'font-style:normal;border-radius:999px;padding:1px 6px;font-size:10px;color:#fff;background:' + col; el.appendChild(b); } b.textContent = n; } else if (b) b.remove(); };
+      badge('appsw-cc', +localStorage.getItem('rem_needs_count_v1') || 0, '#e11d2a');
+      badge('appsw-vault', +localStorage.getItem('rem_vault_warn_v1') || 0, '#7a3a3a');
+    } catch(e){}
     $('#total-badge').textContent = total;
     $('#total-badge').style.display = total ? '' : 'none';
     $('#agent-count').textContent = agents.length + ' agent' + (agents.length === 1 ? '' : 's');
@@ -2057,6 +2069,37 @@
     const saved = localStorage.getItem(TOKEN_KEY);
     if (saved){ $('#gate-token').value = saved; unlock(); }
   } catch(e){}
+</script>
+<div id="verstamp" title="App version" style="position:fixed;bottom:4px;right:6px;z-index:60;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.6);background:rgba(128,128,128,.12);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CHAT v2026.11.15-1</div>
+<script>
+/* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
+(function(){
+  var el = document.getElementById('verstamp'); if(!el) return;
+  var cur = (el.textContent || '').trim(); if(!cur) return;
+  var path = (location.pathname.split('/').pop() || 'index.html');
+  function show(v){
+    if(document.getElementById('upd-banner')) return;
+    var b = document.createElement('div'); b.id = 'upd-banner'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483646;display:flex;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:999px;padding:8px 8px 8px 16px;font:600 13px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);max-width:94vw';
+    var t = document.createElement('span'); t.textContent = '✨ A new version is ready'; b.appendChild(t);
+    var r = document.createElement('button'); r.type = 'button'; r.textContent = 'Refresh'; r.title = v;
+    r.style.cssText = 'appearance:none;border:0;background:#F2A900;color:#1a1205;font:700 12px/1 inherit;padding:8px 14px;border-radius:999px;cursor:pointer';
+    r.onclick = function(){ location.reload(); }; b.appendChild(r);
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Dismiss');
+    x.style.cssText = 'appearance:none;border:0;background:transparent;color:#b7afa1;font:600 13px/1 inherit;padding:6px 8px;cursor:pointer';
+    x.onclick = function(){ b.remove(); }; b.appendChild(x);
+    document.body.appendChild(b);
+  }
+  function check(){
+    fetch(path + '?vc=' + Date.now(), {cache: 'no-store'}).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+      var m = t && t.match(/id="verstamp"[^>]*>([^<]+)</);
+      if(m && m[1].trim() && m[1].trim() !== cur) show(m[1].trim());
+    }).catch(function(){});
+  }
+  setTimeout(check, 15000);
+  setInterval(check, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
+})();
 </script>
 </body>
 </html>
