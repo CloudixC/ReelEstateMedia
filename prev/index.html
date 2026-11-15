@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-7) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-8) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -3647,6 +3647,9 @@ function AppInner({
   const bakBusy = React.useRef(false);
   const doBackup = async manual => {
     if (IS_BETA) return false;
+    try {
+      if (localStorage.getItem('rem_heal_v1') !== '1') return false;
+    } catch (e) {}
     const inboxUrl = db.settings.inboxUrl,
       inboxToken = db.settings.inboxToken;
     if (!inboxUrl || !inboxToken || bakBusy.current) return false;
@@ -3751,8 +3754,39 @@ function AppInner({
         return (+m.c || 0) + (+m.o || 0) + (+m.d || 0);
       };
       const localW = weighDb(dbRef.current);
-      const newest = localW <= 1 ? items.find(it => metaW(it) > 1 || !it.meta) || null : items[0] || null;
-      if (!newest) return;
+      const pool = items.slice(0, 25).filter(it => it && it.meta);
+      const mx = pool.length ? Math.max.apply(null, pool.map(metaW)) : 0;
+      const best = pool.find(it => metaW(it) >= mx * 0.97 && metaW(it) > 1) || null;
+      const healed = (() => {
+        try {
+          return localStorage.getItem('rem_heal_v1') === '1';
+        } catch (e) {
+          return true;
+        }
+      })();
+      const markHealed = () => {
+        try {
+          localStorage.setItem('rem_heal_v1', '1');
+        } catch (e) {}
+      };
+      const bootDone = () => {
+        if (!window.__bootDone) {
+          window.__bootDone = true;
+          if (opsPullRef.current) opsPullRef.current();
+        }
+      };
+      const needsHeal = localW > 1 && !healed && !!best && metaW(best) > localW * 1.03;
+      if (needsHeal && opOutbox().length) {
+        if (opsFlushRef.current) opsFlushRef.current();
+        setTimeout(() => autoSync(), 6000);
+        return;
+      }
+      const newest = localW <= 1 || needsHeal ? best || items.find(it => metaW(it) > 1 || !it.meta) || null : items[0] || null;
+      if (!newest) {
+        markHealed();
+        bootDone();
+        return;
+      }
       const meta = newest.meta || {};
       const curH = dbHash(JSON.stringify(dbRef.current));
       if (meta.h !== undefined && String(meta.h) === String(curH)) {
@@ -3762,9 +3796,13 @@ function AppInner({
             t: String(newest.ts)
           }));
         } catch (e) {}
+        markHealed();
+        bootDone();
         return;
       }
-      if (localW > 1) {
+      if (localW > 1 && !needsHeal) {
+        markHealed();
+        bootDone();
         if (metaW(newest) <= 1 && doBackupRef.current) doBackupRef.current(true);
         return;
       }
@@ -3785,13 +3823,22 @@ function AppInner({
         status: 'idle',
         last: fmtClock(newest.ts)
       });
-      showToast('🔄 Synced — latest copy from your other device');
+      if (needsHeal) {
+        saveCursor(0);
+        logActivity('🩹 Loaded the complete copy from the cloud — this device only held part of your data');
+      }
+      showToast(needsHeal ? '🩹 Loaded the complete copy — this device only held part of your data' : '🔄 Synced — latest copy from your other device');
+      markHealed();
+      window.__bootDone = true;
+      setTimeout(() => {
+        if (opsPullRef.current) opsPullRef.current();
+      }, 300);
     } catch (e) {} finally {
       syncBusy.current = false;
     }
   };
   useEffect(() => {
-    const t0 = setTimeout(autoSync, 2500);
+    const t0 = setTimeout(autoSync, weighDb(dbRef.current) <= 1 ? 200 : 2500);
     const iv = setInterval(autoSync, 4 * 60 * 1000);
     const onVis = () => {
       if (document.hidden) {
@@ -4001,6 +4048,7 @@ function AppInner({
       ...x,
       pulling: true
     }));
+    if (!window.__bootDone && weighDb(d0) <= 1) return;
     try {
       let cur = opCursor(),
         guard = 0,
@@ -8218,6 +8266,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-8',
+  items: [['🩹', 'Fix: new devices load everything', 'After the move to thecontenthub.ca, a newly set-up device loaded only part of your data (orders without some agents). It now takes the complete copy first, and any device that loaded short repairs itself the next time it opens.']]
+}, {
   v: '2026.11.16-6',
   items: [['🚪', 'thecontenthub.ca always shows the public page', 'Typing just the address now lands on the page for new clients, on every device. Your Command Centre is at thecontenthub.ca/index.html — bookmark that.']]
 }, {
@@ -15959,7 +16010,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-7</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-8</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
