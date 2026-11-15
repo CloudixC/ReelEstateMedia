@@ -1,4 +1,76 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<!--REM-STAGE-SHIM--><script>
+/* 🧪 STAGING + FALLBACK
+   /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
+             but the only thing it can WRITE to is the sandbox Test Agent (ids starting "tst").
+             Real agents never receive anything from here; the live app's data is never touched.
+   /prev/  — the version that was live before the latest update. Same data, older code: the fallback. */
+(function(){
+  var path = location.pathname, beta = /\/beta\//.test(path), prev = /\/prev\//.test(path);
+  if(!beta && !prev) return;
+  function ribbon(html, bg){
+    var go = function(){
+      if(document.getElementById('rem-stage-ribbon')) return;
+      var d = document.createElement('div'); d.id = 'rem-stage-ribbon';
+      d.style.cssText = 'position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:2147483646;max-width:96vw;font:600 11.5px/1.35 system-ui,-apple-system,sans-serif;color:#fff;background:' + bg + ';padding:6px 12px;border-radius:0 0 10px 10px;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center';
+      d.innerHTML = html; document.body.appendChild(d);
+    };
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  }
+  var linkCss = 'color:#fff;text-decoration:underline;margin-left:8px;cursor:pointer';
+  var live = path.replace(/\/(beta|prev)\//, '/') + location.search + location.hash;
+  if(prev){
+    ribbon('⏪ Previous version — same data, older code. <a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Back to the current version →</a>', '#8a5a00');
+    return;
+  }
+  window.__REM_BETA = true;
+  var P = 'beta:', SP = Storage.prototype, g = SP.getItem, s = SP.setItem, r = SP.removeItem;
+  try{
+    var fresh = /[?&]betafresh=1/.test(location.search);
+    if(fresh || !g.call(localStorage, P + '__seeded')){
+      var all = [], i, k;
+      for(i = 0; i < localStorage.length; i++){ k = localStorage.key(i); if(k) all.push(k); }
+      all.filter(function(x){ return x.indexOf(P) === 0; }).forEach(function(x){ r.call(localStorage, x); });
+      all.filter(function(x){ return x.indexOf(P) !== 0 && x.indexOf('rem_') === 0 && x !== 'rem_opout_v1'; })
+        .forEach(function(x){ try{ s.call(localStorage, P + x, g.call(localStorage, x)); }catch(e){ window.__REM_BETA_FULL = true; } });
+      s.call(localStorage, P + '__seeded', String(Date.now()));
+      if(fresh){ try{ history.replaceState(null, '', path + location.search.replace(/[?&]betafresh=1/, '').replace(/^&/, '?') + location.hash); }catch(e){} }
+    }
+  }catch(e){}
+  SP.getItem = function(k){ return g.call(this, P + k); };
+  SP.setItem = function(k, v){ return s.call(this, P + k, v); };
+  SP.removeItem = function(k){ return r.call(this, P + k); };
+  SP.clear = function(){ var ks = [], i, k; for(i = 0; i < this.length; i++){ k = this.key(i); if(k && k.indexOf(P) === 0) ks.push(k); } for(i = 0; i < ks.length; i++) r.call(this, ks[i]); };
+  // write guard: only the sandbox agent can receive anything
+  var of = window.fetch, okFolders = {}; window.__betaBlocked = 0;
+  var isTst = function(v){ return String(v == null ? '' : v).indexOf('tst') === 0; };
+  var note = function(){ var n = document.getElementById('rem-stage-n'); if(n) n.textContent = window.__betaBlocked ? ' · ' + window.__betaBlocked + ' send' + (window.__betaBlocked === 1 ? '' : 's') + ' held back' : ''; };
+  window.fetch = function(u, o){
+    var url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+    if(m === 'GET' || m === 'HEAD') return of.apply(this, arguments);
+    var allow = false, d = null;
+    if(/script\.google\.com/.test(url)){
+      try{ d = JSON.parse(o && o.body); }catch(e){ d = null; }
+      if(d) allow = isTst(d.ref) || isTst(d.key) || isTst(d.id) || isTst(d.hub)
+        || (d.kind === 'link' && /(^|&)r=tst/.test(String(d.body || '')))
+        || (d.kind === 'dlvfolder' && /sandbox/i.test(String(d.agent || '')))
+        || !!(d.folder && okFolders[d.folder]);
+    }
+    if(allow){
+      var p = of.apply(this, arguments);
+      if(d && d.kind === 'dlvfolder') p.then(function(x){ return x.clone().json(); }).then(function(j){ if(j && j.id) okFolders[j.id] = 1; }).catch(function(){});
+      return p;
+    }
+    window.__betaBlocked++; note();
+    return Promise.resolve(new Response(JSON.stringify({ok: true, beta: 1, held: 1}), {status: 200, headers: {'Content-Type': 'application/json'}}));
+  };
+  var sep = location.search ? '&' : '?';
+  ribbon('🧪 BETA — a test copy of your data. Only the Test Agent can receive anything from here<span id="rem-stage-n"></span>.' +
+    '<a style="' + linkCss + '" href="' + (path + location.search + sep + 'betafresh=1').replace(/"/g, '&quot;') + '" title="Throw this test copy away and copy your live data again">↻ Fresh copy</a>' +
+    '<a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Live →</a>', '#6a2bd9');
+})();
+</script><!--/REM-STAGE-SHIM-->
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ready for your review · Reel Estate Media</title>
 <meta name="description" content="Your new content is ready — tap to watch, leave time-stamped feedback, and approve. From Reel Estate Media.">
@@ -1902,4 +1974,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.15-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-1</div></div></body></html>

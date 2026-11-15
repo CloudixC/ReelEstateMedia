@@ -2,6 +2,78 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!--REM-STAGE-SHIM--><script>
+/* 🧪 STAGING + FALLBACK
+   /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
+             but the only thing it can WRITE to is the sandbox Test Agent (ids starting "tst").
+             Real agents never receive anything from here; the live app's data is never touched.
+   /prev/  — the version that was live before the latest update. Same data, older code: the fallback. */
+(function(){
+  var path = location.pathname, beta = /\/beta\//.test(path), prev = /\/prev\//.test(path);
+  if(!beta && !prev) return;
+  function ribbon(html, bg){
+    var go = function(){
+      if(document.getElementById('rem-stage-ribbon')) return;
+      var d = document.createElement('div'); d.id = 'rem-stage-ribbon';
+      d.style.cssText = 'position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:2147483646;max-width:96vw;font:600 11.5px/1.35 system-ui,-apple-system,sans-serif;color:#fff;background:' + bg + ';padding:6px 12px;border-radius:0 0 10px 10px;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center';
+      d.innerHTML = html; document.body.appendChild(d);
+    };
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  }
+  var linkCss = 'color:#fff;text-decoration:underline;margin-left:8px;cursor:pointer';
+  var live = path.replace(/\/(beta|prev)\//, '/') + location.search + location.hash;
+  if(prev){
+    ribbon('⏪ Previous version — same data, older code. <a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Back to the current version →</a>', '#8a5a00');
+    return;
+  }
+  window.__REM_BETA = true;
+  var P = 'beta:', SP = Storage.prototype, g = SP.getItem, s = SP.setItem, r = SP.removeItem;
+  try{
+    var fresh = /[?&]betafresh=1/.test(location.search);
+    if(fresh || !g.call(localStorage, P + '__seeded')){
+      var all = [], i, k;
+      for(i = 0; i < localStorage.length; i++){ k = localStorage.key(i); if(k) all.push(k); }
+      all.filter(function(x){ return x.indexOf(P) === 0; }).forEach(function(x){ r.call(localStorage, x); });
+      all.filter(function(x){ return x.indexOf(P) !== 0 && x.indexOf('rem_') === 0 && x !== 'rem_opout_v1'; })
+        .forEach(function(x){ try{ s.call(localStorage, P + x, g.call(localStorage, x)); }catch(e){ window.__REM_BETA_FULL = true; } });
+      s.call(localStorage, P + '__seeded', String(Date.now()));
+      if(fresh){ try{ history.replaceState(null, '', path + location.search.replace(/[?&]betafresh=1/, '').replace(/^&/, '?') + location.hash); }catch(e){} }
+    }
+  }catch(e){}
+  SP.getItem = function(k){ return g.call(this, P + k); };
+  SP.setItem = function(k, v){ return s.call(this, P + k, v); };
+  SP.removeItem = function(k){ return r.call(this, P + k); };
+  SP.clear = function(){ var ks = [], i, k; for(i = 0; i < this.length; i++){ k = this.key(i); if(k && k.indexOf(P) === 0) ks.push(k); } for(i = 0; i < ks.length; i++) r.call(this, ks[i]); };
+  // write guard: only the sandbox agent can receive anything
+  var of = window.fetch, okFolders = {}; window.__betaBlocked = 0;
+  var isTst = function(v){ return String(v == null ? '' : v).indexOf('tst') === 0; };
+  var note = function(){ var n = document.getElementById('rem-stage-n'); if(n) n.textContent = window.__betaBlocked ? ' · ' + window.__betaBlocked + ' send' + (window.__betaBlocked === 1 ? '' : 's') + ' held back' : ''; };
+  window.fetch = function(u, o){
+    var url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+    if(m === 'GET' || m === 'HEAD') return of.apply(this, arguments);
+    var allow = false, d = null;
+    if(/script\.google\.com/.test(url)){
+      try{ d = JSON.parse(o && o.body); }catch(e){ d = null; }
+      if(d) allow = isTst(d.ref) || isTst(d.key) || isTst(d.id) || isTst(d.hub)
+        || (d.kind === 'link' && /(^|&)r=tst/.test(String(d.body || '')))
+        || (d.kind === 'dlvfolder' && /sandbox/i.test(String(d.agent || '')))
+        || !!(d.folder && okFolders[d.folder]);
+    }
+    if(allow){
+      var p = of.apply(this, arguments);
+      if(d && d.kind === 'dlvfolder') p.then(function(x){ return x.clone().json(); }).then(function(j){ if(j && j.id) okFolders[j.id] = 1; }).catch(function(){});
+      return p;
+    }
+    window.__betaBlocked++; note();
+    return Promise.resolve(new Response(JSON.stringify({ok: true, beta: 1, held: 1}), {status: 200, headers: {'Content-Type': 'application/json'}}));
+  };
+  var sep = location.search ? '&' : '?';
+  ribbon('🧪 BETA — a test copy of your data. Only the Test Agent can receive anything from here<span id="rem-stage-n"></span>.' +
+    '<a style="' + linkCss + '" href="' + (path + location.search + sep + 'betafresh=1').replace(/"/g, '&quot;') + '" title="Throw this test copy away and copy your live data again">↻ Fresh copy</a>' +
+    '<a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Live →</a>', '#6a2bd9');
+})();
+</script><!--/REM-STAGE-SHIM-->
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Vault · Reel Estate Media</title>
 <meta name="robots" content="noindex">
@@ -259,7 +331,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.15-3</div>
+<div id="verstamp" title="App version">VAULT v2026.11.16-1</div>
 <script>
 (function(){
   'use strict';
@@ -804,6 +876,19 @@ body.selmode .tile .ck{display:grid}
     fetch(ENDPOINT+'?hub='+encodeURIComponent(key)).then(function(r){ return r.json(); }).then(function(j){
       var m=j&&j.hub; if(typeof m==='string'){ try{ m=JSON.parse(m); }catch(e){ m=null; } }
       if(!m){ app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Vault not found</h1><p>This link doesn\u2019t match an agent hub. Ask Reel Estate Media for a fresh link.</p></div></div>'; return; }
+      // 🔐 same optional PIN as the hub (one entry unlocks both on this device)
+      var want=String(m.pn||''), PK='rem_hub_pinok_v1:'+key, okPin=''; try{ okPin=localStorage.getItem(PK)||''; }catch(eP){}
+      if(want && okPin!==want && window.crypto && crypto.subtle && !window.__pinPassed){
+        app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Enter your PIN</h1><p>This library is private — once per device.</p><input id="vpin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off"><button id="vpingo">Open</button><p id="vpinmsg" style="min-height:1.3em"></p></div></div>';
+        var vin=document.getElementById('vpin'), vgo=document.getElementById('vpingo'), vmsg=document.getElementById('vpinmsg');
+        var tryPin=function(){ var v=String(vin.value||'').replace(/[^0-9]/g,''); if(!v) return;
+          crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem\u00B7rem-hub\u00B7'+key+'\u00B7'+v)).then(function(buf){
+            var hh=Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0'+b.toString(16)).slice(-2); }).join('');
+            if(hh===want){ try{ localStorage.setItem(PK, want); }catch(eS){} window.__pinPassed=true; startAgent(); }
+            else { vmsg.textContent='That PIN doesn\u2019t match — try again.'; vin.value=''; vin.focus(); } }); };
+        vgo.onclick=tryPin; vin.onkeydown=function(ev){ if(ev.key==='Enter') tryPin(); }; setTimeout(function(){ try{ vin.focus(); }catch(eF2){} },50);
+        return null;
+      }
       DRIVE_KEY=m.k||'';
       var projs=(m.projects||[]).filter(function(p){ return p.dv; });
       // deliveries whose Drive folder isn't in the manifest yet: resolve it through the review link snapshot

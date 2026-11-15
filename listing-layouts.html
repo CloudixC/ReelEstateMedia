@@ -1,8 +1,91 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8>
+<!--REM-STAGE-SHIM--><script>
+/* 🧪 STAGING + FALLBACK
+   /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
+             but the only thing it can WRITE to is the sandbox Test Agent (ids starting "tst").
+             Real agents never receive anything from here; the live app's data is never touched.
+   /prev/  — the version that was live before the latest update. Same data, older code: the fallback. */
+(function(){
+  var path = location.pathname, beta = /\/beta\//.test(path), prev = /\/prev\//.test(path);
+  if(!beta && !prev) return;
+  function ribbon(html, bg){
+    var go = function(){
+      if(document.getElementById('rem-stage-ribbon')) return;
+      var d = document.createElement('div'); d.id = 'rem-stage-ribbon';
+      d.style.cssText = 'position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:2147483646;max-width:96vw;font:600 11.5px/1.35 system-ui,-apple-system,sans-serif;color:#fff;background:' + bg + ';padding:6px 12px;border-radius:0 0 10px 10px;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center';
+      d.innerHTML = html; document.body.appendChild(d);
+    };
+    if(document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+  }
+  var linkCss = 'color:#fff;text-decoration:underline;margin-left:8px;cursor:pointer';
+  var live = path.replace(/\/(beta|prev)\//, '/') + location.search + location.hash;
+  if(prev){
+    ribbon('⏪ Previous version — same data, older code. <a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Back to the current version →</a>', '#8a5a00');
+    return;
+  }
+  window.__REM_BETA = true;
+  var P = 'beta:', SP = Storage.prototype, g = SP.getItem, s = SP.setItem, r = SP.removeItem;
+  try{
+    var fresh = /[?&]betafresh=1/.test(location.search);
+    if(fresh || !g.call(localStorage, P + '__seeded')){
+      var all = [], i, k;
+      for(i = 0; i < localStorage.length; i++){ k = localStorage.key(i); if(k) all.push(k); }
+      all.filter(function(x){ return x.indexOf(P) === 0; }).forEach(function(x){ r.call(localStorage, x); });
+      all.filter(function(x){ return x.indexOf(P) !== 0 && x.indexOf('rem_') === 0 && x !== 'rem_opout_v1'; })
+        .forEach(function(x){ try{ s.call(localStorage, P + x, g.call(localStorage, x)); }catch(e){ window.__REM_BETA_FULL = true; } });
+      s.call(localStorage, P + '__seeded', String(Date.now()));
+      if(fresh){ try{ history.replaceState(null, '', path + location.search.replace(/[?&]betafresh=1/, '').replace(/^&/, '?') + location.hash); }catch(e){} }
+    }
+  }catch(e){}
+  SP.getItem = function(k){ return g.call(this, P + k); };
+  SP.setItem = function(k, v){ return s.call(this, P + k, v); };
+  SP.removeItem = function(k){ return r.call(this, P + k); };
+  SP.clear = function(){ var ks = [], i, k; for(i = 0; i < this.length; i++){ k = this.key(i); if(k && k.indexOf(P) === 0) ks.push(k); } for(i = 0; i < ks.length; i++) r.call(this, ks[i]); };
+  // write guard: only the sandbox agent can receive anything
+  var of = window.fetch, okFolders = {}; window.__betaBlocked = 0;
+  var isTst = function(v){ return String(v == null ? '' : v).indexOf('tst') === 0; };
+  var note = function(){ var n = document.getElementById('rem-stage-n'); if(n) n.textContent = window.__betaBlocked ? ' · ' + window.__betaBlocked + ' send' + (window.__betaBlocked === 1 ? '' : 's') + ' held back' : ''; };
+  window.fetch = function(u, o){
+    var url = String((u && u.url) || u || ''), m = String((o && o.method) || (u && u.method) || 'GET').toUpperCase();
+    if(m === 'GET' || m === 'HEAD') return of.apply(this, arguments);
+    var allow = false, d = null;
+    if(/script\.google\.com/.test(url)){
+      try{ d = JSON.parse(o && o.body); }catch(e){ d = null; }
+      if(d) allow = isTst(d.ref) || isTst(d.key) || isTst(d.id) || isTst(d.hub)
+        || (d.kind === 'link' && /(^|&)r=tst/.test(String(d.body || '')))
+        || (d.kind === 'dlvfolder' && /sandbox/i.test(String(d.agent || '')))
+        || !!(d.folder && okFolders[d.folder]);
+    }
+    if(allow){
+      var p = of.apply(this, arguments);
+      if(d && d.kind === 'dlvfolder') p.then(function(x){ return x.clone().json(); }).then(function(j){ if(j && j.id) okFolders[j.id] = 1; }).catch(function(){});
+      return p;
+    }
+    window.__betaBlocked++; note();
+    return Promise.resolve(new Response(JSON.stringify({ok: true, beta: 1, held: 1}), {status: 200, headers: {'Content-Type': 'application/json'}}));
+  };
+  var sep = location.search ? '&' : '?';
+  ribbon('🧪 BETA — a test copy of your data. Only the Test Agent can receive anything from here<span id="rem-stage-n"></span>.' +
+    '<a style="' + linkCss + '" href="' + (path + location.search + sep + 'betafresh=1').replace(/"/g, '&quot;') + '" title="Throw this test copy away and copy your live data again">↻ Fresh copy</a>' +
+    '<a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Live →</a>', '#6a2bd9');
+})();
+</script><!--/REM-STAGE-SHIM-->
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Listing Layouts</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;500;600&family=Gilda+Display&family=Libre+Caslon+Display&family=Marcellus&family=Jost:wght@300;400;500;600;700&family=Roboto:wght@500;700;900&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,300;0,400;1,300&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Manrope:wght@300;400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://drive.google.com"><link rel="preconnect" href="https://lh3.googleusercontent.com"><link rel="preconnect" href="https://script.google.com">
+<script>
+/* 🪶 Published pages travel light: a buyer's phone loads only the fonts the chosen design uses
+   (the builder still loads all of them so every design previews correctly). */
+(function(){
+  var q = location.search, pub = /[?&]pub=1/.test(q) || (/[?&]x=/.test(q) && !/[?&]r=/.test(q));
+  window.__LL_FONTS = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=DM+Sans:wght@400;500;600&family=Gilda+Display&family=Libre+Caslon+Display&family=Marcellus&family=Jost:wght@300;400;500;600;700&family=Roboto:wght@500;700;900&family=Barlow:wght@400;500;600&family=Barlow+Condensed:ital,wght@0,300;0,400;1,300&family=Lato:wght@400;700&family=Open+Sans:wght@400;600&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400&family=Manrope:wght@300;400;500;600&display=swap";
+  window.__LL_PUB = pub;
+  if(!pub) document.write('<link rel="stylesheet" href="' + window.__LL_FONTS + '">');
+})();
+</script>
 <style>
 /* Listing Showcase system. A chooser of layouts, each rendered live from one listing's details and photos. Layout CSS uses container queries so thumbnails and the phone preview render true to size. */
 :root {
@@ -1974,9 +2057,12 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   var R_X = RQP.get('x');
   if(R_X && !RQP.get('r')){
     document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Loading the listing…</div>';
+    // a link that's been opened here before goes straight in — no lookup round-trip
+    var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
+    if(_xq){ location.replace(location.pathname + '?' + _xq); return; }
     fetch('https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec?link=' + encodeURIComponent(R_X))
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(j.ok && j.qs) location.replace(location.pathname + '?' + j.qs); else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
+      .then(function(j){ if(j.ok && j.qs){ try{ localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
       .catch(function(){ document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Couldn’t load — check your connection and refresh.</div>'; });
     return;
   }
@@ -3143,7 +3229,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   function render(keepScroll){
     applyTheme();
     var r=route(), y=window.scrollY;
-    app.innerHTML = (r==='home'?homeView():layoutView(r)) + (ui.drawer?drawerHTML():'');
+    var _html = (r==='home'?homeView():layoutView(r)) + (ui.drawer?drawerHTML():'');
+    if(window.__LL_PUB){ var _n = 0; _html = _html.replace(/<img (?![^>]*\bloading=)/g, function(){ return (++_n > 2) ? '<img loading="lazy" decoding="async" ' : '<img decoding="async" '; }); }
+    app.innerHTML = _html;
     if (r!==lastRoute){ window.scrollTo(0,0); lastRoute=r; } else if (keepScroll) window.scrollTo(0,y);
     fitThumbs(); setStick(); wire(); wireRs();
   }
@@ -3196,7 +3284,10 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
           .then(function(j){
             var fl=(j.files||[]).sort(function(a,b){ return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}); });
             if(!fl.length) return;
-            fl.forEach(function(f){ photos.push({url:'https://drive.google.com/thumbnail?id='+f.id+'&sz=w2400', name:f.name.replace(/\.[a-z0-9]+$/i,'')}); });
+            // 📱 photos sized for the screen they're on: a phone gets ~1000–1600px instead of the full 2400px
+            var _need = Math.max(320, window.innerWidth || 1200) * Math.min(window.devicePixelRatio || 1, 3);
+            var _pw = _need <= 1000 ? 1000 : _need <= 1700 ? 1600 : 2400;
+            fl.forEach(function(f){ photos.push({url:'https://drive.google.com/thumbnail?id='+f.id+'&sz=w'+_pw, name:f.name.replace(/\.[a-z0-9]+$/i,'')}); });
             render(true);
           }).catch(function(){});
       });
@@ -3822,6 +3913,20 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     }
 
     if(R_PUB && R_LAY){
+      // 🪶 fonts: only the families this design actually uses (re-checked when the page changes)
+      (function(){
+        var fams = {}, got = {}, seen = {}, t = 0;
+        String(window.__LL_FONTS || '').split('css2?').slice(1).join('').split('&').forEach(function(p){ if(p.indexOf('family=') === 0){ var sp = p.slice(7); fams[sp.split(':')[0].replace(/\+/g, ' ')] = sp; } });
+        function scan(){
+          var els = document.querySelectorAll('body, body *'), add = [];
+          for(var i = 0; i < els.length; i++){ var ff = getComputedStyle(els[i]).fontFamily; if(seen[ff]) continue; seen[ff] = 1;
+            ff.split(',').forEach(function(n){ n = n.replace(/["']/g, '').trim(); if(fams[n] && !got[n]){ got[n] = 1; add.push('family=' + fams[n]); } }); }
+          if(!add.length) return;
+          var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?' + add.join('&') + '&display=swap'; document.head.appendChild(l);
+        }
+        scan();
+        try{ new MutationObserver(function(){ clearTimeout(t); t = setTimeout(scan, 350); }).observe(document.body, {childList: true, subtree: true}); }catch(eM){}
+      })();
       document.body.classList.add('rem-pub');
       window.addEventListener('hashchange', function(){ if((location.hash||'').slice(1) !== R_LAY) location.hash = R_LAY; });
     }
@@ -3978,5 +4083,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.15-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-1</div>
 </body></html>
