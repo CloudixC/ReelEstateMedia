@@ -484,7 +484,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-9) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-10) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1644,7 +1644,7 @@ function monthStats(db, ym) {
   const os = db.orders.filter(o => o.date && o.date.slice(0, 7) === ym);
   const rev = os.reduce((a, o) => a + orderTotals(o).sub, 0);
   const costs = (db.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0);
-  const margin = os.reduce((a, o) => a + orderMargin(o, tierOf(o.clientId)), 0);
+  const margin = os.reduce((a, o) => a + orderMargin(o, db.clients.find(c => c.id === o.clientId)), 0);
   const clients = new Set(os.map(o => o.clientId)).size;
   const services = os.reduce((a, o) => a + o.items.reduce((x, i) => x + (i.qty || 1), 0), 0);
   const delivered = db.deliverables.filter(d => d.deliveredDate && d.deliveredDate.slice(0, 7) === ym).length;
@@ -1659,8 +1659,15 @@ function monthStats(db, ym) {
     delivered
   };
 }
-function orderMargin(o, tier) {
-  if (tier !== 'partner') return 0;
+const NO_MARGIN_NAMES = ['faiz tahir'];
+const marginDefault = c => {
+  const nm = String(c && c.name || '').trim().toLowerCase();
+  const co = c && c.company && c.company.trim() || '';
+  return /pinnacle/i.test(co) && !/^pinnacle\b/.test(nm) && !NO_MARGIN_NAMES.includes(nm);
+};
+const earnsMargin = c => !!c && c.tier === 'partner' && (c.noMargin === true ? false : c.noMargin === false ? true : marginDefault(c));
+function orderMargin(o, who) {
+  if (!(who && typeof who === 'object' && earnsMargin(who))) return 0;
   const spread = o.items.reduce((a, i) => a + Math.max(0, itemRetail(i) - i.price) * i.qty, 0);
   return spread * (o.hst ? 1 + HST : 1);
 }
@@ -6317,7 +6324,7 @@ function AppInner({
       const revThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderTotals(o).sub, 0);
       const owed = db.orders.filter(o => o.payment !== 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
       const tierOf = cid => (db.clients.find(c => c.id === cid) || {}).tier || 'partner';
-      const marginThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderMargin(o, tierOf(o.clientId)), 0);
+      const marginThisMo = db.orders.filter(o => o.date && o.date.slice(0, 7) === mo).reduce((a, o) => a + orderMargin(o, db.clients.find(c => c.id === o.clientId)), 0);
       return {
         active: active.length,
         remaining,
@@ -8275,6 +8282,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-10',
+  items: [['🧮', 'Pinnacle margin only on agent bookings', 'No margin is counted on the brokerage’s own work (Pinnacle accounts), on Faiz Tahir’s shoots, or on anyone outside Pinnacle. Change it per agent in Edit agent.']]
+}, {
   v: '2026.11.16-9',
   items: [['🎙', 'New service: Interview', 'In the catalogue under Content Creation: $250 to agents (Pinnacle rate), $200 Reel Estate Media rate. One video per interview.']]
 }, {
@@ -10294,7 +10304,7 @@ function Orders({
     const totVal = os.reduce((a, o) => a + orderTotals(o).total, 0);
     const marg = os.reduce((a, o) => {
       const c = clientOf(o.clientId) || {};
-      return a + orderMargin(o, c.tier);
+      return a + orderMargin(o, c);
     }, 0);
     const openDl = os.reduce((a, o) => {
       const p = orderProgress(o.id);
@@ -10674,13 +10684,13 @@ function OrderDetail({
     className: "grand"
   }, "Total"), React.createElement("span", {
     className: "grand"
-  }, money(t.total))), clientTier(o.clientId) === 'partner' && React.createElement("div", {
+  }, money(t.total))), earnsMargin(db.clients.find(c => c.id === o.clientId)) && React.createElement("div", {
     className: "row"
   }, React.createElement("span", {
     className: "teal small"
   }, "Pinnacle makes on this order"), React.createElement("span", {
     className: "teal small"
-  }, money(orderMargin(o, 'partner'))))), React.createElement("div", {
+  }, money(orderMargin(o, db.clients.find(c => c.id === o.clientId)))))), React.createElement("div", {
     style: {
       marginTop: 12
     }
@@ -12225,7 +12235,7 @@ function ClientsPage({
           const p = orderProgress(o.id);
           return a + (p.total - p.done);
         }, 0);
-        marg += os.reduce((a, o) => a + orderMargin(o, c.tier), 0);
+        marg += os.reduce((a, o) => a + orderMargin(o, c), 0);
       });
       return tmembers.length + ' agent' + (tmembers.length !== 1 ? 's' : '') + (open > 0 ? ' · ' + open + ' open' : '') + (marg > 0 ? ' · margin ' + money(marg) : '');
     };
@@ -12235,7 +12245,7 @@ function ClientsPage({
         const p = orderProgress(o.id);
         return a + (p.total - p.done);
       }, 0);
-      const marg = os.reduce((a, o) => a + orderMargin(o, c.tier), 0);
+      const marg = os.reduce((a, o) => a + orderMargin(o, c), 0);
       const billed = os.reduce((a, o) => a + orderTotals(o).total, 0);
       const lastBooked = os.reduce((a, o) => o.date > a ? o.date : a, '');
       const rated = os.filter(o => o.rating);
@@ -13824,7 +13834,7 @@ function Money({
   const moOrders = db.orders.filter(o => o.date && o.date.slice(0, 7) === repMo);
   const moSub = moOrders.reduce((a, o) => a + orderTotals(o).sub, 0);
   const moTax = moOrders.reduce((a, o) => a + orderTotals(o).tax, 0);
-  const moMargin = moOrders.reduce((a, o) => a + orderMargin(o, tierOf(o.clientId)), 0);
+  const moMargin = moOrders.reduce((a, o) => a + orderMargin(o, db.clients.find(c => c.id === o.clientId)), 0);
   const moDelivered = db.deliverables.filter(d => d.deliveredDate && d.deliveredDate.slice(0, 7) === repMo).length;
   const moCollected = moOrders.filter(o => o.payment === 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
   const moStats = monthStats(db, repMo);
@@ -13856,7 +13866,7 @@ function Money({
   const moOutstanding = moOrders.filter(o => o.payment !== 'paid').reduce((a, o) => a + orderTotals(o).total, 0);
   const byMonth = {};
   db.orders.forEach(o => {
-    const m = orderMargin(o, tierOf(o.clientId));
+    const m = orderMargin(o, db.clients.find(c => c.id === o.clientId));
     if (m > 0 && o.date) {
       const k = o.date.slice(0, 7);
       byMonth[k] = (byMonth[k] || 0) + m;
@@ -13975,7 +13985,7 @@ function Money({
     className: "empty"
   }, "No orders booked in ", repLabel, "."), moOrders.length > 0 && React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "Project"), React.createElement("th", null, "Agent / Client"), React.createElement("th", null, "Total"), React.createElement("th", null, "Margin"), React.createElement("th", null, "Payment"), React.createElement("th", null))), React.createElement("tbody", null, moOrders.map(o => {
     const t = orderTotals(o);
-    const m = orderMargin(o, tierOf(o.clientId));
+    const m = orderMargin(o, db.clients.find(c => c.id === o.clientId));
     return React.createElement("tr", {
       key: o.id
     }, React.createElement("td", null, React.createElement("strong", null, o.project || 'Untitled')), React.createElement("td", {
@@ -15162,6 +15172,10 @@ function EditClientModal({
   const [retainerStart, setRetainerStart] = useState(client.retainerStart || today().slice(0, 7));
   const [plan, setPlan] = useState(Array.isArray(client.plan) ? client.plan : []);
   const [hubPin, setHubPin] = useState(client.hubPin || '');
+  const [earns, setEarns] = useState(() => earnsMargin({
+    ...client,
+    tier: 'partner'
+  }));
   return React.createElement("div", {
     className: "overlay",
     onClick: e => e.target === e.currentTarget && onClose()
@@ -15221,7 +15235,27 @@ function EditClientModal({
     value: "direct"
   }, "Direct Client — retail rate, no Pinnacle involvement"), React.createElement("option", {
     value: "unlimited"
-  }, "Unlimited Plan — flat monthly retainer, services included")), tier === 'unlimited' && React.createElement("div", {
+  }, "Unlimited Plan — flat monthly retainer, services included")), tier === 'partner' && React.createElement("label", {
+    className: "small muted",
+    "data-earns": true,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 7,
+      cursor: 'pointer',
+      marginTop: 8
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    style: {
+      width: 'auto',
+      minHeight: 0
+    },
+    checked: earns,
+    onChange: e => setEarns(e.target.checked)
+  }), "Pinnacle earns the retail spread on this agent’s orders ", React.createElement("span", {
+    className: "faint"
+  }, "(off for the brokerage’s own work and the broker’s own shoots)")), tier === 'unlimited' && React.createElement("div", {
     style: {
       marginTop: 8
     }
@@ -15472,6 +15506,14 @@ function EditClientModal({
         }),
         name: name.trim(),
         tier,
+        ...(tier === 'partner' && earns !== marginDefault({
+          name: name.trim(),
+          company: company.trim()
+        }) ? {
+          noMargin: !earns
+        } : {
+          noMargin: undefined
+        }),
         company: company.trim(),
         team: team.trim(),
         email: email.trim(),
@@ -16022,7 +16064,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-9</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-10</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
