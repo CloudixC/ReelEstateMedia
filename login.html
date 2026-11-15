@@ -146,7 +146,7 @@
           <!-- Access code -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <label for="password" class="label">Access code</label>
+              <label for="password" class="label">Access code or PIN</label>
               <a href="mailto:hello@reelestatemedia.com?subject=Forgot%20my%20access%20code&body=Hi%20—%20I%20forgot%20the%20access%20code%20for%20my%20content%20hub.%20My%20email%20is%3A%20"
                  class="text-xs font-medium link-underline" style="color:var(--red)">Forgot your code?</a>
             </div>
@@ -155,7 +155,7 @@
               <svg class="h-4 w-4 text-neutral-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <input id="password" type="password" autocomplete="current-password" required placeholder="Enter your access code"
+              <input id="password" type="password" autocomplete="current-password" required placeholder="Access code or hub PIN"
                 class="w-full bg-transparent outline-none text-sm text-neutral-100 placeholder:text-neutral-600" style="text-transform:uppercase" />
               <button type="button" id="togglePw" aria-label="Show access code" class="text-neutral-500 hover:text-neutral-200 transition-colors">
                 <svg id="eyeIcon" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -390,7 +390,17 @@
           if(cb.checked){
             try{ localStorage.setItem(REMEMBER_KEY, JSON.stringify({email: email.value.trim(), name: j.name || '', qs: j.qs})); }catch(err){}
           }
-          setTimeout(function(){ location.href = hubUrl(j.qs); }, 350);
+          // signed in with the hub PIN -> remember it for the hub's own door lock, so they aren't asked for it twice
+          var go = function(){ location.href = hubUrl(j.qs); };
+          var km = String(j.qs || '').match(/(?:^|&)a=([^&]+)/);
+          if(j.via === 'hubpin' && km && window.crypto && crypto.subtle && window.TextEncoder){
+            var hk = decodeURIComponent(km[1]);
+            crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem\u00B7rem-hub\u00B7' + hk + '\u00B7' + pw.value.trim())).then(function(buf){
+              var hex = Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
+              try{ localStorage.setItem('rem_hub_pinok_v1:' + hk, hex); }catch(e9){}
+              setTimeout(go, 150);
+            }).catch(function(){ setTimeout(go, 150); });
+          } else setTimeout(go, 350);
         } else {
           busy(false);
           var er = String(j.error || '');
@@ -400,6 +410,8 @@
           } else if(er === 'bad pin'){
             showErr("That access code doesn't match. Check for typos — or tap “Forgot your code?” and we'll send a fresh one.");
             shake(pw.closest('.input-wrap'));
+          } else if(er === 'locked'){
+            showErr('Too many tries for this email. For your security, sign-in is paused for a few hours. Text us and we\'ll sort it out right away.');
           } else if(er === 'disabled'){
             showErr('This account is paused. Get in touch and we\'ll switch it back on.');
           } else {
