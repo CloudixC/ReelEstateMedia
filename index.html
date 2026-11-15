@@ -471,7 +471,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-4) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-5) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -8204,6 +8204,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-5',
+  items: [['🌐', 'New address: thecontenthub.ca', 'Everything now lives at thecontenthub.ca. Old links forward on their own; agents re-enter their PIN once and re-allow notifications.']]
+}, {
   v: '2026.11.16-4',
   items: [['🧹', 'Clean-up pass', 'Needs you → Clean up: every old piece still marked open, one tap each (delivered quietly, still open, or remove).'], ['🚪', 'Your address shows the front door', 'Anyone who isn’t on one of your devices lands on the public page. On a new device of your own, open index.html?studio=1.'], ['⭐', 'Ask for a review', 'When an agent rates you five stars, Needs you offers a one-tap ask for a line on your wall.'], ['📊', 'What you actually use', 'Home → More: a private count of the buttons you press, on this device only.']]
 }, {
@@ -11728,7 +11731,7 @@ function DeliverableRow({
     onClick: async () => {
       let base = db.settings.briefFormUrl;
       if (!base) {
-        base = await uiPrompt('One-time setup — where is brief-form.html hosted?\n(e.g. https://cloudixc.github.io/brief-form.html — I gave you this file to upload.)', 'https://');
+        base = await uiPrompt('One-time setup — where is brief-form.html hosted?', location.origin + location.pathname.replace(/[^\/]*$/, '') + 'brief-form.html');
         if (!base || base === 'https://') return;
         updateSettings({
           briefFormUrl: base.trim()
@@ -11805,7 +11808,7 @@ function DeliverableRow({
       }
       let base = db.settings.reviewPageUrl;
       if (!base) {
-        base = await uiPrompt('One-time setup — where is review.html hosted?', 'https://cloudixc.github.io/ReelEstateMedia/review.html');
+        base = await uiPrompt('One-time setup — where is review.html hosted?', location.origin + location.pathname.replace(/[^\/]*$/, '') + 'review.html');
         if (!base) return;
         updateSettings({
           reviewPageUrl: base.trim()
@@ -15939,7 +15942,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-4</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-5</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
