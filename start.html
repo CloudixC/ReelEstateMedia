@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Estate Media — Photo, video & content for real-estate agents</title>
+<meta name="description" content="Reels, listing photography and video, headshots and event recaps for real-estate agents — shot, edited and delivered ready to post.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Reel Estate Media">
+<meta property="og:title" content="🎬 Reel Estate Media — content that sells the listing, and the agent">
+<meta property="og:description" content="Reels, listing photo & video, headshots and event recaps for real-estate agents.">
+<meta property="og:image" content="https://cloudixc.github.io/ReelEstateMedia/ch-app-icon-180.png">
+<meta name="theme-color" content="#1A1A1A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20120%20120%27%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20rx%3D%2726%27%20fill%3D%27%23EA002A%27/%3E%3Cg%20transform%3D%27translate%286%2C0%29%27%3E%3Cpath%20d%3D%27M%2083%2036%20A%2037%2037%200%201%200%2083%2084%27%20fill%3D%27none%27%20stroke%3D%27%23FAF8F5%27%20stroke-width%3D%2712%27%20stroke-linecap%3D%27round%27/%3E%3Cg%20fill%3D%27%23F2A900%27%3E%3Cpolygon%20points%3D%2755%2C44%2064%2C49%2064%2C71%2055%2C76%27/%3E%3Cpolygon%20points%3D%2766%2C50.5%2073%2C55%2073%2C65%2066%2C69.5%27/%3E%3Cpolygon%20points%3D%2775%2C56%2082%2C60%2075%2C64%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root{
+  --ink:#1A1A1A; --ink2:#141414; --panel:#202020; --panel2:#262626;
+  --line:rgba(250,248,245,.10); --line2:rgba(250,248,245,.18);
+  --txt:#FAF8F5; --mist:#d6d2cf; --dim:#9a948f; --faint:#726c72;
+  --red:#EA002A; --amber:#F2A900; --teal:#4cc38a;
+  --sans:'Space Grotesk',system-ui,-apple-system,sans-serif; --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--ink);color:var(--txt);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background-image:radial-gradient(900px 480px at 86% -6%, rgba(234,0,42,.20), transparent 60%), radial-gradient(700px 420px at -8% -4%, rgba(242,169,0,.07), transparent 56%);background-repeat:no-repeat}
+a{color:inherit}
+.wrap{max-width:1040px;margin:0 auto;padding:0 clamp(16px,4vw,34px)}
+.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);font-weight:700}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;padding:20px 0}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;margin-right:auto}
+.brand svg{width:38px;height:38px;flex:none}
+.brand b{font-weight:700;font-size:1.08rem;letter-spacing:-.01em}
+.brand b em{font-style:normal;color:var(--red)}
+.nav{display:flex;gap:6px;align-items:center}
+.nav a{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;text-decoration:none;padding:9px 12px;border-radius:999px;color:var(--mist)}
+.nav a:hover{color:var(--txt)}
+.nav a.pill{background:var(--red);color:#fff}
+@media(max-width:560px){.nav a:not(.pill){display:none}}
+
+/* hero */
+.hero{position:relative;padding:clamp(34px,8vw,84px) 0 clamp(30px,6vw,60px)}
+h1{font-weight:700;font-size:clamp(2.3rem,7.4vw,4.6rem);line-height:.98;letter-spacing:-.035em;max-width:13ch;margin-top:16px}
+h1 em{font-style:normal;color:var(--red)}
+.lede{font-size:clamp(1.02rem,2.2vw,1.22rem);color:var(--mist);max-width:54ch;margin-top:22px}
+.acts{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:999px;padding:15px 26px;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:transform .2s,box-shadow .2s,border-color .2s}
+.btn.pri{background:var(--red);color:#fff;border:1px solid var(--red)}
+.btn.pri:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(234,0,42,.42)}
+.btn.sec{border:1px solid var(--line2);color:var(--txt)}
+.btn.sec:hover{border-color:var(--amber);color:var(--amber)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(34px,6vw,58px);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
+.fact{padding:18px 18px 18px 0}
+.fact + .fact{padding-left:18px;border-left:1px solid var(--line)}
+.fact b{display:block;font-size:clamp(1.25rem,3.4vw,1.9rem);font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.fact span{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+@media(max-width:560px){.facts{grid-template-columns:1fr}.fact + .fact{padding-left:0;border-left:0;border-top:1px solid var(--line)}}
+
+section{padding:clamp(38px,7vw,72px) 0}
+h2{font-weight:700;font-size:clamp(1.6rem,4.4vw,2.5rem);letter-spacing:-.025em;line-height:1.06;margin:10px 0 8px;max-width:20ch}
+.sub{color:var(--mist);max-width:58ch}
+
+/* services */
+.svc{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:26px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;display:flex;flex-direction:column;gap:6px;min-height:168px;transition:border-color .2s,transform .2s}
+.card:hover{border-color:var(--line2);transform:translateY(-2px)}
+.card .ic{font-size:1.35rem}
+.card h3{font-size:1.08rem;font-weight:700;letter-spacing:-.01em}
+.card p{font-size:.9rem;color:var(--dim);line-height:1.5}
+.card .from{margin-top:auto;padding-top:10px;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;color:var(--mist);visibility:hidden}
+.card .from b{color:var(--txt);font-size:.95rem}
+.card .from.on{visibility:visible}
+.more{display:inline-block;margin-top:20px;font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--amber);text-decoration:none;border-bottom:1px solid rgba(242,169,0,.4);padding-bottom:3px}
+
+/* steps */
+.band{background:var(--ink2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:28px;counter-reset:st}
+.step{padding:6px 20px 6px 0;counter-increment:st}
+.step + .step{padding-left:20px;border-left:1px solid var(--line)}
+.step::before{content:'0' counter(st);font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--red);font-weight:700}
+.step h3{font-size:1.05rem;font-weight:700;margin:8px 0 4px}
+.step p{font-size:.9rem;color:var(--dim);line-height:1.5}
+@media(max-width:820px){.steps{grid-template-columns:1fr 1fr;row-gap:24px}.step:nth-child(3){padding-left:0;border-left:0}}
+@media(max-width:480px){.steps{grid-template-columns:1fr}.step + .step{padding-left:0;border-left:0}}
+
+/* hub block */
+.hub{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(20px,5vw,48px);align-items:center}
+.hub ul{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.hub li{padding-left:26px;position:relative;color:var(--mist);font-size:.96rem}
+.hub li::before{content:'';position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--red)}
+.hub li b{color:var(--txt);font-weight:600}
+.pipe{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line2);border-radius:20px;padding:20px}
+.pipe .ph{font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.pipe .st{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.pipe .st:first-of-type{border-top:0}
+.pipe .dot{width:10px;height:10px;border-radius:50%;background:var(--line2);flex:none}
+.pipe .st.done .dot{background:var(--teal)}
+.pipe .st.now .dot{background:var(--amber);box-shadow:0 0 0 5px rgba(242,169,0,.16)}
+.pipe .st b{font-weight:600;font-size:.95rem}
+.pipe .st span{margin-left:auto;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+@media(max-width:780px){.hub{grid-template-columns:1fr}}
+
+/* reviews */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:26px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+.q p{font-size:1.02rem;line-height:1.5}
+.q .who{margin-top:14px;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.q .who b{color:var(--txt)}
+
+/* closing */
+.close{text-align:center}
+.close h2{max-width:none;font-size:clamp(1.9rem,6vw,3.3rem)}
+.close .acts{justify-content:center}
+footer{padding:26px 0 46px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+footer a{text-decoration:none;color:var(--dim)}
+footer a:hover{color:var(--txt)}
+footer .sp{margin-right:auto}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto !important}}
+</style></head><body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="start.html" aria-label="Reel Estate Media">
+      <svg viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="26" fill="#EA002A"/><g transform="translate(6,0)"><path d="M 83 36 A 37 37 0 1 0 83 84" fill="none" stroke="#FAF8F5" stroke-width="12" stroke-linecap="round"/><g fill="#F2A900"><polygon points="55,44 64,49 64,71 55,76"/><polygon points="66,50.5 73,55 73,65 66,69.5"/><polygon points="75,56 82,60 75,64"/></g></g></svg>
+      <b>Reel Estate <em>Media</em></b>
+    </a>
+    <nav class="nav" aria-label="Site">
+      <a href="#work">What we make</a>
+      <a href="wall.html">Reviews</a>
+      <a href="pricing.html">Pricing</a>
+      <a class="pill" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">Photo · Video · Content for real-estate agents</div>
+    <h1>Content that sells the listing — and <em>the agent</em>.</h1>
+    <p class="lede">Reels, listing photography and video, headshots and event recaps. Shot, edited and delivered ready to post — with a private hub where you book, review and download everything.</p>
+    <div class="acts">
+      <a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a>
+      <a class="btn sec" href="pricing.html">See the price list</a>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>~3 business days</b><span>Photo turnaround</span></div>
+      <div class="fact"><b>~5 business days</b><span>Video turnaround</span></div>
+      <div class="fact"><b>Flat rates</b><span>Across the Greater Toronto Area</span></div>
+    </div>
+  </div>
+</div>
+
+<section id="work"><div class="wrap">
+  <div class="eyebrow">What we make</div>
+  <h2>Everything a listing — or a personal brand — needs.</h2>
+  <p class="sub">Book one piece or a whole content day. Every price is a flat rate, listed in full on the price list.</p>
+  <div class="svc">
+    <div class="card"><div class="ic">🎬</div><h3>Social reels</h3><p>Filmed and edited reels, up to 30 seconds — singly or as a 5 or 10-reel content day.</p><div class="from" data-price="Dynamic Shoot — 1 Reel">from <b></b></div></div>
+    <div class="card"><div class="ic">🎙</div><h3>Talking-to-camera</h3><p>Podcast and teleprompter reels — scripted or prompted, you on camera.</p><div class="from" data-price="Podcast / Teleprompter — 1 Reel">from <b></b></div></div>
+    <div class="card"><div class="ic">📷</div><h3>Listing photography</h3><p>HDR photo sets from 20 images to full luxury estates.</p><div class="from" data-price="Essential Listing Photos">from <b></b></div></div>
+    <div class="card"><div class="ic">🎥</div><h3>Listing video</h3><p>Vertical walkthroughs through to cinematic property films with drone.</p><div class="from" data-price="Essential Walkthrough Video">from <b></b></div></div>
+    <div class="card"><div class="ic">📦</div><h3>Listing bundles</h3><p>Photos and video together — the best value for a new listing.</p><div class="from" data-price="Essential Listing Bundle">from <b></b></div></div>
+    <div class="card"><div class="ic">🧑‍💼</div><h3>Headshots</h3><p>A professional session with your favourites included.</p><div class="from" data-price="Professional Headshots"><b></b></div></div>
+    <div class="card"><div class="ic">🎉</div><h3>Event recaps</h3><p>Photo and video coverage of open houses, launches and team events.</p><div class="from" data-price="Event Recap"><b></b></div></div>
+    <div class="card"><div class="ic">🗺</div><h3>Tours, plans & add-ons</h3><p>Virtual tours, floor plans, twilight, drone and virtual staging.</p><div class="from on">on the <b>price list</b></div></div>
+  </div>
+  <a class="more" href="pricing.html">Full price list →</a>
+</div></section>
+
+<section class="band"><div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2>From booking to posted, without the back-and-forth.</h2>
+  <div class="steps">
+    <div class="step"><h3>Book online</h3><p>Pick a time that suits you — the calendar shows what's open.</p></div>
+    <div class="step"><h3>Brief, then shoot</h3><p>Two minutes on your hub tells us the address, the angle and the music. We handle the day.</p></div>
+    <div class="step"><h3>Review it your way</h3><p>Watch the cut in your review room and pin a note at the exact second you want changed.</p></div>
+    <div class="step"><h3>Delivered, ready to post</h3><p>Finals land in your library with captions and share buttons — yours to download any time.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap hub">
+  <div>
+    <div class="eyebrow">Your content hub</div>
+    <h2>One private page for everything we make together.</h2>
+    <ul>
+      <li><b>See where every piece is</b> — booked, shot, in the edit, ready for review, delivered.</li>
+      <li><b>Book, move or cancel</b> a shoot yourself, and renew a package in one tap.</li>
+      <li><b>Chat with the studio</b> in one thread — no lost texts or emails.</li>
+      <li><b>A library of your finals</b> — photos and reels, searchable, with captions ready.</li>
+    </ul>
+  </div>
+  <div class="pipe" aria-hidden="true">
+    <div class="ph">A piece on its way</div>
+    <div class="st done"><div class="dot"></div><b>Booked</b><span>Done</span></div>
+    <div class="st done"><div class="dot"></div><b>Shot</b><span>Done</span></div>
+    <div class="st now"><div class="dot"></div><b>Ready for your review</b><span>Now</span></div>
+    <div class="st"><div class="dot"></div><b>Delivered</b><span>Next</span></div>
+  </div>
+</div></section>
+
+<section class="band" id="reviews" hidden><div class="wrap">
+  <div class="eyebrow">In their words</div>
+  <h2>What agents say about working with us.</h2>
+  <div class="quotes" id="quotes"></div>
+  <a class="more" href="wall.html">Read every review →</a>
+</div></section>
+
+<section class="close"><div class="wrap">
+  <div class="eyebrow">Ready when you are</div>
+  <h2>Tell us the address. We'll take it from there.</h2>
+  <div class="acts">
+    <a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a>
+    <a class="btn sec" href="mailto:hello@reelestatemedia.com?subject=Booking%20enquiry">✉ hello@reelestatemedia.com</a>
+  </div>
+</div></section>
+
+<div class="wrap"><footer>
+  <span class="sp">Reel Estate Media · Photo · Video · Content</span>
+  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a>
+</footer></div>
+
+<script>
+/* Prices are never typed here: each "from" figure is read off pricing.html, so the price list stays the single source. */
+(function(){
+  fetch('pricing.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+    if(!t) return;
+    var doc = new DOMParser().parseFromString(t, 'text/html'), map = {};
+    [].slice.call(doc.querySelectorAll('.row')).forEach(function(row){
+      var n = row.querySelector('.nm b'), p = row.querySelector('.pr');
+      if(n && p && /\d/.test(p.textContent)) map[n.textContent.trim()] = p.textContent.replace(/\s+/g, '');
+    });
+    [].slice.call(document.querySelectorAll('[data-price]')).forEach(function(el){
+      var v = map[el.getAttribute('data-price')]; if(!v) return;
+      el.querySelector('b').textContent = v; el.classList.add('on');
+    });
+  }).catch(function(){});
+})();
+/* Reviews come live from the same wall the agents post to — the section only appears when there are some. */
+(function(){
+  var E = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  var esc = function(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
+  fetch(E + '?wall=1').then(function(r){ return r.json(); }).then(function(j){
+    var items = (j && j.ok && j.items) ? j.items.filter(function(t){ return t && t.q; }) : [];
+    if(!items.length) return;
+    document.getElementById('quotes').innerHTML = items.slice(0, 3).map(function(t){
+      var q = String(t.q); if(q.length > 240) q = q.slice(0, 237).replace(/\s+\S*$/, '') + '…';
+      return '<div class="q"><p>“' + esc(q) + '”</p><div class="who"><b>' + esc(t.w) + '</b>' + (t.b ? ' · ' + esc(t.b) : '') + '</div></div>';
+    }).join('');
+    document.getElementById('reviews').hidden = false;
+  }).catch(function(){});
+})();
+</script>
+</body></html>
