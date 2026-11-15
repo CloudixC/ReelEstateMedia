@@ -77,15 +77,28 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reel Estate Media · Production Pipeline</title>
+<!-- link previews for the bare address describe the public page, not the studio app -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Reel Estate Media">
+<meta property="og:title" content="🎬 Reel Estate Media — content that sells the listing, and the agent">
+<meta property="og:description" content="Reels, listing photo &amp; video, headshots and event recaps for real-estate agents.">
+<meta property="og:image" content="https://thecontenthub.ca/ch-app-icon-180.png">
+<meta property="og:url" content="https://thecontenthub.ca/">
+<meta name="description" content="Reels, listing photo &amp; video, headshots and event recaps for real-estate agents.">
 <script>
-/* 🚪 The site's main address is public. A browser that has never held studio data is sent to the
-   front door (start.html); the Command Centre only opens where it already lives, or when asked for
-   explicitly (index.html?studio=1, or a #setup= link on a new device). */
+/* 🚪 The site's main address is public.
+   · The bare address (thecontenthub.ca/) ALWAYS shows the front door (start.html) — on every device, the studio's included.
+   · The Command Centre lives at /index.html. There, a browser that has never held studio data is still sent to the
+     front door; it only opens where it already lives, or when asked for explicitly (index.html?studio=1, or a
+     #setup= link on a new device). */
 (function(){
   try{
     if(/\/(beta|prev)\//.test(location.pathname)) return;
+    var asked = /#setup=/.test(location.hash) || /[?&]studio(=|&|$)/.test(location.search) || /#dl=/.test(location.hash);
+    if(asked) return;
+    if(/\/$/.test(location.pathname)){ location.replace('start.html'); return; }
     var mine = localStorage.getItem('rem_pipeline_v1') || localStorage.getItem('rem_setup_v1') || sessionStorage.getItem('rem_unlocked');
-    if(mine || /#setup=/.test(location.hash) || /[?&]studio(=|&|$)/.test(location.search) || /#dl=/.test(location.hash)) return;
+    if(mine) return;
     location.replace('start.html');
   }catch(e){}
 })();
@@ -472,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-5) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-6) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -8205,6 +8218,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-6',
+  items: [['🚪', 'thecontenthub.ca always shows the public page', 'Typing just the address now lands on the page for new clients, on every device. Your Command Centre is at thecontenthub.ca/index.html — bookmark that.']]
+}, {
   v: '2026.11.16-5',
   items: [['🌐', 'New address: thecontenthub.ca', 'Everything now lives at thecontenthub.ca. Old links forward on their own; agents re-enter their PIN once and re-allow notifications.']]
 }, {
@@ -15943,7 +15959,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-5</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-6</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
