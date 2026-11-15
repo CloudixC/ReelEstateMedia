@@ -74,8 +74,13 @@
 })();
 </script><!--/REM-STAGE-SHIM-->
 
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Reel Estate Media · Production Pipeline</title>
+<link rel="manifest" href="cc.webmanifest">
+<meta name="theme-color" content="#0a0a0c">
+<link rel="apple-touch-icon" href="cc-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -243,6 +248,10 @@
   .syncchip.busy{color:var(--cream)}
   .syncchip.warn{color:#ffb86b;border-color:rgba(255,160,70,.55);background:rgba(255,160,70,.08)}
   .searchbtn .kbd{font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.6;margin-left:6px}
+  .whatsnew{border-color:rgba(130,168,217,.45)}
+  .wnrow{display:grid;grid-template-columns:24px 1fr;gap:8px;padding:5px 0;font-size:13.5px;line-height:1.45}
+  .histrow{padding:9px 0;border-top:1px solid var(--line)}
+  .histrow:first-child{border-top:0}
   .homemore{display:block;width:100%;text-align:left;margin:4px 0 14px;padding:12px 16px;border-radius:12px;border:1px dashed var(--line2);background:transparent;color:var(--cream);font-weight:600;font-size:13px;line-height:1.3;font-family:inherit;cursor:pointer}
   .homemore:hover,.homemore.on{border-style:solid;background:var(--panel)}
   .cmdk-ov{z-index:320;align-items:flex-start;padding:10vh 16px 16px}
@@ -450,7 +459,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-1) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-3) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -5946,6 +5955,25 @@ function AppInner({
   };
   window.applyBookingAttach = applyBookingAttach;
   window.__markSubHandled = markSubHandled;
+  window.__restoreField = (id, field, value) => {
+    const cur = dbRef.current.deliverables.find(x => x.id === id);
+    if (!cur) return;
+    setDb(p => ({
+      ...p,
+      deliverables: p.deliverables.map(x => {
+        if (x.id !== id) return x;
+        const n = {
+          ...x
+        };
+        if (value === undefined) delete n[field];else n[field] = value;
+        return n;
+      })
+    }));
+    logActivity(`↩ Restored “${HIST_LABEL[field] || field}” on ${dlTitle(cur)} from history`);
+    showToast(`↩ ${HIST_LABEL[field] || field} put back on ${dlTitle(cur)}`);
+    const o = dbRef.current.orders.find(x => x.id === cur.orderId);
+    if (o && o.clientId) setTimeout(() => pushHub(o.clientId), 900);
+  };
   window.__stmtDone = pm => setDb(p => ({
     ...p,
     settings: {
@@ -7868,6 +7896,316 @@ function CommandPalette({
     className: "cmdk-foot"
   }, React.createElement("span", null, "↑↓ move"), React.createElement("span", null, "↵ open"), React.createElement("span", null, "esc close"))));
 }
+const WHATS_NEW = [{
+  v: '2026.11.16-3',
+  items: [['🕘', 'History on every deliverable', 'Row menu (⋯) → History shows what changed, when and on which device — with one tap to put an old value back.'], ['📴', 'Works without signal', 'Once you’ve opened this version online, the Command Centre opens with no connection (install it from your browser menu for a home-screen icon). Changes sync when you’re back.'], ['⚡', 'Agent pages open faster', 'Hubs, review rooms and listing pages no longer wait on the full inbox sheet.'], ['🚪', 'A front door for new clients', 'start.html — what you do, real reviews, pricing and booking on one page.']]
+}, {
+  v: '2026.11.16-1',
+  items: [['🧪', 'Test agent + staging', 'Clients → Test agent. New versions land in /beta first; the previous one stays at /prev.'], ['🧾', 'Statements by agent · ⏱ Turnaround', 'Both on the Money tab.'], ['🔐', 'Hub PIN · ↔ Move or cancel · 🔁 Renewals', 'Set a PIN in the client editor; agents can move, cancel or renew from their hub and it lands in Needs you.'], ['☕', 'Morning email', '7am: today’s shoots and what’s waiting on you.']]
+}, {
+  v: '2026.11.15-3',
+  items: [['🔎', 'Search everything', '⌘K / Ctrl+K.'], ['✓', 'Sync status · real lock · versions at upload', 'The chip by the app switcher shows whether this device is up to date.']]
+}];
+function WhatsNew() {
+  const cur = String(((document.getElementById('verstamp') || {}).textContent || '').replace(/^CMD v/, '')).trim();
+  const [seen, setSeen] = useState(() => {
+    try {
+      return localStorage.getItem('rem_whatsnew_v1') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [older, setOlder] = useState(false);
+  const latest = WHATS_NEW[0];
+  if (!latest || !cur || seen === cur || latest.v !== cur) return null;
+  const close = () => {
+    try {
+      localStorage.setItem('rem_whatsnew_v1', cur);
+    } catch (e) {}
+    setSeen(cur);
+  };
+  const list = older ? WHATS_NEW : [latest];
+  return React.createElement("div", {
+    className: "card whatsnew",
+    "data-whatsnew": true
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      marginBottom: 8
+    }
+  }, React.createElement("h3", {
+    style: {
+      fontSize: 17,
+      marginBottom: 0
+    }
+  }, "🆕 What’s new"), React.createElement("span", {
+    className: "faint small"
+  }, "v", cur), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-whatsnew-close": true,
+    onClick: close
+  }, "Got it")), list.map(rel => React.createElement("div", {
+    key: rel.v,
+    style: {
+      marginBottom: 6
+    }
+  }, older && React.createElement("div", {
+    className: "small faint",
+    style: {
+      margin: '8px 0 4px',
+      fontWeight: 700
+    }
+  }, "v", rel.v), rel.items.map((it, i) => React.createElement("div", {
+    key: i,
+    className: "wnrow"
+  }, React.createElement("span", null, it[0]), React.createElement("span", null, React.createElement("b", null, it[1]), " ", React.createElement("span", {
+    className: "faint"
+  }, "— ", it[2])))))), !older && WHATS_NEW.length > 1 && React.createElement("button", {
+    className: "backlink",
+    style: {
+      marginBottom: 0
+    },
+    onClick: () => setOlder(true)
+  }, "Earlier updates"));
+}
+async function loadOpsLog(inbox, tok) {
+  const st = window.__opsLog || (window.__opsLog = {
+    cur: 0,
+    items: []
+  });
+  let guard = 0;
+  while (guard++ < 60) {
+    const j = await fetch(inbox + '?token=' + encodeURIComponent(tok) + '&ops=' + st.cur).then(r => r.json());
+    if (!(j && j.ok)) throw new Error(j && j.error || 'ledger unreachable');
+    (j.items || []).forEach(it => {
+      if (it && it.key) st.items.push(it);
+    });
+    st.cur = +j.cursor || st.cur;
+    if (!j.more) break;
+  }
+  return st.items;
+}
+const HIST_LABEL = {
+  status: 'Status',
+  link: 'Files link',
+  linkVideo: 'Video link',
+  linkHQ: 'HQ link',
+  reviewUrl: 'Review room link',
+  reviewVersions: 'Review versions',
+  shootDate: 'Shoot date',
+  shootTime: 'Shoot time',
+  deliveredDate: 'Delivered date',
+  reviewDate: 'Sent to review',
+  name: 'Name',
+  brief: 'Brief',
+  notes: 'Notes',
+  thumb: 'Thumbnail',
+  dlvFolderUrl: 'Drive folder',
+  dlvFolder: 'Drive folder id',
+  approved: 'Approval',
+  changeReq: 'Change request',
+  upVer: 'Version',
+  dlvDrafts: 'Earlier versions',
+  group: 'Group',
+  mediaType: 'Media type',
+  calEv: 'Calendly booking',
+  credits: 'Credits',
+  briefLock: 'Brief lock'
+};
+const HIST_SKIP = {
+  stAt: 1,
+  stLog: 1,
+  reviewSig: 1,
+  reviewDe: 1,
+  reviewPick: 1,
+  reviewHQ: 1,
+  prepNudged: 1,
+  calRu: 1,
+  calCu: 1,
+  dlvFolder: 1,
+  dlvMsgTs: 1
+};
+const histHidden = f => !!HIST_SKIP[f] || f === '_f' || f === '_ft' || /(Ts|Sig|Nudged)$/.test(f);
+const histVal = v => {
+  if (v === undefined || v === null || v === '') return '— empty —';
+  if (typeof v === 'object') return Array.isArray(v) ? v.length + ' item' + (v.length === 1 ? '' : 's') : 'details';
+  const s = STATUS_LABEL(String(v));
+  return s.length > 64 ? s.slice(0, 30) + '…' + s.slice(-28) : s;
+};
+function DeliverableHistory({
+  d,
+  db,
+  onClose
+}) {
+  const [st, setSt] = useState({
+    loading: true,
+    rows: [],
+    err: ''
+  });
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      try {
+        if (!db.settings.inboxUrl || !db.settings.inboxToken) throw new Error('Cloud sync isn’t set up on this device, so there is no history to read.');
+        const all = await loadOpsLog(db.settings.inboxUrl, db.settings.inboxToken);
+        const mine = all.filter(it => it.key === 'deliverables.' + d.id).slice().sort((a, b) => (+a.ts || 0) - (+b.ts || 0));
+        const rows = [];
+        let prev = null;
+        mine.forEach(it => {
+          let data = it.data;
+          if (typeof data === 'string') {
+            try {
+              data = data ? JSON.parse(data) : null;
+            } catch (e) {
+              data = null;
+            }
+          }
+          if (!data) {
+            rows.push({
+              ts: +it.ts,
+              dev: it.dev,
+              gone: true,
+              ch: []
+            });
+            prev = null;
+            return;
+          }
+          const rec = cleanRec(data);
+          let fields;
+          if (Array.isArray(data._f) && +data._ft === +it.ts) fields = data._f;else if (prev) {
+            const ks = {};
+            Object.keys(prev).concat(Object.keys(rec)).forEach(k => {
+              ks[k] = 1;
+            });
+            fields = Object.keys(ks).filter(k => JSON.stringify(prev[k]) !== JSON.stringify(rec[k]));
+          } else fields = null;
+          const ch = (fields || []).filter(f => !histHidden(f)).map(f => ({
+            f,
+            from: prev ? prev[f] : undefined,
+            to: rec[f],
+            known: !!prev
+          }));
+          if (fields === null) rows.push({
+            ts: +it.ts,
+            dev: it.dev,
+            first: true,
+            ch: []
+          });else if (ch.length) rows.push({
+            ts: +it.ts,
+            dev: it.dev,
+            ch
+          });
+          prev = rec;
+        });
+        if (!dead) setSt({
+          loading: false,
+          rows: rows.reverse(),
+          err: ''
+        });
+      } catch (e) {
+        if (!dead) setSt({
+          loading: false,
+          rows: [],
+          err: String(e && e.message || e)
+        });
+      }
+    })();
+    return () => {
+      dead = true;
+    };
+  }, []);
+  const me = devId();
+  const now = db.deliverables.find(x => x.id === d.id) || d;
+  return React.createElement("div", {
+    className: "overlay",
+    onMouseDown: e => {
+      if (e.target === e.currentTarget) onClose();
+    }
+  }, React.createElement("div", {
+    className: "modal",
+    "data-history": true,
+    style: {
+      maxWidth: 620
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      marginBottom: 10
+    }
+  }, React.createElement("h2", {
+    style: {
+      fontSize: 20,
+      marginBottom: 0
+    }
+  }, "🕘 History — ", dlTitle(d)), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: onClose
+  }, "Close")), st.loading && React.createElement("div", {
+    className: "empty"
+  }, "Reading the change log…"), st.err && React.createElement("div", {
+    className: "empty",
+    style: {
+      color: 'var(--red)'
+    }
+  }, st.err), !st.loading && !st.err && st.rows.length === 0 && React.createElement("div", {
+    className: "empty"
+  }, "No recorded changes yet. History starts from when cloud sync was switched on (October 2026)."), React.createElement("div", {
+    style: {
+      maxHeight: '62vh',
+      overflow: 'auto'
+    }
+  }, st.rows.map((r, i) => React.createElement("div", {
+    key: i,
+    className: "histrow",
+    "data-hist-row": true
+  }, React.createElement("div", {
+    className: "small faint",
+    style: {
+      marginBottom: 3
+    }
+  }, fmtTs(new Date(r.ts).toISOString()), " · ", r.dev === me ? 'this device' : 'another device (' + String(r.dev || '?').slice(0, 4) + ')'), r.first && React.createElement("div", {
+    className: "small"
+  }, "First recorded here."), r.gone && React.createElement("div", {
+    className: "small",
+    style: {
+      color: 'var(--red)'
+    }
+  }, "Removed."), r.ch.map((c, k) => {
+    const canRestore = c.known && JSON.stringify(c.from) !== JSON.stringify(now[c.f]);
+    return React.createElement("div", {
+      key: k,
+      className: "flex",
+      style: {
+        gap: 8,
+        padding: '2px 0'
+      }
+    }, React.createElement("span", {
+      className: "small",
+      style: {
+        minWidth: 0,
+        flex: 1
+      }
+    }, React.createElement("b", null, HIST_LABEL[c.f] || c.f), c.known ? React.createElement(React.Fragment, null, ": ", React.createElement("span", {
+      className: "faint"
+    }, histVal(c.from)), " → ", histVal(c.to)) : React.createElement(React.Fragment, null, " → ", histVal(c.to))), canRestore && React.createElement("button", {
+      className: "btn ghost sm",
+      "data-hist-restore": c.f,
+      title: 'Set “' + (HIST_LABEL[c.f] || c.f) + '” back to what it was before this change',
+      onClick: () => {
+        if (window.__restoreField) window.__restoreField(d.id, c.f, c.from);
+      }
+    }, "↩ Put back"));
+  })))), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 10
+    }
+  }, "“Put back” restores that one field to the value it had before the change — nothing else is touched, and the restore itself shows up here.")));
+}
 function ActionQueue({
   db,
   openOrderDetail,
@@ -8456,7 +8794,7 @@ function Dashboard({
     } catch (e) {}
   };
   const followN = agedUnpaid.length + feedbackDue.length + bdaySoon.length;
-  return React.createElement(React.Fragment, null, React.createElement(ActionQueue, {
+  return React.createElement(React.Fragment, null, React.createElement(WhatsNew, null), React.createElement(ActionQueue, {
     db: db,
     openOrderDetail: openOrderDetail,
     goCalendar: goCalendar,
@@ -10158,6 +10496,7 @@ function DeliverableRow({
   updateSettings
 }) {
   const [showImport, setShowImport] = useState(false);
+  const [showHist, setShowHist] = useState(false);
   const [importTxt, setImportTxt] = useState('');
   const [open, setOpen] = useState(!!defaultOpen);
   const [calBusy, setCalBusy] = useState(false);
@@ -10325,7 +10664,11 @@ function DeliverableRow({
       ...patch
     }
   });
-  return React.createElement(React.Fragment, null, React.createElement("div", {
+  return React.createElement(React.Fragment, null, showHist && React.createElement(DeliverableHistory, {
+    d: d,
+    db: db,
+    onClose: () => setShowHist(false)
+  }), React.createElement("div", {
     className: "dl-row",
     ref: rowRef,
     "data-dlid": d.id,
@@ -10522,6 +10865,10 @@ function DeliverableRow({
     }, d.dlvFolderUrl && {
       label: '🗂 Open Drive folder' + (d.upVer > 1 ? ' (V' + d.upVer + ')' : ''),
       act: () => window.open(d.dlvFolderUrl, '_blank')
+    }, {
+      label: '🕘 History',
+      title: 'Every change to this piece — with one-tap restore',
+      act: () => setShowHist(true)
     }, (d.dlvDrafts || []).length > 0 && {
       label: '🗃 Earlier version' + (d.dlvDrafts.length > 1 ? 's (' + d.dlvDrafts.length + ')' : '') + ' — drafts',
       act: async () => {
@@ -15214,7 +15561,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   setInterval(apply, 10 * 60 * 1000);
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-1</div>
+<script>
+/* 📴 Works without signal: a small service worker keeps a copy of this page (and React + fonts) on the
+   device, so the Command Centre opens on location with no connection — your data is already local.
+   It is scoped to index.html only, so it never touches the hub's push-notification worker. */
+(function(){
+  try{
+    if(/\/(beta|prev)\//.test(location.pathname)) return;
+    if(/\/$/.test(location.pathname)) history.replaceState(null, '', location.pathname + 'index.html' + location.search + location.hash);
+    if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
+      navigator.serviceWorker.register('cc-sw.js', {scope: './index.html'}).catch(function(){});
+  }catch(e){}
+})();
+</script>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-3</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
