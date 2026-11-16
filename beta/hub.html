@@ -3822,7 +3822,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
 
   /* ---------------- listings: group the hub's pieces by property ---------------- */
   var LIST_T = /listing|hdr|drone|aerial|twilight|floor ?plan|virtual tour|iguide|matterport|walk ?through|property (video|tour)/i;
-  var ADDR_T = /^\s*\d+[a-z]?\s+\S+|\b(street|avenue|ave|road|drive|crescent|cres|boulevard|blvd|court|lane|terrace|trail|place|circle|gate)\b/i;
+  // an order named like a street address: a house number AND a street word ("2026 Royal LePage National Sales Conference" is not one)
+  var ADDR_T = /^\s*\d+[a-z]?\s+.*\b(st|street|ave|avenue|rd|road|dr|drive|cres|crescent|blvd|boulevard|crt|ct|court|ln|lane|terr|terrace|trail|trl|pl|place|cir|circle|gate|way|pkwy|parkway|line|sideroad|hwy|highway|sq|square|grove|gardens?|heights|mews|path|row|close)\b/i;
   function isPhotoItem(x){ return /photo|hdr/i.test(String(x.t || '')); }
   function listings(){
     var by = {}, order = [];
@@ -4344,7 +4345,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-7</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-8</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
