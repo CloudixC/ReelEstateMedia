@@ -4173,16 +4173,149 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var fs = Math.round(W * 0.078); x.font = '700 ' + fs + 'px ' + F; x.fillStyle = '#fff';
     var a1 = wrapLines(x, o.l1, W - M * 2, 3); for(var j = a1.length - 1; j >= 0; j--){ x.fillText(a1[j], M, y); y -= Math.round(fs * 1.08); }
   }
+  /* ---- ✂️ cut-out look: the home lifted off its sky and set on a clean page, words above it ----
+     skyCut() finds the sky by growing from the top edge through smooth, similar-coloured pixels (so gradients and soft cloud pass,
+     roof lines and branches stop it), fills small sky gaps seen through branches, drops anything left floating, and feathers the edge.
+     It needs an exterior photo with open sky; `ok` is false otherwise and the design falls back to a framed photo. */
+  function skyCut(img){
+    var ww = 640, hh = Math.max(40, Math.round(img.height * ww / img.width)), N = ww * hh;
+    var c = document.createElement('canvas'); c.width = ww; c.height = hh;
+    var x = c.getContext('2d', {willReadFrequently: true}); x.drawImage(img, 0, 0, ww, hh);
+    var d = x.getImageData(0, 0, ww, hh).data;
+    var lum = new Float32Array(N), grad = new Float32Array(N), sky = new Uint8Array(N), i, px, py, k, n;
+    for(i = 0; i < N; i++) lum[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    for(py = 0; py < hh; py++) for(px = 0; px < ww; px++){ i = py * ww + px;
+      grad[i] = Math.abs(lum[px < ww - 1 ? i + 1 : i] - lum[px > 0 ? i - 1 : i]) + Math.abs(lum[py < hh - 1 ? i + ww : i] - lum[py > 0 ? i - ww : i]); }
+    var G = 20, C = 18, limit = Math.round(hh * 0.9);
+    // seeds: the smooth, bright part of the top edge (foliage and roofs up there are darker or textured)
+    var tl = []; for(px = 0; px < ww; px++) tl.push(lum[px]); tl.sort(function(a, b){ return a - b; });
+    var ref = tl[Math.floor(ww * 0.75)], q = new Int32Array(N), qh = 0, qt = 0;
+    for(px = 0; px < ww; px++){ if(grad[px] < G && lum[px] >= ref * 0.6 && lum[px] > 45){ sky[px] = 1; q[qt++] = px; } }
+    var topCov = qt / ww;
+    var dist = function(a, b){ return Math.abs(d[a * 4] - d[b * 4]) + Math.abs(d[a * 4 + 1] - d[b * 4 + 1]) + Math.abs(d[a * 4 + 2] - d[b * 4 + 2]); };
+    while(qh < qt){ var cur = q[qh++], cx0 = cur % ww, cy0 = (cur - cx0) / ww;
+      var nb = [cx0 > 0 ? cur - 1 : -1, cx0 < ww - 1 ? cur + 1 : -1, cy0 > 0 ? cur - ww : -1, cy0 < limit ? cur + ww : -1];
+      for(k = 0; k < 4; k++){ n = nb[k]; if(n < 0 || sky[n]) continue; if(grad[n] < G && dist(n, cur) < C){ sky[n] = 1; q[qt++] = n; } } }
+    // row colour of the sky, then fill sky-coloured gaps close to it (sky seen through branches)
+    var rowC = new Float32Array(hh * 3), horizon = 0, last = -1;
+    for(py = 0; py < hh; py++){ var cnt = 0, r = 0, g = 0, b = 0; for(px = 0; px < ww; px++){ i = py * ww + px; if(sky[i]){ cnt++; r += d[i * 4]; g += d[i * 4 + 1]; b += d[i * 4 + 2]; } }
+      if(cnt >= 6){ rowC[py * 3] = r / cnt; rowC[py * 3 + 1] = g / cnt; rowC[py * 3 + 2] = b / cnt; last = py; if(cnt >= ww * 0.03) horizon = py; }
+      else if(last >= 0){ rowC[py * 3] = rowC[last * 3]; rowC[py * 3 + 1] = rowC[last * 3 + 1]; rowC[py * 3 + 2] = rowC[last * 3 + 2]; } }
+    var R = Math.max(3, Math.round(ww * 0.03)), integ = new Int32Array((ww + 1) * (hh + 1));
+    for(py = 0; py < hh; py++){ var run = 0; for(px = 0; px < ww; px++){ run += sky[py * ww + px]; integ[(py + 1) * (ww + 1) + px + 1] = integ[py * (ww + 1) + px + 1] + run; } }
+    var add = [];
+    for(py = 0; py <= Math.min(hh - 1, horizon + R); py++) for(px = 0; px < ww; px++){ i = py * ww + px; if(sky[i] || last < 0) continue;
+      var x0 = Math.max(0, px - R), x1 = Math.min(ww, px + R + 1), y0 = Math.max(0, py - R), y1 = Math.min(hh, py + R + 1);
+      var near = integ[y1 * (ww + 1) + x1] - integ[y0 * (ww + 1) + x1] - integ[y1 * (ww + 1) + x0] + integ[y0 * (ww + 1) + x0];
+      if(near < 3) continue;
+      var dc = Math.abs(d[i * 4] - rowC[py * 3]) + Math.abs(d[i * 4 + 1] - rowC[py * 3 + 1]) + Math.abs(d[i * 4 + 2] - rowC[py * 3 + 2]);
+      if(dc < 46) add.push(i); }
+    for(k = 0; k < add.length; k++) sky[add[k]] = 1;
+    // keep only what stands on the ground: anything not connected to the bottom edge was a cloud edge or a stray
+    var keep = new Uint8Array(N); qh = 0; qt = 0;
+    for(px = 0; px < ww; px++){ i = (hh - 1) * ww + px; if(!sky[i]){ keep[i] = 1; q[qt++] = i; } }
+    while(qh < qt){ var cu = q[qh++], ux = cu % ww, uy = (cu - ux) / ww;
+      for(var dy = -1; dy <= 1; dy++) for(var dx = -1; dx <= 1; dx++){ if(!dx && !dy) continue; var nx = ux + dx, ny = uy + dy; if(nx < 0 || ny < 0 || nx >= ww || ny >= hh) continue; n = ny * ww + nx; if(!sky[n] && !keep[n]){ keep[n] = 1; q[qt++] = n; } } }
+    // one-pixel trim (takes the sky-coloured fringe off edges) and a soft edge
+    var m = c.getContext('2d').createImageData(ww, hh), skyCount = 0;
+    for(py = 0; py < hh; py++) for(px = 0; px < ww; px++){ i = py * ww + px; if(!keep[i]) skyCount++;
+      var solid = keep[i] && (px === 0 || keep[i - 1]) && (px === ww - 1 || keep[i + 1]) && (py === 0 || keep[i - ww]) && (py === hh - 1 || keep[i + ww]);
+      m.data[i * 4 + 3] = solid ? 255 : 0; }
+    var mc = document.createElement('canvas'); mc.width = ww; mc.height = hh; mc.getContext('2d').putImageData(m, 0, 0);
+    var ow = Math.min(1600, img.width), oh = Math.round(img.height * ow / img.width);
+    var out = document.createElement('canvas'); out.width = ow; out.height = oh;
+    var ox = out.getContext('2d'); ox.drawImage(img, 0, 0, ow, oh);
+    ox.globalCompositeOperation = 'destination-in'; ox.imageSmoothingEnabled = true; ox.imageSmoothingQuality = 'high';
+    try{ ox.filter = 'blur(' + (ow / ww * 0.55).toFixed(2) + 'px)'; }catch(eF){}
+    ox.drawImage(mc, 0, 0, ow, oh); ox.globalCompositeOperation = 'source-over'; try{ ox.filter = 'none'; }catch(eF2){}
+    // where the main mass of the home starts, and where its peak sits left-to-right
+    // (the home is taken to be what stands in the middle of the frame: trees at the sides usually reach higher and are allowed to crop or fade)
+    var colTop = new Int32Array(ww), mid = [], mainTop = 0, sx = 0, sn = 0;
+    for(px = 0; px < ww; px++){ colTop[px] = hh; for(py = 0; py < hh; py++){ if(keep[py * ww + px]){ colTop[px] = py; break; } } if(px >= ww * 0.3 && px <= ww * 0.7) mid.push(colTop[px]); }
+    mid.sort(function(a2, b2){ return a2 - b2; }); mainTop = mid.length ? mid[Math.floor(mid.length * 0.2)] : 0;   // near the roof peak, not the eaves
+    for(px = Math.round(ww * 0.15); px < ww * 0.85; px++){ if(colTop[px] >= mainTop - hh * 0.03 && colTop[px] <= mainTop + hh * 0.12){ sx += px; sn++; } }
+    var frac = skyCount / N;
+    // is it really sky? A colourful top (blue, sunset) is. A white/grey one is only trusted when it ends high in the frame —
+    // a white ceiling and walls look the same but run most of the way down to the floor.
+    var sat = 0, sc2 = 0, bots = [];
+    for(px = 0; px < ww; px += 2){ var bot = 0; for(py = 0; py < hh; py += 2){ i = py * ww + px; if(!keep[i]){ bot = py; var mx = Math.max(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]), mn = Math.min(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]); sat += mx ? (mx - mn) / mx : 0; sc2++; } } bots.push(bot); }
+    bots.sort(function(a3, b3){ return a3 - b3; });
+    var meanSat = sc2 ? sat / sc2 : 0, medBot = bots[Math.floor(bots.length / 2)] / hh;
+    var real = meanSat > 0.18 || medBot < 0.52;
+    return {cv: out, top: mainTop / hh, cx: sn > 30 ? Math.min(0.62, Math.max(0.38, sx / sn / ww)) : 0.5, frac: frac, sat: meanSat, bot: medBot,
+      ok: frac >= 0.05 && frac <= 0.8 && topCov >= 0.3 && mainTop > hh * 0.04 && real};
+  }
+  KIT._skyCut = skyCut;
+  function fitFont(x, text, weight, F, maxW, maxPx){ var fs = maxPx; x.font = weight + ' ' + fs + 'px ' + F; var w = x.measureText(text).width; if(w > maxW){ fs = Math.floor(fs * maxW / w); x.font = weight + ' ' + fs + 'px ' + F; } return fs; }
+  function drawCut(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.065);
+    var ink = '#1F1B1A', acc = o.accent || '#EA002A', tall = H / W;
+    x.fillStyle = '#F3EEE8'; x.fillRect(0, 0, W, H);
+    var pg = x.createRadialGradient(W * 0.28, H * 0.16, 0, W * 0.28, H * 0.16, Math.max(W, H) * 0.8); pg.addColorStop(0, 'rgba(255,255,255,.7)'); pg.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = pg; x.fillRect(0, 0, W, H);
+    try{ x.letterSpacing = '0px'; }catch(e0){}
+    // agent, top right
+    var y = M + Math.round(W * 0.026);
+    x.textAlign = 'right'; x.textBaseline = 'alphabetic'; x.fillStyle = ink;
+    if(o.agent){ x.font = '700 ' + Math.round(W * 0.027) + 'px ' + F; x.fillText(String(o.agent).toUpperCase(), W - M, y); y += Math.round(W * 0.034); }
+    if(o.brokerage){ x.font = '500 ' + Math.round(W * 0.024) + 'px ' + F; x.fillText(wrapLines(x, o.brokerage, W * 0.6, 1)[0] || '', W - M, y); }
+    // headline: two stacked lines, as large as the page allows
+    var words = String(o.label || '').toUpperCase().split(/\s+/).filter(Boolean), l1 = words[0] || '', l2 = words.slice(1).join(' ');
+    var capPx = Math.min(W * 0.3, H * (tall > 1.5 ? 0.15 : tall > 1.1 ? 0.19 : 0.2));
+    try{ x.letterSpacing = '-' + Math.round(capPx * 0.035) + 'px'; }catch(e1){}
+    var fs = Math.min(fitFont(x, l1, 700, F, W - M * 2, capPx), l2 ? fitFont(x, l2 + '.', 700, F, W - M * 2, capPx) : capPx);
+    x.font = '700 ' + fs + 'px ' + F; x.textAlign = 'left';
+    var hy = M + Math.round(W * (tall > 1.5 ? 0.2 : 0.085)) + Math.round(fs * 0.76);
+    x.fillStyle = ink; x.fillText(l1, M - Math.round(fs * 0.04), hy);
+    if(l2){ hy += Math.round(fs * 0.88); x.fillStyle = acc; x.fillText(l2, M - Math.round(fs * 0.04), hy); var lw = x.measureText(l2).width; x.fillStyle = ink; x.fillText('.', M - Math.round(fs * 0.04) + lw, hy); }
+    try{ x.letterSpacing = '0px'; }catch(e2){}
+    // details row under a hairline
+    var ry = hy + Math.round(W * 0.06);
+    x.fillStyle = 'rgba(31,27,26,.28)'; x.fillRect(M, ry, W - M * 2, 2);
+    var f1 = Math.round(W * 0.031), ly = ry + Math.round(W * 0.052);
+    x.fillStyle = ink; x.font = '700 ' + f1 + 'px ' + F;
+    try{ x.letterSpacing = '1px'; }catch(e3){}
+    var al = wrapLines(x, String(o.l1 || '').toUpperCase(), (W - M * 2) * 0.56, 2), rowBottom = ly;
+    al.forEach(function(t, i2){ x.fillText(t, M, ly + i2 * Math.round(f1 * 1.28)); rowBottom = ly + i2 * Math.round(f1 * 1.28); });
+    x.textAlign = 'right'; var ryy = ly;
+    if(o.l2){ x.fillText(wrapLines(x, o.l2, (W - M * 2) * 0.4, 1)[0] || '', W - M, ryy); ryy += Math.round(f1 * 1.28); }
+    if(o.phone){ x.font = '500 ' + Math.round(W * 0.027) + 'px ' + F; x.fillText(o.phone, W - M, ryy); rowBottom = Math.max(rowBottom, ryy); }
+    try{ x.letterSpacing = '0px'; }catch(e4){}
+    x.textAlign = 'left';
+    // the home
+    var zoneTop = rowBottom + Math.round(W * 0.035), zoneH = H - zoneTop;
+    if(zoneH < H * 0.18 || !o.img) return;
+    var layer = document.createElement('canvas'); layer.width = W; layer.height = H; var lx = layer.getContext('2d');
+    var cut = o.cut;
+    if(cut && cut.ok){
+      var cw = cut.cv.width, ch = cut.cv.height, mt = cut.top, s0 = W / cw;
+      var s = Math.min(s0 * 2.2, Math.max(s0, zoneH * 0.8 / ((1 - mt) * ch)));
+      var yMain = Math.max(H - (1 - mt) * ch * s, zoneTop + zoneH * 0.16), dw = cw * s, dx = Math.min(0, Math.max(W - dw, W / 2 - cut.cx * dw));
+      lx.imageSmoothingQuality = 'high'; lx.drawImage(cut.cv, dx, yMain - mt * ch * s, dw, ch * s);
+      // trees or peaks that reach above the space for the home fade out instead of running into the words
+      var fg = lx.createLinearGradient(0, zoneTop - zoneH * 0.02, 0, zoneTop + zoneH * 0.13); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(0.5, 'rgba(0,0,0,.5)'); fg.addColorStop(1, 'rgba(0,0,0,1)');
+      lx.globalCompositeOperation = 'destination-in'; lx.fillStyle = fg; lx.fillRect(0, 0, W, H);
+    } else {
+      // no open sky to cut: the photo sits in an arched frame instead
+      var fx = M, fw = W - M * 2, fy = zoneTop + Math.round(W * 0.01), rad = Math.min(fw / 2, zoneH * 0.55);
+      lx.beginPath(); lx.moveTo(fx, H); lx.lineTo(fx, fy + rad); lx.arc(fx + rad, fy + rad, rad, Math.PI, Math.PI * 1.5); lx.lineTo(fx + fw - rad, fy); lx.arc(fx + fw - rad, fy + rad, rad, Math.PI * 1.5, 0); lx.lineTo(fx + fw, H); lx.closePath(); lx.clip();
+      var fh = H - fy, sc = Math.max(fw / o.img.width, fh / o.img.height); lx.drawImage(o.img, fx + (fw - o.img.width * sc) / 2, fy + (fh - o.img.height * sc) / 2, o.img.width * sc, o.img.height * sc);
+    }
+    x.drawImage(layer, 0, 0);
+  }
+  KIT._drawCut = drawCut;
   KIT._draw = drawGraphic;
   function openGraphic(g, kind){
     var d = dirFor(g) || {}, raw = KIT.raw || {};
     var accent = '#EA002A'; try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) accent = c1.value; }catch(e){}
     var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
-    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null,
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name and brokerage are added for you.</div>' +
       '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
-      '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div>' +
+      '<label class="kf">Look</label><div class="kchips" id="kg-style"><button type="button" class="kchip' + (st.style === 'photo' ? ' on' : '') + '" data-gs="photo">Full photo</button><button type="button" class="kchip' + (st.style === 'cut' ? ' on' : '') + '" data-gs="cut">Cut-out</button></div>' +
+      '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div><div class="bsub" id="kg-note" style="margin:6px 0 0"></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
       '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
@@ -4190,22 +4323,49 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">Download <span class="ar">→</span></button></div>');
     var job = KIT.job, cv = $id('kg-cv'), l1 = $id('kg-l1'), l2 = $id('kg-l2');
     var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); };
-    var paint = function(){ var f = GFMT[st.fmt]; drawGraphic(cv, {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent}); };
+    var paint = function(){
+      var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent};
+      var note = $id('kg-note');
+      if(st.style === 'cut'){
+        if(st.img && !st.cut){ try{ st.cut = skyCut(st.img); }catch(eC){ st.cut = {ok: false}; } }
+        o.cut = st.cut; drawCut(cv, o);
+        if(note) note.textContent = (st.img && st.cut && !st.cut.ok) ? 'This photo has no open sky to cut away, so it’s shown in a frame. A front-of-house shot with sky works best.' : '';
+      } else { drawGraphic(cv, o); if(note) note.textContent = ''; }
+    };
     l1.value = st.l1; l2.value = st.l2; hint();
     l1.oninput = function(){ st.l1 = l1.value; paint(); }; l2.oninput = function(){ st.l2 = l2.value; paint(); };
     if(/open house|sold/i.test(st.label)){ st.l2 = ''; l2.value = ''; }
     card.addEventListener('click', function(e){
       var k = e.target.closest ? e.target.closest('[data-gk]') : null;
       if(k){ st.label = k.getAttribute('data-gk'); card.querySelectorAll('[data-gk]').forEach(function(b){ b.classList.toggle('on', b === k); }); if(/open house|sold/i.test(st.label) && l2.value === (d.price || '')){ st.l2 = ''; l2.value = ''; } hint(); paint(); return; }
+      var gs = e.target.closest ? e.target.closest('[data-gs]') : null;
+      if(gs){ st.style = KIT.gstyle = gs.getAttribute('data-gs'); card.querySelectorAll('[data-gs]').forEach(function(b){ b.classList.toggle('on', b === gs); }); paint(); findExterior(); return; }
       var f = e.target.closest ? e.target.closest('[data-gf]') : null;
       if(f){ st.fmt = f.getAttribute('data-gf'); card.querySelectorAll('[data-gf]').forEach(function(b){ b.classList.toggle('on', b === f); }); paint(); return; }
       var p = e.target.closest ? e.target.closest('[data-gp]') : null;
       if(p){ card.querySelectorAll('[data-gp]').forEach(function(b){ b.classList.toggle('on', b === p); }); pick(p.getAttribute('data-gp')); }
     });
-    var filesById = {};
+    var filesById = {}, fileList = [], scanned = false;
+    // the cut-out look needs a photo with open sky: if the chosen one has none, look through the small previews for a front-of-house shot
+    var findExterior = function(){
+      if(st.style !== 'cut' || scanned || !fileList.length || (st.cut && st.cut.ok)) return;
+      scanned = true;
+      var note = $id('kg-note'), list = fileList.slice(0, 60), i = 0, best = null;
+      if(note) note.textContent = 'Looking for a front-of-house photo…';
+      var next = function(){
+        if(job !== KIT.job || st.style !== 'cut') return;
+        if(i >= list.length || (best && best.sat > 0.18)){ if(best) choose(best.id); else paint(); return; }
+        var f = list[i++];
+        fetch(thumbUrl(f)).then(function(r){ if(!r.ok) throw new Error('t'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).then(function(bm){
+          var c = skyCut(bm); if(c.ok && (!best || c.sat > best.sat)) best = {id: f.id, sat: c.sat};
+        }).catch(function(){}).then(next);
+      };
+      next();
+    };
+    var choose = function(id){ card.querySelectorAll('[data-gp]').forEach(function(b){ var on = b.getAttribute('data-gp') === id; b.classList.toggle('on', on); if(on){ try{ b.scrollIntoView({block: 'nearest'}); }catch(eS){} } }); pick(id); };
     var pick = function(id){
       var f = filesById[id]; if(!f) return;
-      sized(f, 1600).then(function(b){ return createImageBitmap(b); }).then(function(bm){ if(job !== KIT.job) return; st.img = bm; paint(); }).catch(function(){ say('Couldn’t load that photo — try another.'); });
+      sized(f, 1600).then(function(b){ return createImageBitmap(b); }).then(function(bm){ if(job !== KIT.job) return; st.img = bm; st.cut = null; paint(); findExterior(); }).catch(function(){ say('Couldn’t load that photo — try another.'); });
     };
     paint();
     try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if(job === KIT.job) paint(); }); }catch(e){}
@@ -4213,7 +4373,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       if(job !== KIT.job) return;
       var box = $id('kg-pick');
       if(!files.length){ box.innerHTML = '<span class="bsub">No photos found for this home yet — the graphic will use a plain background.</span>'; return; }
-      files.forEach(function(f){ filesById[f.id] = f; });
+      files.forEach(function(f){ filesById[f.id] = f; }); fileList = files;
       box.innerHTML = files.slice(0, 60).map(function(f, i){ return '<button type="button" data-gp="' + esc(f.id) + '" class="' + (i === 0 ? 'on' : '') + '" style="background-image:url(&quot;' + esc(thumbUrl(f)) + '&quot;)" aria-label="Photo ' + (i + 1) + '"></button>'; }).join('');
       pick(files[0].id);
     });
@@ -4369,7 +4529,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-10</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-11</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
