@@ -4284,27 +4284,79 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(o.phone){ x.font = '500 ' + Math.round(W * 0.027) + 'px ' + F; x.fillText(o.phone, W - M, ryy); rowBottom = Math.max(rowBottom, ryy); }
     try{ x.letterSpacing = '0px'; }catch(e4){}
     x.textAlign = 'left';
-    // the home
-    var zoneTop = rowBottom + Math.round(W * 0.035), zoneH = H - zoneTop;
-    if(zoneH < H * 0.18 || !o.img) return;
+    drawHome(x, o, rowBottom + Math.round(W * 0.035), null);
+  }
+  /* the home along the bottom of a cut-out page: the cut-out when the photo has sky, the photo in an arch when it doesn't.
+     `arch` (a colour) paints a soft arch behind the cut-out as well. */
+  function drawHome(x, o, zoneTop, arch){
+    var W = o.w, H = o.h, M = Math.round(W * 0.065), zoneH = H - zoneTop;
+    if(zoneH < H * 0.18) return;
+    var cut = o.cut, fx = arch ? Math.round(W * 0.11) : M, fw = W - fx * 2, fy = zoneTop + Math.round(W * 0.01), rad = Math.min(fw / 2, zoneH * 0.55);
+    var archPath = function(c2){ c2.beginPath(); c2.moveTo(fx, H); c2.lineTo(fx, fy + rad); c2.arc(fx + rad, fy + rad, rad, Math.PI, Math.PI * 1.5); c2.lineTo(fx + fw - rad, fy); c2.arc(fx + fw - rad, fy + rad, rad, Math.PI * 1.5, 0); c2.lineTo(fx + fw, H); c2.closePath(); };
+    if(arch){ archPath(x); x.fillStyle = arch; x.fill(); }
+    if(!o.img) return;
     var layer = document.createElement('canvas'); layer.width = W; layer.height = H; var lx = layer.getContext('2d');
-    var cut = o.cut;
     if(cut && cut.ok){
       var cw = cut.cv.width, ch = cut.cv.height, mt = cut.top, s0 = W / cw;
-      var s = Math.min(s0 * 2.2, Math.max(s0, zoneH * 0.8 / ((1 - mt) * ch)));
-      var yMain = Math.max(H - (1 - mt) * ch * s, zoneTop + zoneH * 0.16), dw = cw * s, dx = Math.min(0, Math.max(W - dw, W / 2 - cut.cx * dw));
+      var s = Math.min(s0 * 2.2, Math.max(s0, zoneH * (arch ? 0.7 : 0.8) / ((1 - mt) * ch)));
+      var yMain = Math.max(H - (1 - mt) * ch * s, zoneTop + zoneH * (arch ? 0.24 : 0.16)), dw = cw * s, dx = Math.min(0, Math.max(W - dw, W / 2 - cut.cx * dw));
       lx.imageSmoothingQuality = 'high'; lx.drawImage(cut.cv, dx, yMain - mt * ch * s, dw, ch * s);
       // trees or peaks that reach above the space for the home fade out instead of running into the words
       var fg = lx.createLinearGradient(0, zoneTop - zoneH * 0.02, 0, zoneTop + zoneH * 0.13); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(0.5, 'rgba(0,0,0,.5)'); fg.addColorStop(1, 'rgba(0,0,0,1)');
       lx.globalCompositeOperation = 'destination-in'; lx.fillStyle = fg; lx.fillRect(0, 0, W, H);
     } else {
-      // no open sky to cut: the photo sits in an arched frame instead
-      var fx = M, fw = W - M * 2, fy = zoneTop + Math.round(W * 0.01), rad = Math.min(fw / 2, zoneH * 0.55);
-      lx.beginPath(); lx.moveTo(fx, H); lx.lineTo(fx, fy + rad); lx.arc(fx + rad, fy + rad, rad, Math.PI, Math.PI * 1.5); lx.lineTo(fx + fw - rad, fy); lx.arc(fx + fw - rad, fy + rad, rad, Math.PI * 1.5, 0); lx.lineTo(fx + fw, H); lx.closePath(); lx.clip();
+      // no open sky to cut: the photo sits inside the arch instead
+      archPath(lx); lx.clip();
       var fh = H - fy, sc = Math.max(fw / o.img.width, fh / o.img.height); lx.drawImage(o.img, fx + (fw - o.img.width * sc) / 2, fy + (fh - o.img.height * sc) / 2, o.img.width * sc, o.img.height * sc);
     }
     x.drawImage(layer, 0, 0);
   }
+  /* ---- classic cut-out: centred, serif, quieter — same cut-out home, standing in front of a soft arch ---- */
+  var SERIF = '"Cormorant Garamond",Georgia,"Times New Roman",serif', serifP = null;
+  function ensureSerif(){
+    if(serifP) return serifP;
+    try{ var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap'; document.head.appendChild(l); }catch(e){}
+    serifP = new Promise(function(res){
+      var done = false, fin = function(){ if(!done){ done = true; res(); } };
+      setTimeout(fin, 3500);
+      try{ var tries = 0, go = function(){ Promise.all([document.fonts.load('600 80px "Cormorant Garamond"'), document.fonts.load('italic 600 80px "Cormorant Garamond"'), document.fonts.load('500 80px "Cormorant Garamond"')]).then(function(r){ if((r[0] && r[0].length) || tries++ > 12) fin(); else setTimeout(go, 250); }).catch(fin); }; go(); }catch(e2){ fin(); }
+    });
+    return serifP;
+  }
+  function drawClassic(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.075);
+    var ink = '#221E1C', acc = o.accent || '#EA002A', tall = H / W, cxm = W / 2, U = W * (tall > 1.5 ? 1.28 : 1);   // the tall story shape has room for larger type
+    x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H);
+    x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+    var sp = function(px){ try{ x.letterSpacing = px + 'px'; }catch(e){} };
+    // who: name over brokerage, small spaced capitals
+    var y = M + Math.round(U * (tall > 1.5 ? 0.09 : 0.02));
+    x.fillStyle = ink; sp(Math.round(U * 0.004));
+    if(o.agent){ x.font = '700 ' + Math.round(U * 0.024) + 'px ' + F; x.fillText(String(o.agent).toUpperCase(), cxm, y); y += Math.round(U * 0.034); }
+    if(o.brokerage){ x.font = '500 ' + Math.round(U * 0.021) + 'px ' + F; x.fillStyle = 'rgba(34,30,28,.72)'; x.fillText(wrapLines(x, String(o.brokerage).toUpperCase(), W - M * 2, 1)[0] || '', cxm, y); }
+    sp(0);
+    // headline: first word upright, the rest in italics, on one line when it fits
+    var words = String(o.label || '').split(/\s+/).filter(Boolean), w1 = words[0] || '', w2 = words.slice(1).join(' ');
+    var cap = Math.min(W * 0.2, H * (tall > 1.5 ? 0.125 : 0.15)), fs = cap, gap, tw;
+    var measure = function(){ x.font = '600 ' + fs + 'px ' + SERIF; var a = x.measureText(w1).width; gap = fs * 0.22; x.font = 'italic 600 ' + fs + 'px ' + SERIF; return a + (w2 ? gap + x.measureText(w2).width : 0); };
+    tw = measure(); if(tw > W - M * 2){ fs = Math.floor(fs * (W - M * 2) / tw); tw = measure(); }
+    var hy = y + Math.round(U * 0.05) + Math.round(fs * 0.82), sx = cxm - tw / 2;
+    x.textAlign = 'left'; x.fillStyle = ink; x.font = '600 ' + fs + 'px ' + SERIF; x.fillText(w1, sx, hy);
+    if(w2){ var a1 = x.measureText(w1).width; x.fillStyle = acc; x.font = 'italic 600 ' + fs + 'px ' + SERIF; x.fillText(w2, sx + a1 + gap, hy); }
+    x.textAlign = 'center';
+    // address, then the second line, then the phone
+    var ay = hy + Math.round(U * 0.092), f1 = Math.round(U * 0.027);
+    x.fillStyle = ink; x.font = '700 ' + f1 + 'px ' + F; sp(Math.round(U * 0.0045));
+    var al = wrapLines(x, String(o.l1 || '').toUpperCase(), W - M * 2.4, 2);
+    al.forEach(function(t, i2){ x.fillText(t, cxm, ay + i2 * Math.round(f1 * 1.4)); });
+    var by = ay + (al.length - 1) * Math.round(f1 * 1.4); sp(0);
+    if(o.l2){ by += Math.round(U * 0.062); x.font = '500 ' + Math.round(U * 0.05) + 'px ' + SERIF; x.fillText(wrapLines(x, o.l2, W - M * 2, 1)[0] || '', cxm, by); }
+    if(o.phone){ by += Math.round(U * 0.042); x.font = '500 ' + Math.round(U * 0.024) + 'px ' + F; x.fillStyle = 'rgba(34,30,28,.72)'; sp(Math.round(U * 0.002)); x.fillText(o.phone, cxm, by); sp(0); }
+    x.textAlign = 'left';
+    drawHome(x, o, by + Math.round(U * 0.045), '#E6DCCF');
+  }
+  KIT._drawClassic = drawClassic;
   KIT._drawCut = drawCut;
   KIT._draw = drawGraphic;
   function openGraphic(g, kind){
@@ -4315,7 +4367,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name and brokerage are added for you.</div>' +
       '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
-      '<label class="kf">Look</label><div class="kchips" id="kg-style"><button type="button" class="kchip' + (st.style === 'photo' ? ' on' : '') + '" data-gs="photo">Full photo</button><button type="button" class="kchip' + (st.style === 'cut' ? ' on' : '') + '" data-gs="cut">Cut-out</button></div>' +
+      '<label class="kf">Look</label><div class="kchips" id="kg-style"><button type="button" class="kchip' + (st.style === 'photo' ? ' on' : '') + '" data-gs="photo">Full photo</button><button type="button" class="kchip' + (st.style === 'cut' ? ' on' : '') + '" data-gs="cut">Cut-out · Bold</button><button type="button" class="kchip' + (st.style === 'classic' ? ' on' : '') + '" data-gs="classic">Cut-out · Classic</button></div>' +
       '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div><div class="bsub" id="kg-note" style="margin:6px 0 0"></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
@@ -4327,9 +4379,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var paint = function(){
       var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent};
       var note = $id('kg-note');
-      if(st.style === 'cut'){
+      if(st.style === 'cut' || st.style === 'classic'){
         if(st.img && !st.cut){ try{ st.cut = skyCut(st.img); }catch(eC){ st.cut = {ok: false}; } }
-        o.cut = st.cut; drawCut(cv, o);
+        o.cut = st.cut;
+        if(st.style === 'classic'){ drawClassic(cv, o); if(!KIT.serifReady) ensureSerif().then(function(){ KIT.serifReady = true; if(job === KIT.job && st.style === 'classic') paint(); }); }
+        else drawCut(cv, o);
         if(note) note.textContent = (st.img && st.cut && !st.cut.ok) ? 'This photo has no open sky to cut away, so it’s shown in a frame. A front-of-house shot with sky works best.' : '';
       } else { drawGraphic(cv, o); if(note) note.textContent = ''; }
     };
@@ -4349,12 +4403,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var filesById = {}, fileList = [], scanned = false;
     // the cut-out look needs a photo with open sky: if the chosen one has none, look through the small previews for a front-of-house shot
     var findExterior = function(){
-      if(st.style !== 'cut' || scanned || !fileList.length || (st.cut && st.cut.ok)) return;
+      if(st.style === 'photo' || scanned || !fileList.length || (st.cut && st.cut.ok)) return;
       scanned = true;
       var note = $id('kg-note'), list = fileList.slice(0, 60), i = 0, best = null;
       if(note) note.textContent = 'Looking for a front-of-house photo…';
       var next = function(){
-        if(job !== KIT.job || st.style !== 'cut') return;
+        if(job !== KIT.job || st.style === 'photo') return;
         if(i >= list.length || (best && best.sat > 0.18)){ if(best) choose(best.id); else paint(); return; }
         var f = list[i++];
         fetch(thumbUrl(f)).then(function(r){ if(!r.ok) throw new Error('t'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).then(function(bm){
@@ -4530,7 +4584,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-11</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-12</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
