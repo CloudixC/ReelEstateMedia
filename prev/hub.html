@@ -4254,10 +4254,10 @@ window.OneSignalDeferred.push(async function(OneSignal){
     // where the main mass of the home starts, and where its peak sits left-to-right
     // (the home is taken to be what stands in the middle of the frame: trees at the sides usually reach higher and are allowed to crop or fade)
     var colTop = new Int32Array(ww), mid = [], mainTop = 0, sx = 0, sn = 0;
-    for(px = 0; px < ww; px++){ colTop[px] = solidTop[px]; if(px >= ww * 0.3 && px <= ww * 0.7) mid.push(colTop[px]); }
-    mid.sort(function(a2, b2){ return a2 - b2; }); mainTop = mid.length ? mid[Math.floor(mid.length * 0.2)] : 0;   // near the roof peak, not the eaves
+    for(px = 0; px < ww; px++){ colTop[px] = solidTop[px]; if(px >= ww * 0.2 && px <= ww * 0.8) mid.push(colTop[px]); }
+    mid.sort(function(a2, b2){ return a2 - b2; }); mainTop = mid.length ? mid[Math.floor(mid.length * 0.04)] : 0;   // the apex: the highest point of anything standing in the middle 60% of the frame
     for(px = Math.round(ww * 0.15); px < ww * 0.85; px++){ if(colTop[px] >= mainTop - hh * 0.03 && colTop[px] <= mainTop + hh * 0.12){ sx += px; sn++; } }
-    var cxi = Math.round((sn > 30 ? Math.min(0.62, Math.max(0.38, sx / sn / ww)) : 0.5) * ww), lo = cxi, hi = cxi, nearRoof = function(p2){ return colTop[p2] >= mainTop - hh * 0.06 && colTop[p2] <= mainTop + hh * 0.2; }, miss;
+    var cxi = Math.round((sn > 30 ? Math.min(0.62, Math.max(0.38, sx / sn / ww)) : 0.5) * ww), lo = cxi, hi = cxi, nearRoof = function(p2){ return colTop[p2] >= mainTop - hh * 0.06 && colTop[p2] <= mainTop + hh * 0.27; }, miss;
     for(miss = 0; lo > 0 && miss < ww * 0.03; lo--){ if(nearRoof(lo - 1)) miss = 0; else miss++; } lo += miss;
     for(miss = 0; hi < ww - 1 && miss < ww * 0.03; hi++){ if(nearRoof(hi + 1)) miss = 0; else miss++; } hi -= miss;
     var span = Math.min(1, Math.max(0.42, (hi - lo + 1) / ww));
@@ -4444,7 +4444,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var hf = homeFit(o, zTop, zBot, opt), mt = cut.top, bw = hf.bw, dw = hf.dw, dh = hf.dh, x0 = hf.x0, y0 = hf.y0;
       lx.drawImage(cut.cv, x0, y0, dw, dh);
       try{ lx.filter = 'none'; }catch(e2){}
-      var yPeak = y0 + mt * dh, fg = lx.createLinearGradient(0, yPeak - Math.max(zh * (opt.fade || 0.13), W * 0.085), 0, yPeak - zh * 0.01);
+      var yPeak = y0 + mt * dh, fg = lx.createLinearGradient(0, yPeak - (opt.fadePx || Math.max(zh * (opt.fade || 0.13), W * 0.085)), 0, yPeak - zh * 0.01);
       fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)');
       lx.globalCompositeOperation = 'destination-in'; lx.fillStyle = fg; lx.fillRect(0, 0, W, H);
       if(dw < bw - 2){   // zoomed out narrower than the space: the sides melt away instead of ending in a hard edge
@@ -4481,10 +4481,18 @@ window.OneSignalDeferred.push(async function(OneSignal){
       if(w2){ x.fillStyle = acc; if(two) x.fillText(w2, M, hy); else x.fillText(w2, M + x.measureText(w1 + ' ').width, hy1); } };
     // the band, and the home standing on it — its roof reaching up over the foot of the headline
     var bandH = Math.round(H * (story ? 0.24 : tall > 1.1 ? 0.25 : 0.3)), bandTop = H - safeB - bandH, U = W * (story ? 1.3 : 1);   // the tall story shape gets larger type
-    var hopt = {fill: 0.98, fade: 0.07, sink: Math.round(H * 0.02)}, zTop0 = hy - A * 0.22, fit = homeFit(o, zTop0, bandTop, hopt);
-    if(fit && fit.yPeak + A * 0.16 > hy1){ var down = fit.yPeak + A * 0.16 - hy1; hy1 += down; hy += down; }   // the words come down to meet the roof
+    // the words never sit ON the home: the home starts below them (a clear gap, plus the short band where taller side trees dissolve),
+    // and when the home is lower than that the words come down to just above its highest point
+    var fadeH = Math.round(W * 0.065), gapH = Math.round(A * 0.14), hopt = {fill: 0.98, fadePx: fadeH, sink: Math.round(H * 0.02)}, zTop0 = hy + gapH + fadeH, fit = homeFit(o, zTop0, bandTop, hopt);
+    if(fit && fit.yPeak - fadeH - gapH > hy1){ var down = fit.yPeak - fadeH - gapH - hy1; hy1 += down; hy += down; }
     placeHome(x, o, zTop0, bandTop, hopt);
     headline();   // the words go on last, in front of the home, so nothing in the photo can ever cover them
+    drawBand(x, o, bandTop, bandH, story);
+  }
+  /* the dark details band along the foot: address, price / second line, the facts, and the agent (face, name, brokerage, phone) */
+  function drawBand(x, o, bandTop, bandH, story){
+    var W = o.w, H = o.h, M = Math.round(W * 0.065), U = W * (story ? 1.3 : 1), ink = '#1B1817', acc = o.accent || '#EA002A';
+    x.textAlign = 'left'; x.textBaseline = 'alphabetic'; sp(x, 0);
     x.fillStyle = ink; x.fillRect(0, bandTop, W, H - bandTop);
     x.fillStyle = acc; x.fillRect(0, bandTop, W, Math.max(4, Math.round(W * 0.007)));
     // right: the agent
@@ -4523,6 +4531,63 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(o.l2){ ly += pF * 1.05; x.font = '700 ' + fitSize(x, o.l2, function(s3){ return '700 ' + s3 + 'px ' + SANS2; }, Lw, pF, 22) + 'px ' + SANS2; x.fillStyle = light; x.fillText(o.l2, M, ly); ly += pF * 0.2; }
     if(facts.length){ ly += fF * 1.35; var ft = facts.join('   ·   ').toUpperCase(); sp(x, Math.round(U * 0.0018)); x.font = '500 ' + fitSize(x, ft, function(s4){ return '500 ' + s4 + 'px ' + SANS2; }, Lw, fF, 16) + 'px ' + SANS2; x.fillStyle = dim; x.fillText(ft, M, ly); sp(x, 0); }
   }
+  function coverInto(x, img, rx, ry, rw, rh, zoom, slide){   // the photo filling a box, with the agent's zoom / slide
+    var z = Math.min(2.5, Math.max(1, +zoom || 1)), sc = Math.max(rw / img.width, rh / img.height) * z, iw = img.width * sc, ih = img.height * sc;
+    x.save(); x.beginPath(); x.rect(rx, ry, rw, rh); x.clip();
+    x.drawImage(img, rx + (rw - iw) / 2 + (Math.min(1, Math.max(-1, +slide || 0))) * (iw - rw) / 2, ry + (rh - ih) / 2, iw, ih); x.restore();
+  }
+  /* ---- Card: the whole photo framed on a paper page, an elegant caption under it. No cut-out. ---- */
+  function drawCard(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), M = Math.round(W * 0.06), tall = H / W, story = tall > 1.5, U = W * (story ? 1.22 : 1);
+    var ink = '#221E1C', soft = 'rgba(34,30,28,.7)', acc = o.accent || '#EA002A', safeT = story ? Math.round(H * 0.13) : M, safeB = story ? Math.round(H * 0.13) : M;
+    x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H);
+    x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
+    // measure the caption first, from the foot upward, so the photo gets every pixel that is left
+    var facts = factsOf(o), bits = (o.l2 ? [o.l2] : []).concat(facts), nameF = Math.round(U * 0.03), smF = Math.round(U * 0.024), r = o.head ? Math.round(U * 0.046) : 0;
+    var rowH = Math.max(r * 2, nameF + smF * 1.5), yRow = H - safeB - rowH;                       // agent row
+    var ruleY = yRow - Math.round(U * 0.032);
+    var fF = Math.round(U * 0.031), yFacts = bits.length ? ruleY - Math.round(U * 0.036) : ruleY - Math.round(U * 0.01);   // price · facts baseline
+    var aMax = Math.round(U * 0.078), af = function(s2){ return '600 ' + s2 + 'px ' + SERIF; };
+    var aF = fitSize(x, String(o.l1 || ''), af, W - M * 2, aMax, Math.round(U * 0.056)), al = wrapLines(x, String(o.l1 || ''), W - M * 2, 2);
+    var yAddrLast = (bits.length ? yFacts - fF * 1.95 : yFacts - Math.round(U * 0.01)), yAddr0 = yAddrLast - (al.length - 1) * Math.round(aF * 1.04);
+    var lF = Math.round(U * 0.026), yLabel = yAddr0 - Math.round(aF * 0.86) - Math.round(U * 0.028);
+    var pTop = safeT, pBot = yLabel - lF - Math.round(U * 0.04);
+    if(o.img && pBot - pTop > H * 0.12) coverInto(x, o.img, M, pTop, W - M * 2, pBot - pTop, o.zoom, o.slide);
+    else { x.fillStyle = '#E6DCCF'; x.fillRect(M, pTop, W - M * 2, Math.max(0, pBot - pTop)); }
+    // label with a short accent rule, address, price and facts
+    x.fillStyle = acc; x.fillRect(M, yLabel - lF * 0.36, Math.round(U * 0.05), Math.max(3, Math.round(U * 0.004)));
+    x.font = '700 ' + lF + 'px ' + SANS2; sp(x, Math.round(U * 0.0045)); x.fillText(String(o.label || '').toUpperCase(), M + Math.round(U * 0.068), yLabel); sp(x, 0);
+    x.fillStyle = ink; x.font = af(aF); al.forEach(function(t, i2){ x.fillText(t, M, yAddr0 + i2 * Math.round(aF * 1.04)); });
+    if(bits.length){ var bt = bits.join('   ·   '); x.font = '500 ' + fitSize(x, bt, function(s3){ return '500 ' + s3 + 'px ' + SANS2; }, W - M * 2, fF, 16) + 'px ' + SANS2; x.fillStyle = ink; x.fillText(bt, M, yFacts); }
+    x.fillStyle = 'rgba(34,30,28,.22)'; x.fillRect(M, ruleY, W - M * 2, 2);
+    // agent row: face, name, brokerage and phone; their logo at the right when they have one
+    var tx = M + (r ? r * 2 + Math.round(U * 0.022) : 0), cy = yRow + rowH / 2;
+    if(r) circleImg(x, o.head, M + r, cy, r, 'rgba(34,30,28,.18)');
+    x.fillStyle = ink; x.font = '700 ' + nameF + 'px ' + SANS2; x.fillText(o.agent || '', tx, cy - smF * 0.15);
+    x.fillStyle = soft; x.font = '500 ' + smF + 'px ' + SANS2; x.fillText(wrapLines(x, [o.brokerage, o.phone].filter(Boolean).join('   ·   '), W - M - tx - (o.logo ? W * 0.24 : 0), 1)[0] || '', tx, cy + smF * 1.15);
+    if(o.logo){ var lh = Math.min(rowH * 0.8, U * 0.06), lw = o.logo.width * lh / o.logo.height; if(lw > W * 0.22){ lh = lh * W * 0.22 / lw; lw = W * 0.22; } x.drawImage(o.logo, W - M - lw, cy - lh / 2, lw, lh); }
+  }
+  KIT._drawCard = drawCard;
+  /* ---- Banner: the headline in a bar of the agent's colour, the whole photo, and the dark details band. No cut-out. ---- */
+  function drawBanner(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), M = Math.round(W * 0.065), tall = H / W, story = tall > 1.5;
+    var acc = o.accent || '#EA002A', safeT = story ? Math.round(H * 0.13) : 0, safeB = story ? Math.round(H * 0.13) : 0;
+    x.fillStyle = '#1B1817'; x.fillRect(0, 0, W, H);
+    x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
+    var label = String(o.label || '').toUpperCase(), pf = function(fs2){ return '400 ' + fs2 + 'px ' + POSTER; };
+    var fs = fitSize(x, label, pf, W - M * 2, H * (story ? 0.11 : 0.16)); x.font = pf(fs);
+    var A = capH(x, 'H') || fs * 0.72, pad = Math.round(W * 0.042), barH = safeT + pad + A + pad;
+    var bandH = Math.round(H * (story ? 0.24 : tall > 1.1 ? 0.25 : 0.3)), bandTop = H - safeB - bandH;
+    if(o.img) coverInto(x, o.img, 0, barH, W, bandTop - barH, o.zoom, o.slide);
+    x.fillStyle = acc; x.fillRect(0, 0, W, barH);
+    // white words on the colour; on a very light colour they switch to ink
+    var c = String(acc).replace('#', ''), lum = c.length === 6 ? (parseInt(c.slice(0, 2), 16) * 0.299 + parseInt(c.slice(2, 4), 16) * 0.587 + parseInt(c.slice(4, 6), 16) * 0.114) : 0;
+    x.fillStyle = lum > 170 ? '#1B1817' : '#FFFFFF'; x.font = pf(fs); x.fillText(label, M, safeT + pad + A);
+    drawBand(x, o, bandTop, bandH, story);
+  }
+  KIT._drawBanner = drawBanner;
   /* ---- Cut-out · Classic: centred and quiet — serif headline, the home inside an arched window, the agent along the foot ---- */
   function drawClassic(cv, o){
     var W = o.w, H = o.h; cv.width = W; cv.height = H;
@@ -4590,7 +4655,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
       '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
-      '<label class="kf">Look</label><div class="kchips" id="kg-style">' + [['photo', 'Full photo'], ['cut1', 'Bold'], ['classic1', 'Classic'], ['cut', 'Poster'], ['classic', 'Window']].map(function(k){ return '<button type="button" class="kchip' + (st.style === k[0] ? ' on' : '') + '" data-gs="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
+      '<label class="kf">Look</label><div class="kchips" id="kg-style">' + [['photo', 'Full photo'], ['card', 'Card'], ['banner', 'Banner'], ['cut1', 'Bold'], ['classic1', 'Classic'], ['cut', 'Poster'], ['classic', 'Window']].map(function(k){ return '<button type="button" class="kchip' + (st.style === k[0] ? ' on' : '') + '" data-gs="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div><div class="bsub" id="kg-note" style="margin:6px 0 0"></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
@@ -4608,7 +4673,13 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var note = $id('kg-note');
       var v1 = st.style === 'cut1' || st.style === 'classic1';
       card.classList.toggle('kgv1', v1);   // the original looks don't use the facts or the zoom/slide controls
-      if(st.style !== 'photo'){
+      var isCut = st.style === 'cut' || st.style === 'classic' || st.style === 'cut1' || st.style === 'classic1';
+      if(st.style === 'card' || st.style === 'banner'){   // whole-photo looks: nothing to cut, any picture works
+        var fk2 = st.style === 'card' ? 'classic' : 'cut', sk2 = st.style; KIT.fontsReady = KIT.fontsReady || {};
+        if(sk2 === 'card') drawCard(cv, o); else drawBanner(cv, o);
+        if(!KIT.fontsReady[fk2]) ensureFonts(fk2).then(function(){ KIT.fontsReady[fk2] = true; if(job === KIT.job && st.style === sk2) paint(); });
+        if(note) note.textContent = '';
+      } else if(isCut){
         if(st.img && !st.cut){ try{ st.cut = skyCut(st.img, 1000); }catch(eC){ st.cut = {ok: false}; } }
         o.cut = st.cut;
         var fk = st.style; KIT.fontsReady = KIT.fontsReady || {};
@@ -4650,12 +4721,13 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var filesById = {}, fileList = [], scanned = false;
     // the cut-out look needs a photo with open sky: if the chosen one has none, look through the small previews for a front-of-house shot
     var findExterior = function(){
-      if(st.style === 'photo' || scanned || !fileList.length || (st.cut && st.cut.ok)) return;
+      var cutLook = st.style === 'cut' || st.style === 'classic' || st.style === 'cut1' || st.style === 'classic1';
+      if(!cutLook || scanned || !fileList.length || (st.cut && st.cut.ok)) return;
       scanned = true;
       var note = $id('kg-note'), list = fileList.slice(0, 60), i = 0, best = null;
       if(note) note.textContent = 'Looking for a front-of-house photo…';
       var next = function(){
-        if(job !== KIT.job || st.style === 'photo') return;
+        if(job !== KIT.job || !(st.style === 'cut' || st.style === 'classic' || st.style === 'cut1' || st.style === 'classic1')) return;
         if(i >= list.length || (best && best.sat > 0.18)){ if(best) choose(best.id); else paint(); return; }
         var f = list[i++];
         fetch(thumbUrl(f)).then(function(r){ if(!r.ok) throw new Error('t'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).then(function(bm){
@@ -4831,7 +4903,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-15</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-16</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
