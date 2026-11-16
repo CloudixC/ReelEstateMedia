@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Reel Estate Media — Sign in</title>
+<title>Sign in · The Content Hub</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = { darkMode: 'class' }
@@ -86,6 +86,21 @@
     color: #7ddcae;
   }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style id="hublook">
+  /* one look from the landing page to the hub: same type, same ink, red and amber */
+  :root{ --red:#EA002A; --red-hi:#ff3d46; --line:rgba(255,255,255,.12); }
+  body{ font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif; color:#F5F2E9;
+    background:radial-gradient(900px 480px at 12% -12%, rgba(234,0,42,.12), transparent 60%), #1A1A1A; }
+  .serif{ font-family:'Space Grotesk',system-ui,-apple-system,sans-serif; font-weight:500; letter-spacing:-.02em; }
+  .label{ font-family:'Space Mono',ui-monospace,Menlo,monospace; letter-spacing:.16em; font-weight:700; }
+  .card{ background:rgba(34,34,34,.72); border-color:rgba(255,255,255,.1); border-radius:22px !important; }
+  .input-wrap{ background:rgba(255,255,255,.04) !important; border-color:rgba(255,255,255,.12) !important; border-radius:14px !important; height:48px !important; }
+  .input-wrap:focus-within{ border-color:#EA002A !important; }
+  .input-wrap select{ background:#222 !important; }
+  input, select, button{ font-family:inherit; }
+  .primary-btn{ border-radius:999px !important; height:50px !important; font-family:'Space Mono',ui-monospace,Menlo,monospace; font-size:11.5px !important; font-weight:700 !important; letter-spacing:.16em !important; text-transform:uppercase; }
+</style>
 </head>
 <body class="antialiased text-neutral-100">
 
@@ -95,7 +110,7 @@
       <!-- Brand mark -->
       <div class="flex flex-col items-center text-center mb-8">
         <div class="serif text-[26px] leading-none tracking-tight">
-          <span class="text-white">Content</span> <span class="italic" style="color:var(--red)">Hub</span>
+          <a href="start.html" title="Back to thecontenthub.ca" style="text-decoration:none"><span class="text-white">Content</span> <span style="color:#F2A900">Hub</span><span style="color:var(--red)">.</span></a>
         </div>
         <div class="label mt-2" id="brandTag">Your Social Media Command Centre</div>
       </div>
@@ -121,7 +136,7 @@
             Welcome <span class="italic" style="color:var(--red)">back</span>
           </h1>
           <p class="mt-2 text-sm text-neutral-400">
-            Sign in to continue to your production pipeline.
+            Sign in to see your content, review new cuts and book your next shoot.
           </p>
         </header>
 
@@ -288,6 +303,10 @@
         </p>
       </section>
 
+      <p class="mt-8 text-center text-xs">
+        <a href="start.html" class="link-underline" style="color:#9a9a9a">&larr; Back to thecontenthub.ca</a>
+      </p>
+
       <!-- Powered by -->
       <p class="mt-8 text-center text-xs text-neutral-600">
         Powered by <span class="serif italic text-neutral-400">Reel Estate <span style="color:var(--red)">Media</span></span>
@@ -400,6 +419,16 @@
               try{ localStorage.setItem('rem_hub_pinok_v1:' + hk, hex); }catch(e9){}
               setTimeout(go, 150);
             }).catch(function(){ setTimeout(go, 150); });
+          } else if(km){
+            // signed in with the access code: the sign-in already proved who they are, so the hub's own PIN lock isn't asked for a second time
+            var hk2 = decodeURIComponent(km[1]); var gone = false;
+            var go1 = function(){ if(gone) return; gone = true; go(); };
+            setTimeout(go1, 2500);
+            fetch(ENDPOINT + '?hub=' + encodeURIComponent(hk2)).then(function(r){ return r.json(); }).then(function(h){
+              var m = h && h.hub; if(typeof m === 'string'){ try{ m = JSON.parse(m); }catch(e8){ m = null; } }
+              if(m && m.pn){ try{ localStorage.setItem('rem_hub_pinok_v1:' + hk2, String(m.pn)); }catch(e9){} }
+              go1();
+            }).catch(go1);
           } else setTimeout(go, 350);
         } else {
           busy(false);
@@ -617,6 +646,36 @@
       setTimeout(function(){ $('adCopy').textContent = '📋 Copy welcome message for the agent'; }, 2500);
     }).catch(function(){ prompt('Copy this message:', msg); });
   });
+</script>
+<script>
+/* "Forgot your code?" opens a small panel with the address to write to (copy it, or open the mail app) instead of only launching a mail app */
+(function(){
+  var links = document.querySelectorAll('#signIn a');
+  var a = null; for(var i = 0; i < links.length; i++){ if(/Forgot/i.test(links[i].textContent)) a = links[i]; }
+  var form = document.getElementById('loginForm');
+  if(!a || !form) return;
+  var href = a.getAttribute('href') || '';
+  var addr = ''; try{ addr = decodeURIComponent(href.replace(/^mailto:/i, '').split('?')[0] || ''); }catch(e0){}
+  var box = document.createElement('div');
+  box.id = 'forgotBox'; box.className = 'hidden rounded-xl px-4 py-3 text-sm mb-4';
+  box.style.cssText = 'background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12)';
+  box.innerHTML = '<div style="color:#F5F2E9;font-weight:600;margin-bottom:4px">Forgot your code or PIN?</div>' +
+    '<div style="color:#a3a3a3;line-height:1.5">Email <b id="fgAddr" style="color:#fff;white-space:nowrap"></b> from the address on your account and we’ll send you a fresh one — usually the same day.</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+    '<button type="button" id="fgCopy" class="ghost-btn text-xs font-semibold rounded-lg border px-3 py-2 text-neutral-200" style="border-color:rgba(255,255,255,.16)">Copy address</button>' +
+    '<a id="fgMail" class="ghost-btn text-xs font-semibold rounded-lg border px-3 py-2 text-neutral-200" style="border-color:rgba(255,255,255,.16);text-decoration:none">Open my email app</a></div>';
+  form.parentNode.insertBefore(box, form);
+  document.getElementById('fgAddr').textContent = addr;
+  var mail = document.getElementById('fgMail'); mail.setAttribute('href', href);
+  mail.addEventListener('click', function(){ var em = (document.getElementById('email').value || '').trim(); mail.setAttribute('href', href + encodeURIComponent(em)); });
+  a.setAttribute('role', 'button');
+  a.addEventListener('click', function(e){ e.preventDefault(); box.classList.toggle('hidden'); });
+  var cp = document.getElementById('fgCopy');
+  cp.addEventListener('click', function(){
+    var done = function(){ cp.textContent = '✓ Copied'; setTimeout(function(){ cp.textContent = 'Copy address'; }, 1600); };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(addr).then(done).catch(done); else done();
+  });
+})();
 </script>
 </body>
 </html>
