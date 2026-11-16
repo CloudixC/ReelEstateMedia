@@ -840,6 +840,66 @@ body.light .aud{background:#fff}
 .auda .mini{cursor:pointer;padding:7px 10px;font-size:10px}
 .audsv{appearance:none;background:none;border:1px solid var(--line2);color:var(--dim);border-radius:999px;padding:6px 11px;font-family:var(--sans);font-size:12px;cursor:pointer;width:auto;margin:0;white-space:nowrap;flex:0 0 auto}
 .audsv.on{background:var(--txt);color:var(--bg);border-color:var(--txt);font-weight:600}
+/* round 3 */
+.lead .lk.late{color:#e0584f;border-color:rgba(224,88,79,.5)}
+.ktoolrow{margin-top:8px}
+.kgsave{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.kgsave .bsub{margin:0 !important;flex:1;min-width:160px}
+.kgsoldrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kcpc{padding:5px 10px !important;margin-bottom:4px}
+.kpick button{color:#fff;font:700 15px var(--sans);text-shadow:0 1px 5px rgba(0,0,0,.9)}
+.kstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.kstrip canvas{height:210px;width:auto;border-radius:8px;border:1px solid var(--line2);flex:0 0 auto;scroll-snap-align:start;background:#111}
+.ksrc{border-top:1px solid var(--line);padding:10px 0}
+.ksrc:first-child{border-top:0}
+.ksrct{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px}
+.ksrct span{color:var(--dim);font-size:12.5px;font-variant-numeric:tabular-nums}
+.ksrc .klink{margin-top:6px}
+#kitsheet{position:fixed;inset:0;z-index:96;background:#e9e7e2;color:#111;overflow:auto;display:none;font-family:var(--sans)}
+#kitsheet.on{display:block}
+#kitsheet .ksbar{display:flex;gap:8px;justify-content:center;padding:14px;position:sticky;top:0;background:#e9e7e2;z-index:2}
+#kitsheet .ksbar button{appearance:none;border:1px solid #bbb;background:#fff;color:#111;border-radius:9px;padding:9px 14px;font-family:inherit;font-size:13px;cursor:pointer;width:auto;margin:0}
+#kitsheet .ksbar .prim{background:#111;color:#fff;border-color:#111}
+#kitsheet .kspage{background:#fff;width:min(816px,calc(100% - 24px));min-height:1040px;margin:0 auto 40px;padding:56px;box-shadow:0 10px 40px rgba(0,0,0,.18);box-sizing:border-box}
+@media (max-width:640px){#kitsheet .kspage{padding:28px 22px;min-height:0}}
+.ohsign{text-align:center;display:flex;flex-direction:column;align-items:center}
+.ohsign .ohk{font:700 15px var(--sans);letter-spacing:.32em;text-transform:uppercase;color:var(--kacc,#EA002A)}
+.ohsign h1{font:600 76px/1 "Cormorant Garamond",Georgia,serif;margin:14px 0 12px;color:#111}
+.ohsign .oha{font-size:24px;font-weight:600}
+.ohsign .ohw{font-size:19px;color:#444;margin-top:6px}
+.ohsign .ohqr{width:min(340px,80%);margin:32px 0 14px}
+.ohsign .ohqr svg,.fsqr svg{width:100%;height:auto;display:block}
+.ohsign .ohs{font:700 30px var(--sans)}
+.ohsign .ohp{font-size:16px;color:#444;max-width:440px;margin-top:8px;line-height:1.5}
+.ohag{display:flex;gap:14px;align-items:center;margin-top:36px;text-align:left;border-top:1px solid #ccc;padding-top:22px;width:100%;justify-content:center}
+.ohag img{width:64px;height:64px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.ohag b{display:block;font-size:18px;color:#111}
+.ohag span{display:block;font-size:13.5px;color:#444}
+.fsheet .fsh{width:100%;height:320px;object-fit:cover;border-radius:6px;display:block}
+.fsheet .fsk{font:700 12px var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--kacc,#EA002A);margin-top:20px}
+.fsheet h1{font:600 42px/1.08 "Cormorant Garamond",Georgia,serif;margin:8px 0 4px;color:#111}
+.fsheet .fsp{font-size:21px;font-weight:600}
+.fsheet .fsf{display:flex;gap:28px;flex-wrap:wrap;border-top:1px solid #ccc;border-bottom:1px solid #ccc;padding:12px 0;margin:14px 0}
+.fsheet .fsf b{display:block;font:600 26px/1.1 "Cormorant Garamond",Georgia,serif}
+.fsheet .fsf span{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#555}
+.fsheet .fshl{font:600 21px/1.25 "Cormorant Garamond",Georgia,serif;margin-bottom:6px}
+.fsheet .fsi{font-size:14px;line-height:1.55;margin:0 0 10px;color:#222}
+.fsheet .fsl{columns:2;column-gap:28px;font-size:13.5px;line-height:1.5;padding-left:18px;margin:0 0 6px}
+.fsheet .fsg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.fsheet .fsg img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px;display:block}
+.fsfoot{display:flex;align-items:center;gap:14px;margin-top:18px;border-top:1px solid #ccc;padding-top:16px}
+.fsfoot .ohag{margin:0;border:0;padding:0;width:auto;flex:1;justify-content:flex-start}
+.fsqr{width:92px;flex:0 0 auto}
+.fsqrt{font-size:11.5px;color:#444;max-width:104px;text-align:right;line-height:1.35}
+@media print{
+  body.kprintk > *:not(#kitsheet){display:none !important}
+  body.kprintk{background:#fff !important}
+  body.kprintk #kitsheet{position:static;display:block;background:#fff;overflow:visible}
+  body.kprintk #kitsheet .ksbar{display:none}
+  body.kprintk #kitsheet .kspage{box-shadow:none;margin:0;width:auto;min-height:0;padding:0}
+  body.kprintk .ohsign{padding-top:24px}
+  .fsheet img,.ohsign svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
 /*END-KIT-CSS*/
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
@@ -3774,11 +3834,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
    sized photo downloads, seller report, yearly summary.
    Reads: the hub manifest (items), the hub chat thread (📩 lead messages the listing pages post), the listing directory
    (review state 'lldir-<hub>'), page views (?biohits=ll-<id>), Drive folder listings (the hub's Drive key).
-   Writes: ONE small state blob — review state 'kit-<hub>' — {ld: lead status, pl: posting plan, ck: checklists, sr: seller-report codes, au: saved songs}.
+   Writes: ONE small state blob — review state 'kit-<hub>' — {ld: lead status, pl: posting plan, ck: checklists, sr: seller-report codes, au: saved songs, gs: saved graphic style}.
    Also reads the weekly trending-audio list (review state 'trend-audio', published from the Command Centre).
    Nothing is written in studio preview. */
 (function(){
-  var KIT = {items: [], raw: {}, state: {ld: {}, pl: {}, ck: {}, sr: {}, au: {}}, stateLoaded: false, leads: [], leadsLoaded: false, dir: null, views: {}, files: {}, open: {}, filter: 'all'};
+  var KIT = {items: [], raw: {}, state: {ld: {}, pl: {}, ck: {}, sr: {}, au: {}, gs: {}}, stateLoaded: false, leads: [], leadsLoaded: false, dir: null, views: {}, files: {}, open: {}, filter: 'all'};
   window.__KIT = KIT;
   var $id = function(id){ return document.getElementById(id); };
   var canWrite = function(){ return !(typeof PREVIEW !== 'undefined' && PREVIEW); };
@@ -3808,7 +3868,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function loadState(){
     return fetch(ENDPOINT + '?review=' + encodeURIComponent('kit-' + a)).then(function(r){ return r.json(); }).then(function(j){
       var s = (j && j.state) || {};
-      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}, au: (s.au && typeof s.au === 'object') ? s.au : {}};
+      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}, au: (s.au && typeof s.au === 'object') ? s.au : {}, gs: (s.gs && typeof s.gs === 'object') ? s.gs : {}};
       KIT.stateLoaded = true;
     }).catch(function(){ KIT.stateLoaded = false; });
   }
@@ -3848,10 +3908,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function when(ts){ var t = ''; try{ t = (typeof ago === 'function' ? ago(ts) : '') || ''; }catch(e){} if(!t){ var d = new Date(ts); if(!isNaN(d)) t = d.toLocaleDateString('en-CA', {month: 'short', day: 'numeric'}); } return t; }
   function leadHtml(l){
     var st = leadStatus(l);
-    var tel = l.phone ? '<a href="tel:' + esc(l.phone.replace(/[^\d+]/g, '')) + '">📞 ' + esc(l.phone) + '</a>' : '';
-    var em = l.email ? '<a href="mailto:' + esc(l.email) + '?subject=' + encodeURIComponent(l.addr || 'Your enquiry') + '">✉ ' + esc(l.email) + '</a>' : '';
+    var num = l.phone ? l.phone.replace(/[^\d+]/g, '') : '', body = replyText(l), wd = st ? 0 : waitedDays(l);
+    var tel = num ? '<a href="tel:' + esc(num) + '">📞 ' + esc(l.phone) + '</a><a data-lreply="1" href="sms:' + esc(num) + '?&body=' + encodeURIComponent(body) + '">💬 Text a reply</a>' : '';
+    var em = l.email ? '<a data-lreply="1" href="mailto:' + esc(l.email) + '?subject=' + encodeURIComponent(l.addr || 'Your enquiry') + '&body=' + encodeURIComponent(body) + '">✉ ' + esc(l.email) + '</a>' : '';
     return '<div class="lead' + (st ? '' : ' new') + '" data-lead="' + esc(l.id) + '">' +
-      '<div class="lh"><b>' + esc(l.name || 'Someone') + '</b><span class="lk' + (l.oh ? ' oh' : '') + '">' + esc(l.label || 'Enquiry') + '</span><span class="lw">' + esc(when(l.ts)) + '</span></div>' +
+      '<div class="lh"><b>' + esc(l.name || 'Someone') + '</b><span class="lk' + (l.oh ? ' oh' : '') + '">' + esc(l.label || 'Enquiry') + '</span>' + (wd >= 1 ? '<span class="lk late">Waiting ' + wd + ' day' + (wd === 1 ? '' : 's') + '</span>' : '') + '<span class="lw">' + esc(when(l.ts)) + '</span></div>' +
       (l.addr ? '<div class="la">🏡 ' + esc(l.addr) + '</div>' : '') +
       (l.note ? '<div class="ln">“' + esc(l.note) + '”</div>' : '') +
       ((tel || em) ? '<div class="lc">' + tel + em + '</div>' : '') +
@@ -3930,7 +3991,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function loadViews(g){
     var d = dirFor(g); if(!d || KIT.views[d.id] != null) return Promise.resolve();
     KIT.views[d.id] = -1;
-    return fetch(ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){ KIT.views[d.id] = (j && j.ok && j.views != null) ? (+j.views || 0) : 0; }).catch(function(){ KIT.views[d.id] = 0; });
+    return fetch(ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){ KIT.views[d.id] = (j && j.ok && j.views != null) ? (+j.views || 0) : 0;
+      var lk = (j && j.links) || {}, by = {}; Object.keys(lk).forEach(function(k){ var m = /^src:(ig|tt|fb|em|tx|qr)$/.exec(k); if(m) by[m[1]] = +lk[k] || 0; }); (KIT.vsrc = KIT.vsrc || {})[d.id] = by; }).catch(function(){ KIT.views[d.id] = 0; });
   }
   function viewsOf(g){ var d = dirFor(g); var v = d ? KIT.views[d.id] : null; return (v == null || v < 0) ? null : v; }
 
@@ -3973,10 +4035,16 @@ window.OneSignalDeferred.push(async function(OneSignal){
           '<label for="ck-' + esc(g.key) + '-' + c.k + '">' + c.t + '</label>' +
           (c.act ? '<button type="button" class="mini" data-kact="' + esc(c.act[0]) + '">' + c.act[1] + '</button>' : '') + '</div>';
       });
-      h += '<div class="klbl">Tools for this home</div><div class="ktools">' +
+      h += '<div class="klbl">Post it</div><div class="ktools">' +
+        '<button type="button" class="mini" data-kact="launch">🚀 Launch pack</button>' +
         '<button type="button" class="mini" data-kact="g:Just Listed">🖼 Make a graphic</button>' +
+        '<button type="button" class="mini" data-kact="carousel">🎠 Swipe post</button>' +
+        '<button type="button" class="mini" data-kact="caps">✍️ Captions</button></div>' +
+        '<div class="klbl">Tools for this home</div><div class="ktools">' +
         '<button type="button" class="mini" data-kact="mls">⬇ MLS-ready photos</button>' +
         '<button type="button" class="mini" data-kact="ig">⬇ Instagram crops</button>' +
+        '<button type="button" class="mini" data-kact="ohkit">🚪 Open house kit</button>' +
+        '<button type="button" class="mini" data-kact="links">🔗 Share links</button>' +
         '<button type="button" class="mini" data-kact="report">📊 Seller report</button>' +
         (d && d.url ? '<a class="mini" href="' + esc(d.url) + '" target="_blank" rel="noopener">🏡 Live page ↗</a>' : '') + '</div>';
       if(ls.length){ h += '<div class="klbl">Leads for this home</div>' + ls.map(leadHtml).join(''); }
@@ -4009,7 +4077,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var s = $id('leadslot');
     if(s){
       var nl = newLeads();
-      s.innerHTML = nl.length ? '<button type="button" class="khome" data-kgo="listings"><span class="ki">📩</span><span class="kt"><b>' + nl.length + ' new lead' + (nl.length === 1 ? '' : 's') + '</b><span>' + esc((nl[0].name || 'Someone') + (nl[0].addr ? ' · ' + nl[0].addr : '')) + '</span></span><span class="ka">Open →</span></button>' : '';
+      s.innerHTML = nl.length ? '<button type="button" class="khome" data-kgo="listings"><span class="ki">📩</span><span class="kt"><b>' + nl.length + ' new lead' + (nl.length === 1 ? '' : 's') + (staleLeads().length ? ' · ' + staleLeads().length + ' waiting over a day' : '') + '</b><span>' + esc((nl[0].name || 'Someone') + (nl[0].addr ? ' · ' + nl[0].addr : '')) + '</span></span><span class="ka">Open →</span></button>' : '';
     }
     var p = $id('planslot');
     if(p){
@@ -4792,10 +4860,10 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var isPin = true; try{ isPin = !!pin; }catch(eP){}
     var brandC = ''; try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) brandC = c1.value.toUpperCase(); }catch(e){}
     var swatches = (brandC ? [brandC] : []).concat(['#EA002A', '#A8733A', '#1F5B45', '#1E3A5F', '#1B1817']).filter(function(c, i, a2){ return a2.indexOf(c) === i; });
-    var accent = KIT.gaccent || brandC || (isPin ? '#EA002A' : '#A8733A');
+    var gp = gPrefs(), accent = gp.accent; if(swatches.indexOf(accent) < 0) swatches.unshift(accent);
     var mem = (KIT.gfacts = KIT.gfacts || {})[g.key] || {};
     var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
-    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: KIT.gmotion || 'still', play: 0, busy: false, bw: !!KIT.gbw, cutBw: null,
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: gp.style, cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: gp.motion, play: 0, busy: false, bw: gp.bw, cutBw: null,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
       '<div class="kgwrap"><div class="kgopts"><label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
@@ -4804,6 +4872,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<div class="kchips" id="kg-bw" style="margin-top:8px"><button type="button" class="kchip' + (st.bw ? '' : ' on') + '" data-gb="0">Colour photo</button><button type="button" class="kchip' + (st.bw ? ' on' : '') + '" data-gb="1">Black &amp; white</button></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
+      '<div class="kgsoldrow" id="kg-sold" style="display:none"><div><label class="kf" for="kg-dom">Days on market</label><input type="text" id="kg-dom" maxlength="4" inputmode="numeric" placeholder="6"></div><div><label class="kf" for="kg-sp">How it sold</label><select id="kg-sp"><option value="">(leave out)</option><option>Over asking</option><option>At asking</option><option>With multiple offers</option><option>Firm</option></select></div></div>' +
       '<div class="kg3"><div><label class="kf" for="kg-beds">Beds</label><input type="text" id="kg-beds" maxlength="8"></div><div><label class="kf" for="kg-baths">Baths</label><input type="text" id="kg-baths" maxlength="8"></div><div><label class="kf" for="kg-sqft">Sq ft</label><input type="text" id="kg-sqft" maxlength="12"></div></div>' +
       '<label class="kf">Colour</label><div class="ksws" id="kg-sw">' + swatches.map(function(c){ return '<button type="button" class="ksw' + (c === accent ? ' on' : '') + '" data-gc="' + c + '" style="background:' + c + '" aria-label="Colour ' + c + (c === brandC ? ' (your brand colour)' : '') + '"></button>'; }).join('') + '</div>' +
       '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
@@ -4811,11 +4880,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<div class="kg2"><div><div class="kgr"><label class="kf" for="kg-zoom">Zoom the home</label><span class="kgnum"><input type="number" id="kg-zoomn" min="60" max="180" step="1" value="100" inputmode="numeric" aria-label="Zoom, percent"><i>%</i></span></div><input type="range" id="kg-zoom" min="0.6" max="1.8" step="0.01" value="1" title="Double-click to go back to 100%"></div>' +
       '<div><div class="kgr"><label class="kf" for="kg-slide">Slide left / right</label><span class="kgnum"><input type="number" id="kg-sliden" min="-100" max="100" step="1" value="0" inputmode="numeric" aria-label="Slide, minus is left, plus is right"></span></div><input type="range" id="kg-slide" min="-1" max="1" step="0.01" value="0" title="Double-click to centre it again"></div></div>' +
       '<div class="bsub kgtip">Double-click (or double-tap) a slider to put it back.</div>' +
+      '<div class="kgsave"><button type="button" class="mini" id="kg-savestyle">★ Save as my style</button><span class="bsub" id="kg-styleinfo"></span></div>' +
       '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kg-cv"></canvas><div class="bsub" id="kg-note"></div></div>' +
       '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">' + (st.motion === 'still' ? 'Download ' : 'Download video ') + '<span class="ar">→</span></button></div></div></div>');
     card.classList.add('kgcard');
     var job = KIT.job, cv = $id('kg-cv'), l1 = $id('kg-l1'), l2 = $id('kg-l2');
-    var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); };
+    var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); var sr0 = $id('kg-sold'); if(sr0) sr0.style.display = /sold/i.test(st.label) ? '' : 'none'; };
     var paint = function(){
       var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent,
         beds: st.beds, baths: st.baths, sqft: st.sqft, zoom: st.zoom, slide: st.slide, head: st.head, logo: st.logo};
@@ -4858,6 +4928,14 @@ window.OneSignalDeferred.push(async function(OneSignal){
     l1.value = st.l1; l2.value = st.l2; hint();
     l1.oninput = function(){ st.l1 = l1.value; paint(); }; l2.oninput = function(){ st.l2 = l2.value; paint(); };
     [['beds', 'kg-beds'], ['baths', 'kg-baths'], ['sqft', 'kg-sqft']].forEach(function(p){ var el = $id(p[1]); el.value = st[p[0]]; el.oninput = function(){ st[p[0]] = el.value; KIT.gfacts[g.key] = {beds: st.beds, baths: st.baths, sqft: st.sqft}; paint(); }; });
+    var soldLine = function(){ var dm = parseInt($id('kg-dom').value, 10), how = $id('kg-sp').value; st.l2 = [dm > 0 ? 'Sold in ' + dm + ' day' + (dm === 1 ? '' : 's') : '', how].filter(Boolean).join(' · '); l2.value = st.l2; paint(); };
+    $id('kg-dom').oninput = soldLine; $id('kg-sp').onchange = soldLine;
+    var styleInfo = function(){ var sv = KIT.state.gs || {}; $id('kg-styleinfo').textContent = LOOKFN[sv.style] ? 'Saved: ' + prefsLine({style: sv.style, bw: !!sv.bw, motion: sv.motion || 'still'}) + '. New graphics and the launch pack start this way.' : 'New graphics, the swipe post and the launch pack will start this way.'; };
+    styleInfo();
+    $id('kg-savestyle').onclick = function(){
+      if(!canWrite()){ say('Preview only — nothing is saved.'); return; }
+      if(!KIT.stateLoaded){ say('Couldn’t reach your saved settings — check your connection and reopen the hub.'); return; }
+      KIT.state.gs = {style: st.style, accent: st.accent, bw: !!st.bw, motion: st.motion}; save(); styleInfo(); say('★ Saved as your style.'); };
     var zr = $id('kg-zoom'), zn = $id('kg-zoomn'), sr = $id('kg-slide'), sn = $id('kg-sliden');
     var setZoom = function(v, from){ v = Math.min(1.8, Math.max(0.6, +v || 1)); st.zoom = v; if(from !== 'r') zr.value = v; if(from !== 'n') zn.value = Math.round(v * 100); paint(); };
     var setSlide = function(v, from){ v = Math.min(1, Math.max(-1, +v || 0)); st.slide = v; if(from !== 'r') sr.value = v; if(from !== 'n') sn.value = Math.round(v * 100); paint(); };
@@ -4970,7 +5048,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     return {v: 1, addr: d.addr || g.title, price: d.price || '', hero: heroOf(g).replace(/sz=w400/, 'sz=w1600'),
       made: g.items.filter(function(x){ return x.dv; }).map(function(x){ return String(x.t || ''); }).filter(Boolean),
       doing: g.items.filter(function(x){ return !x.dv; }).map(function(x){ return String(x.t || ''); }).filter(Boolean),
-      page: (d.rel && d.url) ? d.url : '', views: v == null ? null : v,
+      page: (d.rel && d.url) ? d.url : '', views: v == null ? null : v, by: srcBy(g),
       show: ls.filter(function(l){ return !l.oh; }).length, oh: ls.filter(function(l){ return l.oh; }).length,
       note: String(note || '').slice(0, 1200),
       ag: {n: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), t: String(raw.at || ''), b: String(raw.brokerage || ''), ph: String(raw.ph || ''), em: String(raw.email || ''),
@@ -5069,10 +5147,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function renderAudioHome(){
     var s = $id('audioslot'); if(!s) return;
     var n = AUD.list ? AUD.list.items.length : 0, sv = audSaved().length;
-    if(!n && !sv){ s.innerHTML = ''; return; }
+    var tools = '<div class="kchips ktoolrow"><button type="button" class="kchip" data-kreview="1">⭐ Make a review graphic</button></div>';
+    if(!n && !sv){ s.innerHTML = tools; return; }
     var fresh = n && AUD.list.at > audSeen();
     var sub = n ? (n + ' song' + (n === 1 ? '' : 's') + (AUD.list.at ? ' · updated ' + esc(audWhen(AUD.list.at)) : '') + (sv ? ' · ' + sv + ' saved' : '')) : (sv + ' saved song' + (sv === 1 ? '' : 's'));
-    s.innerHTML = '<button type="button" class="khome" data-kaudio="1"><span class="ki">🎵</span><span class="kt"><b>' + (n ? 'Trending audio this week' : 'Your saved audio') + '</b><span>' + sub + '</span></span><span class="ka">' + (fresh ? 'New →' : 'Open →') + '</span></button>';
+    s.innerHTML = '<button type="button" class="khome" data-kaudio="1"><span class="ki">🎵</span><span class="kt"><b>' + (n ? 'Trending audio this week' : 'Your saved audio') + '</b><span>' + sub + '</span></span><span class="ka">' + (fresh ? 'New →' : 'Open →') + '</span></button>' + tools;
   }
   function audRow(c, saved){
     var q = function(v){ return esc(v).replace(/"/g, '&quot;'); };
@@ -5119,6 +5198,469 @@ window.OneSignalDeferred.push(async function(OneSignal){
     save(); var b = $id('aud-body'); if(b) b.innerHTML = audBody(); renderAudioHome();
   }
 
+  /* ================= 🧰 round 3 — saved style, launch pack, captions, swipe post, open-house kit, lead replies, review graphic, view sources ================= */
+  var LOOKFN = {photo: drawGraphic, card: drawCard, banner: drawBanner, cut1: drawCutV1, classic1: drawClassicV1, cut: drawCut, classic: drawClassic};
+  var LOOKNAME = {photo: 'Full photo', card: 'Card', banner: 'Banner', cut1: 'Bold', classic1: 'Classic', cut: 'Poster', classic: 'Window'};
+  function qa(v){ return esc(v).replace(/"/g, '&quot;'); }
+  function lookFonts(style){ return style === 'classic1' ? ensureSerif() : (style === 'cut' || style === 'banner') ? ensureFonts('cut') : (style === 'classic' || style === 'card') ? ensureFonts('classic') : Promise.resolve(); }
+  function isCutLook(s){ return s === 'cut' || s === 'classic' || s === 'cut1' || s === 'classic1'; }
+  function brandColour(){ try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) return c1.value.toUpperCase(); }catch(e){} return ''; }
+  function agentName(){ return String((KIT.raw || {}).an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || '').trim(); }
+  // the agent's style: what they chose this visit, else what they saved ("my style"), else the defaults
+  function gPrefs(){
+    var s = KIT.state.gs || {}, isPin = true; try{ isPin = !!pin; }catch(e){}
+    var ok = function(v){ return LOOKFN[v] ? v : ''; };
+    return {style: ok(KIT.gstyle) || ok(s.style) || 'photo',
+      accent: KIT.gaccent || (/^#[0-9a-f]{6}$/i.test(String(s.accent)) ? String(s.accent).toUpperCase() : '') || brandColour() || (isPin ? '#EA002A' : '#A8733A'),
+      bw: KIT.gbw != null ? !!KIT.gbw : !!s.bw,
+      motion: KIT.gmotion || (/^(still|slide|fade)$/.test(String(s.motion)) ? s.motion : 'still')};
+  }
+  function prefsLine(p){ return LOOKNAME[p.style] + (p.bw ? ', black & white' : '') + (p.motion !== 'still' ? ', video' : ''); }
+  function agentPics(){   // their face and logo, fetched once
+    if(KIT._pics) return KIT._pics;
+    var raw = KIT.raw || {}, idOf = function(v){ var m = String(v || '').match(/[-\w]{25,}/); return m ? m[0] : ''; };
+    var load = function(id){ return id ? fetch('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=s400').then(function(r){ if(!r.ok) throw new Error('pic'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).catch(function(){ return null; }) : Promise.resolve(null); };
+    var bk = {}; try{ bk = (typeof BK !== 'undefined' && BK) || {}; }catch(e){}
+    KIT._pics = Promise.all([load(idOf(raw.hd) || idOf(bk.head)), load(idOf(bk.logo))]).then(function(a2){ return {head: a2[0], logo: a2[1]}; });
+    return KIT._pics;
+  }
+  function headUrl(){ var hd = String((KIT.raw || {}).hd || ''), hm = hd.match(/[-\w]{25,}/); return (/drive\.google|docs\.google/.test(hd) && hm) ? 'https://drive.google.com/thumbnail?id=' + hm[0] + '&sz=w240' : (/^https:\/\//.test(hd) ? hd : ''); }
+  function listingInfo(g){   // the listing page's own details (review state 'll-<id>'), fetched once per home
+    var d = dirFor(g); if(!d || !d.id) return Promise.resolve({});
+    KIT.linfo = KIT.linfo || {};
+    if(!KIT.linfo[d.id]) KIT.linfo[d.id] = fetch(ENDPOINT + '?review=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){ return (j && j.state && j.state.listing) || {}; }).catch(function(){ return {}; });
+    return KIT.linfo[d.id];
+  }
+  function listingFacts(g){   // beds / baths / size: what the agent typed last, else what the listing page says
+    var mem = (KIT.gfacts = KIT.gfacts || {})[g.key]; if(mem && (mem.beds || mem.baths || mem.sqft)) return Promise.resolve(mem);
+    return listingInfo(g).then(function(L){ var f = {beds: String(L.beds || ''), baths: String(L.baths || ''), sqft: String(L.sqft || '')}; if(f.beds || f.baths || f.sqft) KIT.gfacts[g.key] = f; return f; });
+  }
+  function bitmapOf(f){ return sizedW(f, 2048).then(function(b){ return createImageBitmap(b); }); }
+  function pickExterior(files){   // the front-of-house shot: the photo with the most open sky among the small previews
+    var list = files.slice(0, 40), i = 0, best = null;
+    return new Promise(function(res){
+      var next = function(){
+        if(i >= list.length || (best && best.sat > 0.18)){ res(best ? best.f : null); return; }
+        var f = list[i++];
+        fetch(thumbUrl(f)).then(function(r){ if(!r.ok) throw new Error('t'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).then(function(bm){ var c = skyCut(bm, 320); if(c.ok && (!best || c.sat > best.sat)) best = {f: f, sat: c.sat}; }).catch(function(){}).then(next);
+      };
+      next();
+    });
+  }
+  function graphicKit(g, style){   // everything a graphic needs, gathered once: the photo (and its cut-out), face, logo, facts, fonts
+    var d = dirFor(g) || {}, raw = KIT.raw || {}, p = gPrefs(); style = style || p.style;
+    return Promise.all([driveImages(photoFolder(g)), agentPics(), listingFacts(g), lookFonts(style)]).then(function(r){
+      var files = r[0] || [], pics = r[1] || {}, facts = r[2] || {};
+      var k = {files: files, file: null, img: null, cut: null, head: pics.head, logo: pics.logo, beds: facts.beds || '', baths: facts.baths || '', sqft: facts.sqft || '', accent: p.accent, bw: p.bw, style: style, motion: p.motion,
+        agent: agentName(), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), l1: d.addr || g.title, price: d.price || ''};
+      if(!files.length) return k;
+      var cutOf = function(bm){ try{ return skyCut(bm, 1000); }catch(e){ return {ok: false}; } };
+      return bitmapOf(files[0]).catch(function(){ return null; }).then(function(bm){
+        k.img = bm; k.file = files[0];
+        if(!isCutLook(style) || !bm) return k;
+        k.cut = cutOf(bm);
+        if(k.cut.ok) return k;
+        return pickExterior(files).then(function(f){
+          if(!f || f === files[0]) return k;
+          return bitmapOf(f).then(function(b2){ k.img = b2; k.cut = cutOf(b2); k.file = f; return k; }).catch(function(){ return k; });
+        });
+      });
+    });
+  }
+  function lookO(k, fmt, label, l2){   // the options a look's draw function takes
+    var f = GFMT[fmt], o = {w: f[0], h: f[1], img: k.img, label: label, l1: k.l1, l2: l2 == null ? '' : l2, agent: k.agent, brokerage: k.brokerage, phone: k.phone, accent: k.accent, beds: k.beds, baths: k.baths, sqft: k.sqft, zoom: 1, slide: 0, head: k.head, logo: k.logo};
+    if(k.bw && k.img) o.img = grayOf(k.img);
+    if(isCutLook(k.style) && k.cut){ o.cut = k.cut; if(k.bw && k.cut.cv){ var cb = {}; for(var kk in k.cut) cb[kk] = k.cut[kk]; cb.cv = grayOf(k.cut.cv); o.cut = cb; } }
+    return o;
+  }
+  function jpegOf(cv){ return new Promise(function(res, rej){ cv.toBlob(function(b){ if(b) res(b); else rej(new Error('blob')); }, 'image/jpeg', 0.95); }); }
+  function u8of(blob){ return blob.arrayBuffer().then(function(ab){ return new Uint8Array(ab); }); }
+  function safeName(s){ return String(s || '').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'Listing'; }
+  function onDark(hex){   // the accent, lightened only as far as it needs to be read on the dark slide (navy and deep green are lifted; red and bronze stay as they are)
+    var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if(!m) return '#F5F1EB';
+    var n = parseInt(m[1], 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    var rl = function(v){ var q = v.map(function(u){ u /= 255; return u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4); }); return q[0] * 0.2126 + q[1] * 0.7152 + q[2] * 0.0722; };
+    var bg = rl([27, 24, 23]);
+    for(var i = 0; i < 9 && (rl(c) + 0.05) / (bg + 0.05) < 3.6; i++) c = c.map(function(u){ return Math.round(u + (255 - u) * 0.14); });
+    return '#' + c.map(function(u){ return (u < 16 ? '0' : '') + u.toString(16); }).join('');
+  }
+  function lumOf(hex){ var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if(!m) return 0.5; var n = parseInt(m[1], 16); return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255; }
+
+  /* ---------------- ✍️ captions: filled in from the address, price and facts ---------------- */
+  var CAPK = [['jl', 'Just Listed'], ['oh', 'Open House'], ['sold', 'Just Sold'], ['cs', 'Coming Soon'], ['pi', 'Price Improved'], ['vt', 'Video tour']];
+  function cityOf(addr){ var p = String(addr || '').split(','); return p.length > 1 ? p[1].replace(/\b(ON|Ontario|Canada)\b.*$/i, '').trim() : ''; }
+  function capsFor(g, kind, when){
+    var d = dirFor(g) || {}, raw = KIT.raw || {}, f = (KIT.gfacts || {})[g.key] || {};
+    var addr = d.addr || g.title, street = String(addr).split(',')[0].trim(), city = cityOf(addr), price = String(d.price || '').trim();
+    var name = agentName(), phone = String(raw.ph || '').trim(), brk = String(raw.brokerage || '');
+    var facts = [f.beds ? f.beds + ' bed' : '', f.baths ? f.baths + ' bath' : '', f.sqft ? f.sqft + ' sq ft' : ''].filter(Boolean).join(' · ');
+    var where = street + (city ? ', ' + city : ''), w = String(when || '').trim();
+    var see = 'Photos, video and full details at the link in my bio.';
+    var call = 'Call or text ' + (name || 'me') + (phone ? ' at ' + phone : '') + ' to book a private showing.';
+    var talk = 'Call or text ' + (name || 'me') + (phone ? ' at ' + phone : '') + '.';
+    var S, L;
+    if(kind === 'oh'){
+      S = 'Open house' + (w ? ' ' + w : ' this weekend') + ' at ' + where + '. Come walk through — no appointment needed.';
+      L = 'OPEN HOUSE' + (w ? ' — ' + w : '') + '\n' + where + '\n\n' + facts + '\n' + (price ? 'Offered at ' + price : '') + '\n\nNo appointment needed. Come see it in person and bring your questions.\n\n' + see + '\n\nCan’t make it? ' + call;
+    } else if(kind === 'sold'){
+      S = 'Just sold: ' + where + '. Congratulations to my clients, and thank you for trusting me with this one.';
+      L = 'SOLD\n' + where + '\n\nCongratulations to my clients, and thank you for trusting me with your home.\n\nThinking of selling? I’m happy to walk you through what your home could sell for in today’s market.\n\n' + talk;
+    } else if(kind === 'cs'){
+      S = 'Coming soon: ' + where + '.' + (facts ? ' ' + facts + '.' : '') + ' Want the details before it hits the market? Message me.';
+      L = 'COMING SOON\n' + where + '\n\n' + facts + '\n\nThis one hasn’t hit the market yet. Message me for the details and first access to showings.\n\n' + talk;
+    } else if(kind === 'pi'){
+      S = 'Price improved: ' + where + (price ? ', now ' + price : '') + '.' + (facts ? ' ' + facts + '.' : '') + ' Message me for a showing.';
+      L = 'PRICE IMPROVED\n' + where + '\n\n' + (price ? 'Now ' + price : '') + '\n' + facts + '\n\n' + see + '\n\n' + call;
+    } else if(kind === 'vt'){
+      S = 'Take the tour: ' + where + '.' + (facts ? ' ' + facts + '.' : '') + ' Full details at the link in my bio.';
+      L = 'Take the tour of ' + where + '.\n\n' + facts + '\n' + (price ? 'Offered at ' + price : '') + '\n\n' + see + '\n\n' + call;
+    } else {
+      S = 'Just listed: ' + where + '.' + (facts ? ' ' + facts + (price ? ' · ' + price : '') + '.' : (price ? ' ' + price + '.' : '')) + ' Message me for a private showing.';
+      L = 'JUST LISTED\n' + where + '\n\n' + facts + '\n' + (price ? 'Offered at ' + price : '') + '\n\n' + see + '\n\n' + call;
+    }
+    L = L.replace(/\n{3,}/g, '\n\n').replace(/^\n+|\n+$/g, '');
+    var tag = function(s){ return String(s || '').replace(/[^A-Za-z0-9]+/g, ''); }, ct = tag(city);
+    var H = ({jl: ['JustListed', 'NewListing', 'HomesForSale'], oh: ['OpenHouse', 'HouseHunting', 'HomesForSale'], sold: ['JustSold', 'Sold'], cs: ['ComingSoon', 'NewListing'], pi: ['PriceImproved', 'HomesForSale'], vt: ['HomeTour', 'PropertyTour', 'HomesForSale']})[kind] || ['JustListed'];
+    if(ct) H = H.concat([ct, ct + 'RealEstate', ct + 'Homes']);
+    H = H.concat(['RealEstate', 'Realtor']); if(/royal\s*lepage/i.test(brk)) H.push('RoyalLePage');
+    return {s: S, l: L, h: H.map(function(t){ return '#' + t; }).join(' ')};
+  }
+  function capsFile(g){
+    var d = dirFor(g) || {}, out = ['Captions for ' + (d.addr || g.title), 'Edit anything before you post. Hashtags go at the end of the caption or in the first comment.', ''];
+    [['jl', 'JUST LISTED'], ['vt', 'VIDEO TOUR'], ['oh', 'OPEN HOUSE (add the day and time)'], ['sold', 'JUST SOLD']].forEach(function(k){
+      var c = capsFor(g, k[0], ''); out.push('==== ' + k[1] + ' ====', '', 'Short:', c.s, '', 'Long:', c.l, '', 'Hashtags:', c.h, '', ''); });
+    return out.join('\n').replace(/\n/g, '\r\n');
+  }
+  function openCaps(g){
+    var st = {kind: 'jl'};
+    var card = openModal('<h3>✍️ Captions</h3><div class="bsub">' + esc(g.title) + ' — written from this home’s address, price and details. Change anything, then copy.</div>' +
+      '<div class="kchips" id="kcp-kinds" style="margin-top:12px">' + CAPK.map(function(k){ return '<button type="button" class="kchip' + (k[0] === st.kind ? ' on' : '') + '" data-capk="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
+      '<div id="kcp-whenrow" style="display:none"><label class="kf" for="kcp-when">When</label><input type="text" id="kcp-when" maxlength="60" placeholder="Saturday, 2–4 PM"></div>' +
+      '<div class="kgr"><label class="kf" for="kcp-s">Short</label><button type="button" class="mini kcpc" data-capcopy="kcp-s">Copy</button></div><textarea id="kcp-s" rows="3"></textarea>' +
+      '<div class="kgr"><label class="kf" for="kcp-l">Long</label><button type="button" class="mini kcpc" data-capcopy="kcp-l">Copy</button></div><textarea id="kcp-l" rows="9"></textarea>' +
+      '<div class="kgr"><label class="kf" for="kcp-h">Hashtags</label><button type="button" class="mini kcpc" data-capcopy="kcp-h">Copy</button></div><textarea id="kcp-h" rows="2"></textarea>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kcp-all" style="width:auto">Copy long + hashtags <span class="ar">→</span></button></div>');
+    var job = KIT.job;
+    var fill = function(){ var c = capsFor(g, st.kind, $id('kcp-when').value); $id('kcp-s').value = c.s; $id('kcp-l').value = c.l; $id('kcp-h').value = c.h; $id('kcp-whenrow').style.display = st.kind === 'oh' ? '' : 'none'; };
+    fill();
+    listingFacts(g).then(function(){ if(job === KIT.job) fill(); });
+    $id('kcp-when').oninput = fill;
+    $id('kcp-all').onclick = function(){ copy($id('kcp-l').value + '\n\n' + $id('kcp-h').value, function(){ say('Copied — paste it into your post.'); }); };
+    card.addEventListener('click', function(e){
+      var k = e.target.closest ? e.target.closest('[data-capk]') : null;
+      if(k){ st.kind = k.getAttribute('data-capk'); card.querySelectorAll('[data-capk]').forEach(function(b){ b.classList.toggle('on', b === k); }); fill(); return; }
+      var c = e.target.closest ? e.target.closest('[data-capcopy]') : null;
+      if(c){ var ta = $id(c.getAttribute('data-capcopy')); copy(ta.value, function(){ say('Copied.'); }); }
+    });
+  }
+
+  /* ---------------- 🎠 swipe post: cover, photos, details, contact ---------------- */
+  function drawPhotoSlide(cv, o, img, i, n){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H; var x = cv.getContext('2d'), M = Math.round(W * 0.06);
+    x.fillStyle = '#1B1817'; x.fillRect(0, 0, W, H);
+    if(img) coverInto(x, o.bw ? grayOf(img) : img, 0, 0, W, H, 1, 0);
+    var gr = x.createLinearGradient(0, H * 0.78, 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.62)'); x.fillStyle = gr; x.fillRect(0, H * 0.78, W, H * 0.22);
+    x.textBaseline = 'alphabetic'; x.fillStyle = '#fff'; sp(x, 0);
+    var fs = Math.round(W * 0.03); x.font = '600 ' + fs + 'px ' + SANS2; x.textAlign = 'left';
+    x.fillText(wrapLines(x, String(o.l1 || '').split(',')[0], W * 0.7, 1)[0] || '', M, H - M);
+    x.textAlign = 'right'; x.font = '500 ' + Math.round(fs * 0.86) + 'px ' + SANS2; x.fillText(i + ' / ' + n, W - M, H - M); x.textAlign = 'left';
+  }
+  function drawDetails(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H; var x = cv.getContext('2d'), M = Math.round(W * 0.09), acc = o.accent || '#EA002A', ink = '#221E1C';
+    x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
+    var y = Math.round(H * 0.19);
+    x.fillStyle = acc; x.fillRect(M, y - W * 0.011, W * 0.07, Math.max(2, W * 0.005));
+    x.font = '700 ' + Math.round(W * 0.028) + 'px ' + SANS2; sp(x, W * 0.005); x.fillText('THE DETAILS', M + W * 0.095, y); sp(x, 0);
+    var aF = Math.round(W * 0.085); x.font = '600 ' + aF + 'px ' + SERIF; x.fillStyle = ink;
+    var al = wrapLines(x, String(o.l1 || ''), W - M * 2, 3), lh = Math.round(aF * 1.05); y += Math.round(W * 0.13);
+    al.forEach(function(t, i){ x.fillText(t, M, y + i * lh); }); y += (al.length - 1) * lh;
+    if(o.price){ y += Math.round(W * 0.09); x.font = '600 ' + Math.round(W * 0.05) + 'px ' + SANS2; x.fillStyle = lumOf(acc) > 0.8 ? ink : acc; x.fillText(String(o.price), M, y); }
+    var facts = [[o.beds, 'Beds'], [o.baths, 'Baths'], [o.sqft, 'Sq ft']].filter(function(f){ return String(f[0] || '').trim(); });
+    if(facts.length){
+      y += Math.round(W * 0.065); x.fillStyle = 'rgba(34,30,28,.2)'; x.fillRect(M, y, W - M * 2, Math.max(1, W * 0.002)); y += Math.round(W * 0.125);
+      var cw = (W - M * 2) / facts.length;
+      facts.forEach(function(f, i){ var fx = M + cw * i; x.fillStyle = ink; x.font = '600 ' + Math.round(W * 0.085) + 'px ' + SERIF; x.fillText(wrapLines(x, String(f[0]), cw - W * 0.02, 1)[0] || '', fx, y);
+        x.fillStyle = 'rgba(34,30,28,.65)'; x.font = '600 ' + Math.round(W * 0.024) + 'px ' + SANS2; sp(x, W * 0.004); x.fillText(f[1].toUpperCase(), fx, y + Math.round(W * 0.045)); sp(x, 0); });
+      y += Math.round(W * 0.085); x.fillStyle = 'rgba(34,30,28,.2)'; x.fillRect(M, y, W - M * 2, Math.max(1, W * 0.002));
+    }
+    x.fillStyle = ink; x.font = '500 ' + Math.round(W * 0.032) + 'px ' + SANS2;
+    var foot = wrapLines(x, 'Message me for the full details or to book a private showing.', W - M * 2, 3), flh = Math.round(W * 0.046), fy = H - Math.round(H * 0.1) - (foot.length - 1) * flh;
+    foot.forEach(function(t, i){ x.fillText(t, M, fy + i * flh); });
+  }
+  function drawContact(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H; var x = cv.getContext('2d'), M = Math.round(W * 0.09), acc = onDark(o.accent || '#EA002A');
+    x.fillStyle = '#1B1817'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic'; x.textAlign = 'center'; sp(x, 0);
+    var r = Math.round(W * 0.15), cy = Math.round(H * 0.29), y = o.head ? cy + r + Math.round(W * 0.095) : Math.round(H * 0.36);
+    if(o.head) circleImg(x, o.head, W / 2, cy, r, 'rgba(255,255,255,.28)');
+    x.fillStyle = acc; x.font = '700 ' + Math.round(W * 0.026) + 'px ' + SANS2; sp(x, W * 0.006); x.fillText('BOOK A PRIVATE SHOWING', W / 2, y); sp(x, 0);
+    var nm = String(o.agent || 'Your agent'), nf = fitSize(x, nm, function(s){ return '600 ' + s + 'px ' + SERIF; }, W - M * 2, Math.round(W * 0.095), Math.round(W * 0.05));
+    y += Math.round(W * 0.115); x.fillStyle = '#fff'; x.font = '600 ' + nf + 'px ' + SERIF; x.fillText(nm, W / 2, y);
+    var sub = [o.title, o.brokerage].filter(Boolean).join(' · ');
+    if(sub){ y += Math.round(W * 0.055); x.fillStyle = 'rgba(255,255,255,.7)'; x.font = '500 ' + Math.round(W * 0.03) + 'px ' + SANS2; x.fillText(wrapLines(x, sub, W - M * 2, 1)[0] || '', W / 2, y); }
+    y += Math.round(W * 0.06); x.fillStyle = acc; x.fillRect(W / 2 - W * 0.04, y, W * 0.08, Math.max(2, W * 0.004));
+    if(o.phone){ y += Math.round(W * 0.095); x.fillStyle = '#fff'; x.font = '700 ' + Math.round(W * 0.056) + 'px ' + SANS2; x.fillText(String(o.phone), W / 2, y); }
+    if(o.logo){ var lh2 = W * 0.075, lw = o.logo.width * lh2 / o.logo.height; if(lw > W * 0.4){ lh2 = lh2 * W * 0.4 / lw; lw = W * 0.4; } var px = W * 0.03, by = H - Math.round(H * 0.075) - lh2 - px;
+      x.fillStyle = '#F5F1EB'; x.fillRect(W / 2 - lw / 2 - px, by, lw + px * 2, lh2 + px * 2); x.drawImage(o.logo, W / 2 - lw / 2, by + px, lw, lh2); }
+    x.textAlign = 'left';
+  }
+  KIT._slides = {photo: drawPhotoSlide, details: drawDetails, contact: drawContact};
+  function openCarousel(g){
+    var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
+    var st = {label: 'Just Listed', sel: [], k: null, thumbs: {}, want: {}, busy: false}, byId = {}, PW = 324, PH = 405;
+    var card = openModal('<h3>🎠 Swipe post</h3><div class="bsub">' + esc(g.title) + ' — a ready-to-post carousel in feed size (4:5): your cover, the photos you pick, a details slide and your contact slide.</div>' +
+      '<label class="kf">Cover</label><div class="kchips" id="kca-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-cak="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
+      '<label class="kf">Photos — tap to add or remove, in the order you want them (up to 8)</label><div class="kpick" id="kca-pick"><span class="bsub">Loading photos…</span></div>' +
+      '<label class="kf">Preview — swipe sideways</label><div class="kstrip" id="kca-strip"></div><div class="bsub" id="kca-msg" style="margin-top:8px">Getting the photos and your details…</div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kca-go" style="width:auto">Download the slides <span class="ar">→</span></button></div>');
+    var job = KIT.job, strip = $id('kca-strip'), msg = $id('kca-msg');
+    var slideO = function(w, h){ var k = st.k; return {w: w, h: h, l1: k.l1, price: k.price, beds: k.beds, baths: k.baths, sqft: k.sqft, accent: k.accent, bw: k.bw, agent: k.agent, brokerage: k.brokerage, phone: k.phone, head: k.head, logo: k.logo, title: String((KIT.raw || {}).at || '')}; };
+    var cover = function(cv, w, h){ var o = lookO(st.k, 'p', st.label, /open house|sold/i.test(st.label) ? '' : st.k.price); o.w = w; o.h = h; (LOOKFN[st.k.style] || drawGraphic)(cv, o); };
+    var loadThumb = function(id){
+      if(st.want[id]) return; st.want[id] = 1;
+      fetch(thumbUrl(byId[id]).replace(/=s220$/, '=s400')).then(function(r){ if(!r.ok) throw new Error('t'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).then(function(bm){ st.thumbs[id] = bm; if(job === KIT.job) preview(); }).catch(function(){});
+    };
+    var preview = function(){
+      if(!st.k || job !== KIT.job) return;
+      var n = st.sel.length + 3, h = '';
+      for(var i = 0; i < n; i++) h += '<canvas data-sl="' + i + '"></canvas>';
+      strip.innerHTML = h; var cvs = strip.querySelectorAll('canvas');
+      try{ cover(cvs[0], PW, PH); }catch(e){}
+      st.sel.forEach(function(id, i2){ drawPhotoSlide(cvs[i2 + 1], slideO(PW, PH), st.thumbs[id] || null, i2 + 2, n); if(!st.thumbs[id]) loadThumb(id); });
+      drawDetails(cvs[n - 2], slideO(PW, PH)); drawContact(cvs[n - 1], slideO(PW, PH));
+      if(!st.busy) msg.textContent = n + ' slides: cover, ' + st.sel.length + ' photo' + (st.sel.length === 1 ? '' : 's') + ', details, contact.';
+      card.querySelectorAll('[data-cap2]').forEach(function(b){ var ix = st.sel.indexOf(b.getAttribute('data-cap2')); b.classList.toggle('on', ix > -1); b.textContent = ix > -1 ? String(ix + 1) : ''; });
+    };
+    Promise.all([graphicKit(g), ensureFonts('classic')]).then(function(r){
+      if(job !== KIT.job) return;
+      st.k = r[0]; var files = st.k.files || [], box = $id('kca-pick');
+      files.forEach(function(f){ byId[f.id] = f; });
+      if(!files.length) box.innerHTML = '<span class="bsub">No photos found for this home yet — the post will have a cover, details and contact slide.</span>';
+      else box.innerHTML = files.slice(0, 60).map(function(f, i){ return '<button type="button" data-cap2="' + qa(f.id) + '" style="background-image:url(&quot;' + qa(thumbUrl(f)) + '&quot;)" aria-label="Photo ' + (i + 1) + '"></button>'; }).join('');
+      st.sel = files.filter(function(f){ return f !== st.k.file; }).slice(0, 6).map(function(f){ return f.id; });
+      preview();
+    }).catch(function(){ if(job === KIT.job) msg.textContent = 'Couldn’t load this home’s photos — check your connection and reopen.'; });
+    card.addEventListener('click', function(e){
+      var k = e.target.closest ? e.target.closest('[data-cak]') : null;
+      if(k){ st.label = k.getAttribute('data-cak'); card.querySelectorAll('[data-cak]').forEach(function(b){ b.classList.toggle('on', b === k); }); preview(); return; }
+      var p = e.target.closest ? e.target.closest('[data-cap2]') : null;
+      if(p){ var id = p.getAttribute('data-cap2'), ix = st.sel.indexOf(id); if(ix > -1) st.sel.splice(ix, 1); else if(st.sel.length >= 8){ say('Eight photos is the most — remove one first.'); return; } else st.sel.push(id); preview(); }
+    });
+    $id('kca-go').onclick = function(){
+      if(st.busy || !st.k) return; st.busy = true; var btn = this; btn.disabled = true; btn.style.opacity = '.5';
+      var n = st.sel.length + 3, out = [], base = safeName(g.title), W = 1080, H = 1350;
+      var add = function(cv, name){ return jpegOf(cv).then(function(b){ out.push({name: name, blob: b}); }); };
+      var alive = function(){ if(job !== KIT.job) throw new Error('closed'); };
+      var chain = Promise.resolve().then(function(){ msg.textContent = 'Making slide 1 of ' + n + '…'; var cv = document.createElement('canvas'); cover(cv, W, H); return add(cv, base + ' - 01 Cover.jpg'); });
+      st.sel.forEach(function(id, i){ chain = chain.then(function(){ alive(); msg.textContent = 'Making slide ' + (i + 2) + ' of ' + n + '…';
+        return sized(byId[id], 1600).then(function(b){ return createImageBitmap(b); }).catch(function(){ return st.thumbs[id] || null; }).then(function(bm){ var cv = document.createElement('canvas'); drawPhotoSlide(cv, slideO(W, H), bm, i + 2, n); return add(cv, base + ' - ' + pad2(i + 2) + '.jpg'); }); }); });
+      chain = chain.then(function(){ alive(); var c1 = document.createElement('canvas'); drawDetails(c1, slideO(W, H)); return add(c1, base + ' - ' + pad2(n - 1) + ' Details.jpg'); })
+        .then(function(){ var c2 = document.createElement('canvas'); drawContact(c2, slideO(W, H)); return add(c2, base + ' - ' + pad2(n) + ' Contact.jpg'); });
+      var zipIt = function(){ return Promise.all(out.map(function(f){ return u8of(f.blob).then(function(d){ return {name: f.name, data: d}; }); })).then(function(z){ dl(zipStore(z), base + ' - Swipe post.zip'); }); };
+      chain.then(function(){
+        alive();
+        var files = []; try{ files = out.map(function(f){ return new File([f.blob], f.name, {type: 'image/jpeg'}); }); }catch(e){ files = []; }
+        var mobile = /iphone|ipad|android/i.test(navigator.userAgent);
+        if(mobile && files.length && navigator.canShare && navigator.canShare({files: files})) return navigator.share({files: files}).catch(function(e2){ if(e2 && e2.name === 'AbortError') return; return zipIt(); });
+        return zipIt();
+      }).then(function(){ st.busy = false; if(job === KIT.job) msg.textContent = '✓ ' + n + ' slides ready — post them in order.'; })
+        .catch(function(){ st.busy = false; if(job === KIT.job) msg.textContent = 'Couldn’t make the slides just now — try again.'; })
+        .then(function(){ btn.disabled = false; btn.style.opacity = ''; });
+    };
+  }
+
+  /* ---------------- 🚀 launch pack: graphics, video, cropped photos and captions in one download ---------------- */
+  function openLaunch(g){
+    var p = gPrefs(), canVid = !!videoMime();
+    openModal('<h3>🚀 Launch pack</h3><div class="bsub">' + esc(g.title) + ' — everything for launch day in one download, made in your style (' + esc(prefsLine(p)) + '). To change the style, open <b>Make a graphic</b> and tap <b>Save as my style</b>.</div>' +
+      '<div class="kck"><input type="checkbox" id="kl-g" checked><label for="kl-g">“Just Listed” graphic — feed, story and square</label></div>' +
+      '<div class="kck"><input type="checkbox" id="kl-v"' + (canVid ? ' checked' : ' disabled') + '><label for="kl-v">“Just Listed” video, 6 seconds' + (canVid ? '' : ' (this browser can’t make videos)') + '</label></div>' +
+      '<div class="kck"><input type="checkbox" id="kl-p" checked><label for="kl-p">First 10 photos, cropped for Instagram (4:5)</label></div>' +
+      '<div class="kck"><input type="checkbox" id="kl-c" checked><label for="kl-c">Captions and hashtags (a text file)</label></div>' +
+      '<div class="kprog" style="margin-top:12px;display:none" id="kl-prog"><i style="width:0"></i></div><div class="bsub" id="kl-msg" style="margin-top:8px"></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kl-go" style="width:auto">Build the pack <span class="ar">→</span></button></div>');
+    var job = KIT.job, go = $id('kl-go'), msg = $id('kl-msg'), prog = $id('kl-prog');
+    go.onclick = function(){
+      var want = {g: $id('kl-g').checked, v: $id('kl-v').checked && canVid, p: $id('kl-p').checked, c: $id('kl-c').checked};
+      if(!want.g && !want.v && !want.p && !want.c){ msg.textContent = 'Tick at least one thing to include.'; return; }
+      go.disabled = true; go.style.opacity = '.5'; prog.style.display = '';
+      var out = [], skipped = [], base = safeName(g.title), label = 'Just Listed';
+      var step = function(t, f){ if(job === KIT.job){ msg.textContent = t; prog.firstChild.style.width = Math.round(f * 100) + '%'; } };
+      var alive = function(){ if(job !== KIT.job) throw new Error('closed'); };
+      step('Getting the photos and your details…', 0.05);
+      graphicKit(g).then(function(k){
+        alive();
+        var chain = Promise.resolve(), fn = LOOKFN[k.style] || drawGraphic;
+        if(want.g) [['p', 'Feed'], ['s', 'Story'], ['q', 'Square']].forEach(function(f, i){ chain = chain.then(function(){ alive(); step('Making the ' + f[1].toLowerCase() + ' graphic…', 0.12 + i * 0.07);
+          var cv = document.createElement('canvas'); fn(cv, lookO(k, f[0], label, k.price)); return jpegOf(cv).then(u8of).then(function(d){ out.push({name: '1 Graphics/' + label + ' - ' + f[1] + '.jpg', data: d}); }); }); });
+        if(want.v) chain = chain.then(function(){ alive(); step('Recording the video — about 6 seconds…', 0.36);
+          var o = lookO(k, 'p', label, k.price); o.cache = {};
+          return recordVideo(fn, o, p.motion === 'fade' ? 'fade' : 'slide', function(pr){ step('Recording the video… ' + Math.round(pr * 100) + '%', 0.36 + pr * 0.2); })
+            .then(function(v){ return u8of(v.blob).then(function(d){ out.push({name: '1 Graphics/' + label + ' - Video.' + v.ext, data: d}); }); }).catch(function(){ skipped.push('the video'); }); });
+        if(want.p) chain = chain.then(function(){ alive(); var files = k.files.slice(0, 10), i = 0, done = 0;
+          if(!files.length){ skipped.push('the photos (none delivered yet)'); return; }
+          var one = function(){ var n = i++; if(n >= files.length || job !== KIT.job) return Promise.resolve();
+            return sized(files[n], 1600).then(function(b){ return cropTo(b, 1080, 1350); }).then(u8of).then(function(d){ out.push({name: '2 Photos for Instagram/' + base + ' - ' + pad2(n + 1) + '.jpg', data: d}); }).catch(function(){})
+              .then(function(){ done++; step('Cropping photos… ' + done + ' of ' + files.length, 0.58 + done / files.length * 0.36); return one(); }); };
+          return Promise.all([one(), one(), one()]); });
+        if(want.c) chain = chain.then(function(){ out.push({name: '3 Captions.txt', data: new TextEncoder().encode(capsFile(g))}); });
+        return chain;
+      }).then(function(){
+        alive(); go.disabled = false; go.style.opacity = '';
+        if(!out.length){ step('Couldn’t build the pack just now — try again.', 0); return; }
+        out.sort(function(m, n){ return m.name.localeCompare(n.name); });
+        dl(zipStore(out), base + ' - Launch pack.zip');
+        step('✓ Pack downloaded — ' + out.length + ' files.' + (skipped.length ? ' Left out: ' + skipped.join(', ') + '.' : ''), 1);
+        if(want.g || want.v) setCheck(g, 'jl', false, true);
+      }).catch(function(){ if(job !== KIT.job) return; go.disabled = false; go.style.opacity = ''; step('Couldn’t build the pack just now — try again.', 0); });
+    };
+  }
+
+  /* ---------------- ⭐ review graphic: a client's words as a post ---------------- */
+  function drawQuote(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H; var x = cv.getContext('2d'), story = H / W > 1.5, M = Math.round(W * 0.09), acc = o.accent || '#EA002A', ink = '#221E1C';
+    var safeT = story ? Math.round(H * 0.13) : Math.round(W * 0.085), safeB = story ? Math.round(H * 0.13) : Math.round(W * 0.075);
+    x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
+    // the agent row at the foot
+    var nameF = Math.round(W * 0.03), smF = Math.round(W * 0.024), r = o.head ? Math.round(W * 0.046) : 0, rowH = Math.max(r * 2, nameF + smF * 1.5), yRow = H - safeB - rowH, ruleY = yRow - Math.round(W * 0.035);
+    x.fillStyle = 'rgba(34,30,28,.22)'; x.fillRect(M, ruleY, W - M * 2, 2);
+    var tx = M + (r ? r * 2 + Math.round(W * 0.022) : 0), cy = yRow + rowH / 2;
+    if(r) circleImg(x, o.head, M + r, cy, r, 'rgba(34,30,28,.18)');
+    x.fillStyle = ink; x.font = '700 ' + nameF + 'px ' + SANS2; x.fillText(o.agent || '', tx, cy - smF * 0.15);
+    x.fillStyle = 'rgba(34,30,28,.7)'; x.font = '500 ' + smF + 'px ' + SANS2; x.fillText(wrapLines(x, [o.brokerage, o.phone].filter(Boolean).join('   ·   '), W - M - tx - (o.logo ? W * 0.24 : 0), 1)[0] || '', tx, cy + smF * 1.15);
+    if(o.logo){ var lh0 = Math.min(rowH * 0.8, W * 0.06), lw0 = o.logo.width * lh0 / o.logo.height; if(lw0 > W * 0.22){ lh0 = lh0 * W * 0.22 / lw0; lw0 = W * 0.22; } x.drawImage(o.logo, W - M - lw0, cy - lh0 / 2, lw0, lh0); }
+    // the opening mark and the stars
+    var markC = lumOf(acc) > 0.8 ? ink : acc;
+    x.fillStyle = markC; x.font = '600 ' + Math.round(W * 0.3) + 'px ' + SERIF; x.fillText('“', M - W * 0.012, safeT + Math.round(W * 0.235));
+    if(o.stars){ x.font = '400 ' + Math.round(W * 0.042) + 'px ' + SANS2; sp(x, W * 0.008); x.textAlign = 'right'; x.fillText('★★★★★', W - M, safeT + Math.round(W * 0.085)); x.textAlign = 'left'; sp(x, 0); }
+    // the words: the largest size that fits between the mark and the name
+    var whoH = Math.round(W * (o.sub ? 0.17 : 0.125)), top = safeT + Math.round(W * 0.2), bot = ruleY - Math.round(W * 0.05) - whoH;
+    var text = String(o.quote || '').trim() || 'Paste your client’s review and it appears here.', fs = Math.round(W * 0.078), lines = [], lh = 0;
+    for(; fs >= Math.round(W * 0.03); fs -= Math.max(1, Math.round(W * 0.002))){ x.font = 'italic 600 ' + fs + 'px ' + SERIF; lines = wrapLines(x, text, W - M * 2, 60); lh = Math.round(fs * 1.22); if(lines.length * lh <= bot - top) break; }
+    lines = wrapLines(x, text, W - M * 2, Math.max(1, Math.floor((bot - top) / lh)));
+    x.fillStyle = ink; var y0 = top + fs;
+    lines.forEach(function(t, i){ x.fillText(t, M, y0 + i * lh); });
+    var yw = y0 + (lines.length - 1) * lh + Math.round(W * 0.085);
+    x.fillStyle = markC; x.fillRect(M, yw - W * 0.011, W * 0.06, Math.max(2, W * 0.004));
+    x.fillStyle = ink; x.font = '700 ' + Math.round(W * 0.03) + 'px ' + SANS2; sp(x, W * 0.004); x.fillText(String(o.who || '').toUpperCase(), M + W * 0.08, yw); sp(x, 0);
+    if(o.sub){ x.fillStyle = 'rgba(34,30,28,.65)'; x.font = '500 ' + Math.round(W * 0.026) + 'px ' + SANS2; x.fillText(wrapLines(x, String(o.sub), W - M * 2 - W * 0.08, 1)[0] || '', M + W * 0.08, yw + Math.round(W * 0.042)); }
+  }
+  KIT._drawQuote = drawQuote;
+  function openReview(){
+    var p = gPrefs(), raw = KIT.raw || {}, bc = brandColour();
+    var swatches = (bc ? [bc] : []).concat(['#EA002A', '#A8733A', '#1F5B45', '#1E3A5F', '#1B1817']); if(swatches.indexOf(p.accent) < 0) swatches.unshift(p.accent);
+    swatches = swatches.filter(function(c, i, a2){ return a2.indexOf(c) === i; });
+    var st = {quote: '', who: '', sub: '', stars: true, fmt: 'p', accent: p.accent, head: null, logo: null};
+    var card = openModal('<h3>⭐ Review graphic</h3><div class="bsub">Paste a client’s review and post it in your colours. Ask your client before sharing their name.</div>' +
+      '<div class="kgwrap"><div class="kgopts">' +
+      '<label class="kf" for="kq-text">Their words</label><textarea id="kq-text" rows="5" maxlength="600" placeholder="Paste the review here"></textarea>' +
+      '<label class="kf" for="kq-who">Their name</label><input type="text" id="kq-who" maxlength="40" placeholder="Dana W.">' +
+      '<label class="kf" for="kq-sub">A line under the name (optional)</label><input type="text" id="kq-sub" maxlength="50" placeholder="Bought in Brampton, 2026">' +
+      '<div class="kck" style="margin-top:8px"><input type="checkbox" id="kq-stars" checked><label for="kq-stars">Show five stars</label></div>' +
+      '<label class="kf">Colour</label><div class="ksws">' + swatches.map(function(c){ return '<button type="button" class="ksw' + (c === st.accent ? ' on' : '') + '" data-qc="' + c + '" style="background:' + c + '" aria-label="Colour ' + c + '"></button>'; }).join('') + '</div>' +
+      '<label class="kf">Shape</label><div class="kchips">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-qf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
+      '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kq-cv"></canvas></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kq-dl" style="width:auto">Download <span class="ar">→</span></button></div></div></div>');
+    card.classList.add('kgcard');
+    var job = KIT.job, cv = $id('kq-cv');
+    var paint = function(){ var f = GFMT[st.fmt]; drawQuote(cv, {w: f[0], h: f[1], quote: st.quote, who: st.who, sub: st.sub, stars: st.stars, accent: st.accent, agent: agentName(), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), head: st.head, logo: st.logo}); };
+    paint();
+    ensureFonts('classic').then(function(){ if(job === KIT.job) paint(); });
+    agentPics().then(function(pc){ if(job !== KIT.job) return; st.head = pc.head; st.logo = pc.logo; paint(); });
+    $id('kq-text').oninput = function(){ st.quote = this.value; paint(); };
+    $id('kq-who').oninput = function(){ st.who = this.value; paint(); };
+    $id('kq-sub').oninput = function(){ st.sub = this.value; paint(); };
+    $id('kq-stars').onchange = function(){ st.stars = this.checked; paint(); };
+    card.addEventListener('click', function(e){
+      var c = e.target.closest ? e.target.closest('[data-qc]') : null;
+      if(c){ st.accent = c.getAttribute('data-qc'); card.querySelectorAll('[data-qc]').forEach(function(b){ b.classList.toggle('on', b === c); }); paint(); return; }
+      var f = e.target.closest ? e.target.closest('[data-qf]') : null;
+      if(f){ st.fmt = f.getAttribute('data-qf'); card.querySelectorAll('[data-qf]').forEach(function(b){ b.classList.toggle('on', b === f); }); paint(); }
+    });
+    $id('kq-dl').onclick = function(){
+      if(!st.quote.trim()){ say('Paste the review first.'); return; }
+      cv.toBlob(function(b){
+        if(!b){ say('Couldn’t make the image on this device.'); return; }
+        var name = 'Review' + (st.who.trim() ? ' - ' + safeName(st.who).replace(/\.+$/, '') : '') + '.jpg', file = null; try{ file = new File([b], name, {type: 'image/jpeg'}); }catch(e){}
+        if(/iphone|ipad|android/i.test(navigator.userAgent) && file && navigator.canShare && navigator.canShare({files: [file]})) navigator.share({files: [file]}).catch(function(){});
+        else dl(b, name);
+      }, 'image/jpeg', 0.95);
+    };
+  }
+
+  /* ---------------- 🔗 one link per place, so the views can be told apart ---------------- */
+  var SRC = [['ig', 'Instagram'], ['tt', 'TikTok'], ['fb', 'Facebook'], ['em', 'Email'], ['tx', 'Text message'], ['qr', 'QR code or sign']];
+  function srcUrl(u, k){ u = String(u || ''); var h = u.indexOf('#'), hash = h > -1 ? u.slice(h) : ''; if(h > -1) u = u.slice(0, h); return u + (u.indexOf('?') > -1 ? '&' : '?') + 'src=' + k + hash; }
+  function srcBy(g){ var d = dirFor(g); return (d && KIT.vsrc && KIT.vsrc[d.id]) || {}; }
+  function openLinks(g){
+    var d = dirFor(g);
+    if(!(d && d.rel && d.url)){ openModal('<h3>🔗 Share links</h3><div class="bsub">' + esc(g.title) + ' — these appear once this home’s listing page is published. Open <b>Listing page</b> in the checklist to publish it.</div><div class="bact"><button type="button" class="mini" data-kclose="1">Close</button></div>'); return; }
+    var rows = function(){ var by = srcBy(g); return SRC.map(function(s){ var n = by[s[0]] || 0; return '<div class="ksrc"><div class="ksrct"><b>' + s[1] + '</b><span>' + n + ' visit' + (n === 1 ? '' : 's') + '</span></div><div class="klink"><input type="text" readonly value="' + qa(srcUrl(d.url, s[0])) + '"><button type="button" class="mini" data-srccopy="1">Copy</button></div></div>'; }).join(''); };
+    var tot = function(){ var v = viewsOf(g); return v == null ? '' : 'All visits to this page so far: ' + v + '. Visits through the plain link aren’t in the counts above.'; };
+    openModal('<h3>🔗 Share links</h3><div class="bsub">' + esc(g.title) + ' — use a different link in each place and you’ll see which one brings visitors. They all open the same page.</div>' +
+      '<div id="ks-body">' + rows() + '</div><div class="bsub" id="ks-tot" style="margin-top:12px">' + esc(tot()) + '</div><div class="bact"><button type="button" class="mini" data-kclose="1">Close</button></div>');
+    var job = KIT.job; delete KIT.views[d.id];
+    loadViews(g).then(function(){ if(job !== KIT.job) return; var b = $id('ks-body'); if(b) b.innerHTML = rows(); var t = $id('ks-tot'); if(t) t.textContent = tot(); renderListings(); });
+  }
+
+  /* ---------------- 🚪 open-house kit: a sign with a QR code, and a one-page feature sheet ---------------- */
+  function openSheet(inner){
+    var sh = $id('kitsheet'); if(!sh){ sh = document.createElement('div'); sh.id = 'kitsheet'; document.body.appendChild(sh); }
+    sh.innerHTML = '<div class="ksbar"><button type="button" data-kshclose="1">← Back</button><button type="button" class="prim" data-kshprint="1">Print or save as PDF</button></div><div class="kspage">' + inner + '</div>';
+    sh.classList.add('on'); sh.scrollTop = 0; closeModal();
+  }
+  function qrOf(text){ try{ return (typeof qrSVG === 'function' && typeof qrcode === 'function') ? qrSVG(text) : ''; }catch(e){ return ''; } }
+  function agentBlock(){
+    var raw = KIT.raw || {}, hu = headUrl();
+    return '<div class="ohag">' + (hu ? '<img src="' + qa(hu) + '" alt="">' : '') + '<div><b>' + esc(agentName()) + '</b><span>' + esc([raw.at, raw.brokerage].filter(Boolean).join(' · ')) + '</span><span>' + esc([raw.ph, raw.email].filter(Boolean).join(' · ')) + '</span></div></div>';
+  }
+  function bigPhoto(u, px){ u = String(u || ''); return u.replace(/sz=w\d+/, 'sz=w' + px).replace(/=s\d+$/, '=s' + px); }
+  function openOH(g){
+    var d = dirFor(g), live = !!(d && d.rel && d.url), acc = gPrefs().accent;
+    openModal('<h3>🚪 Open house kit</h3><div class="bsub">' + esc(g.title) + ' — two pages to print. Visitors scan the code and sign in on their own phone; they land in your Leads as “Open house sign-in”.</div>' +
+      '<label class="kf" for="ko-when">When (shown on the sign)</label><input type="text" id="ko-when" maxlength="60" placeholder="Saturday, November 21 · 2–4 PM">' +
+      (live ? '' : '<div class="kempty" style="margin-top:12px">This home’s listing page isn’t published yet, so there’s no sign-in code. Publish the page from the checklist and the sign will be ready; the feature sheet works now.</div>') +
+      '<div class="ktools" style="margin-top:14px"><button type="button" class="mini" id="ko-sign"' + (live ? '' : ' disabled style="opacity:.45"') + '>🖨 Sign with QR code</button><button type="button" class="mini" id="ko-sheet">🖨 Feature sheet</button></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button></div>');
+    ensureFonts('classic');
+    var addr = (d && d.addr) || g.title;
+    $id('ko-sign').onclick = function(){
+      if(!live) return;
+      var when = $id('ko-when').value.trim(), qr = qrOf(srcUrl(d.url, 'qr') + '&oh=1');
+      if(!qr){ say('Couldn’t draw the code just now — check your connection and try again.'); return; }
+      openSheet('<div class="ohsign" style="--kacc:' + qa(acc) + '"><div class="ohk">Open house</div><h1>Welcome</h1><div class="oha">' + esc(addr) + '</div>' + (when ? '<div class="ohw">' + esc(when) + '</div>' : '') +
+        '<div class="ohqr">' + qr + '</div><div class="ohs">Scan to sign in</div><div class="ohp">Point your phone’s camera at the code. It takes ten seconds, and it opens every photo and detail of this home.</div>' + agentBlock() + '</div>');
+    };
+    $id('ko-sheet').onclick = function(){
+      var btn = this; btn.disabled = true;
+      Promise.all([listingInfo(g), driveImages(photoFolder(g))]).then(function(r){
+        var L = r[0] || {}, files = r[1] || [], hero = bigPhoto(heroOf(g), 1600);
+        var facts = [[L.beds, 'Beds'], [L.baths, 'Baths'], [L.sqft, 'Sq ft'], [L.lot, 'Lot'], [L.built, 'Built'], [L.parking, 'Parking']].filter(function(f){ return String(f[0] || '').trim(); });
+        var mem = (KIT.gfacts || {})[g.key] || {}; if(!facts.length) facts = [[mem.beds, 'Beds'], [mem.baths, 'Baths'], [mem.sqft, 'Sq ft']].filter(function(f){ return String(f[0] || '').trim(); });
+        var blurb = String(L.intro || L.body || '').replace(/\s+/g, ' ').trim(); if(blurb.length > 620) blurb = blurb.slice(0, 600).replace(/\s+\S*$/, '') + '…';
+        var hl = String(L.highlights || '').split('\n').map(function(l){ return l.split('|')[0].trim(); }).filter(Boolean).slice(0, 8);
+        var more = files.slice(1, 5).map(function(f){ return thumbUrl(f).replace(/=s220$/, '=s800'); });
+        var qr = live ? qrOf(srcUrl(d.url, 'qr')) : '';
+        openSheet('<div class="fsheet" style="--kacc:' + qa(acc) + '">' + (hero ? '<img class="fsh" src="' + qa(hero) + '" alt="">' : '') +
+          '<div class="fsk">' + esc(String(L.status || 'For sale')) + '</div><h1>' + esc(addr) + '</h1>' + ((d && d.price) || L.price ? '<div class="fsp">' + esc((d && d.price) || L.price) + '</div>' : '') +
+          (facts.length ? '<div class="fsf">' + facts.map(function(f){ return '<div><b>' + esc(f[0]) + '</b><span>' + f[1] + '</span></div>'; }).join('') + '</div>' : '') +
+          (L.headline ? '<div class="fshl">' + esc(L.headline) + '</div>' : '') + (blurb ? '<p class="fsi">' + esc(blurb) + '</p>' : '') +
+          (hl.length ? '<ul class="fsl">' + hl.map(function(t){ return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
+          (more.length ? '<div class="fsg">' + more.map(function(u){ return '<img src="' + qa(u) + '" alt="">'; }).join('') + '</div>' : '') +
+          '<div class="fsfoot">' + agentBlock() + (qr ? '<div class="fsqrt">Scan for every photo and the video</div><div class="fsqr">' + qr + '</div>' : '') + '</div></div>');
+      }).catch(function(){ btn.disabled = false; say('Couldn’t build the sheet just now — try again.'); });
+    };
+  }
+
+  /* ---------------- 📩 lead follow-up: who has waited, and a reply ready to send ---------------- */
+  function staleLeads(){ var cut = Date.now() - 864e5; return newLeads().filter(function(l){ var t = +new Date(l.ts); return t && t < cut; }); }
+  function waitedDays(l){ var t = +new Date(l.ts); return t ? Math.floor((Date.now() - t) / 864e5) : 0; }
+  function replyText(l){
+    var raw = KIT.raw || {}, me = agentName(), first = String(l.name || '').trim().split(/\s+/)[0] || 'there', street = String(l.addr || '').split(',')[0].trim() || 'the home';
+    var who = me ? 'it’s ' + me + (raw.brokerage ? ' from ' + raw.brokerage : '') + '. ' : '';
+    return l.oh ? 'Hi ' + first + ', ' + who + 'Thanks for coming to the open house at ' + street + '. Do you have any questions about the home, or would you like a second look?'
+      : 'Hi ' + first + ', ' + who + 'Thanks for asking about ' + street + '. I’d be glad to show it to you. What day works best?';
+  }
+
   /* ---------------- wiring ---------------- */
   function setCheck(g, k, val, onlyOn){
     var o = KIT.state.ck[g.key] || (KIT.state.ck[g.key] = {});
@@ -5130,6 +5672,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
   document.addEventListener('click', function(e){
     var t = e.target; if(!t || !t.closest) return;
     if(t.closest('[data-kaudio]')){ openAudio(); return; }
+    if(t.closest('[data-kreview]')){ openReview(); return; }
+    if(t.closest('[data-kshclose]')){ var ks = $id('kitsheet'); if(ks) ks.classList.remove('on'); return; }
+    if(t.closest('[data-kshprint]')){ document.body.classList.add('kprintk'); var offk = function(){ document.body.classList.remove('kprintk'); window.removeEventListener('afterprint', offk); }; window.addEventListener('afterprint', offk); setTimeout(function(){ try{ window.print(); }catch(e3){} }, 50); return; }
+    var scp = t.closest('[data-srccopy]'); if(scp){ var sin = scp.parentNode.querySelector('input'); if(sin) copy(sin.value, function(){ say('🔗 Link copied.'); }); return; }
+    var lrp = t.closest('[data-lreply]');
+    if(lrp){ var lrow = lrp.closest('[data-lead]'); if(lrow && canWrite()){ var lid = lrow.getAttribute('data-lead'); if(!KIT.state.ld[lid]){ KIT.state.ld[lid] = 'c'; save(); setTimeout(function(){ renderListings(); renderHome(); say('Marked as contacted.'); }, 800); } } return; }
     var at2 = t.closest('[data-audtab]'); if(at2){ AUD.tab = at2.getAttribute('data-audtab'); var ab = $id('aud-body'); if(ab) ab.innerHTML = audBody(); return; }
     var ar2 = t.closest('[data-aud]');
     if(ar2 && t.closest('[data-audsave]')){ audToggle(ar2.getAttribute('data-aud')); return; }
@@ -5150,6 +5698,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(act){ var g = groupOf(act); if(!g) return; var k = act.getAttribute('data-kact');
       if(k === 'mls' || k === 'ig') openSized(g, k);
       else if(k === 'report') openReport(g);
+      else if(k === 'launch') openLaunch(g);
+      else if(k === 'carousel') openCarousel(g);
+      else if(k === 'caps') openCaps(g);
+      else if(k === 'ohkit') openOH(g);
+      else if(k === 'links') openLinks(g);
       else if(k.indexOf('g:') === 0) openGraphic(g, k.slice(2));
       else if(k === 'page'){ var d = dirFor(g); var it = g.items.filter(function(x){ return typeof listingUrl === 'function' && listingUrl(x); })[0]; var u = (d && d.rel && d.url) ? d.url : (it ? listingUrl(it) : ''); if(u) location.href = u; else say('The listing page opens once the photos are delivered.'); }
       return; }
@@ -5185,7 +5738,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-20</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-21</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
