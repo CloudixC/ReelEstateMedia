@@ -117,6 +117,18 @@ html[data-theme="light"] body.agentmode{--bg:#FAF8F5}
 body.agentmode .brand b{font-weight:700;letter-spacing:-.01em}
 body.agentmode .brand b i{font-style:normal;font-weight:700;color:#EA002A}
 body.agentmode .top .remnav{margin-left:6px}
+/* agent side: the hub's own bottom tabs, so this page is plainly part of the hub (it used to drop them) */
+#vtabbar{position:fixed;left:0;right:0;bottom:0;z-index:98;display:flex;justify-content:center;gap:2px;background:rgba(20,20,22,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.1);padding:7px 10px calc(7px + env(safe-area-inset-bottom))}
+#vtabbar a{flex:1;max-width:130px;text-decoration:none;color:rgba(245,242,233,.45);font-family:'Space Grotesk',system-ui,-apple-system,sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.06em;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0 3px;border-radius:12px;position:relative;-webkit-tap-highlight-color:transparent}
+#vtabbar a .ti{font-size:19px;line-height:1;filter:grayscale(1) opacity(.6)}
+#vtabbar a.on{color:#F5F2E9}
+#vtabbar a.on .ti{filter:none;transform:translateY(-1px)}
+#vtabbar a.on::after{content:'';position:absolute;top:-7.5px;left:26%;right:26%;height:2px;border-radius:2px;background:#EA002A}
+html[data-theme="light"] #vtabbar{background:rgba(250,248,245,.94);border-top-color:rgba(0,0,0,.1)}
+html[data-theme="light"] #vtabbar a{color:rgba(26,26,26,.45)}
+html[data-theme="light"] #vtabbar a.on{color:#1A1A1A}
+body.agentmode{padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+body.agentmode #verstamp{position:static;display:block;width:max-content;margin:22px auto 0;background:none;opacity:.6}
 .seg{display:flex;background:var(--panel);border:1px solid var(--hair2);border-radius:999px;padding:3px;margin-left:auto}
 .seg button{border:0;background:transparent;border-radius:999px;padding:7px 14px;font:700 12px var(--sans);letter-spacing:.04em;color:var(--ink2)}
 .seg button.on{background:var(--brass);color:#1a1205}
@@ -331,7 +343,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.16-1</div>
+<div id="verstamp" title="App version">VAULT v2026.11.16-2</div>
 <script>
 (function(){
   'use strict';
@@ -620,12 +632,18 @@ body.selmode .tile .ck{display:grid}
   function statusPill(s){ var i=STATUSES.indexOf(s); return '<span class="pill '+(s==='Delivered'?'ok':i>=4?'live':i<2?'warn':'')+'">'+esc(s==='Booked'?'To schedule':s)+'</span>'; }
   function auditCount(list){ var n=0; list.forEach(function(a){ a.items.forEach(function(i){ if(flagOf(i)) n++; }); }); return n; }
 
+  function agentTabs(){   // the hub's four tabs, as links back into it — Library stays lit because this page is the deep end of it
+    if(!AGENT_MODE) return '';
+    var a=agents[0]||{}; if(!a.hub) return '';
+    return '<nav id="vtabbar" aria-label="Hub sections">'+[['home','🏠','Home'],['library','📚','Library'],['book','📅','Book'],['more','✨','More']].map(function(t){
+      return '<a href="'+esc(a.hub+'&tab='+t[0])+'"'+(t[0]==='library'?' class="on"':'')+'><span class="ti">'+t[1]+'</span><span>'+t[2]+'</span></a>'; }).join('')+'</nav>';
+  }
   function topHTML(){
     var pieces=agents.reduce(function(s,a){ return s+a.finals.length; },0);
     if(AGENT_MODE){
       var a=agents[0]||{name:''};
-      return '<div class="top"><div class="brand"><b>My <i>Library</i></b><span>'+esc(a.company||'Reel Estate Media')+'</span></div>'+
-        '<span class="remnav">'+(a.hub?'<a href="'+esc(a.hub)+'">⌂ My hub</a>':'')+'<a class="on" href="#" onclick="return false">🗄 Library</a></span>'+
+      return '<div class="top"><div class="brand"><b>Photos <i>&amp; clips</i></b><span>'+esc(a.company||'Reel Estate Media')+'</span></div>'+
+        '<span class="remnav">'+(a.hub?'<a href="'+esc(a.hub+'&tab=library')+'">‹ Back to Library</a>':'')+'</span>'+
         '<div class="cnt"><b>'+pieces+'</b>pieces · '+esc(a.name)+'</div>'+
         '<div class="seg">'+[['wall','Wall'],['dossier','Profile']].map(function(v){ return '<button data-view="'+v[0]+'" class="'+(state.view===v[0]?'on':'')+'">'+v[1]+'</button>'; }).join('')+'</div>'+
         '<button class="ico" id="theme" title="Light / dark">◐</button></div>';
@@ -820,7 +838,7 @@ body.selmode .tile .ck{display:grid}
   function updateSelbar(){ var old=app.querySelector('.selbar'); if(old) old.remove(); var h=selbarHTML(cur()); if(h) app.insertAdjacentHTML('beforeend',h); }
   function render(){
     var body = state.view==='cabinet'?cabinetHTML() : state.view==='dossier'?dossierHTML() : wallHTML();
-    app.innerHTML=topHTML()+'<div class="wrap fade">'+body+'</div>';
+    app.innerHTML=topHTML()+'<div class="wrap fade">'+body+'</div>'+agentTabs();
     document.body.classList.toggle('selmode', !!(state.sel && state.view==='wall' && cur()));
     var all=[]; agents.forEach(function(a){ a.items.forEach(function(i){ all.push(i); }); });
     paintAll(all); paintPerf(all);
@@ -872,7 +890,7 @@ body.selmode .tile .ck{display:grid}
     // 🧭 agent side wears the hub's look: same type, same ink-and-red, same nav pills
     document.body.classList.add('agentmode');
     try{ var gf=document.createElement('link'); gf.rel='stylesheet'; gf.href='https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap'; document.head.appendChild(gf); }catch(eF){}
-    app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Opening your vault…</h1></div></div>';
+    app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Opening your photos &amp; clips…</h1></div></div>';
     fetch(ENDPOINT+'?hub='+encodeURIComponent(key)).then(function(r){ return r.json(); }).then(function(j){
       var m=j&&j.hub; if(typeof m==='string'){ try{ m=JSON.parse(m); }catch(e){ m=null; } }
       if(!m){ app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Vault not found</h1><p>This link doesn\u2019t match an agent hub. Ask Reel Estate Media for a fresh link.</p></div></div>'; return; }
@@ -903,7 +921,7 @@ body.selmode .tile .ck{display:grid}
         var a={id:'me', c:c, name:c.name, title:c.agentTitle, orders:[], items:items, finals:items, delivered:items.length, spent:0, first:items.length?items[items.length-1].date:'', last:items.length?items[0].date:'', headshot:headshotUrl(c.headshot),
           hub:((QP.get('h')||'')||(location.origin+location.pathname.replace('vault.html','hub.html')))+'?a='+key+'&t='+(m.t||'pin'), hk:key, company:c.company||'Reel Estate Media', pin:m.t==='pin',
           counts:['reel','photo','headshot','listing'].reduce(function(x,k){ x[k]=items.filter(function(i){ return matchFilter(i,k); }).length; return x; },{})};
-        agents=[a]; state.agent='me'; if(state.view!=='dossier') state.view='wall'; document.title=c.name+' · My Library';
+        agents=[a]; state.agent='me'; if(state.view!=='dossier') state.view='wall'; document.title=c.name+' · Photos & clips';
         render();
       });
     }).catch(function(){ app.innerHTML='<div class="lock"><div class="door"><div class="dial">V</div><h1>Couldn\u2019t open the vault</h1><p>Check your connection and try again.</p></div></div>'; });

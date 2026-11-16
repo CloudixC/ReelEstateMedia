@@ -484,7 +484,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-10) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-11) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -4388,6 +4388,7 @@ function AppInner({
           t: shootType(d),
           p: _desc + (withName ? ' · 🤝 with ' + withName : ''),
           st: STATUS_LABEL(d.status),
+          nm: /\d+\s*(of|\/)\s*\d+/i.test(String(d.name || '')) ? String(d.name) : '',
           op: o.project || '',
           oi: o.id,
           ...(d.status === 'Scheduled' && d.calRu && !d.calCancelled ? {
@@ -8282,6 +8283,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-11',
+  items: [['🧭', 'Agent hub: smoother from sign-in to approve', 'What’s waiting on an agent now sits at the top of their hub, Approve stays on screen in the review room, the rating ask is a card instead of a pop-up, More is tidier (Log out and light/dark at the top), and pieces from one package show their number (“Reel 2 of 5”).']]
+}, {
   v: '2026.11.16-10',
   items: [['🧮', 'Pinnacle margin only on agent bookings', 'No margin is counted on the brokerage’s own work (Pinnacle accounts), on Faiz Tahir’s shoots, or on anyone outside Pinnacle. Change it per agent in Edit agent.']]
 }, {
@@ -16064,7 +16068,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-10</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-11</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
