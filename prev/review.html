@@ -140,6 +140,8 @@ h1#brand em{font-style:italic;color:var(--red)}
 .wholine a{color:var(--redsoft);text-decoration:none}
 .proj{font-family:var(--serif);font-weight:600;font-size:clamp(1.4rem,3.6vw,2.05rem);letter-spacing:-.02em;line-height:1.15;margin:22px 0 4px;color:var(--txt)}
 .proj .dim{color:var(--dim);font-weight:400}
+/* the quiet second line under the piece's name: type of shoot · anything the name doesn't already say · who it's for */
+.proj .projsub{display:block;font-family:var(--sans, system-ui, sans-serif);font-weight:400;font-size:.92rem;letter-spacing:0;line-height:1.45;color:var(--dim);margin-top:7px}
 .reviewing{font-size:.86rem;color:var(--mist);margin:0 0 16px}
 .reviewing b{color:var(--txt);font-weight:600}
 .due{margin:0 0 14px;padding:10px 16px;border-radius:999px;display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;font-weight:700;background:rgba(242,169,0,.1);border:1px solid rgba(242,169,0,.4);color:#f4ba2e}
@@ -565,11 +567,18 @@ try{ cmts = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){}
 
 document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
 document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Client Review';
-// New links carry ty/de → show "type · description". Old links fall back to project · dname.
-const _projHead = dispType || project;
-const _projSub = dispType ? dispDesc : dname;
-document.getElementById('proj').innerHTML = escT(_projHead) + (_projSub ? ' <span class="dim">· ' + escT(_projSub) + '</span>' : '') + (who ? ' <span class="dim">· for ' + escT(who) + '</span>' : '');
-document.title = 'Review — ' + (dispType || project);
+// The big line is what the piece is CALLED (its own name, else the event / property); the type of shoot, anything
+// the name doesn't already say, and who it's for go on one quiet line underneath. New links carry ty (type) and
+// de ("name · event/property"); old links only have project + dname.
+const _parts = String(dispType ? dispDesc : (dname || '')).split(' \u00B7 ').map(v => v.trim()).filter(Boolean);
+const _top = _parts[0] || dispType || project;
+const _ty = dispType || (dname ? project : '');
+const _subBits = [];
+if(_ty && _ty !== _top) _subBits.push(_ty);
+_parts.slice(1).forEach(v => { if(_top.toLowerCase().indexOf(v.toLowerCase()) < 0 && _subBits.indexOf(v) < 0) _subBits.push(v); });
+if(who) _subBits.push('for ' + who);
+document.getElementById('proj').innerHTML = escT(_top) + (_subBits.length ? '<span class="projsub">' + escT(_subBits.join(' \u00B7 ')) + '</span>' : '');
+document.title = 'Review — ' + _top;
 function setWhoLine(){
   document.getElementById('wholine').innerHTML = 'Reviewing: <b>' + escT(identity) + '</b> ✎';
 }
@@ -1975,4 +1984,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-2</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-3</div></div></body></html>

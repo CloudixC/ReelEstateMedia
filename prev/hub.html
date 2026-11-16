@@ -867,6 +867,22 @@ function esc(s){ const d = document.createElement('div'); d.textContent = s == n
 function projNames(){ try{ return JSON.parse(localStorage.getItem('rem_hub_pname_v1:' + a)) || {}; }catch(e){ return {}; } }
 function setProjName(id, name){ var m = projNames(); if(name){ m[id] = name; } else { delete m[id]; } try{ localStorage.setItem('rem_hub_pname_v1:' + a, JSON.stringify(m)); }catch(e){} }
 function nameOf(x){ if(!x) return ''; var m = projNames(); return (x.id && m[x.id]) ? m[x.id] : (x.t || ''); }
+/* What a piece is CALLED goes on top — the name the agent gave it, else its own name / event / property —
+   and the type of shoot is the quieter second line. (x.t = type of shoot, x.p = "name · event/property · 🤝 with …") */
+function headOf(x){
+  if(!x) return {top: '', sub: ''};
+  var m = projNames(); var custom = (x.id && m[x.id]) ? m[x.id] : '';
+  var parts = String(x.p || '').split(' \u00B7 ').map(function(v){ return v.trim(); }).filter(Boolean);
+  var withs = parts.filter(function(v){ return /^\uD83E\uDD1D/.test(v); });
+  parts = parts.filter(function(v){ return !/^\uD83E\uDD1D/.test(v); });
+  var top = custom || parts[0] || x.t || '';
+  var rest = custom ? parts : parts.slice(1);
+  var sub = [];
+  if(x.t && x.t !== top) sub.push(x.t);
+  rest.forEach(function(v){ if(v !== top && top.toLowerCase().indexOf(v.toLowerCase()) < 0 && sub.indexOf(v) < 0) sub.push(v); });   // skip what the top line already says
+  withs.forEach(function(v){ sub.push(v); });
+  return {top: top, sub: sub.join(' \u00B7 ')};
+}
 function renBtn(x){ return (x && x.id) ? '<button class="pren" data-ren="' + esc(x.id) + '" title="Name this reel">✎</button>' : ''; }
 function csse(s){ return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s); }
 function ago(ts){
@@ -978,7 +994,7 @@ function workRow(x, wi){
     (bacts.trim() ? '<div class="act">' + bacts + '</div>' : '') + '</div>';
   return '<div class="wkrow" data-wrow="' + wi + '">' +
     '<div class="wrow-head" data-wtoggle="' + wi + '">' +
-      '<span class="wtt"><span class="wname"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span></span>' + (x.p ? '<span class="wproj">' + esc(x.p) + '</span>' : '') + '</span>' +
+      '<span class="wtt"><span class="wname"><span data-pid="' + esc(x.id || '') + '">' + esc(headOf(x).top) + '</span></span>' + (headOf(x).sub ? '<span class="wproj">' + esc(headOf(x).sub) + '</span>' : '') + '</span>' +
       '<span class="wstage">' + esc(stageLabel(x)) + '</span>' +
       '<span class="wbar"><i style="width:' + pct + '%"></i></span>' +
       '<span class="wchev">▸</span>' +
@@ -1096,7 +1112,7 @@ function thumbHtml(x){
 function librow(x, di, sid){
   return '<div class="librow" data-lib="' + esc(String(x.t + ' ' + (x.p || '')).toLowerCase()) + '">' +
     thumbHtml(x) +
-    '<span class="lt"><b><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span>' + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
+    '<span class="lt"><b><span data-pid="' + esc(x.id || '') + '">' + esc(headOf(x).top) + '</span>' + (x.du ? (PAYURL ? ' <a href="' + esc(PAYURL) + '" target="_blank" rel="noopener" title="Balance owing' + (x.amt ? ': $' + (+x.amt).toLocaleString('en-CA', {minimumFractionDigits: 2}) : '') + ' — tap to pay online" style="text-decoration:none">💳</a>' : ' <span title="Balance owing — e-transfer to hello@reelestatemedia.com">💰</span>') : '') + '</b><span>' + esc(libDate(x.dt)) + '</span></span>' +
     '<span class="lract">' +
     (x.url ? '<a class="mini" href="' + esc(x.url) + '">Finals ↗</a>' : '') +
     listingBtn(x) +
@@ -1232,8 +1248,8 @@ document.getElementById('body').addEventListener('click', function(ev){
 });
 function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
   return '<div class="card ' + cls + '"' + (lib ? ' data-lib="' + esc(lib) + '"' : '') + ' style="animation-delay:' + Math.min(i * 70, 560) + 'ms">' +
-    '<div class="chead">' + (cls.indexOf('done') > -1 ? thumbHtml(x) : '') + '<div class="tt"><div class="name"><span data-pid="' + esc(x.id || '') + '">' + esc(nameOf(x)) + '</span> ' + renBtn(x) + '</div>' +
-    '<div class="proj">' + esc(x.p) + '</div></div>' + pillHtml + '</div>' +
+    '<div class="chead">' + (cls.indexOf('done') > -1 ? thumbHtml(x) : '') + '<div class="tt"><div class="name"><span data-pid="' + esc(x.id || '') + '">' + esc(headOf(x).top) + '</span> ' + renBtn(x) + '</div>' +
+    '<div class="proj">' + esc(headOf(x).sub) + '</div></div>' + pillHtml + '</div>' +
     tracker(x) +
     (extraLine || '') +
     ((x.url || extraAct) ? '<div class="act">' + (extraAct || '') +
@@ -3534,7 +3550,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-4</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-5</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
