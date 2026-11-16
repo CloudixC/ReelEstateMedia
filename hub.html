@@ -768,7 +768,7 @@ body.light .kitm input[type=text],body.light .kitm textarea,body.light .kitm sel
 .kpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:150px;overflow:auto}
 .kpick button{appearance:none;border:2px solid transparent;border-radius:9px;padding:0;aspect-ratio:1;background:#2a2a2a center/cover no-repeat;cursor:pointer;width:auto;margin:0}
 .kpick button.on{border-color:#EA002A}
-.kcanvas{width:100%;max-width:300px;display:block;margin:12px auto 0;border-radius:10px;border:1px solid var(--line2);background:#111}
+.kcanvas{display:block;margin:0 auto;border-radius:10px;border:1px solid var(--line2);background:#111;width:auto;height:auto;max-width:100%;max-height:34vh}
 .kstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .kstat div{border:1px solid var(--line2);border-radius:12px;padding:10px;text-align:center}
 .kstat b{display:block;font-family:var(--serif);font-size:22px;font-weight:520}
@@ -803,6 +803,23 @@ body.light .kitm input[type=text],body.light .kitm textarea,body.light .kitm sel
 .ksw{appearance:none;width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;padding:0;margin:0}
 .ksw.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--txt)}
 .kgv1 .kg3,.kgv1 .kg2{display:none}
+/* graphic maker: the preview stays in view while the options scroll */
+.kgwrap{display:flex;flex-direction:column}
+.kgside{display:contents}
+.kgprev{order:-1;position:sticky;top:-22px;z-index:3;margin:8px -22px 0;padding:12px 22px 8px;background:#17171a;border-bottom:1px solid var(--line)}
+.kgprev #kg-note{margin:6px 0 0;text-align:center;min-height:0}
+.kgprev #kg-note:empty{display:none}
+.kgcard .bact{position:sticky;bottom:-22px;z-index:3;margin:14px -22px -22px;padding:12px 22px 16px;background:#101013;border-top:1px solid var(--line)}
+body.light .kgprev,body.light .kgcard .bact{background:#fff}
+@media (min-width:860px){
+  .kitm .bcard.kgcard{max-width:960px}
+  .kgwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,42%);gap:26px;align-items:start}
+  .kgside{display:block;position:sticky;top:0;grid-column:2;grid-row:1}
+  .kgopts{grid-column:1;grid-row:1}
+  .kgprev{position:static;margin:12px 0 0;padding:0;background:none;border:0}
+  .kcanvas{max-height:calc(88vh - 215px)}
+  .kgcard .bact{position:static;margin:16px 0 0;padding:0;background:none;border:0}
+}
 /*END-KIT-CSS*/
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
@@ -4049,7 +4066,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function openModal(html){
     if(!modal){ modal = document.createElement('div'); modal.className = 'bmodal kitm'; modal.innerHTML = '<div class="bcard" id="kitcard"></div>'; document.body.appendChild(modal);
       modal.addEventListener('click', function(e){ if(e.target === modal || (e.target.closest && e.target.closest('[data-kclose]'))) closeModal(); }); }
-    $id('kitcard').innerHTML = html; modal.classList.add('on'); KIT.job = (KIT.job || 0) + 1;
+    $id('kitcard').className = 'bcard'; $id('kitcard').innerHTML = html; modal.classList.add('on'); KIT.job = (KIT.job || 0) + 1;
     return $id('kitcard');
   }
   function closeModal(){ if(modal) modal.classList.remove('on'); KIT.job = (KIT.job || 0) + 1; }
@@ -4746,9 +4763,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: KIT.gmotion || 'still', play: 0, busy: false,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
-      '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
+      '<div class="kgwrap"><div class="kgopts"><label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Look</label><div class="kchips" id="kg-style">' + [['photo', 'Full photo'], ['card', 'Card'], ['banner', 'Banner'], ['cut1', 'Bold'], ['classic1', 'Classic'], ['cut', 'Poster'], ['classic', 'Window']].map(function(k){ return '<button type="button" class="kchip' + (st.style === k[0] ? ' on' : '') + '" data-gs="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
-      '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div><div class="bsub" id="kg-note" style="margin:6px 0 0"></div>' +
+      '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
       '<div class="kg3"><div><label class="kf" for="kg-beds">Beds</label><input type="text" id="kg-beds" maxlength="8"></div><div><label class="kf" for="kg-baths">Baths</label><input type="text" id="kg-baths" maxlength="8"></div><div><label class="kf" for="kg-sqft">Sq ft</label><input type="text" id="kg-sqft" maxlength="12"></div></div>' +
@@ -4756,8 +4773,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Still or video</label><div class="kchips" id="kg-motion">' + [['still', 'Still image'], ['slide', 'Video \u00B7 slide in'], ['fade', 'Video \u00B7 fade in']].map(function(k){ return '<button type="button" class="kchip' + (st.motion === k[0] ? ' on' : '') + '" data-gm="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '<button type="button" class="kchip" id="kg-play"' + (st.motion === 'still' ? ' style="display:none"' : '') + '>\u25B6 Play</button></div>' +
       '<div class="kg2"><div><label class="kf" for="kg-zoom">Zoom the home</label><input type="range" id="kg-zoom" min="0.6" max="1.8" step="0.02" value="1"></div><div><label class="kf" for="kg-slide">Slide left / right</label><input type="range" id="kg-slide" min="-1" max="1" step="0.02" value="0"></div></div>' +
-      '<canvas class="kcanvas" id="kg-cv"></canvas>' +
-      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">' + (st.motion === 'still' ? 'Download ' : 'Download video ') + '<span class="ar">→</span></button></div>');
+      '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kg-cv"></canvas><div class="bsub" id="kg-note"></div></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">' + (st.motion === 'still' ? 'Download ' : 'Download video ') + '<span class="ar">→</span></button></div></div></div>');
+    card.classList.add('kgcard');
     var job = KIT.job, cv = $id('kg-cv'), l1 = $id('kg-l1'), l2 = $id('kg-l2');
     var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); };
     var paint = function(){
@@ -5030,7 +5048,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-17</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-18</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
