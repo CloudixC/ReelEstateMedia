@@ -3832,13 +3832,36 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var k = String(x.oi || x.op || x.p || ''); if(!k) return;
       if(!by[k]){ by[k] = {key: k, title: '', items: [], is: false}; order.push(k); }
       by[k].items.push(x);
-      if(LIST_T.test(String(x.t || '')) || ADDR_T.test(String(x.op || ''))) by[k].is = true;
+      if(LIST_T.test(String(x.t || '')) || ADDR_T.test(String(x.op || '')) || addrFrom(x.p)) by[k].is = true;
     });
-    return order.map(function(k){ return by[k]; }).filter(function(g){ return g.is; }).map(function(g){
-      g.title = g.items[0].op || (typeof headOf === 'function' ? headOf(g.items[0]).top : g.items[0].p) || 'Listing';
-      g.last = g.items.reduce(function(m, x){ return String(x.dt || '') > m ? String(x.dt) : m; }, '');
+    var gs = order.map(function(k){ return by[k]; }).filter(function(g){ return g.is; }).map(function(g){
+      // the card is named by the ADDRESS wherever it is written down: the published listing page first, then the piece's own
+      // name ("787 Avocado Cres - Listing Photos" — what the review room shows), then the order name
+      var addr = '';
+      g.items.forEach(function(x){ if(!addr && KIT.dir && KIT.dir[x.id] && KIT.dir[x.id].addr) addr = String(KIT.dir[x.id].addr).trim(); });
+      g.items.forEach(function(x){ if(addr) return; var top = (typeof headOf === 'function') ? headOf(x).top : ''; addr = addrFrom(top) || addrFrom(x.p) || addrFrom(x.op); });
+      g.byAddr = !!addr;
+      g.title = addr || g.items[0].op || (typeof headOf === 'function' ? headOf(g.items[0]).top : g.items[0].p) || 'Listing';
       return g;
-    }).sort(function(x, y){ return String(y.last).localeCompare(String(x.last)); });
+    });
+    // two bookings for the same home (photos one day, video another) are one card
+    var seen = {}, out = [];
+    gs.forEach(function(g){
+      var k = g.byAddr ? norm(g.title).split(' ').slice(0, 3).join(' ') : '';
+      if(k && seen[k]){ seen[k].items = seen[k].items.concat(g.items); return; }
+      if(k) seen[k] = g;
+      out.push(g);
+    });
+    out.forEach(function(g){ g.last = g.items.reduce(function(m, x){ return String(x.dt || '') > m ? String(x.dt) : m; }, ''); });
+    return out.sort(function(x, y){ return String(y.last).localeCompare(String(x.last)); });
+  }
+  function addrFrom(s){   // the street-address part of a name, if it has one ("787 Avocado Cres - Listing Photos" -> "787 Avocado Cres")
+    var SVC = /\b(photos?|listing|videos?|reels?|shoot|set|tour|drone|hdr|walk ?through)\b/i;
+    var parts = String(s || '').split(/\s+[-\u2013\u2014|\u00B7]\s+/).map(function(p){ return p.trim(); }).filter(function(p){ return p && ADDR_T.test(p); });
+    if(!parts.length) return '';
+    var clean = parts.filter(function(p){ return !SVC.test(p); })[0];   // "23 Prince Crescent Photo Listing - 23 Prince Crescent, Brampton" -> the second part
+    if(clean) return clean;
+    return parts[0].replace(/(\s+(photos?|listing|videos?|reels?|shoot|set|tour|drone|hdr|walk ?through))+\s*$/i, '').trim() || parts[0];
   }
   function leadsFor(g){
     var t = norm(g.title).split(' ').slice(0, 2).join(' ');
@@ -3854,7 +3877,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function heroOf(g){
     var d = dirFor(g); if(d && d.hero) return d.hero;
     var th = (g.items.filter(function(x){ return x.th; })[0] || {}).th || '';
-    if(!th) return '';
+    if(!th){ var fo0 = photoFolder(g); return (fo0 && KIT.files[fo0] && KIT.files[fo0][0]) ? thumbUrl(KIT.files[fo0][0]).replace(/=s220$/, '=s400') : ''; }
     return /^https?:/.test(th) ? th : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(th) + '&sz=w400';
   }
   function loadDir(){
@@ -4342,11 +4365,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var gs = listings(); if(gs.length){ KIT.open[gs[0].key] = true; }
       renderAll();
       gs.slice(0, 6).forEach(function(g){ loadViews(g).then(renderListings); });
+      gs.slice(0, 8).forEach(function(g){ if(!heroOf(g) && photoFolder(g)) driveImages(photoFolder(g)).then(function(f){ if(f && f.length) renderListings(); }); });
     });
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-8</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-10</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
