@@ -782,6 +782,11 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
   </div>
 </div>
 <button id="installbtn" style="display:none;width:100%;margin-top:12px;border-radius:14px;padding:13px 16px;font-size:13.5px;cursor:pointer;font-family:var(--sans)">📲 Add to home screen — open your hub like an app</button>
+<div id="acctbox" style="margin-top:18px;text-align:center">
+  <div id="acctwho" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px"></div>
+  <button id="logoutbtn" type="button" style="width:100%;border-radius:14px;padding:13px 16px;font-size:13.5px;cursor:pointer;font-family:var(--sans);border:1px solid var(--line2);background:transparent;color:var(--dim)">Log out</button>
+  <div style="font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.45">Signs you out on this device. You&rsquo;ll need your email and PIN (or access code) to get back in.</div>
+</div>
 </div>
 <a class="chatfab" id="chatfab" style="display:none" href="#" aria-label="Open your messages">💬<span class="fbadge" id="fbadge">0</span></a>
 <div class="note" id="foot" style="display:none">📌 Add this page to your home screen — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
@@ -3237,9 +3242,22 @@ var TAB_VIEWS = {
   more: []
 };
 var curTab = 'home';
+/* 🚪 Log out — forget this device: the remembered sign-in, the remembered PIN and the push link, then back to the sign-in page */
+function hubLogout(){
+  try{ localStorage.removeItem('rem_agent_v1'); }catch(e){}
+  try{ localStorage.removeItem('rem_hub_pinok_v1:' + a); localStorage.removeItem('rem_hub_pintry_v1:' + a); }catch(e){}
+  try{ if(window.__OS && window.__OS.logout) window.__OS.logout(); }catch(e){}
+  location.href = 'login.html';
+}
+(function(){
+  var b = document.getElementById('logoutbtn'), box = document.getElementById('acctbox');
+  if(box && (typeof PREVIEW !== 'undefined' && PREVIEW)) box.style.display = 'none';   // the studio's preview of a hub isn't a signed-in agent
+  if(b) b.addEventListener('click', hubLogout);
+})();
 function setTab(t){
   if(!TAB_VIEWS[t]) t = 'home';
   if(document.body.classList.contains('assist') && t === 'more') t = 'home';
+  if(t === 'more'){ var w = document.getElementById('acctwho'); if(w) w.textContent = AGENTNAME ? 'Signed in as ' + AGENTNAME + (AGENTEMAIL ? ' · ' + AGENTEMAIL : '') : ''; }
   var switching = t !== curTab;
   curTab = t;
   document.body.setAttribute('data-tab', t);
@@ -3500,7 +3518,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-2</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-3</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
