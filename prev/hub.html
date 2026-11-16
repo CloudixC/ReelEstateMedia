@@ -4500,7 +4500,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(zoneH < H * 0.18) return;
     var cut = o.cut, fx = arch ? Math.round(W * 0.11) : M, fw = W - fx * 2, fy = zoneTop + Math.round(W * 0.01), rad = Math.min(fw / 2, zoneH * 0.55);
     var archPath = function(c2){ c2.beginPath(); c2.moveTo(fx, H); c2.lineTo(fx, fy + rad); c2.arc(fx + rad, fy + rad, rad, Math.PI, Math.PI * 1.5); c2.lineTo(fx + fw - rad, fy); c2.arc(fx + fw - rad, fy + rad, rad, Math.PI * 1.5, 0); c2.lineTo(fx + fw, H); c2.closePath(); };
-    if(arch){ archPath(x); x.fillStyle = arch; x.fill(); }
+    if(arch && !(o.noShape && cut && cut.ok)){ archPath(x); x.fillStyle = arch; x.fill(); }   // "No circle": the cut-out home stands on the plain page
     if(!o.img) return;
     var ck = o.cache ? 'v1|' + Math.round(zoneTop) + '|' + arch : '';
     if(ck && o.cache[ck]){ x.drawImage(o.cache[ck], 0, 0); return; }
@@ -4863,11 +4863,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var gp = gPrefs(), accent = gp.accent; if(swatches.indexOf(accent) < 0) swatches.unshift(accent);
     var mem = (KIT.gfacts = KIT.gfacts || {})[g.key] || {};
     var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
-    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: gp.style, cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: gp.motion, play: 0, busy: false, bw: gp.bw, cutBw: null,
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: gp.style, cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: gp.motion, play: 0, busy: false, bw: gp.bw, noShape: gp.ns, cutBw: null,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
       '<div class="kgwrap"><div class="kgopts"><label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Look</label><div class="kchips" id="kg-style">' + [['photo', 'Full photo'], ['card', 'Card'], ['banner', 'Banner'], ['cut1', 'Bold'], ['classic1', 'Classic'], ['cut', 'Poster'], ['classic', 'Window']].map(function(k){ return '<button type="button" class="kchip' + (st.style === k[0] ? ' on' : '') + '" data-gs="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="kchips" id="kg-shape" style="margin-top:8px;display:none"><button type="button" class="kchip' + (st.noShape ? '' : ' on') + '" data-gn="0">Circle behind the home</button><button type="button" class="kchip' + (st.noShape ? ' on' : '') + '" data-gn="1">No circle</button></div>' +
       '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div>' +
       '<div class="kchips" id="kg-bw" style="margin-top:8px"><button type="button" class="kchip' + (st.bw ? '' : ' on') + '" data-gb="0">Colour photo</button><button type="button" class="kchip' + (st.bw ? ' on' : '') + '" data-gb="1">Black &amp; white</button></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
@@ -4890,6 +4891,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent,
         beds: st.beds, baths: st.baths, sqft: st.sqft, zoom: st.zoom, slide: st.slide, head: st.head, logo: st.logo};
       if(st.bw && st.img) o.img = grayOf(st.img);   // black & white applies to the photo only — the words and the accent colour stay
+      if(st.noShape) o.noShape = true;
+      var shp = $id('kg-shape'); if(shp) shp.style.display = st.style === 'classic1' ? '' : 'none';
       var note = $id('kg-note');
       var v1 = st.style === 'cut1' || st.style === 'classic1';
       card.classList.toggle('kgv1', v1);   // the original looks don't use the facts or the zoom/slide controls
@@ -4930,12 +4933,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
     [['beds', 'kg-beds'], ['baths', 'kg-baths'], ['sqft', 'kg-sqft']].forEach(function(p){ var el = $id(p[1]); el.value = st[p[0]]; el.oninput = function(){ st[p[0]] = el.value; KIT.gfacts[g.key] = {beds: st.beds, baths: st.baths, sqft: st.sqft}; paint(); }; });
     var soldLine = function(){ var dm = parseInt($id('kg-dom').value, 10), how = $id('kg-sp').value; st.l2 = [dm > 0 ? 'Sold in ' + dm + ' day' + (dm === 1 ? '' : 's') : '', how].filter(Boolean).join(' · '); l2.value = st.l2; paint(); };
     $id('kg-dom').oninput = soldLine; $id('kg-sp').onchange = soldLine;
-    var styleInfo = function(){ var sv = KIT.state.gs || {}; $id('kg-styleinfo').textContent = LOOKFN[sv.style] ? 'Saved: ' + prefsLine({style: sv.style, bw: !!sv.bw, motion: sv.motion || 'still'}) + '. New graphics and the launch pack start this way.' : 'New graphics, the swipe post and the launch pack will start this way.'; };
+    var styleInfo = function(){ var sv = KIT.state.gs || {}; $id('kg-styleinfo').textContent = LOOKFN[sv.style] ? 'Saved: ' + prefsLine({style: sv.style, bw: !!sv.bw, ns: !!sv.ns, motion: sv.motion || 'still'}) + '. New graphics and the launch pack start this way.' : 'New graphics, the swipe post and the launch pack will start this way.'; };
     styleInfo();
     $id('kg-savestyle').onclick = function(){
       if(!canWrite()){ say('Preview only — nothing is saved.'); return; }
       if(!KIT.stateLoaded){ say('Couldn’t reach your saved settings — check your connection and reopen the hub.'); return; }
-      KIT.state.gs = {style: st.style, accent: st.accent, bw: !!st.bw, motion: st.motion}; save(); styleInfo(); say('★ Saved as your style.'); };
+      KIT.state.gs = {style: st.style, accent: st.accent, bw: !!st.bw, ns: !!st.noShape, motion: st.motion}; save(); styleInfo(); say('★ Saved as your style.'); };
     var zr = $id('kg-zoom'), zn = $id('kg-zoomn'), sr = $id('kg-slide'), sn = $id('kg-sliden');
     var setZoom = function(v, from){ v = Math.min(1.8, Math.max(0.6, +v || 1)); st.zoom = v; if(from !== 'r') zr.value = v; if(from !== 'n') zn.value = Math.round(v * 100); paint(); };
     var setSlide = function(v, from){ v = Math.min(1, Math.max(-1, +v || 0)); st.slide = v; if(from !== 'r') sr.value = v; if(from !== 'n') sn.value = Math.round(v * 100); paint(); };
@@ -4968,6 +4971,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
       if(gc){ st.accent = KIT.gaccent = gc.getAttribute('data-gc'); card.querySelectorAll('[data-gc]').forEach(function(b){ b.classList.toggle('on', b === gc); }); paint(); return; }
       var gb = e.target.closest ? e.target.closest('[data-gb]') : null;
       if(gb){ st.bw = KIT.gbw = gb.getAttribute('data-gb') === '1'; card.querySelectorAll('[data-gb]').forEach(function(b){ b.classList.toggle('on', b === gb); }); paint(); if(st.motion !== 'still') playPreview(); return; }
+      var gn = e.target.closest ? e.target.closest('[data-gn]') : null;
+      if(gn){ st.noShape = KIT.gns = gn.getAttribute('data-gn') === '1'; card.querySelectorAll('[data-gn]').forEach(function(b){ b.classList.toggle('on', b === gn); }); paint(); if(st.motion !== 'still') playPreview(); return; }
       var gs = e.target.closest ? e.target.closest('[data-gs]') : null;
       if(gs){ st.style = KIT.gstyle = gs.getAttribute('data-gs'); card.querySelectorAll('[data-gs]').forEach(function(b){ b.classList.toggle('on', b === gs); }); paint(); findExterior(); return; }
       var f = e.target.closest ? e.target.closest('[data-gf]') : null;
@@ -5213,9 +5218,10 @@ window.OneSignalDeferred.push(async function(OneSignal){
     return {style: ok(KIT.gstyle) || ok(s.style) || 'photo',
       accent: KIT.gaccent || (/^#[0-9a-f]{6}$/i.test(String(s.accent)) ? String(s.accent).toUpperCase() : '') || brandColour() || (isPin ? '#EA002A' : '#A8733A'),
       bw: KIT.gbw != null ? !!KIT.gbw : !!s.bw,
+      ns: KIT.gns != null ? !!KIT.gns : !!s.ns,
       motion: KIT.gmotion || (/^(still|slide|fade)$/.test(String(s.motion)) ? s.motion : 'still')};
   }
-  function prefsLine(p){ return LOOKNAME[p.style] + (p.bw ? ', black & white' : '') + (p.motion !== 'still' ? ', video' : ''); }
+  function prefsLine(p){ return LOOKNAME[p.style] + (p.style === 'classic1' && p.ns ? ', no circle' : '') + (p.bw ? ', black & white' : '') + (p.motion !== 'still' ? ', video' : ''); }
   function agentPics(){   // their face and logo, fetched once
     if(KIT._pics) return KIT._pics;
     var raw = KIT.raw || {}, idOf = function(v){ var m = String(v || '').match(/[-\w]{25,}/); return m ? m[0] : ''; };
@@ -5251,7 +5257,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var d = dirFor(g) || {}, raw = KIT.raw || {}, p = gPrefs(); style = style || p.style;
     return Promise.all([driveImages(photoFolder(g)), agentPics(), listingFacts(g), lookFonts(style)]).then(function(r){
       var files = r[0] || [], pics = r[1] || {}, facts = r[2] || {};
-      var k = {files: files, file: null, img: null, cut: null, head: pics.head, logo: pics.logo, beds: facts.beds || '', baths: facts.baths || '', sqft: facts.sqft || '', accent: p.accent, bw: p.bw, style: style, motion: p.motion,
+      var k = {files: files, file: null, img: null, cut: null, head: pics.head, logo: pics.logo, beds: facts.beds || '', baths: facts.baths || '', sqft: facts.sqft || '', accent: p.accent, bw: p.bw, ns: p.ns, style: style, motion: p.motion,
         agent: agentName(), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), l1: d.addr || g.title, price: d.price || ''};
       if(!files.length) return k;
       var cutOf = function(bm){ try{ return skyCut(bm, 1000); }catch(e){ return {ok: false}; } };
@@ -5269,6 +5275,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }
   function lookO(k, fmt, label, l2){   // the options a look's draw function takes
     var f = GFMT[fmt], o = {w: f[0], h: f[1], img: k.img, label: label, l1: k.l1, l2: l2 == null ? '' : l2, agent: k.agent, brokerage: k.brokerage, phone: k.phone, accent: k.accent, beds: k.beds, baths: k.baths, sqft: k.sqft, zoom: 1, slide: 0, head: k.head, logo: k.logo};
+    if(k.ns) o.noShape = true;
     if(k.bw && k.img) o.img = grayOf(k.img);
     if(isCutLook(k.style) && k.cut){ o.cut = k.cut; if(k.bw && k.cut.cv){ var cb = {}; for(var kk in k.cut) cb[kk] = k.cut[kk]; cb.cv = grayOf(k.cut.cv); o.cut = cb; } }
     return o;
@@ -5738,7 +5745,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-21</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-22</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
