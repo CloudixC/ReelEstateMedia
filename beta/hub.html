@@ -127,6 +127,11 @@ h1{font-family:var(--serif);font-weight:420;font-size:clamp(32px,8.5vw,44px);lin
 h1 em{font-style:italic;font-weight:480;color:var(--red2)}
 h1 .p{color:var(--red)}
 .heysub{color:var(--dim);font-size:14.5px;margin-top:10px;max-width:42ch}
+/* the agent's headshot beside the greeting (from their profile in the Command Centre, else their brand kit) */
+.heyrow{display:flex;align-items:center;gap:16px}
+.heyrow h1{min-width:0}
+.heyface{width:76px;height:76px;border-radius:50%;object-fit:cover;flex:none;border:2px solid var(--line2);background:var(--panel2);box-shadow:0 6px 18px rgba(0,0,0,.16)}
+@media(max-width:520px){.heyface{width:58px;height:58px}.heyrow{gap:12px}}
 /* ---- primary CTA (no shimmer, just a good button) ---- */
 .heroact{margin-top:22px}
 .heroact .go{display:inline-flex;width:auto;padding:13px 22px}
@@ -1367,9 +1372,18 @@ function render(raw){
     localStorage.setItem(SEEN_KEY, JSON.stringify(snap));
   }catch(e){}
   AGENTEMAIL = String(raw.email || '');
+  // 🙂 headshot beside the name: the one on their studio profile first, else the one in their own brand kit
+  var faceUrl = (function(){
+    var v = String((raw && raw.hd) || ''); 
+    if(v){ var dm = v.match(/[-\w]{25,}/); return (/drive\.google|docs\.google/.test(v) && dm) ? 'https://drive.google.com/thumbnail?id=' + dm[0] + '&sz=w240' : v; }
+    try{ if(typeof BK !== 'undefined' && BK && BK.head) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(BK.head) + '&sz=w240'; }catch(eF){}
+    return '';
+  })();
+  window.__HEYFACE = faceUrl;
   let html = '<div class="homeblk"><div class="hero">' +
     '<div class="overline"><i></i>Your content · live pipeline</div>' +
-    '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1>' +
+    '<div class="heyrow"><img class="heyface" id="heyface" alt="" ' + (faceUrl ? 'src="' + esc(faceUrl) + '"' : 'style="display:none"') + ' onerror="this.style.display=\'none\'">' +
+    '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1></div>' +
     '<div class="heysub">Everything active, at a glance — your finished work lives in the 📚 Library tab below.</div>' +
     '<div class="heroact"><a class="go" href="#">📅 Book a shoot <span class="ar">→</span></a></div>' +
     '</div></div>';
@@ -3132,7 +3146,9 @@ function loadBrand(){
       var k = j.kit;
       BK.logo = String(k.logo || ''); BK.head = String(k.head || '');
       if(BK.logo) bkThumb('logo', BK.logo);
-      if(BK.head) bkThumb('head', BK.head);
+      if(BK.head){ bkThumb('head', BK.head);
+        var hf0 = document.getElementById('heyface');   // no studio headshot → show the one from their brand kit
+        if(hf0 && !window.__HEYFACE){ hf0.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(BK.head) + '&sz=w240'; hf0.style.display = ''; } }
       if(k.colors && k.colors[0]) document.getElementById('bk-c1').value = k.colors[0];
       if(k.colors && k.colors[1]) document.getElementById('bk-c2').value = k.colors[1];
       document.getElementById('bk-ig').value = String(k.ig || '');
@@ -3517,7 +3533,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-3</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-4</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
