@@ -3855,9 +3855,12 @@ window.OneSignalDeferred.push(async function(OneSignal){
     return out.sort(function(x, y){ return String(y.last).localeCompare(String(x.last)); });
   }
   function addrFrom(s){   // the street-address part of a name, if it has one ("787 Avocado Cres - Listing Photos" -> "787 Avocado Cres")
-    var parts = String(s || '').split(/\s+[-\u2013\u2014|\u00B7]\s+/);
-    for(var i = 0; i < parts.length; i++){ var p = parts[i].trim(); if(p && ADDR_T.test(p)) return p; }
-    return '';
+    var SVC = /\b(photos?|listing|videos?|reels?|shoot|set|tour|drone|hdr|walk ?through)\b/i;
+    var parts = String(s || '').split(/\s+[-\u2013\u2014|\u00B7]\s+/).map(function(p){ return p.trim(); }).filter(function(p){ return p && ADDR_T.test(p); });
+    if(!parts.length) return '';
+    var clean = parts.filter(function(p){ return !SVC.test(p); })[0];   // "23 Prince Crescent Photo Listing - 23 Prince Crescent, Brampton" -> the second part
+    if(clean) return clean;
+    return parts[0].replace(/(\s+(photos?|listing|videos?|reels?|shoot|set|tour|drone|hdr|walk ?through))+\s*$/i, '').trim() || parts[0];
   }
   function leadsFor(g){
     var t = norm(g.title).split(' ').slice(0, 2).join(' ');
@@ -4366,7 +4369,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-9</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-10</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
