@@ -79,12 +79,12 @@
 <meta property="og:site_name" content="Reel Estate Media · Content Hub">
 <meta property="og:title" content="🎬 Ready for your review">
 <meta property="og:description" content="Your new content is ready — tap to watch, leave time-stamped feedback, and approve.">
-<meta property="og:image" content="https://cloudixc.github.io/ReelEstateMedia/ch-app-icon-180.png">
-<meta property="og:url" content="https://cloudixc.github.io/ReelEstateMedia/review.html">
+<meta property="og:image" content="https://thecontenthub.ca/ch-app-icon-180.png">
+<meta property="og:url" content="https://thecontenthub.ca/review.html">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="🎬 Ready for your review">
 <meta name="twitter:description" content="Your new content is ready — tap to watch, leave feedback, and approve. From Reel Estate Media.">
-<meta name="twitter:image" content="https://cloudixc.github.io/ReelEstateMedia/ch-app-icon-180.png">
+<meta name="twitter:image" content="https://thecontenthub.ca/ch-app-icon-180.png">
 <script>
 (function(){
   var xs = new URLSearchParams(location.search);
@@ -797,7 +797,7 @@ function renderSingle(url){
       listFolder(r.id).then(items => {
         if(items.length === 0) throw new Error('no media found — is the folder shared as “Anyone with the link”?');
         buildGallery(items);
-      }).catch(e => folderFallback(r, 'gallery couldn’t load: ' + e.message + '. Checklist: folder shared as “Anyone with link” · Drive API enabled · key website restriction is https://cloudixc.github.io/*'));
+      }).catch(e => folderFallback(r, 'gallery couldn’t load: ' + e.message + '. Checklist: folder shared as “Anyone with link” · Drive API enabled · key website restriction includes ' + location.origin + '/*'));
     } else folderFallback(r, 'this link has no gallery key. In the app, tap 🎬 Review room again after saving your Drive API key so a fresh link is generated.');
   } else if(r.kind === 'dfile'){
     // ▶ Default: the clean native player — single set of controls, and pausing pins a
@@ -1975,4 +1975,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-1</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-2</div></div></body></html>
