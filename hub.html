@@ -684,6 +684,119 @@ html.lowfx *,html.lowfx *::before,html.lowfx *::after{animation:none !important}
 html.lowfx .confetti{display:none !important}
 body.tele-open::before,body.tele-open::after{animation-play-state:paused !important}
 @media(max-width:560px){.chatfab{width:48px !important;height:48px !important;font-size:20px !important;right:12px !important;bottom:84px !important}}
+/*KIT-CSS*/
+/* 🧰 agent toolkit — Listings tab, leads inbox, posting plan, launch checklist, graphics, sized downloads, seller report, yearly summary */
+.kslot:empty{display:none}
+.kslot{margin-top:12px}
+.khome{display:flex;align-items:center;gap:12px;border:1px solid var(--line2);border-radius:16px;padding:13px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);cursor:pointer;text-align:left;width:100%;color:inherit;font-family:var(--sans)}
+.khome .ki{font-size:22px;line-height:1}
+.khome .kt{flex:1;min-width:0}
+.khome .kt b{display:block;font-family:var(--serif);font-weight:520;font-size:15px}
+.khome .kt span{display:block;font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.khome .ka{color:var(--red);font-weight:700;font-size:12px;white-space:nowrap}
+body.light .khome{background:#fff}
+#tabbar button[data-tab="listings"]{display:none}
+body.haslistings #tabbar button[data-tab="listings"]{display:flex}
+#lsdot{position:absolute;top:1px;right:24%;width:8px;height:8px;border-radius:50%;background:var(--red);display:none;border:1.5px solid rgba(20,20,22,.94)}
+.ksec{display:flex;align-items:center;gap:10px;margin:26px 0 10px;flex-wrap:wrap}
+.ksec h3{font-family:var(--serif);font-weight:520;font-size:17px;margin:0}
+.ksec .kcnt{font-family:var(--mono);font-size:10.5px;color:var(--faint);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksec .kgrow{flex:1}
+.kchips{display:flex;gap:6px;flex-wrap:wrap}
+.kchip{appearance:none;background:none;border:1px solid var(--line2);color:var(--dim);border-radius:999px;padding:6px 12px;font-family:var(--sans);font-size:12px;cursor:pointer;width:auto;margin:0}
+.kchip.on{background:var(--txt);color:var(--bg);border-color:var(--txt);font-weight:600}
+.kempty{border:1px dashed var(--line2);border-radius:14px;padding:16px;color:var(--dim);font-size:13px;line-height:1.5}
+.lead{border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-top:8px;background:var(--panel)}
+.lead.new{border-color:rgba(242,169,0,.45)}
+.lead .lh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.lead .lh b{font-size:15px;font-family:var(--serif);font-weight:520}
+.lead .lk{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(242,169,0,.4);border-radius:999px;padding:2px 7px}
+.lead .lk.oh{color:var(--dim);border-color:var(--line2)}
+.lead .lw{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.lead .la{font-size:12.5px;color:var(--dim);margin-top:3px}
+.lead .ln{font-size:13px;color:var(--txt);margin-top:6px;font-style:italic;opacity:.9}
+.lead .lc{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.lead .lc a{font-size:12.5px;color:var(--txt);text-decoration:none;border:1px solid var(--line2);border-radius:9px;padding:7px 10px}
+.lead .ls{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.lead .ls button{appearance:none;background:none;border:1px solid var(--line2);color:var(--faint);border-radius:999px;padding:5px 10px;font-family:var(--sans);font-size:11.5px;cursor:pointer;width:auto;margin:0}
+.lead .ls button.on{background:var(--txt);color:var(--bg);border-color:var(--txt);font-weight:600}
+body.light .lead{background:#fff}
+.lcard{border:1px solid var(--line);border-radius:18px;margin-top:10px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);overflow:hidden}
+body.light .lcard{background:#fff}
+.lcard .ltop{display:flex;gap:13px;align-items:center;padding:13px 14px;cursor:pointer}
+.lcard .lhero{width:74px;height:56px;border-radius:10px;background:#2a2a2a center/cover no-repeat;flex:0 0 auto;display:grid;place-items:center;font-size:22px}
+.lcard .lti{flex:1;min-width:0}
+.lcard .lti b{display:block;font-family:var(--serif);font-weight:520;font-size:16.5px;line-height:1.2}
+.lcard .lti span{display:block;font-size:12px;color:var(--dim);margin-top:3px}
+.lcard .lchev{color:var(--faint);transition:transform .15s ease}
+.lcard.open .lchev{transform:rotate(90deg)}
+.lcard .lbody{display:none;padding:2px 14px 16px;border-top:1px solid var(--line)}
+.lcard.open .lbody{display:block}
+.klbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:16px 0 7px}
+.kpiece{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.kpiece:last-child{border-bottom:0}
+.kpiece .kpn{flex:1;min-width:0}
+.kpiece .kpn b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpiece .kpn span{display:block;font-size:11.5px;color:var(--faint)}
+.ktools{display:flex;gap:7px;flex-wrap:wrap}
+.ktools .mini{cursor:pointer}
+.kck{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13.5px}
+.kck input{width:18px;height:18px;accent-color:#EA002A;flex:0 0 auto;margin:0}
+.kck label{flex:1;min-width:0;cursor:pointer}
+.kck.done label{color:var(--faint);text-decoration:line-through}
+.kck .mini{flex:0 0 auto;cursor:pointer}
+.kprog{height:4px;border-radius:4px;background:var(--line2);overflow:hidden;margin:2px 0 6px}
+.kprog i{display:block;height:100%;background:var(--red);border-radius:4px;transition:width .2s ease}
+/* posting plan */
+.plrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.plrow:last-child{border-bottom:0}
+.plrow .pld{flex:0 0 92px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:700}
+.plrow.due .pld{color:var(--amber)}
+.plrow .pln{flex:1 1 150px;min-width:0}
+.plrow .pln b{display:block;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plrow .pln span{display:block;font-size:11.5px;color:var(--faint)}
+.plrow .pla{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.plrow .pla .mini{cursor:pointer}
+.plrow input[type=date]{background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:9px;padding:6px 8px;font-family:var(--sans);font-size:11.5px;width:auto;margin:0;color-scheme:dark}
+body.light .plrow input[type=date]{color-scheme:light}
+/* dialogs */
+.kitm .bcard{max-width:560px}
+.kitm h3{font-family:var(--serif);font-weight:520;font-size:19px;margin:0 0 4px}
+.kitm label.kf{display:block;font-size:11.5px;color:var(--dim);margin:12px 0 5px}
+.kitm input[type=text],.kitm textarea,.kitm select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:11px;padding:10px 12px;color:var(--txt);font-family:var(--sans);font-size:14px}
+body.light .kitm input[type=text],body.light .kitm textarea,body.light .kitm select{background:#fff}
+.kpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;max-height:150px;overflow:auto}
+.kpick button{appearance:none;border:2px solid transparent;border-radius:9px;padding:0;aspect-ratio:1;background:#2a2a2a center/cover no-repeat;cursor:pointer;width:auto;margin:0}
+.kpick button.on{border-color:#EA002A}
+.kcanvas{width:100%;max-width:300px;display:block;margin:12px auto 0;border-radius:10px;border:1px solid var(--line2);background:#111}
+.kstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kstat div{border:1px solid var(--line2);border-radius:12px;padding:10px;text-align:center}
+.kstat b{display:block;font-family:var(--serif);font-size:22px;font-weight:520}
+.kstat span{font-size:10.5px;color:var(--faint);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.klink{display:flex;gap:8px;align-items:center;margin-top:12px}
+.klink input{flex:1;min-width:0}
+/* yearly summary sheet */
+#spendsheet{position:fixed;inset:0;z-index:95;background:#fff;color:#111;overflow:auto;display:none;font-family:var(--sans)}
+#spendsheet.on{display:block}
+#spendsheet .ssin{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+#spendsheet .ssbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:22px}
+#spendsheet .ssbar button,#spendsheet .ssbar select{appearance:none;border:1px solid #ccc;background:#fff;color:#111;border-radius:9px;padding:9px 13px;font-family:inherit;font-size:13px;cursor:pointer;width:auto;margin:0}
+#spendsheet .ssbar .prim{background:#111;color:#fff;border-color:#111}
+#spendsheet h1{font-size:24px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+#spendsheet .sssub{color:#555;font-size:13.5px;line-height:1.5}
+#spendsheet table{width:100%;border-collapse:collapse;margin-top:20px;font-size:13px}
+#spendsheet th{text-align:left;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#666;border-bottom:1.5px solid #111;padding:8px 6px}
+#spendsheet td{padding:9px 6px;border-bottom:1px solid #ddd;vertical-align:top}
+#spendsheet td.n,#spendsheet th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#spendsheet tfoot td{font-weight:700;border-bottom:0;border-top:1.5px solid #111}
+#spendsheet .ssnote{color:#666;font-size:12px;margin-top:18px;line-height:1.5}
+@media print{
+  body.kprint > *:not(#spendsheet){display:none !important}
+  body.kprint{background:#fff !important}
+  body.kprint #spendsheet{position:static;display:block}
+  body.kprint #spendsheet .ssbar{display:none}
+}
+/*END-KIT-CSS*/
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
    an older device. One saved preference (rem_tele_power_v1) drives this and the teleprompter. */
@@ -741,6 +854,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
   <h3>💳 Billing &amp; receipts</h3>
   <div class="psub">Any balance owing and how to settle it — receipts for completed work land in your chat.</div>
   <div id="billing-body"></div>
+  <div id="kit-spend"></div>
 </div>
 <div class="pcard" id="refwrap">
   <h3>🎁 Know an agent who needs content?</h3>
@@ -822,6 +936,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
 <div class="sign" id="sign" style="display:none"></div>
 <nav id="tabbar" aria-label="Hub sections">
   <button type="button" data-tab="home" class="on"><span class="ti">🏠</span><span>Home</span></button>
+  <button type="button" data-tab="listings"><span class="ti">🏡</span><span>Listings</span><i id="lsdot"></i></button>
   <button type="button" data-tab="library"><span class="ti">📚</span><span>Library</span><i class="tdot2" id="libdot"></i></button>
   <button type="button" data-tab="book"><span class="ti">📅</span><span>Book</span></button>
   <button type="button" data-tab="more"><span class="ti">✨</span><span>More</span></button>
@@ -1447,6 +1562,8 @@ function render(raw){
     html += '</div>';
     html += '<div class="homeblk"><div class="heroact" style="margin-top:4px"><a class="go soft" href="#">📅 Book a shoot <span class="ar">→</span></a></div></div>';
   }
+  // 🧰 toolkit slots on Home: new leads, and anything due on the posting plan
+  html += '<div class="homeblk"><div class="kslot" id="leadslot"></div><div class="kslot" id="planslot"></div></div>';
   if(recap.length){
     html += '<div class="homeblk"><div class="recap"><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
@@ -1506,8 +1623,10 @@ function render(raw){
     html += '<div class="homeblk"><div class="center"><div class="big">A fresh start<span style="color:var(--red)">.</span></div>' +
       '<div class="sm">Your first project will appear here the moment we kick it off — and you’ll watch it move through the pipeline, step by step. 🎥</div></div></div>';
   // ---- 📚 Library tab: everything delivered, archived out of the way ----
+  html += '<div class="viewblk" data-view="listings" style="display:none"><div id="kit-listings"></div></div>';
   html += '<div class="viewblk" data-view="delivered" style="display:none">';
   html += '<div class="tabhead"><h2>Your <em>library</em><span style="color:var(--red)">.</span></h2><span class="thsub">' + done.length + ' delivered</span></div>';
+  html += '<div id="kit-plan"></div>';
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
     html += '<div class="fileguide"><b>Which file goes where?</b> &nbsp;📱 Vertical reel → Instagram · TikTok · FB/IG Story &nbsp;·&nbsp; 🖥 Horizontal video → YouTube · MLS · listing sites &nbsp;·&nbsp; 📷 Photos → MLS &amp; print &nbsp;·&nbsp; 🔇 Need a music-free (MLS-safe) cut? Ask in chat.</div>';
@@ -1597,6 +1716,7 @@ function render(raw){
   var ld = document.getElementById('libdot');
   if(ld) ld.style.display = DELCOUNT > seenC ? 'block' : 'none';
   setTab(curTab || 'home');
+  try{ if(window.kitRender) window.kitRender(items, raw); }catch(eK){}
   updateWelcome();
   loadBookings();
   loadBrand();
@@ -3327,6 +3447,7 @@ document.getElementById('body').addEventListener('input', function(ev){
 /* ---- 📑 tabs: Home · Library · Book · More ---- */
 var TAB_VIEWS = {
   home: ['review', 'production'],
+  listings: ['listings'],
   library: ['delivered'],
   book: ['bookhead', 'pricing', 'ideas'],
   more: []
@@ -3602,7 +3723,628 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-6</div></div><script>
+</script><script>
+/*KIT-JS*/
+/* ===== 🧰 Agent toolkit =====
+   Listings tab (everything by address + leads inbox), posting plan, launch checklist, ready-made graphics,
+   sized photo downloads, seller report, yearly summary.
+   Reads: the hub manifest (items), the hub chat thread (📩 lead messages the listing pages post), the listing directory
+   (review state 'lldir-<hub>'), page views (?biohits=ll-<id>), Drive folder listings (the hub's Drive key).
+   Writes: ONE small state blob — review state 'kit-<hub>' — {ld: lead status, pl: posting plan, ck: checklists, sr: seller-report codes}.
+   Nothing is written in studio preview. */
+(function(){
+  var KIT = {items: [], raw: {}, state: {ld: {}, pl: {}, ck: {}, sr: {}}, stateLoaded: false, leads: [], leadsLoaded: false, dir: null, views: {}, files: {}, open: {}, filter: 'all'};
+  window.__KIT = KIT;
+  var $id = function(id){ return document.getElementById(id); };
+  var canWrite = function(){ return !(typeof PREVIEW !== 'undefined' && PREVIEW); };
+  var pad2 = function(n){ return (n < 10 ? '0' : '') + n; };
+  var ymd = function(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); };
+  var fromYmd = function(s){ var p = String(s || '').slice(0, 10).split('-'); return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2], 12) : null; };
+  var money = function(n){ return '$' + (+n || 0).toLocaleString('en-CA', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
+  var norm = function(s){ return String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); };
+  function say(t){ try{ if(typeof toast === 'function') toast(t); }catch(e){} }
+  function dl(blob, name){
+    var u = URL.createObjectURL(blob), l = document.createElement('a');
+    l.href = u; l.download = name; document.body.appendChild(l); l.click();
+    setTimeout(function(){ l.remove(); URL.revokeObjectURL(u); }, 4000);
+  }
+  function copy(t, done){ var ok = function(){ if(done) done(); }; if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok).catch(ok); else ok(); }
+
+  /* ---------------- saved state ---------------- */
+  var saveT = null;
+  function save(){
+    if(!canWrite() || !KIT.stateLoaded) return;
+    clearTimeout(saveT);
+    saveT = setTimeout(function(){
+      KIT.state.at = Date.now();
+      fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'review', ref: 'kit-' + a, project: '', dname: '', who: (typeof AGENTNAME !== 'undefined' && AGENTNAME) || 'agent', body: JSON.stringify(KIT.state)})}).catch(function(){});
+    }, 1200);
+  }
+  function loadState(){
+    return fetch(ENDPOINT + '?review=' + encodeURIComponent('kit-' + a)).then(function(r){ return r.json(); }).then(function(j){
+      var s = (j && j.state) || {};
+      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}};
+      KIT.stateLoaded = true;
+    }).catch(function(){ KIT.stateLoaded = false; });
+  }
+
+  /* ---------------- leads: 📩 messages the listing pages post into the hub thread ---------------- */
+  function parseLead(m){
+    var b = String(m.body || ''); if(b.indexOf('📩') !== 0) return null;
+    var lines = b.split('\n');
+    var head = lines[0].replace(/^📩\s*/, '');
+    var hm = head.match(/^(.*?)\s+—\s+(.*)$/);
+    var label = hm ? hm[1] : head, rest = hm ? hm[2] : '';
+    var pm = rest.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+    var addr = pm ? pm[1] : rest, price = pm ? pm[2] : '';
+    var parts = String(lines[1] || '').split(' · ');
+    var name = (parts[0] || '').trim(), phone = '', email = '';
+    parts.slice(1).forEach(function(p){ p = p.trim(); if(/@/.test(p)) email = p; else if(/\d{3}/.test(p)) phone = p; });
+    var note = lines.slice(2).join(' ').replace(/^“|”$/g, '').trim();
+    return {id: String(m.id || m.ts || ''), ts: String(m.ts || ''), label: label.trim(), addr: addr.trim(), price: price, name: name, phone: phone, email: email, note: note, oh: /open house/i.test(label)};
+  }
+  function loadLeads(){
+    return fetch(ENDPOINT + '?thread=' + encodeURIComponent(a) + '&full=1').then(function(r){ return r.json(); }).then(function(j){
+      var rows = (j && j.rows) || [], dead = {};
+      rows.forEach(function(m){ if(m.kind === 'del') dead[String(m.body || '')] = 1; });
+      var out = [], seen = {};
+      rows.forEach(function(m){
+        if(m.kind !== 'msg' || dead[String(m.id)]) return;
+        var l = parseLead(m); if(!l || !l.id || seen[l.id]) return;
+        seen[l.id] = 1; out.push(l);
+      });
+      out.sort(function(x, y){ return String(y.ts).localeCompare(String(x.ts)); });
+      KIT.leads = out; KIT.leadsLoaded = true;
+    }).catch(function(){ KIT.leadsLoaded = true; });
+  }
+  var LSTAT = [['', 'New'], ['c', 'Contacted'], ['b', 'Showing booked'], ['x', 'Not a fit']];
+  function leadStatus(l){ return KIT.state.ld[l.id] || ''; }
+  function newLeads(){ return KIT.leads.filter(function(l){ return !leadStatus(l); }); }
+  function when(ts){ var t = ''; try{ t = (typeof ago === 'function' ? ago(ts) : '') || ''; }catch(e){} if(!t){ var d = new Date(ts); if(!isNaN(d)) t = d.toLocaleDateString('en-CA', {month: 'short', day: 'numeric'}); } return t; }
+  function leadHtml(l){
+    var st = leadStatus(l);
+    var tel = l.phone ? '<a href="tel:' + esc(l.phone.replace(/[^\d+]/g, '')) + '">📞 ' + esc(l.phone) + '</a>' : '';
+    var em = l.email ? '<a href="mailto:' + esc(l.email) + '?subject=' + encodeURIComponent(l.addr || 'Your enquiry') + '">✉ ' + esc(l.email) + '</a>' : '';
+    return '<div class="lead' + (st ? '' : ' new') + '" data-lead="' + esc(l.id) + '">' +
+      '<div class="lh"><b>' + esc(l.name || 'Someone') + '</b><span class="lk' + (l.oh ? ' oh' : '') + '">' + esc(l.label || 'Enquiry') + '</span><span class="lw">' + esc(when(l.ts)) + '</span></div>' +
+      (l.addr ? '<div class="la">🏡 ' + esc(l.addr) + '</div>' : '') +
+      (l.note ? '<div class="ln">“' + esc(l.note) + '”</div>' : '') +
+      ((tel || em) ? '<div class="lc">' + tel + em + '</div>' : '') +
+      '<div class="ls" role="group" aria-label="Status">' + LSTAT.map(function(s){ return '<button type="button" data-ls="' + s[0] + '" class="' + (st === s[0] ? 'on' : '') + '">' + s[1] + '</button>'; }).join('') + '</div></div>';
+  }
+  function leadsCsv(list){
+    var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    var rows = [['Date', 'Type', 'Name', 'Phone', 'Email', 'Property', 'Note', 'Status']];
+    list.forEach(function(l){ var d = new Date(l.ts); var st = (LSTAT.filter(function(s){ return s[0] === leadStatus(l); })[0] || LSTAT[0])[1];
+      rows.push([isNaN(d) ? '' : ymd(d), l.label, l.name, l.phone, l.email, l.addr, l.note, st]); });
+    return '﻿' + rows.map(function(r){ return r.map(q).join(','); }).join('\r\n');
+  }
+
+  /* ---------------- listings: group the hub's pieces by property ---------------- */
+  var LIST_T = /listing|hdr|drone|aerial|twilight|floor ?plan|virtual tour|iguide|matterport|walk ?through|property (video|tour)/i;
+  var ADDR_T = /^\s*\d+[a-z]?\s+\S+|\b(street|avenue|ave|road|drive|crescent|cres|boulevard|blvd|court|lane|terrace|trail|place|circle|gate)\b/i;
+  function isPhotoItem(x){ return /photo|hdr/i.test(String(x.t || '')); }
+  function listings(){
+    var by = {}, order = [];
+    KIT.items.forEach(function(x){
+      var k = String(x.oi || x.op || x.p || ''); if(!k) return;
+      if(!by[k]){ by[k] = {key: k, title: '', items: [], is: false}; order.push(k); }
+      by[k].items.push(x);
+      if(LIST_T.test(String(x.t || '')) || ADDR_T.test(String(x.op || ''))) by[k].is = true;
+    });
+    return order.map(function(k){ return by[k]; }).filter(function(g){ return g.is; }).map(function(g){
+      g.title = g.items[0].op || (typeof headOf === 'function' ? headOf(g.items[0]).top : g.items[0].p) || 'Listing';
+      g.last = g.items.reduce(function(m, x){ return String(x.dt || '') > m ? String(x.dt) : m; }, '');
+      return g;
+    }).sort(function(x, y){ return String(y.last).localeCompare(String(x.last)); });
+  }
+  function leadsFor(g){
+    var t = norm(g.title).split(' ').slice(0, 2).join(' ');
+    if(t.length < 3) return [];
+    return KIT.leads.filter(function(l){ var la = norm(l.addr); return la && (la.indexOf(t) === 0 || norm(g.title).indexOf(la.split(' ').slice(0, 2).join(' ')) === 0); });
+  }
+  function dirFor(g){   // the published listing page for this property, if there is one
+    if(!KIT.dir) return null;
+    for(var i = 0; i < g.items.length; i++){ var d = KIT.dir[g.items[i].id]; if(d) return {id: g.items[i].id, addr: d.addr || '', price: d.price || '', url: d.url || '', hero: d.hero || '', rel: !!d.rel}; }
+    return null;
+  }
+  function photoFolder(g){ var p = g.items.filter(function(x){ return x.fo && isPhotoItem(x); })[0] || g.items.filter(function(x){ return x.fo; })[0]; return p ? p.fo : ''; }
+  function heroOf(g){
+    var d = dirFor(g); if(d && d.hero) return d.hero;
+    var th = (g.items.filter(function(x){ return x.th; })[0] || {}).th || '';
+    if(!th) return '';
+    return /^https?:/.test(th) ? th : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(th) + '&sz=w400';
+  }
+  function loadDir(){
+    return fetch(ENDPOINT + '?review=' + encodeURIComponent('lldir-' + a)).then(function(r){ return r.json(); }).then(function(j){ KIT.dir = (j && j.state && j.state.items) || null; }).catch(function(){});
+  }
+  function loadViews(g){
+    var d = dirFor(g); if(!d || KIT.views[d.id] != null) return Promise.resolve();
+    KIT.views[d.id] = -1;
+    return fetch(ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){ KIT.views[d.id] = (j && j.ok && j.views != null) ? (+j.views || 0) : 0; }).catch(function(){ KIT.views[d.id] = 0; });
+  }
+  function viewsOf(g){ var d = dirFor(g); var v = d ? KIT.views[d.id] : null; return (v == null || v < 0) ? null : v; }
+
+  /* ---------------- launch checklist ---------------- */
+  var CHECKS = [
+    {k: 'ph', t: 'Photos delivered', auto: function(g){ return g.items.some(function(x){ return x.dv && isPhotoItem(x); }); }},
+    {k: 'mls', t: 'Photos uploaded to MLS', act: ['mls', '⬇ MLS-ready photos']},
+    {k: 'pg', t: 'Listing page published', auto: function(g){ var d = dirFor(g); return !!(d && d.rel); }, act: ['page', '🏡 Listing page']},
+    {k: 'jl', t: '“Just Listed” post', act: ['g:Just Listed', '🖼 Make it']},
+    {k: 'oh', t: 'Open-house post', act: ['g:Open House', '🖼 Make it']},
+    {k: 'sr', t: 'Seller update sent', act: ['report', '📊 Seller report']},
+    {k: 'sold', t: '“Just Sold” post', act: ['g:Just Sold', '🖼 Make it']}
+  ];
+  function checkDone(g, c){ if(c.auto && c.auto(g)) return true; return !!((KIT.state.ck[g.key] || {})[c.k]); }
+
+  /* ---------------- Listings tab ---------------- */
+  function listingCard(g){
+    var ls = leadsFor(g), v = viewsOf(g), d = dirFor(g), hero = heroOf(g);
+    var open = !!KIT.open[g.key];
+    var done = CHECKS.filter(function(c){ return checkDone(g, c); }).length;
+    var meta = [g.items.length + ' piece' + (g.items.length === 1 ? '' : 's')];
+    if(v != null) meta.push('👀 ' + v + ' view' + (v === 1 ? '' : 's'));
+    if(ls.length) meta.push('📩 ' + ls.length + ' lead' + (ls.length === 1 ? '' : 's'));
+    meta.push('✓ ' + done + '/' + CHECKS.length);
+    var h = '<div class="lcard' + (open ? ' open' : '') + '" data-lk="' + esc(g.key) + '">' +
+      '<div class="ltop" data-ltoggle="1"><span class="lhero"' + (hero ? ' style="background-image:url(&quot;' + esc(hero) + '&quot;)"' : '') + '>' + (hero ? '' : '🏡') + '</span>' +
+      '<span class="lti"><b>' + esc(g.title) + '</b><span>' + esc(meta.join(' · ')) + '</span></span><span class="lchev">▸</span></div>';
+    h += '<div class="lbody">';
+    if(open){
+      h += '<div class="klbl">What we made</div>';
+      g.items.forEach(function(x){
+        var top = (typeof headOf === 'function') ? headOf(x) : {top: x.t, sub: ''};
+        var act = x.dv ? (x.url ? '<a class="mini" href="' + esc(x.url) + '">View finals ↗</a>' : '') : ((x.rs && x.url) ? '<a class="mini" href="' + esc(x.url) + '" style="color:var(--amber)">Review now →</a>' : '');
+        h += '<div class="kpiece"><span class="kpn"><b>' + esc(x.t || top.top) + '</b><span>' + esc(x.dv ? 'Delivered' + (x.dt ? ' · ' + x.dt : '') : (x.st || 'In progress')) + '</span></span>' + act + '</div>';
+      });
+      h += '<div class="klbl">Launch checklist</div><div class="kprog"><i style="width:' + Math.round(done / CHECKS.length * 100) + '%"></i></div>';
+      CHECKS.forEach(function(c){
+        var on = checkDone(g, c), auto = !!(c.auto && c.auto(g));
+        h += '<div class="kck' + (on ? ' done' : '') + '"><input type="checkbox" id="ck-' + esc(g.key) + '-' + c.k + '" data-ck="' + c.k + '"' + (on ? ' checked' : '') + (auto ? ' disabled' : '') + '>' +
+          '<label for="ck-' + esc(g.key) + '-' + c.k + '">' + c.t + '</label>' +
+          (c.act ? '<button type="button" class="mini" data-kact="' + esc(c.act[0]) + '">' + c.act[1] + '</button>' : '') + '</div>';
+      });
+      h += '<div class="klbl">Tools for this home</div><div class="ktools">' +
+        '<button type="button" class="mini" data-kact="g:Just Listed">🖼 Make a graphic</button>' +
+        '<button type="button" class="mini" data-kact="mls">⬇ MLS-ready photos</button>' +
+        '<button type="button" class="mini" data-kact="ig">⬇ Instagram crops</button>' +
+        '<button type="button" class="mini" data-kact="report">📊 Seller report</button>' +
+        (d && d.url ? '<a class="mini" href="' + esc(d.url) + '" target="_blank" rel="noopener">🏡 Live page ↗</a>' : '') + '</div>';
+      if(ls.length){ h += '<div class="klbl">Leads for this home</div>' + ls.map(leadHtml).join(''); }
+    }
+    h += '</div></div>';
+    return h;
+  }
+  function renderListings(){
+    var box = $id('kit-listings'); if(!box) return;
+    var gs = listings(), nl = newLeads();
+    var show = gs.length > 0 || KIT.leads.length > 0;
+    document.body.classList.toggle('haslistings', show);
+    var dot = $id('lsdot'); if(dot) dot.style.display = nl.length ? 'block' : 'none';
+    if(!show){ box.innerHTML = ''; return; }
+    var list = KIT.filter === 'new' ? nl : KIT.leads;
+    var h = '<div class="tabhead"><h2>Your <em>listings</em><span style="color:var(--red)">.</span></h2><span class="thsub">' + gs.length + ' propert' + (gs.length === 1 ? 'y' : 'ies') + '</span></div>';
+    h += '<div class="ksec"><h3>📩 Leads</h3><span class="kcnt">' + KIT.leads.length + '</span><span class="kgrow"></span>' +
+      '<span class="kchips"><button type="button" class="kchip' + (KIT.filter === 'all' ? ' on' : '') + '" data-lf="all">All</button><button type="button" class="kchip' + (KIT.filter === 'new' ? ' on' : '') + '" data-lf="new">New' + (nl.length ? ' · ' + nl.length : '') + '</button>' +
+      (KIT.leads.length ? '<button type="button" class="kchip" data-lcsv="1">⬇ Spreadsheet</button>' : '') + '</span></div>';
+    if(!KIT.leadsLoaded) h += '<div class="kempty">Loading your leads…</div>';
+    else if(!KIT.leads.length) h += '<div class="kempty">No leads yet. When someone asks for a showing or signs in at an open house on one of your listing pages, they land here with their phone and email.</div>';
+    else if(!list.length) h += '<div class="kempty">Nothing new — every lead has been dealt with. 👏</div>';
+    else h += '<div id="kit-leadlist">' + list.slice(0, 40).map(leadHtml).join('') + (list.length > 40 ? '<div class="kempty" style="margin-top:8px">Showing the newest 40 of ' + list.length + '. The spreadsheet has them all.</div>' : '') + '</div>';
+    h += '<div class="ksec"><h3>🏡 By address</h3><span class="kcnt">' + gs.length + '</span></div>';
+    if(!gs.length) h += '<div class="kempty">Your listing shoots will appear here, one card per property, with everything we made for it.</div>';
+    else h += gs.map(listingCard).join('');
+    box.innerHTML = h;
+  }
+  function renderHome(){
+    var s = $id('leadslot');
+    if(s){
+      var nl = newLeads();
+      s.innerHTML = nl.length ? '<button type="button" class="khome" data-kgo="listings"><span class="ki">📩</span><span class="kt"><b>' + nl.length + ' new lead' + (nl.length === 1 ? '' : 's') + '</b><span>' + esc((nl[0].name || 'Someone') + (nl[0].addr ? ' · ' + nl[0].addr : '')) + '</span></span><span class="ka">Open →</span></button>' : '';
+    }
+    var p = $id('planslot');
+    if(p){
+      var due = planRows().filter(function(r){ return r.d && r.d <= ymd(new Date()); });
+      p.innerHTML = due.length ? '<button type="button" class="khome" data-kgo="library"><span class="ki">📲</span><span class="kt"><b>' + (due.length === 1 ? 'Today: post “' + esc(due[0].name) + '”' : due.length + ' pieces ready to post') + '</b><span>From your posting plan</span></span><span class="ka">Open →</span></button>' : '';
+    }
+  }
+
+  /* ---------------- posting plan ---------------- */
+  function planRows(){
+    var st = KIT.state.pl, out = [];
+    KIT.items.forEach(function(x){
+      if(!x.dv || !x.id) return;
+      var s = st[x.id]; if(!s || !s.d || s.p || s.s) return;
+      var top = (typeof headOf === 'function') ? headOf(x) : {top: x.t, sub: ''};
+      out.push({x: x, id: x.id, d: s.d, name: top.top || x.t, sub: x.t});
+    });
+    out.sort(function(m, n){ return String(m.d).localeCompare(String(n.d)); });
+    return out;
+  }
+  function seedPlan(){   // newly delivered pieces (last 60 days) get a suggested date: one every other day, newest first
+    if(!KIT.stateLoaded) return false;
+    var st = KIT.state.pl, cut = ymd(new Date(Date.now() - 60 * 864e5));
+    var taken = {}; Object.keys(st).forEach(function(k){ if(st[k] && st[k].d && !st[k].p && !st[k].s) taken[st[k].d] = 1; });
+    var fresh = KIT.items.filter(function(x){ return x.dv && x.id && !st[x.id] && String(x.dt || '') >= cut; }).sort(function(m, n){ return String(n.dt).localeCompare(String(m.dt)); }).slice(0, 8);
+    if(!fresh.length) return false;
+    var d = new Date(); d.setHours(12, 0, 0, 0);
+    fresh.forEach(function(x){
+      do { d = new Date(d.getTime() + 864e5); } while(taken[ymd(d)]);
+      st[x.id] = {d: ymd(d)}; taken[ymd(d)] = 1;
+      d = new Date(d.getTime() + 864e5);
+    });
+    return true;
+  }
+  function dayLabel(s){
+    var t = ymd(new Date()), tm = ymd(new Date(Date.now() + 864e5));
+    if(s === t) return 'Today'; if(s === tm) return 'Tomorrow'; if(s < t) return 'Overdue';
+    var d = fromYmd(s); return d ? d.toLocaleDateString('en-CA', {weekday: 'short', month: 'short', day: 'numeric'}) : s;
+  }
+  function renderPlan(){
+    var box = $id('kit-plan'); if(!box) return;
+    var rows = planRows();
+    if(!rows.length){ box.innerHTML = ''; return; }
+    var t = ymd(new Date());
+    var h = '<div class="pcard" id="planwrap"><h3>📅 Posting plan</h3><div class="psub">A date for each new piece so nothing sits unused. Move a date, tick it off when it’s up, or skip it.</div>';
+    rows.forEach(function(r){
+      var sid = 'kp-' + r.id;
+      try{ SHARE[sid] = {t: r.x.t, url: r.x.url || '', cp: r.x.cp || '', cp2: r.x.cp2 || '', lg: r.x.lg || ''}; }catch(e){}
+      h += '<div class="plrow' + (r.d <= t ? ' due' : '') + '" data-pl="' + esc(r.id) + '"><span class="pld">' + esc(dayLabel(r.d)) + '</span>' +
+        '<span class="pln"><b>' + esc(r.name) + '</b><span>' + esc(r.sub || '') + '</span></span>' +
+        '<span class="pla"><button type="button" class="mini" data-post="' + sid + '" title="Copy the caption and open Instagram">📲 Post</button>' +
+        '<button type="button" class="mini" data-plp="1" title="Mark as posted">✓ Posted</button>' +
+        '<input type="date" data-pld="1" value="' + esc(r.d) + '" aria-label="Change the date">' +
+        '<button type="button" class="mini" data-pls="1" title="Take it off the plan">✕</button></span></div>';
+    });
+    h += '<div style="margin-top:12px"><button type="button" class="mini" data-plics="1" title="Adds each post to your phone or computer calendar with a reminder">📆 Add these to my calendar</button></div></div>';
+    box.innerHTML = h;
+  }
+  function planIcs(rows){
+    var esc2 = function(s){ return String(s || '').replace(/\\/g, '\\\\').replace(/[,;]/g, function(c){ return '\\' + c; }).replace(/\n/g, '\\n'); };
+    var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+    var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//The Content Hub//Posting plan//EN', 'CALSCALE:GREGORIAN'];
+    rows.forEach(function(r){
+      var d = r.d.replace(/-/g, '');
+      L.push('BEGIN:VEVENT', 'UID:post-' + r.id + '-' + d + '@thecontenthub.ca', 'DTSTAMP:' + stamp, 'DTSTART:' + d + 'T090000', 'DTEND:' + d + 'T091500',
+        'SUMMARY:' + esc2('Post: ' + r.name), 'DESCRIPTION:' + esc2('From your Content Hub posting plan. Open your hub for the caption and the files.'),
+        'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc2('Post: ' + r.name), 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT');
+    });
+    L.push('END:VCALENDAR');
+    return L.join('\r\n');
+  }
+
+  /* ---------------- dialog shell ---------------- */
+  var modal = null;
+  function openModal(html){
+    if(!modal){ modal = document.createElement('div'); modal.className = 'bmodal kitm'; modal.innerHTML = '<div class="bcard" id="kitcard"></div>'; document.body.appendChild(modal);
+      modal.addEventListener('click', function(e){ if(e.target === modal || (e.target.closest && e.target.closest('[data-kclose]'))) closeModal(); }); }
+    $id('kitcard').innerHTML = html; modal.classList.add('on'); KIT.job = (KIT.job || 0) + 1;
+    return $id('kitcard');
+  }
+  function closeModal(){ if(modal) modal.classList.remove('on'); KIT.job = (KIT.job || 0) + 1; }
+
+  /* ---------------- Drive photos ---------------- */
+  function driveImages(fo){
+    if(!fo) return Promise.resolve([]);
+    if(KIT.files[fo]) return Promise.resolve(KIT.files[fo]);
+    var k = (typeof DRIVEK !== 'undefined' && DRIVEK) || '';
+    if(!k) return Promise.resolve([]);
+    var q = "'" + fo + "' in parents and trashed = false and mimeType contains 'image/'";
+    return fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=' + encodeURIComponent('files(id,name,thumbnailLink)') + '&orderBy=name&pageSize=200&key=' + encodeURIComponent(k))
+      .then(function(r){ return r.json(); }).then(function(j){ var f = (j && j.files) || []; KIT.files[fo] = f; return f; }).catch(function(){ return []; });
+  }
+  function sized(f, px){   // a resized copy Google makes for us; falls back to the listing's own thumbnail link
+    return fetch('https://lh3.googleusercontent.com/d/' + encodeURIComponent(f.id) + '=s' + px).then(function(r){ if(!r.ok) throw new Error('lh3'); return r.blob(); })
+      .catch(function(){ if(!f.thumbnailLink) throw new Error('no copy'); return fetch(String(f.thumbnailLink).replace(/=s\d+$/, '=s' + px)).then(function(r){ if(!r.ok) throw new Error('thumb'); return r.blob(); }); });
+  }
+  function thumbUrl(f){ return f.thumbnailLink ? String(f.thumbnailLink).replace(/=s\d+$/, '=s220') : 'https://lh3.googleusercontent.com/d/' + encodeURIComponent(f.id) + '=s220'; }
+
+  /* ---------------- zip (store only — photos are already compressed) ---------------- */
+  var CRCT = null;
+  function crc32(u8){
+    if(!CRCT){ CRCT = new Uint32Array(256); for(var n = 0; n < 256; n++){ var c = n; for(var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); CRCT[n] = c >>> 0; } }
+    var crc = 0xFFFFFFFF; for(var i = 0; i < u8.length; i++) crc = CRCT[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zipStore(files){
+    var parts = [], central = [], off = 0, enc = new TextEncoder();
+    files.forEach(function(f){
+      var nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true); lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, nm.length, true); lh.setUint16(28, 0, true);
+      parts.push(lh.buffer, nm, f.data);
+      var ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, nm.length, true); ch.setUint32(42, off, true);
+      central.push(ch.buffer, nm);
+      off += 30 + nm.length + sz;
+    });
+    var csz = central.reduce(function(s, p){ return s + (p.byteLength || p.length); }, 0);
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, csz, true); end.setUint32(16, off, true);
+    return new Blob(parts.concat(central, [end.buffer]), {type: 'application/zip'});
+  }
+  KIT._zip = zipStore;
+
+  /* ---------------- sized downloads ---------------- */
+  var SIZES = {
+    mls: {name: 'MLS-ready', px: 2048, note: 'Resized so the long edge is 2048 px — small enough to upload quickly, sharp enough for the listing.'},
+    ig: {name: 'Instagram', px: 1600, crop: [1080, 1350], note: 'Cropped to 4:5 (1080 × 1350), the tallest size Instagram shows in the feed. Cropping is from the centre.'}
+  };
+  function cropTo(blob, w, h){
+    return createImageBitmap(blob).then(function(bm){
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var s = Math.max(w / bm.width, h / bm.height), dw = bm.width * s, dh = bm.height * s;
+      c.getContext('2d').drawImage(bm, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      return new Promise(function(res){ c.toBlob(res, 'image/jpeg', 0.9); });
+    });
+  }
+  function openSized(g, kind){
+    var S = SIZES[kind], fo = photoFolder(g);
+    var card = openModal('<h3>⬇ ' + S.name + ' photos</h3><div class="bsub">' + esc(g.title) + ' — ' + S.note + '</div><div id="kz-body" class="bsub">Looking for the photos…</div><div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kz-go" style="width:auto;display:none">Download <span class="ar">→</span></button></div>');
+    var job = KIT.job, body = $id('kz-body'), go = $id('kz-go');
+    driveImages(fo).then(function(files){
+      if(job !== KIT.job) return;
+      if(!files.length){ body.innerHTML = 'No photos found for this home yet. Once the photo set is delivered they’ll be available here. For the full-size originals use <b>View finals</b>.'; return; }
+      body.innerHTML = '<b>' + files.length + ' photo' + (files.length === 1 ? '' : 's') + '</b> — they download as one zip file (about ' + Math.max(1, Math.round(files.length * (kind === 'ig' ? 0.45 : 1))) + ' MB). For the full-size originals use <b>View finals</b>.<div class="kprog" style="margin-top:12px;display:none" id="kz-prog"><i style="width:0"></i></div><div id="kz-msg" style="margin-top:6px"></div>';
+      go.style.display = '';
+      go.onclick = function(){
+        go.disabled = true; go.style.opacity = '.5';
+        var prog = $id('kz-prog'), msg = $id('kz-msg'); prog.style.display = '';
+        var base = String(g.title).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'Listing';
+        var out = [], fail = 0, i = 0, done = 0;
+        var step = function(){
+          if(job !== KIT.job) return Promise.resolve();
+          var n = i++; if(n >= files.length) return Promise.resolve();
+          return sized(files[n], S.px).then(function(b){ return S.crop ? cropTo(b, S.crop[0], S.crop[1]) : b; }).then(function(b){ return b.arrayBuffer(); })
+            .then(function(ab){ out[n] = {name: base + ' - ' + pad2(n + 1) + '.jpg', data: new Uint8Array(ab)}; }).catch(function(){ fail++; })
+            .then(function(){ done++; prog.firstChild.style.width = Math.round(done / files.length * 100) + '%'; msg.textContent = done + ' of ' + files.length; return step(); });
+        };
+        Promise.all([step(), step(), step(), step()]).then(function(){
+          if(job !== KIT.job) return;
+          var good = out.filter(Boolean);
+          if(!good.length){ msg.textContent = 'Couldn’t prepare the photos just now. Try again, or use View finals for the originals.'; go.disabled = false; go.style.opacity = ''; return; }
+          dl(zipStore(good), base + ' - ' + S.name + '.zip');
+          msg.textContent = '✓ ' + good.length + ' photo' + (good.length === 1 ? '' : 's') + ' downloaded' + (fail ? ' (' + fail + ' couldn’t be prepared)' : '') + '.';
+          if(kind === 'mls') setCheck(g, 'mls', false, true);
+        });
+      };
+    });
+  }
+
+  /* ---------------- ready-made graphics ---------------- */
+  var GFMT = {p: [1080, 1350, 'Feed 4:5'], s: [1080, 1920, 'Story 9:16'], q: [1080, 1080, 'Square']};
+  function wrapLines(ctx, text, maxW, maxLines){
+    var words = String(text || '').split(/\s+/).filter(Boolean), lines = [], cur = '';
+    words.forEach(function(w){ var t = cur ? cur + ' ' + w : w; if(ctx.measureText(t).width > maxW && cur){ lines.push(cur); cur = w; } else cur = t; });
+    if(cur) lines.push(cur);
+    if(lines.length > maxLines){ lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].replace(/\s+\S*$/, '') + '…'; }
+    return lines;
+  }
+  function drawGraphic(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.065);
+    x.fillStyle = '#151515'; x.fillRect(0, 0, W, H);
+    if(o.img){ var s = Math.max(W / o.img.width, H / o.img.height), dw = o.img.width * s, dh = o.img.height * s; x.drawImage(o.img, (W - dw) / 2, (H - dh) / 2, dw, dh); }
+    var gr = x.createLinearGradient(0, H * 0.38, 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,0,.62)'); gr.addColorStop(1, 'rgba(0,0,0,.9)');
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    var gt = x.createLinearGradient(0, 0, 0, H * 0.22); gt.addColorStop(0, 'rgba(0,0,0,.45)'); gt.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gt; x.fillRect(0, 0, W, H * 0.22);
+    // label
+    x.font = '700 ' + Math.round(W * 0.034) + 'px ' + F; x.textBaseline = 'middle';
+    var lab = String(o.label || '').toUpperCase().split('').join(' '), lw = x.measureText(lab).width + M * 0.9, lh = Math.round(W * 0.075);
+    x.fillStyle = o.accent || '#EA002A'; x.fillRect(M, M, lw, lh);
+    x.fillStyle = '#fff'; x.fillText(lab, M + M * 0.45, M + lh / 2 + 1);
+    // footer: agent + brokerage
+    var y = H - M;
+    x.textBaseline = 'alphabetic';
+    var f2 = Math.round(W * 0.027);
+    x.font = '500 ' + f2 + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.82)';
+    var l3 = [o.brokerage, o.phone].filter(Boolean).join('  ·  ');
+    if(l3){ x.fillText(wrapLines(x, l3, W - M * 2, 1)[0] || '', M, y); y -= Math.round(f2 * 1.5); }
+    if(o.agent){ x.font = '700 ' + Math.round(W * 0.031) + 'px ' + F; x.fillStyle = '#fff'; x.fillText(wrapLines(x, o.agent, W - M * 2, 1)[0] || '', M, y); y -= Math.round(W * 0.05); }
+    x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(M, y - Math.round(W * 0.012), W - M * 2, 2); y -= Math.round(W * 0.05);
+    // sub line + address
+    if(o.l2){ x.font = '500 ' + Math.round(W * 0.042) + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.92)'; var s2 = wrapLines(x, o.l2, W - M * 2, 2); for(var i = s2.length - 1; i >= 0; i--){ x.fillText(s2[i], M, y); y -= Math.round(W * 0.056); } y -= Math.round(W * 0.012); }
+    var fs = Math.round(W * 0.078); x.font = '700 ' + fs + 'px ' + F; x.fillStyle = '#fff';
+    var a1 = wrapLines(x, o.l1, W - M * 2, 3); for(var j = a1.length - 1; j >= 0; j--){ x.fillText(a1[j], M, y); y -= Math.round(fs * 1.08); }
+  }
+  KIT._draw = drawGraphic;
+  function openGraphic(g, kind){
+    var d = dirFor(g) || {}, raw = KIT.raw || {};
+    var accent = '#EA002A'; try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) accent = c1.value; }catch(e){}
+    var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null,
+      agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
+    var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name and brokerage are added for you.</div>' +
+      '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
+      '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div>' +
+      '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
+      '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
+      '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
+      '<canvas class="kcanvas" id="kg-cv"></canvas>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">Download <span class="ar">→</span></button></div>');
+    var job = KIT.job, cv = $id('kg-cv'), l1 = $id('kg-l1'), l2 = $id('kg-l2');
+    var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); };
+    var paint = function(){ var f = GFMT[st.fmt]; drawGraphic(cv, {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent}); };
+    l1.value = st.l1; l2.value = st.l2; hint();
+    l1.oninput = function(){ st.l1 = l1.value; paint(); }; l2.oninput = function(){ st.l2 = l2.value; paint(); };
+    if(/open house|sold/i.test(st.label)){ st.l2 = ''; l2.value = ''; }
+    card.addEventListener('click', function(e){
+      var k = e.target.closest ? e.target.closest('[data-gk]') : null;
+      if(k){ st.label = k.getAttribute('data-gk'); card.querySelectorAll('[data-gk]').forEach(function(b){ b.classList.toggle('on', b === k); }); if(/open house|sold/i.test(st.label) && l2.value === (d.price || '')){ st.l2 = ''; l2.value = ''; } hint(); paint(); return; }
+      var f = e.target.closest ? e.target.closest('[data-gf]') : null;
+      if(f){ st.fmt = f.getAttribute('data-gf'); card.querySelectorAll('[data-gf]').forEach(function(b){ b.classList.toggle('on', b === f); }); paint(); return; }
+      var p = e.target.closest ? e.target.closest('[data-gp]') : null;
+      if(p){ card.querySelectorAll('[data-gp]').forEach(function(b){ b.classList.toggle('on', b === p); }); pick(p.getAttribute('data-gp')); }
+    });
+    var filesById = {};
+    var pick = function(id){
+      var f = filesById[id]; if(!f) return;
+      sized(f, 1600).then(function(b){ return createImageBitmap(b); }).then(function(bm){ if(job !== KIT.job) return; st.img = bm; paint(); }).catch(function(){ say('Couldn’t load that photo — try another.'); });
+    };
+    paint();
+    try{ if(document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if(job === KIT.job) paint(); }); }catch(e){}
+    driveImages(photoFolder(g)).then(function(files){
+      if(job !== KIT.job) return;
+      var box = $id('kg-pick');
+      if(!files.length){ box.innerHTML = '<span class="bsub">No photos found for this home yet — the graphic will use a plain background.</span>'; return; }
+      files.forEach(function(f){ filesById[f.id] = f; });
+      box.innerHTML = files.slice(0, 60).map(function(f, i){ return '<button type="button" data-gp="' + esc(f.id) + '" class="' + (i === 0 ? 'on' : '') + '" style="background-image:url(&quot;' + esc(thumbUrl(f)) + '&quot;)" aria-label="Photo ' + (i + 1) + '"></button>'; }).join('');
+      pick(files[0].id);
+    });
+    $id('kg-dl').onclick = function(){
+      cv.toBlob(function(b){
+        if(!b){ say('Couldn’t make the image on this device.'); return; }
+        var name = (String(st.l1 || g.title).replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 50) || 'Listing') + ' - ' + st.label + '.jpg';
+        var file = null; try{ file = new File([b], name, {type: 'image/jpeg'}); }catch(e){}
+        var mobile = /iphone|ipad|android/i.test(navigator.userAgent);
+        if(mobile && file && navigator.canShare && navigator.canShare({files: [file]})){ navigator.share({files: [file]}).catch(function(){}); }
+        else dl(b, name);
+        var ck = /listed/i.test(st.label) ? 'jl' : /open house/i.test(st.label) ? 'oh' : /sold/i.test(st.label) ? 'sold' : '';
+        if(ck) setCheck(g, ck, false, true);
+      }, 'image/jpeg', 0.92);
+    };
+  }
+
+  /* ---------------- seller report ---------------- */
+  function reportData(g, note){
+    var d = dirFor(g) || {}, raw = KIT.raw || {}, ls = leadsFor(g), v = viewsOf(g);
+    var hd = String(raw.hd || ''), hm = hd.match(/[-\w]{25,}/);
+    return {v: 1, addr: d.addr || g.title, price: d.price || '', hero: heroOf(g).replace(/sz=w400/, 'sz=w1600'),
+      made: g.items.filter(function(x){ return x.dv; }).map(function(x){ return String(x.t || ''); }).filter(Boolean),
+      doing: g.items.filter(function(x){ return !x.dv; }).map(function(x){ return String(x.t || ''); }).filter(Boolean),
+      page: (d.rel && d.url) ? d.url : '', views: v == null ? null : v,
+      show: ls.filter(function(l){ return !l.oh; }).length, oh: ls.filter(function(l){ return l.oh; }).length,
+      note: String(note || '').slice(0, 1200),
+      ag: {n: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), t: String(raw.at || ''), b: String(raw.brokerage || ''), ph: String(raw.ph || ''), em: String(raw.email || ''),
+        hd: (/drive\.google|docs\.google/.test(hd) && hm) ? 'https://drive.google.com/thumbnail?id=' + hm[0] + '&sz=w240' : hd},
+      at: Date.now()};
+  }
+  function reportUrl(code){ return location.origin + location.pathname.replace(/[^\/]*$/, '') + 'report.html?x=' + encodeURIComponent(code); }
+  function openReport(g){
+    var code = KIT.state.sr[g.key] || '';
+    var card = openModal('<h3>📊 Seller report</h3><div class="bsub">' + esc(g.title) + ' — one link to send your seller: what’s been done to market their home and how it’s performing. It shows numbers only, never anyone’s name or contact details.</div>' +
+      '<div class="kstat" id="kr-stat"></div>' +
+      '<label class="kf" for="kr-note">A note to your seller (optional)</label><textarea id="kr-note" rows="3" maxlength="1200" placeholder="For example: Great first week — two showings booked for Saturday."></textarea>' +
+      '<div id="kr-link"></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kr-go" style="width:auto">' + (code ? 'Update the report' : 'Create the link') + ' <span class="ar">→</span></button></div>');
+    var job = KIT.job;
+    var stat = function(){ var r = reportData(g, ''); $id('kr-stat').innerHTML = '<div><b>' + (r.views == null ? '—' : r.views) + '</b><span>Page views</span></div><div><b>' + r.show + '</b><span>Showing requests</span></div><div><b>' + r.oh + '</b><span>Open-house sign-ins</span></div>'; };
+    var link = function(c){ $id('kr-link').innerHTML = '<div class="klink"><input type="text" readonly id="kr-url" value="' + esc(reportUrl(c)) + '"><button type="button" class="mini" id="kr-copy">Copy</button><a class="mini" href="' + esc(reportUrl(c)) + '" target="_blank" rel="noopener">Open ↗</a></div>';
+      $id('kr-copy').onclick = function(){ copy(reportUrl(c), function(){ say('🔗 Link copied — paste it in a text or email to your seller.'); }); }; };
+    stat(); if(code) link(code);
+    loadViews(g).then(function(){ if(job === KIT.job) stat(); });
+    $id('kr-go').onclick = function(){
+      if(!canWrite()){ say('Preview only — the agent creates this from their own hub.'); return; }
+      var btn = this; btn.disabled = true; btn.style.opacity = '.5';
+      var c = code || ('sr' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6));
+      var data = reportData(g, $id('kr-note').value);
+      fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'link', ref: c, project: data.addr, dname: '', who: 'app', body: 'sr=1&d=' + encodeURIComponent(JSON.stringify(data))})})
+        .then(function(r){ return r.json(); }).then(function(j){
+          btn.disabled = false; btn.style.opacity = '';
+          if(!j || !j.ok){ say('Couldn’t save the report — try again.'); return; }
+          code = c; KIT.state.sr[g.key] = c; save(); link(c); btn.firstChild.textContent = 'Update the report ';
+          say('✓ Report ready — copy the link and send it.');
+        }).catch(function(){ btn.disabled = false; btn.style.opacity = ''; say('Couldn’t reach the server — try again.'); });
+    };
+  }
+
+  /* ---------------- yearly summary (only when the studio sends spend lines) ---------------- */
+  function spendLines(){ return Array.isArray(KIT.raw.sp) ? KIT.raw.sp.filter(function(r){ return r && r.d; }) : []; }
+  function renderSpendBtn(){
+    var box = $id('kit-spend'); if(!box) return;
+    var ys = {}; spendLines().forEach(function(r){ ys[String(r.d).slice(0, 4)] = 1; });
+    var years = Object.keys(ys).sort().reverse();
+    box.innerHTML = years.length ? '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><div class="psub" style="margin:0 0 8px">Need it for your accountant? One page with everything you spent with us in a year.</div><button type="button" class="mini" data-kspend="' + esc(years[0]) + '">🧾 Yearly summary</button></div>' : '';
+  }
+  function openSpend(year){
+    var sh = $id('spendsheet');
+    if(!sh){ sh = document.createElement('div'); sh.id = 'spendsheet'; document.body.appendChild(sh); }
+    var all = spendLines(), ys = {}; all.forEach(function(r){ ys[String(r.d).slice(0, 4)] = 1; });
+    var years = Object.keys(ys).sort().reverse();
+    var rows = all.filter(function(r){ return String(r.d).slice(0, 4) === String(year); }).sort(function(m, n){ return String(m.d).localeCompare(String(n.d)); });
+    var S = 0, X = 0, T = 0, P = 0;
+    var body = rows.map(function(r){ var s = +r.s || 0, x = +r.x || 0, t = +r.a || 0; S += s; X += x; T += t; if(r.pd) P += t;
+      return '<tr><td>' + esc(r.d) + '</td><td>' + esc(r.n || 'Order') + '</td><td class="n">' + money(s) + '</td><td class="n">' + money(x) + '</td><td class="n">' + money(t) + '</td><td>' + (r.pd ? 'Paid ' + esc(r.pd) : 'Owing') + '</td></tr>'; }).join('');
+    var who = String(KIT.raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || '');
+    sh.innerHTML = '<div class="ssin"><div class="ssbar"><button type="button" data-ssclose="1">← Back</button>' +
+      '<select id="ss-year" aria-label="Year">' + years.map(function(y){ return '<option' + (y === String(year) ? ' selected' : '') + '>' + esc(y) + '</option>'; }).join('') + '</select>' +
+      '<button type="button" class="prim" data-ssprint="1">Print or save as PDF</button><button type="button" data-sscsv="1">Spreadsheet</button></div>' +
+      '<h1>' + esc(String(year)) + ' summary — Reel Estate Media</h1>' +
+      '<div class="sssub">Prepared for ' + esc(who || 'you') + (KIT.raw.brokerage ? ' · ' + esc(KIT.raw.brokerage) : '') + '<br>Orders dated ' + esc(String(year)) + ' · generated ' + esc(ymd(new Date())) + '</div>' +
+      '<table><thead><tr><th>Date</th><th>Order</th><th class="n">Subtotal</th><th class="n">HST</th><th class="n">Total</th><th>Status</th></tr></thead><tbody>' + (body || '<tr><td colspan="6">No orders dated ' + esc(String(year)) + '.</td></tr>') + '</tbody>' +
+      '<tfoot><tr><td colspan="2">Total for ' + esc(String(year)) + '</td><td class="n">' + money(S) + '</td><td class="n">' + money(X) + '</td><td class="n">' + money(T) + '</td><td>' + money(P) + ' paid</td></tr></tfoot></table>' +
+      '<div class="ssnote">This is a summary of your orders, not a tax receipt. Individual receipts are in your hub chat — ask us if you need one re-sent.</div></div>';
+    sh.classList.add('on'); sh.scrollTop = 0;
+    KIT._spendRows = rows; KIT._spendYear = year;
+    $id('ss-year').onchange = function(){ openSpend(this.value); };
+  }
+  function spendCsv(rows){
+    var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+    return '﻿' + [['Date', 'Order', 'Subtotal', 'HST', 'Total', 'Paid on']].concat(rows.map(function(r){ return [r.d, r.n, (+r.s || 0).toFixed(2), (+r.x || 0).toFixed(2), (+r.a || 0).toFixed(2), r.pd || '']; })).map(function(r){ return r.map(q).join(','); }).join('\r\n');
+  }
+
+  /* ---------------- wiring ---------------- */
+  function setCheck(g, k, val, onlyOn){
+    var o = KIT.state.ck[g.key] || (KIT.state.ck[g.key] = {});
+    if(onlyOn){ if(o[k]) return; o[k] = 1; } else if(val) o[k] = 1; else delete o[k];
+    save(); renderListings();
+  }
+  function groupOf(el){ var c = el.closest ? el.closest('[data-lk]') : null; if(!c) return null; var k = c.getAttribute('data-lk'); return listings().filter(function(g){ return g.key === k; })[0] || null; }
+  function renderAll(){ renderListings(); renderPlan(); renderHome(); renderSpendBtn(); }
+  document.addEventListener('click', function(e){
+    var t = e.target; if(!t || !t.closest) return;
+    var go = t.closest('[data-kgo]'); if(go){ try{ setTab(go.getAttribute('data-kgo')); window.scrollTo(0, 0); }catch(e1){} return; }
+    var sp = t.closest('[data-kspend]'); if(sp){ openSpend(sp.getAttribute('data-kspend')); return; }
+    if(t.closest('[data-ssclose]')){ var sh = $id('spendsheet'); if(sh) sh.classList.remove('on'); return; }
+    if(t.closest('[data-ssprint]')){ document.body.classList.add('kprint'); var off = function(){ document.body.classList.remove('kprint'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); setTimeout(function(){ try{ window.print(); }catch(e2){} }, 50); return; }
+    if(t.closest('[data-sscsv]')){ dl(new Blob([spendCsv(KIT._spendRows || [])], {type: 'text/csv'}), 'Reel Estate Media ' + (KIT._spendYear || '') + ' summary.csv'); return; }
+    var lf = t.closest('[data-lf]'); if(lf){ KIT.filter = lf.getAttribute('data-lf'); renderListings(); return; }
+    if(t.closest('[data-lcsv]')){ dl(new Blob([leadsCsv(KIT.leads)], {type: 'text/csv'}), 'Leads ' + ymd(new Date()) + '.csv'); return; }
+    var ls = t.closest('[data-ls]');
+    if(ls){ var row = ls.closest('[data-lead]'); if(!row) return; var id = row.getAttribute('data-lead'), v = ls.getAttribute('data-ls');
+      if(!canWrite()){ say('Preview only — nothing is saved.'); }
+      if(v) KIT.state.ld[id] = v; else delete KIT.state.ld[id];
+      save(); renderListings(); renderHome(); return; }
+    var act = t.closest('[data-kact]');
+    if(act){ var g = groupOf(act); if(!g) return; var k = act.getAttribute('data-kact');
+      if(k === 'mls' || k === 'ig') openSized(g, k);
+      else if(k === 'report') openReport(g);
+      else if(k.indexOf('g:') === 0) openGraphic(g, k.slice(2));
+      else if(k === 'page'){ var d = dirFor(g); var it = g.items.filter(function(x){ return typeof listingUrl === 'function' && listingUrl(x); })[0]; var u = (d && d.rel && d.url) ? d.url : (it ? listingUrl(it) : ''); if(u) location.href = u; else say('The listing page opens once the photos are delivered.'); }
+      return; }
+    var tg = t.closest('[data-ltoggle]');
+    if(tg){ var g2 = groupOf(tg); if(!g2) return; KIT.open[g2.key] = !KIT.open[g2.key]; renderListings(); if(KIT.open[g2.key]) loadViews(g2).then(renderListings); return; }
+    var plrow = t.closest('[data-pl]');
+    if(plrow){ var pid = plrow.getAttribute('data-pl');
+      if(t.closest('[data-plp]')){ KIT.state.pl[pid] = {p: Date.now()}; save(); renderPlan(); renderHome(); say('✓ Marked as posted.'); return; }
+      if(t.closest('[data-pls]')){ KIT.state.pl[pid] = {s: 1}; save(); renderPlan(); renderHome(); return; } }
+    if(t.closest('[data-plics]')){ var rows = planRows(); if(rows.length) dl(new Blob([planIcs(rows)], {type: 'text/calendar'}), 'Posting plan.ics'); return; }
+  });
+  document.addEventListener('change', function(e){
+    var t = e.target; if(!t || !t.closest) return;
+    if(t.matches && t.matches('[data-pld]')){ var row = t.closest('[data-pl]'); if(row && /^\d{4}-\d\d-\d\d$/.test(t.value)){ KIT.state.pl[row.getAttribute('data-pl')] = {d: t.value}; save(); renderPlan(); renderHome(); } return; }
+    if(t.matches && t.matches('[data-ck]')){ var g = groupOf(t); if(g) setCheck(g, t.getAttribute('data-ck'), t.checked); }
+  });
+
+  /* entry point — the hub calls this at the end of every render */
+  window.kitRender = function(items, raw){
+    KIT.items = items || []; KIT.raw = raw || {};
+    if(KIT.booted && KIT.stateLoaded && seedPlan()) save();
+    renderAll();
+    if(KIT.booted) return;
+    KIT.booted = true;
+    Promise.all([loadState(), loadLeads(), loadDir()]).then(function(){
+      if(seedPlan()) save();
+      var gs = listings(); if(gs.length){ KIT.open[gs[0].key] = true; }
+      renderAll();
+      gs.slice(0, 6).forEach(function(g){ loadViews(g).then(renderListings); });
+    });
+  };
+})();
+/*END-KIT-JS*/
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-7</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;

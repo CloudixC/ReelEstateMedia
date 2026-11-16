@@ -484,7 +484,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-11) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-12) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -4445,6 +4445,24 @@ function AppInner({
         projects,
         pay: db.settings.payUrl || '',
         svc: svcMenu,
+        ...(showBal ? {
+          sp: db.orders.filter(o => (o.clientId === clientId || o.coAgentId === clientId) && o.date && (o.items || []).length).map(o => {
+            const t = orderTotals(o);
+            const isCo2 = o.coAgentId === clientId && o.clientId !== clientId;
+            const cs = +o.coShare || 0;
+            const mine = o.coAgentId ? isCo2 ? cs : Math.max(0, t.total - cs) : t.total;
+            const fr = t.total > 0 ? mine / t.total : 0;
+            const r2 = n => Math.round(n * 100) / 100;
+            return {
+              d: o.date,
+              n: o.project || 'Order',
+              s: r2(t.sub * fr),
+              x: r2(t.tax * fr),
+              a: r2(mine),
+              pd: o.payment === 'paid' ? o.paidAt || o.date : ''
+            };
+          }).filter(r => r.a > 0)
+        } : {}),
         an: c.name || '',
         at: c.agentTitle || '',
         hd: c.headshot || '',
@@ -8283,6 +8301,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-12',
+  items: [['🧰', 'Agent hub: listings, leads, posting plan', 'Agents with listing work get a Listings tab: one card per address with everything made for it, a launch checklist, ready-made Just Listed / Open House graphics, MLS-ready and Instagram-sized photo downloads, and a seller report link. Showing requests and open-house sign-ins collect in a leads inbox. Every new piece gets a suggested post date. Clients who see their balance also get a yearly spending summary.']]
+}, {
   v: '2026.11.16-11',
   items: [['🧭', 'Agent hub: smoother from sign-in to approve', 'What’s waiting on an agent now sits at the top of their hub, Approve stays on screen in the review room, the rating ask is a card instead of a pop-up, More is tidier (Log out and light/dark at the top), and pieces from one package show their number (“Reel 2 of 5”).']]
 }, {
@@ -16068,7 +16089,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-11</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-12</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

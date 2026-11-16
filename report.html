@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Marketing report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAF8F5;--ink:#17171A;--dim:#5d5d63;--faint:#8e8e94;--line:rgba(23,23,26,.12);--red:#EA002A;--card:#fff}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:28px 18px 56px}
+.over{font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--red);font-weight:700}
+h1{font-size:clamp(30px,7vw,46px);font-weight:600;letter-spacing:-.02em;line-height:1.05;margin:10px 0 6px;text-wrap:balance}
+.sub{color:var(--dim);font-size:14.5px}
+.hero{width:100%;aspect-ratio:3/2;border-radius:18px;background:#e9e5df center/cover no-repeat;margin-top:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-top:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 12px}
+.stat b{display:block;font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{display:block;margin-top:8px;font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-top:12px}
+.card h2{font-size:12px;font-family:'Space Mono',ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:700}
+.note{font-size:17px;line-height:1.5;white-space:pre-wrap}
+ul.made{list-style:none;margin:0;padding:0}
+ul.made li{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+ul.made li:last-child{border-bottom:0}
+ul.made li i{font-style:normal;color:var(--red);font-weight:700;flex:0 0 auto}
+ul.made li.wip i{color:var(--faint)}
+ul.made li.wip{color:var(--dim)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:#fff;text-decoration:none;border-radius:999px;padding:13px 22px;font-family:'Space Mono',ui-monospace,Menlo,monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:4px}
+.agent{display:flex;gap:14px;align-items:center}
+.agent .ph{width:60px;height:60px;border-radius:50%;background:#e9e5df center/cover no-repeat;flex:0 0 auto}
+.agent b{display:block;font-size:17px;font-weight:600}
+.agent span{display:block;font-size:13px;color:var(--dim)}
+.agent a{color:var(--ink)}
+.foot{margin-top:26px;text-align:center;color:var(--faint);font-size:12px}
+.center{min-height:70vh;display:grid;place-items:center;text-align:center;color:var(--dim);padding:24px}
+</style>
+</head>
+<body>
+<div id="app"><div class="center">Opening the report…</div></div>
+<script>
+(function(){
+  var ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  var app = document.getElementById('app');
+  function esc(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function safeUrl(u){ u = String(u || '').trim(); return /^https:\/\//i.test(u) ? u : ''; }
+  function fail(t){ app.innerHTML = '<div class="center"><div><b style="display:block;font-size:20px;color:#17171A;margin-bottom:6px">' + esc(t) + '</b>Ask your agent for a fresh link.</div></div>'; }
+  var code = new URLSearchParams(location.search).get('x') || '';
+  if(!code){ fail('This link is missing its report.'); return; }
+  fetch(ENDPOINT + '?link=' + encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(j){
+    if(!j || !j.ok || !j.qs){ fail('We couldn’t find this report.'); return; }
+    var q = new URLSearchParams(String(j.qs)); var d = null;
+    if(q.get('sr') === '1'){ try{ d = JSON.parse(q.get('d') || ''); }catch(e){ d = null; } }
+    if(!d || typeof d !== 'object'){ fail('We couldn’t find this report.'); return; }
+    render(d);
+  }).catch(function(){ fail('Couldn’t load the report — check your connection.'); });
+
+  function render(d){
+    var ag = (d.ag && typeof d.ag === 'object') ? d.ag : {};
+    var when = ''; try{ var dt = new Date(+d.at); if(!isNaN(dt)) when = dt.toLocaleDateString('en-CA', {year: 'numeric', month: 'long', day: 'numeric'}); }catch(e){}
+    var hero = safeUrl(d.hero), page = safeUrl(d.page), hd = safeUrl(ag.hd);
+    var made = Array.isArray(d.made) ? d.made.slice(0, 30) : [], doing = Array.isArray(d.doing) ? d.doing.slice(0, 30) : [];
+    document.title = (d.addr ? String(d.addr) + ' — ' : '') + 'Marketing report';
+    var stats = [];
+    if(d.views != null && isFinite(+d.views)) stats.push([+d.views, 'Listing page views']);
+    stats.push([+d.show || 0, 'Showing requests']);
+    stats.push([+d.oh || 0, 'Open-house sign-ins']);
+    var first = String(ag.n || '').split(' ')[0];
+    var h = '<div class="wrap">' +
+      '<div class="over">Marketing report</div>' +
+      '<h1>' + esc(d.addr || 'Your home') + '</h1>' +
+      '<div class="sub">' + [d.price ? esc(d.price) : '', when ? 'Updated ' + esc(when) : ''].filter(Boolean).join(' · ') + '</div>' +
+      (hero ? '<div class="hero" id="hero"></div>' : '') +
+      '<div class="stats">' + stats.map(function(s){ return '<div class="stat"><b>' + esc(s[0]) + '</b><span>' + esc(s[1]) + '</span></div>'; }).join('') + '</div>' +
+      (d.note ? '<div class="card"><h2>A note from ' + esc(first || 'your agent') + '</h2><div class="note">' + esc(d.note) + '</div></div>' : '') +
+      ((made.length || doing.length || page) ? '<div class="card"><h2>What’s been done to market your home</h2><ul class="made">' +
+        made.map(function(t){ return '<li><i>✓</i><span>' + esc(t) + '</span></li>'; }).join('') +
+        (page ? '<li><i>✓</i><span>A dedicated web page for your home, live online</span></li>' : '') +
+        doing.map(function(t){ return '<li class="wip"><i>…</i><span>' + esc(t) + ' — in progress</span></li>'; }).join('') +
+        '</ul>' + (page ? '<div style="margin-top:14px"><a class="btn" id="pagebtn" target="_blank" rel="noopener">See your listing page →</a></div>' : '') + '</div>' : '') +
+      (ag.n ? '<div class="card"><h2>Your agent</h2><div class="agent">' + (hd ? '<span class="ph" id="agph"></span>' : '') + '<div><b>' + esc(ag.n) + '</b><span>' + esc([ag.t, ag.b].filter(Boolean).join(' · ')) + '</span>' +
+        '<span>' + [ag.ph ? '<a id="agtel">' + esc(ag.ph) + '</a>' : '', ag.em ? '<a id="agem">' + esc(ag.em) + '</a>' : ''].filter(Boolean).join(' · ') + '</span></div></div></div>' : '') +
+      '<div class="foot">Photography and video by Reel Estate Media</div></div>';
+    app.innerHTML = h;
+    var e;
+    if((e = document.getElementById('hero'))) e.style.backgroundImage = 'url("' + hero.replace(/["\\\n]/g, '') + '")';
+    if((e = document.getElementById('agph'))) e.style.backgroundImage = 'url("' + hd.replace(/["\\\n]/g, '') + '")';
+    if((e = document.getElementById('pagebtn'))) e.setAttribute('href', page);
+    if((e = document.getElementById('agtel'))) e.setAttribute('href', 'tel:' + String(ag.ph).replace(/[^\d+]/g, ''));
+    if((e = document.getElementById('agem')) && /^[^\s@<>"']+@[^\s@<>"']+$/.test(String(ag.em))) e.setAttribute('href', 'mailto:' + String(ag.em));
+  }
+})();
+</script>
+<div id="verstamp" title="App version" style="display:block;width:max-content;margin:0 auto 18px;font:600 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.05em;color:rgba(120,120,120,.5)">REPORT v2026.11.16-1</div>
+</body>
+</html>
