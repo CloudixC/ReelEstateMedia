@@ -127,6 +127,34 @@ h1{font-family:var(--serif);font-weight:420;font-size:clamp(32px,8.5vw,44px);lin
 h1 em{font-style:italic;font-weight:480;color:var(--red2)}
 h1 .p{color:var(--red)}
 .heysub{color:var(--dim);font-size:14.5px;margin-top:10px;max-width:42ch}
+.heysub b{color:var(--amber);font-weight:600}
+/* ⭐ rating ask — a quiet card on Home (it used to be a pop-up over whatever you were doing) */
+#rateslot:not(:empty){margin-top:14px}
+.ratecard{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;border:1px solid var(--line2);border-radius:16px;padding:13px 40px 13px 16px;position:relative;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%)}
+.ratecard .rc-t{flex:1 1 170px;min-width:0}
+.ratecard .rc-t b{display:block;font-family:var(--serif);font-weight:520;font-size:15px}
+.ratecard .rc-t span{display:block;font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-stars{display:flex;gap:1px}
+.rc-star{background:none;border:0;color:var(--faint);font-size:27px;line-height:1;cursor:pointer;padding:2px 4px;transition:color .12s ease,transform .12s ease}
+.rc-star:hover,.rc-star:focus-visible{color:var(--amber);transform:scale(1.12);outline:none}
+.rc-x{position:absolute;top:6px;right:6px;background:none;border:0;color:var(--faint);font-size:13px;cursor:pointer;padding:7px}
+body.light .ratecard{background:#fff}
+/* 👤 account card + appearance switch (More tab) */
+.acctrow{display:flex;align-items:center;gap:10px 12px;justify-content:space-between;flex-wrap:wrap}
+.acctwho{font-size:13.5px;color:var(--dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 150px}
+.acctlbl{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.thseg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;padding:3px;gap:2px;flex:0 0 auto}
+.thseg button{appearance:none;background:none;border:0;color:var(--dim);font-family:var(--sans);font-size:12px;line-height:1;padding:7px 13px;border-radius:999px;cursor:pointer;width:auto;margin:0}
+.thseg button.on{background:var(--txt);color:var(--bg);font-weight:600}
+/* More tab: long forms fold away until wanted */
+.pcard.foldable > h3{cursor:pointer;position:relative;padding-right:26px}
+.pcard.foldable > h3::after{content:'\25BE';position:absolute;right:0;top:1px;color:var(--faint);font-size:14px;transition:transform .15s ease}
+.pcard.foldable.fold > h3{margin-bottom:0}
+.pcard.foldable.fold > h3::after{transform:rotate(-90deg)}
+.pcard.foldable.fold > *:not(h3){display:none !important}
+/* Library: the finals come first; the other buttons are quieter */
+.card.done .act .tbtn.postbtn{background:rgba(245,242,233,.03);color:var(--dim);border-color:var(--line2)}
+.librow .lt b span{font-size:inherit;color:inherit}
 /* the agent's headshot beside the greeting (from their profile in the Command Centre, else their brand kit) */
 .heyrow{display:flex;align-items:center;gap:16px}
 .heyrow h1{min-width:0}
@@ -410,10 +438,7 @@ body.light .wcard{background:linear-gradient(180deg,rgba(255,246,246,.9),rgba(25
 #previewbar button{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:20px;padding:4px 13px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 #previewbar button:hover{background:rgba(255,255,255,.28)}
 body.haspreview{padding-top:44px}
-#themefab{position:fixed;left:18px;bottom:88px;z-index:60;width:46px;height:46px;border-radius:50%;border:1px solid var(--line2);background:var(--panel2);color:var(--txt);font-size:19px;cursor:pointer;box-shadow:0 10px 26px -10px rgba(0,0,0,.5);display:grid;place-items:center;transition:transform .15s ease}
-#themefab:hover{transform:scale(1.08)}
-#themefab .auto{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;letter-spacing:.1em;background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;display:none}
-#themefab.isauto .auto{display:block}
+
 /* ---- 📑 bottom tab bar ---- */
 .vaultlink{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:13px 16px;border:1px solid rgba(128,128,128,.28);border-radius:14px;text-decoration:none;color:inherit;background:rgba(128,128,128,.08)}
 .vaultlink:hover{border-color:var(--red)}
@@ -658,6 +683,7 @@ html.lowfx body::before,html.lowfx body::after{display:none !important}
 html.lowfx *,html.lowfx *::before,html.lowfx *::after{animation:none !important}
 html.lowfx .confetti{display:none !important}
 body.tele-open::before,body.tele-open::after{animation-play-state:paused !important}
+@media(max-width:560px){.chatfab{width:48px !important;height:48px !important;font-size:20px !important;right:12px !important;bottom:84px !important}}
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
    an older device. One saved preference (rem_tele_power_v1) drives this and the teleprompter. */
@@ -697,6 +723,10 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
 </div>
 <div id="moretab" style="display:none">
 <div class="tabhead"><h2>More<span style="color:var(--red)">.</span></h2><span class="thsub">Your brand, your team, your account</span></div>
+<div class="pcard" id="acctwrap">
+  <div class="acctrow"><span class="acctwho" id="acctwho">Your account</span><button type="button" class="mini" id="logoutbtn" title="Sign out on this device — you’ll need your email and PIN (or access code) to get back in">Log out</button></div>
+  <div class="acctrow" style="margin-top:12px"><span class="acctlbl">Appearance</span><span class="thseg" id="themeseg"><button type="button" data-th="auto">Auto</button><button type="button" data-th="light">Light</button><button type="button" data-th="dark">Dark</button></span></div>
+</div>
 <div class="pcard" id="yearwrap" style="display:none">
   <h3>📈 Your <span id="yr-label">year</span> so far</h3>
   <div class="psub">The content bank you&rsquo;ve built with us — worth a mention when a colleague asks who does your videos. 😉</div>
@@ -729,7 +759,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bk-save">Save brand kit</button><span class="bstat" id="bk-stat"></span></div>
   <input type="file" id="bk-file" accept="image/*" style="display:none">
 </div>
-<div class="pcard" id="biowrap">
+<div class="pcard foldable fold" id="biowrap">
   <h3>🔗 Your link-in-bio page</h3>
   <div class="psub">A clean personal page for your Instagram bio — your headshot, your links, your brand. It updates the moment you save.</div>
   <div class="brow"><label>Tagline</label><input type="text" id="bio-blurb" maxlength="120" placeholder="Helping families move up in Mississauga · Royal LePage Pinnacle"></div>
@@ -739,7 +769,7 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bio-save">Save my page</button><button class="upbtn" id="bio-copy">🔗 Copy my bio link</button><a class="upbtn" id="bio-view" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">👁 Preview</a><button class="upbtn" id="bio-qr">🔳 QR code</button><span class="bstat" id="bio-stat"></span></div>
   <div class="biotaps" id="bio-taps"></div>
 </div>
-<div class="pcard" id="asstwrap">
+<div class="pcard foldable fold" id="asstwrap">
   <h3>👥 Assistant access</h3>
   <div class="psub">Give your assistant their own link — they see progress, fill shoot briefs and grab files. Your chat and billing stay private to you. Turn any link off with one tap.</div>
   <div id="asst-list"></div>
@@ -786,11 +816,6 @@ body.tele-open::before,body.tele-open::after{animation-play-state:paused !import
   </div>
 </div>
 <button id="installbtn" style="display:none;width:100%;margin-top:12px;border-radius:14px;padding:13px 16px;font-size:13.5px;cursor:pointer;font-family:var(--sans)">📲 Add to home screen — open your hub like an app</button>
-<div id="acctbox" style="margin-top:18px;text-align:center">
-  <div id="acctwho" style="font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:8px"></div>
-  <button id="logoutbtn" type="button" style="width:100%;border-radius:14px;padding:13px 16px;font-size:13.5px;cursor:pointer;font-family:var(--sans);border:1px solid var(--line2);background:transparent;color:var(--dim)">Log out</button>
-  <div style="font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.45">Signs you out on this device. You&rsquo;ll need your email and PIN (or access code) to get back in.</div>
-</div>
 </div>
 <a class="chatfab" id="chatfab" style="display:none" href="#" aria-label="Open your messages">💬<span class="fbadge" id="fbadge">0</span></a>
 <div class="note" id="foot" style="display:none">📌 Add this page to your home screen — every new project appears here automatically,<br>and moves across the pipeline as we work.</div>
@@ -877,7 +902,11 @@ function headOf(x){
   var top = custom || parts[0] || x.t || '';
   var rest = custom ? parts : parts.slice(1);
   var sub = [];
-  if(x.t && x.t !== top) sub.push(x.t);
+  // "Reel 2 of 5": pieces from one package used to read identically — the number rides on the second line
+  var nm = String(x.nm || ''), nOf = (nm.match(/\d+\s*(?:of|\/)\s*\d+/i) || [''])[0].replace(/\s*\/\s*/, ' of ');
+  var nmFits = nm && String(x.t || '') && nm.toLowerCase().indexOf(String(x.t).toLowerCase()) === 0;
+  if(x.t && x.t !== top) sub.push(nmFits ? nm : x.t);
+  if(nOf && !nmFits && top.indexOf(nOf) < 0) sub.push(x.t && x.t !== top ? nOf : nm);
   rest.forEach(function(v){ if(v !== top && top.toLowerCase().indexOf(v.toLowerCase()) < 0 && sub.indexOf(v) < 0) sub.push(v); });   // skip what the top line already says
   withs.forEach(function(v){ sub.push(v); });
   return {top: top, sub: sub.join(' \u00B7 ')};
@@ -953,7 +982,8 @@ function normalize(h){
     url: x.url || '', dt: x.dt || '', du: x.du ? 1 : 0, amt: +x.amt || 0,
     cp: x.cp || '', cp2: x.cp2 || '', lg: x.lg || '', th: x.th || '',
     br: (x.br && typeof x.br === 'object') ? x.br : null, lk: x.lk ? 1 : 0,
-    fo: x.fo || '', op: x.op || '', oi: x.oi || '', ru: x.ru || '', cu: x.cu || ''
+    fo: x.fo || '', op: x.op || '', oi: x.oi || '', ru: x.ru || '', cu: x.cu || '',
+    nm: String(x.nm || '')   // the piece's own name as the studio has it ("Reel 2 of 5") — tells same-package pieces apart
   }));
   return {agent: h.agent || h.n || '', brokerage: h.brokerage || '', items,
     pay: String(h.pay || ''), svc: Array.isArray(h.svc) ? h.svc : [],
@@ -1251,9 +1281,11 @@ function card(x, i, cls, pillHtml, btnTxt, soft, extraLine, extraAct, lib){
     '<div class="proj">' + esc(headOf(x).sub) + '</div></div>' + pillHtml + '</div>' +
     tracker(x) +
     (extraLine || '') +
-    ((x.url || extraAct) ? '<div class="act">' + (extraAct || '') +
-      (x.url ? '<a class="go' + (soft ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a>' : '') +
-      '</div>' : '') +
+    ((x.url || extraAct) ? (function(){
+      var isDone = cls.indexOf('done') > -1;   // a delivered piece leads with its files; captions, posting and sharing follow
+      var goLink = x.url ? '<a class="go' + ((soft && !isDone) ? ' soft' : '') + '" href="' + esc(x.url) + '">' + btnTxt + ' <span class="ar">→</span></a>' : '';
+      return '<div class="act">' + (isDone ? goLink + (extraAct || '') : (extraAct || '') + goLink) + '</div>';
+    })() : '') +
     '</div>';
 }
 let AGENTNAME = '', AGENTEMAIL = '', PAYURL = '';
@@ -1400,10 +1432,21 @@ function render(raw){
     '<div class="overline"><i></i>Your content · live pipeline</div>' +
     '<div class="heyrow"><img class="heyface" id="heyface" alt="" ' + (faceUrl ? 'src="' + esc(faceUrl) + '"' : 'style="display:none"') + ' onerror="this.style.display=\'none\'">' +
     '<h1>Hey <em>' + esc(h.agent || 'there') + '</em><span class="p">.</span></h1></div>' +
-    '<div class="heysub">Everything active, at a glance — your finished work lives in the 📚 Library tab below.</div>' +
-    '<div class="heroact"><a class="go" href="#">📅 Book a shoot <span class="ar">→</span></a></div>' +
+    '<div class="heysub">' + (rev.length
+      ? '<b>' + rev.length + '</b> ' + (rev.length === 1 ? 'piece is' : 'pieces are') + ' waiting on your review — that’s the one thing we need from you right now.'
+      : 'Everything active, at a glance — your finished work lives in the 📚 Library tab below.') + '</div>' +
+    (rev.length ? '' : '<div class="heroact"><a class="go" href="#">📅 Book a shoot <span class="ar">→</span></a></div>') +
     '</div></div>';
   if(ASSIST) html += '<div class="homeblk"><div class="assistbar">👥 Viewing <b>' + esc(h.agent || 'the agent') + '</b>&rsquo;s hub as <b>' + esc(ASSIST.n) + '</b> — follow progress, fill shoot briefs, grab files. Chat and billing stay with ' + esc((h.agent || 'the agent').split(' ')[0]) + '.</div></div>';
+  // 👀 what's waiting on the agent comes FIRST, straight under the greeting — it's the one thing we need from them
+  let i = 0;
+  if(rev.length){
+    html += '<div class="viewblk" data-view="review">';
+    html += '<div class="sec"><span class="no">01</span><span class="lbl">Waiting on your review</span><span class="cnt">' + rev.length + '</span></div>';
+    rev.forEach(x => html += card(x, i++, 'rev', '<span class="pill rev"><i></i>In review</span>', 'Review now'));
+    html += '</div>';
+    html += '<div class="homeblk"><div class="heroact" style="margin-top:4px"><a class="go soft" href="#">📅 Book a shoot <span class="ar">→</span></a></div></div>';
+  }
   if(recap.length){
     html += '<div class="homeblk"><div class="recap"><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
@@ -1438,18 +1481,12 @@ function render(raw){
         '<button type="button" class="mini renewbtn" data-ren="' + esc(g.any.id) + '" data-ro="' + esc(g.oi) + '" data-rp="' + esc(g.p) + '">🔁 Renew it</button></div>';
     }).join('') + '<div class="crh" style="margin:0 0 6px"><span>Same package again — we’ll confirm it and your new shoots appear here to book.</span></div></div></div>';
   })();
+  html += '<div class="homeblk"><div id="rateslot"></div></div>';
   if(items.length){
     html += '<div class="homeblk"><div class="stats">' +
       '<div class="stat rev"><b>' + rev.length + '</b><span>Your review</span></div>' +
       '<div class="stat"><b>' + work.length + '</b><span>In production</span></div>' +
       '<div class="stat done"><b>' + done.length + '</b><span>Delivered</span></div></div></div>';
-  }
-  let i = 0;
-  if(rev.length){
-    html += '<div class="viewblk" data-view="review">';
-    html += '<div class="sec"><span class="no">01</span><span class="lbl">Waiting on your review</span><span class="cnt">' + rev.length + '</span></div>';
-    rev.forEach(x => html += card(x, i++, 'rev', '<span class="pill rev"><i></i>In review</span>', 'Review now'));
-    html += '</div>';
   }
   if(work.length){
     html += '<div class="viewblk" data-view="production">';
@@ -1474,7 +1511,7 @@ function render(raw){
   if(done.length){
     const dsorted = done.slice().sort((y1, y2) => String(y2.dt || '').localeCompare(String(y1.dt || '')));
     html += '<div class="fileguide"><b>Which file goes where?</b> &nbsp;📱 Vertical reel → Instagram · TikTok · FB/IG Story &nbsp;·&nbsp; 🖥 Horizontal video → YouTube · MLS · listing sites &nbsp;·&nbsp; 📷 Photos → MLS &amp; print &nbsp;·&nbsp; 🔇 Need a music-free (MLS-safe) cut? Ask in chat.</div>';
-    html += '<a class="vaultlink" href="' + esc(vaultUrl()) + '"><span><b>🗄 Browse every photo &amp; clip</b><i>Your full vault — everything we’ve shot for you, in one gallery, with downloads.</i></span><em>Open →</em></a>';
+    html += '<a class="vaultlink" href="' + esc(vaultUrl()) + '"><span><b>🗄 Browse every photo &amp; clip</b><i>Everything we’ve shot for you, in one gallery, with downloads.</i></span><em>Open →</em></a>';
     if(done.length > 5) html += '<div class="libsearch"><input id="libsearch" type="search" placeholder="🔎 Search your library…"></div>';
     SHARE = {}; PERFT = {};
     dsorted.forEach((x, di) => {
@@ -1580,17 +1617,38 @@ function maybeAskRating(items){
     if(!recent) return;
     if(x.si >= 2 || x.dv){                            // shoot done (status ≥ 'Shot') → rate the shoot
       var ks = x.id + ':shoot';
-      if(done[ks] !== 'done' && !ratedSkippedSession(ks)) q.push({dref: x.id, phase: 'shoot', title: x.t, dt: x.dt || ''});
+      if(done[ks] !== 'done' && !ratedSkippedSession(ks)) q.push({dref: x.id, phase: 'shoot', title: headOf(x).top || x.t, dt: x.dt || ''});
     }
     if(x.dv){                                          // delivered → rate the edit
       var ke = x.id + ':edit';
-      if(done[ke] !== 'done' && !ratedSkippedSession(ke)) q.push({dref: x.id, phase: 'edit', title: x.t, dt: x.dt || ''});
+      if(done[ke] !== 'done' && !ratedSkippedSession(ke)) q.push({dref: x.id, phase: 'edit', title: headOf(x).top || x.t, dt: x.dt || ''});
     }
   });
   // most recent milestone first; within a project ask the shoot before the edit (chronological)
   q.sort(function(a2, b2){ if(String(b2.dt) !== String(a2.dt)) return String(b2.dt).localeCompare(String(a2.dt)); return (a2.phase === 'shoot' ? 0 : 1) - (b2.phase === 'shoot' ? 0 : 1); });
   RATE_Q = q.slice(0, 1);                              // ONE gentle ask per visit — never a wall of prompts
-  if(RATE_Q.length) rateWhenSettled();
+  renderRateCard();                                    // …and it's a card on Home now, never a pop-up over what they came to do
+}
+function renderRateCard(){
+  var slot = document.getElementById('rateslot'); if(!slot) return;
+  var it = RATE_Q[0];
+  if(!it || (typeof ASSIST !== 'undefined' && ASSIST) || (ratingModal && ratingModal.classList.contains('on'))){ slot.innerHTML = ''; return; }
+  var isShoot = it.phase === 'shoot';
+  slot.innerHTML = '<div class="ratecard"><div class="rc-t"><b>' + (isShoot ? 'How was your shoot?' : 'How did the final edit land?') + '</b><span>' + esc(it.title) + '</span></div>' +
+    '<div class="rc-stars" role="group" aria-label="Rate it">' + [1, 2, 3, 4, 5].map(function(n){ return '<button type="button" class="rc-star" data-rn="' + n + '" aria-label="' + n + ' star' + (n > 1 ? 's' : '') + '">★</button>'; }).join('') + '</div>' +
+    '<button type="button" class="rc-x" title="Not now" aria-label="Not now">✕</button></div>';
+  slot.onclick = function(e){
+    var st = e.target.closest ? e.target.closest('.rc-star') : null;
+    if(st){   // a star tap opens the full rating with that star already chosen — add a line if you like, then Send
+      var n = +st.getAttribute('data-rn');
+      RATE_CUR = RATE_Q.shift();
+      openRatingModal(RATE_CUR);
+      var ms = ratingModal.querySelector('.rstar[data-n="' + n + '"]'); if(ms) ms.click();
+      slot.innerHTML = '';
+      return;
+    }
+    if(e.target.closest && e.target.closest('.rc-x')){ var c = RATE_Q.shift(); if(c) ratedSkipSession(c.dref + ':' + c.phase); renderRateCard(); }
+  };
 }
 /* Ask only after the agent has actually engaged with the page — never on first paint. */
 var RATE_ARMED = false;
@@ -1607,10 +1665,11 @@ function rateWhenSettled(){
   };
   ['pointerdown', 'scroll', 'keydown'].forEach(function(ev){ window.addEventListener(ev, fire, true); });
 }
-function nextRating(){
-  if(!RATE_Q.length){ if(ratingModal) ratingModal.classList.remove('on'); return; }
-  RATE_CUR = RATE_Q.shift();
-  openRatingModal(RATE_CUR);
+function nextRating(){   // after a send or a "maybe later": close up; anything still unrated waits as the Home card
+  if(ratingModal) ratingModal.classList.remove('on');
+  var dn = ratedState();
+  RATE_Q = RATE_Q.filter(function(q2){ var k = q2.dref + ':' + q2.phase; return dn[k] !== 'done' && !ratedSkippedSession(k); });
+  renderRateCard();
 }
 function ensureRatingModal(){
   if(ratingModal) return ratingModal;
@@ -3273,6 +3332,7 @@ var TAB_VIEWS = {
   more: []
 };
 var curTab = 'home';
+try{ var _t0 = new URLSearchParams(location.search).get('tab'); if(_t0 && TAB_VIEWS[_t0]) curTab = _t0; }catch(eT){}
 /* 🚪 Log out — forget this device: the remembered sign-in, the remembered PIN and the push link, then back to the sign-in page */
 function hubLogout(){
   try{ localStorage.removeItem('rem_agent_v1'); }catch(e){}
@@ -3281,14 +3341,14 @@ function hubLogout(){
   location.href = 'login.html';
 }
 (function(){
-  var b = document.getElementById('logoutbtn'), box = document.getElementById('acctbox');
-  if(box && (typeof PREVIEW !== 'undefined' && PREVIEW)) box.style.display = 'none';   // the studio's preview of a hub isn't a signed-in agent
+  var b = document.getElementById('logoutbtn');
+  if(b && (typeof PREVIEW !== 'undefined' && PREVIEW)) b.style.display = 'none';   // the studio's preview of a hub isn't a signed-in agent
   if(b) b.addEventListener('click', hubLogout);
 })();
 function setTab(t){
   if(!TAB_VIEWS[t]) t = 'home';
   if(document.body.classList.contains('assist') && t === 'more') t = 'home';
-  if(t === 'more'){ var w = document.getElementById('acctwho'); if(w) w.textContent = AGENTNAME ? 'Signed in as ' + AGENTNAME + (AGENTEMAIL ? ' · ' + AGENTEMAIL : '') : ''; }
+  if(t === 'more'){ var w = document.getElementById('acctwho'); if(w) w.textContent = AGENTNAME ? 'Signed in as ' + AGENTNAME + (AGENTEMAIL ? ' · ' + AGENTEMAIL : '') : 'Your account'; }
   var switching = t !== curTab;
   curTab = t;
   document.body.setAttribute('data-tab', t);
@@ -3466,37 +3526,30 @@ else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
   })
   .catch(() => fail('Couldn’t load your content.', 'Check your connection and pull to refresh.'));
 
-/* ---- ☀️/🌙 theme: light by day (7am–7pm), dark by night, or your pick ---- */
+/* ---- ☀️/🌙 theme: light by day (7am–7pm), dark by night, or your pick — chosen in More → Appearance ---- */
 (function(){
   var KEY = 'rem_theme_v1';
-  var fab = document.createElement('button');
-  fab.id = 'themefab';
-  fab.innerHTML = '<span id="themeic"></span><span class="auto">AUTO</span>';
-  fab.title = 'Theme — tap to switch';
-  document.body.appendChild(fab);
-  function pref(){ try{ return localStorage.getItem(KEY) || 'auto'; }catch(e){ return 'auto'; } }
+  function pref(){ try{ var v = localStorage.getItem(KEY) || 'auto'; return (v === 'light' || v === 'dark') ? v : 'auto'; }catch(e){ return 'auto'; } }
   function isDay(){ var h = new Date().getHours(); return h >= 7 && h < 19; }
   function apply(){
     var m = pref();
     var light = m === 'light' || (m === 'auto' && isDay());
     document.body.classList.toggle('light', light);
-    fab.classList.toggle('isauto', m === 'auto');
-    document.getElementById('themeic').textContent = light ? '🌙' : '☀️';
-    fab.title = m === 'auto' ? 'Theme: Auto (light by day, dark by night) — tap to pick' : (light ? 'Theme: Light — tap for dark' : 'Theme: Dark — tap for auto');
+    document.querySelectorAll('#themeseg [data-th]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-th') === m); });
   }
-  fab.addEventListener('click', function(){
-    var m = pref();
-    var next = m === 'auto' ? (isDay() ? 'dark' : 'light') : (m === 'light' ? 'dark' : m === 'dark' ? 'auto' : 'auto');
-    // cycle: auto -> (opposite of current) -> other -> auto
-    if(m === 'auto') next = isDay() ? 'dark' : 'light';
-    else if(m === 'light') next = 'dark';
-    else next = 'auto';
-    try{ localStorage.setItem(KEY, next); }catch(e){}
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('#themeseg [data-th]') : null; if(!b) return;
+    try{ localStorage.setItem(KEY, b.getAttribute('data-th')); }catch(e2){}
     apply();
   });
   apply();
   setInterval(apply, 10 * 60 * 1000);   // auto mode flips at sunset even if the tab stays open
 })();
+/* More tab: tap a folded card's title to open it */
+document.addEventListener('click', function(e){
+  var h3 = e.target.closest ? e.target.closest('.pcard.foldable > h3') : null;
+  if(h3) h3.parentElement.classList.toggle('fold');
+});
 
 /* ---- 🔔 web push notifications (OneSignal) ---- */
 function osIsIOS(){ return /iP(hone|ad|od)/.test(navigator.userAgent); }
@@ -3549,7 +3602,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   }catch(e){}
 });
 
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-5</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-6</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
