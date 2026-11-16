@@ -821,6 +821,18 @@ body.light .kgprev,body.light .kgcard .bact{background:#fff}
   .kcanvas{max-height:calc(88vh - 215px)}
   .kgcard .bact{position:static;margin:16px 0 0;padding:0;background:none;border:0}
 }
+.aud{border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-top:8px;background:var(--panel)}
+body.light .aud{background:#fff}
+.audh{display:flex;gap:10px;align-items:flex-start}
+.audn{flex:1;min-width:0}
+.audn b{display:block;font-family:var(--serif);font-weight:520;font-size:15.5px;line-height:1.25}
+.audn span{display:block;font-size:12.5px;color:var(--dim);margin-top:2px}
+.audb{font-style:normal;color:#3fae7a;font-weight:600}
+.audw{font-size:12.5px;color:var(--txt);opacity:.86;margin-top:7px;line-height:1.45}
+.auda{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.auda .mini{cursor:pointer;padding:7px 10px;font-size:10px}
+.audsv{appearance:none;background:none;border:1px solid var(--line2);color:var(--dim);border-radius:999px;padding:6px 11px;font-family:var(--sans);font-size:12px;cursor:pointer;width:auto;margin:0;white-space:nowrap;flex:0 0 auto}
+.audsv.on{background:var(--txt);color:var(--bg);border-color:var(--txt);font-weight:600}
 /*END-KIT-CSS*/
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
@@ -1588,7 +1600,7 @@ function render(raw){
     html += '<div class="homeblk"><div class="heroact" style="margin-top:4px"><a class="go soft" href="#">📅 Book a shoot <span class="ar">→</span></a></div></div>';
   }
   // 🧰 toolkit slots on Home: new leads, and anything due on the posting plan
-  html += '<div class="homeblk"><div class="kslot" id="leadslot"></div><div class="kslot" id="planslot"></div></div>';
+  html += '<div class="homeblk"><div class="kslot" id="leadslot"></div><div class="kslot" id="planslot"></div><div class="kslot" id="audioslot"></div></div>';
   if(recap.length){
     html += '<div class="homeblk"><div class="recap"><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
@@ -3755,10 +3767,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
    sized photo downloads, seller report, yearly summary.
    Reads: the hub manifest (items), the hub chat thread (📩 lead messages the listing pages post), the listing directory
    (review state 'lldir-<hub>'), page views (?biohits=ll-<id>), Drive folder listings (the hub's Drive key).
-   Writes: ONE small state blob — review state 'kit-<hub>' — {ld: lead status, pl: posting plan, ck: checklists, sr: seller-report codes}.
+   Writes: ONE small state blob — review state 'kit-<hub>' — {ld: lead status, pl: posting plan, ck: checklists, sr: seller-report codes, au: saved songs}.
+   Also reads the weekly trending-audio list (review state 'trend-audio', published from the Command Centre).
    Nothing is written in studio preview. */
 (function(){
-  var KIT = {items: [], raw: {}, state: {ld: {}, pl: {}, ck: {}, sr: {}}, stateLoaded: false, leads: [], leadsLoaded: false, dir: null, views: {}, files: {}, open: {}, filter: 'all'};
+  var KIT = {items: [], raw: {}, state: {ld: {}, pl: {}, ck: {}, sr: {}, au: {}}, stateLoaded: false, leads: [], leadsLoaded: false, dir: null, views: {}, files: {}, open: {}, filter: 'all'};
   window.__KIT = KIT;
   var $id = function(id){ return document.getElementById(id); };
   var canWrite = function(){ return !(typeof PREVIEW !== 'undefined' && PREVIEW); };
@@ -3788,7 +3801,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function loadState(){
     return fetch(ENDPOINT + '?review=' + encodeURIComponent('kit-' + a)).then(function(r){ return r.json(); }).then(function(j){
       var s = (j && j.state) || {};
-      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}};
+      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}, au: (s.au && typeof s.au === 'object') ? s.au : {}};
       KIT.stateLoaded = true;
     }).catch(function(){ KIT.stateLoaded = false; });
   }
@@ -4989,6 +5002,84 @@ window.OneSignalDeferred.push(async function(OneSignal){
     return '﻿' + [['Date', 'Order', 'Subtotal', 'HST', 'Total', 'Paid on']].concat(rows.map(function(r){ return [r.d, r.n, (+r.s || 0).toFixed(2), (+r.x || 0).toFixed(2), (+r.a || 0).toFixed(2), r.pd || '']; })).map(function(r){ return r.map(q).join(','); }).join('\r\n');
   }
 
+  /* ---------------- 🎵 trending audio: the weekly list (review state 'trend-audio', published from the Command Centre) + the agent's saved songs ---------------- */
+  var AUD = {list: null, loaded: false, tab: 'week'};
+  var AUDG = [['t', 'Trending now'], ['h', 'Good for home tours'], ['s', 'Seasonal']];
+  function audUrl(u, kind){
+    u = String(u || '').trim(); if(u.length > 300 || /["'<>\s\\]/.test(u)) return '';
+    if(kind === 'tt') return /^https:\/\/(www\.|vm\.|m\.)?tiktok\.com\//i.test(u) ? u : '';
+    return /^https:\/\/(www\.)?instagram\.com\//i.test(u) ? u : '';
+  }
+  function audClean(x){
+    if(!x || typeof x !== 'object') return null;
+    var t = String(x.t || '').trim().slice(0, 90), ar = String(x.a || '').trim().slice(0, 90); if(!t) return null;
+    var id = String(x.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 70) || norm(t + ' ' + ar).replace(/ /g, '-').slice(0, 70); if(!id) return null;
+    return {id: id, t: t, a: ar, n: String(x.n || '').trim().slice(0, 180), tt: audUrl(x.tt, 'tt'), ig: audUrl(x.ig, 'ig'), g: /^[ths]$/.test(String(x.g)) ? String(x.g) : 't', b: x.b ? 1 : 0};
+  }
+  function loadAudio(){
+    return fetch(ENDPOINT + '?review=trend-audio').then(function(r){ return r.json(); }).then(function(j){
+      var s = (j && j.state) || null, items = [], seen = {};
+      if(s && Array.isArray(s.items)) s.items.slice(0, 40).forEach(function(x){ var c = audClean(x); if(c && !seen[c.id]){ seen[c.id] = 1; items.push(c); } });
+      var at = s ? +new Date(s.at) : 0;
+      AUD.list = items.length ? {at: isFinite(at) ? at : 0, items: items} : null; AUD.loaded = true;
+    }).catch(function(){ AUD.loaded = true; });
+  }
+  function audSaved(){ var o = KIT.state.au || {}; return Object.keys(o).map(function(k){ var c = audClean(o[k]); if(c){ c.id = k; c.at = +o[k].at || 0; } return c; }).filter(Boolean).sort(function(x, y){ return y.at - x.at; }); }
+  function audSeen(){ try{ return +localStorage.getItem('kit_audio_seen_v1') || 0; }catch(e){ return 0; } }
+  function audWhen(ms){ try{ return new Date(ms).toLocaleDateString('en-CA', {month: 'short', day: 'numeric'}); }catch(e){ return ''; } }
+  function renderAudioHome(){
+    var s = $id('audioslot'); if(!s) return;
+    var n = AUD.list ? AUD.list.items.length : 0, sv = audSaved().length;
+    if(!n && !sv){ s.innerHTML = ''; return; }
+    var fresh = n && AUD.list.at > audSeen();
+    var sub = n ? (n + ' song' + (n === 1 ? '' : 's') + (AUD.list.at ? ' · updated ' + esc(audWhen(AUD.list.at)) : '') + (sv ? ' · ' + sv + ' saved' : '')) : (sv + ' saved song' + (sv === 1 ? '' : 's'));
+    s.innerHTML = '<button type="button" class="khome" data-kaudio="1"><span class="ki">🎵</span><span class="kt"><b>' + (n ? 'Trending audio this week' : 'Your saved audio') + '</b><span>' + sub + '</span></span><span class="ka">' + (fresh ? 'New →' : 'Open →') + '</span></button>';
+  }
+  function audRow(c, saved){
+    var q = function(v){ return esc(v).replace(/"/g, '&quot;'); };
+    var find = 'https://www.tiktok.com/search?q=' + encodeURIComponent(c.t + ' ' + c.a);
+    return '<div class="aud" data-aud="' + q(c.id) + '"><div class="audh"><div class="audn"><b>' + esc(c.t) + '</b><span>' + esc(c.a || 'Original audio') + (c.b ? ' · <i class="audb">OK for business accounts</i>' : '') + '</span></div>' +
+      '<button type="button" class="audsv' + (saved ? ' on' : '') + '" data-audsave="1" aria-pressed="' + (saved ? 'true' : 'false') + '">' + (saved ? '★ Saved' : '☆ Save') + '</button></div>' +
+      (c.n ? '<div class="audw">' + esc(c.n) + '</div>' : '') +
+      '<div class="auda"><a class="mini" target="_blank" rel="noopener" href="' + q(c.tt || find) + '">' + (c.tt ? 'Open in TikTok' : 'Find on TikTok') + ' ↗</a>' +
+      (c.ig ? '<a class="mini" target="_blank" rel="noopener" href="' + q(c.ig) + '">Open in Instagram ↗</a>' : '') +
+      '<button type="button" class="mini" data-audcopy="1">Copy name</button></div></div>';
+  }
+  function audBody(){
+    var sv = audSaved(), has = {}; sv.forEach(function(c){ has[c.id] = 1; });
+    var week = AUD.list ? AUD.list.items : [];
+    var h = '<div class="kchips" style="margin-top:12px"><button type="button" class="kchip' + (AUD.tab === 'week' ? ' on' : '') + '" data-audtab="week">This week (' + week.length + ')</button><button type="button" class="kchip' + (AUD.tab === 'saved' ? ' on' : '') + '" data-audtab="saved">Saved (' + sv.length + ')</button></div>';
+    if(AUD.tab === 'saved'){
+      h += sv.length ? sv.map(function(c){ return audRow(c, true); }).join('') : '<div class="kempty" style="margin-top:12px">Nothing saved yet. Tap ☆ Save on a song and it stays here — even after the weekly list changes.</div>';
+    } else if(!week.length){
+      h += '<div class="kempty" style="margin-top:12px">This week’s list isn’t out yet. Your saved songs are still under Saved.</div>';
+    } else {
+      AUDG.forEach(function(g){ var rows = week.filter(function(c){ return c.g === g[0]; }); if(!rows.length) return;
+        h += '<div class="klbl">' + g[1] + '</div>' + rows.map(function(c){ return audRow(c, !!has[c.id]); }).join(''); });
+    }
+    return h;
+  }
+  function openAudio(){
+    if(AUD.list && AUD.list.at){ try{ localStorage.setItem('kit_audio_seen_v1', String(AUD.list.at)); }catch(e){} }
+    if(!AUD.list && audSaved().length) AUD.tab = 'saved';
+    openModal('<h3>🎵 Trending audio</h3><div class="bsub">' + (AUD.list && AUD.list.at ? 'Updated ' + esc(audWhen(AUD.list.at)) + '. ' : '') + 'Open a song in the app and tap “Use audio” to post with it. Save the ones you like — saved songs stay here when the list changes.</div>' +
+      '<div id="aud-body">' + audBody() + '</div>' +
+      '<div class="bsub" style="margin:16px 0 0">On a business account? Some popular songs won’t show up when you search — the apps only give business accounts their commercial library. If one is missing, pick another or use an “Original audio”. Music is added in the app when you post; it isn’t part of the video file.</div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button></div>');
+    renderAudioHome();
+  }
+  function audFind(id){ var all = (AUD.list ? AUD.list.items : []).concat(audSaved()); for(var i = 0; i < all.length; i++){ if(all[i].id === id) return all[i]; } return null; }
+  function audToggle(id){
+    var c = audFind(id); if(!c) return;
+    if(!canWrite()){ say('Preview only — nothing is saved.'); return; }
+    if(!KIT.stateLoaded){ say('Couldn’t reach your saved songs — check your connection and reopen the hub.'); return; }
+    var o = KIT.state.au || (KIT.state.au = {});
+    if(o[id]){ delete o[id]; say('Removed from your saved songs.'); }
+    else { if(Object.keys(o).length >= 80){ say('You’ve saved 80 songs — remove one to save another.'); return; }
+      o[id] = {t: c.t, a: c.a, n: c.n, tt: c.tt, ig: c.ig, g: c.g, b: c.b, at: Date.now()}; say('★ Saved — it stays under Saved.'); }
+    save(); var b = $id('aud-body'); if(b) b.innerHTML = audBody(); renderAudioHome();
+  }
+
   /* ---------------- wiring ---------------- */
   function setCheck(g, k, val, onlyOn){
     var o = KIT.state.ck[g.key] || (KIT.state.ck[g.key] = {});
@@ -4996,9 +5087,14 @@ window.OneSignalDeferred.push(async function(OneSignal){
     save(); renderListings();
   }
   function groupOf(el){ var c = el.closest ? el.closest('[data-lk]') : null; if(!c) return null; var k = c.getAttribute('data-lk'); return listings().filter(function(g){ return g.key === k; })[0] || null; }
-  function renderAll(){ renderListings(); renderPlan(); renderHome(); renderSpendBtn(); }
+  function renderAll(){ renderListings(); renderPlan(); renderHome(); renderAudioHome(); renderSpendBtn(); }
   document.addEventListener('click', function(e){
     var t = e.target; if(!t || !t.closest) return;
+    if(t.closest('[data-kaudio]')){ openAudio(); return; }
+    var at2 = t.closest('[data-audtab]'); if(at2){ AUD.tab = at2.getAttribute('data-audtab'); var ab = $id('aud-body'); if(ab) ab.innerHTML = audBody(); return; }
+    var ar2 = t.closest('[data-aud]');
+    if(ar2 && t.closest('[data-audsave]')){ audToggle(ar2.getAttribute('data-aud')); return; }
+    if(ar2 && t.closest('[data-audcopy]')){ var sc = audFind(ar2.getAttribute('data-aud')); if(sc) copy(sc.t + (sc.a ? ' ' + sc.a : ''), function(){ say('Copied — paste it into the app’s audio search.'); }); return; }
     var go = t.closest('[data-kgo]'); if(go){ try{ setTab(go.getAttribute('data-kgo')); window.scrollTo(0, 0); }catch(e1){} return; }
     var sp = t.closest('[data-kspend]'); if(sp){ openSpend(sp.getAttribute('data-kspend')); return; }
     if(t.closest('[data-ssclose]')){ var sh = $id('spendsheet'); if(sh) sh.classList.remove('on'); return; }
@@ -5039,6 +5135,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     renderAll();
     if(KIT.booted) return;
     KIT.booted = true;
+    loadAudio().then(renderAudioHome);
     Promise.all([loadState(), loadLeads(), loadDir()]).then(function(){
       if(seedPlan()) save();
       var gs = listings(); if(gs.length){ KIT.open[gs[0].key] = true; }
@@ -5049,7 +5146,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-18</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-19</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
