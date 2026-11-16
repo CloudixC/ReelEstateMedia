@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-12) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-13) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -8247,6 +8247,366 @@ function CleanupModal({
     }
   }, "Remove")))))));
 }
+const AUDIO_GROUPS = [['t', 'Trending now'], ['h', 'Good for home tours'], ['s', 'Seasonal']];
+function audioLink(u, kind) {
+  u = String(u || '').trim();
+  if (!u || u.length > 300 || /["'<>\s\\]/.test(u)) return '';
+  return (kind === 'tt' ? /^https:\/\/(www\.|vm\.|m\.)?tiktok\.com\//i : /^https:\/\/(www\.)?instagram\.com\//i).test(u) ? u : '';
+}
+function audioId(t, a) {
+  return (String(t || '') + ' ' + String(a || '')).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/ /g, '-').slice(0, 70);
+}
+function cleanAudioList(items) {
+  const seen = {},
+    out = [];
+  (Array.isArray(items) ? items : []).forEach(x => {
+    if (!x || typeof x !== 'object') return;
+    const t = String(x.t || '').trim().slice(0, 90),
+      a = String(x.a || '').trim().slice(0, 90);
+    if (!t) return;
+    const id = audioId(t, a);
+    if (!id || seen[id]) return;
+    seen[id] = 1;
+    out.push({
+      id,
+      t,
+      a,
+      n: String(x.n || '').trim().slice(0, 180),
+      tt: audioLink(x.tt, 'tt'),
+      ig: audioLink(x.ig, 'ig'),
+      g: /^[ths]$/.test(String(x.g)) ? String(x.g) : 't',
+      b: x.b ? 1 : 0
+    });
+  });
+  return out.slice(0, 30);
+}
+function TrendingAudioPanel({
+  db,
+  more
+}) {
+  const inbox = db.settings.inboxUrl;
+  const [st, setSt] = useState({
+    loaded: false,
+    live: null,
+    draft: null
+  });
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [sure, setSure] = useState(false);
+  useEffect(() => {
+    if (!inbox) return;
+    let dead = false;
+    const get = ref => fetch(inbox + '?review=' + encodeURIComponent(ref)).then(r => r.json()).then(j => j && j.state || null).catch(() => null);
+    Promise.all([get('trend-audio'), get('trend-audio-draft')]).then(([live, draft]) => {
+      if (!dead) setSt({
+        loaded: true,
+        live,
+        draft
+      });
+    });
+    return () => {
+      dead = true;
+    };
+  }, [inbox]);
+  const at = x => {
+    const n = x ? +new Date(x.at) : 0;
+    return isFinite(n) ? n : 0;
+  };
+  const when = x => {
+    const n = at(x);
+    return n ? new Date(n).toLocaleDateString('en-CA', {
+      month: 'short',
+      day: 'numeric'
+    }) : '';
+  };
+  const liveN = st.live && Array.isArray(st.live.items) ? st.live.items.length : 0;
+  const draftN = st.draft && Array.isArray(st.draft.items) ? st.draft.items.length : 0;
+  const pending = draftN > 0 && at(st.draft) > at(st.live);
+  if (!inbox || !st.loaded) return null;
+  if (!pending && !more && !rows && !msg) return null;
+  const edit = from => {
+    setMsg('');
+    setSure(false);
+    setRows((from && from.items || []).filter(x => x && typeof x === 'object').slice(0, 30).map(x => ({
+      t: String(x.t || ''),
+      a: String(x.a || ''),
+      n: String(x.n || ''),
+      tt: String(x.tt || ''),
+      ig: String(x.ig || ''),
+      g: /^[ths]$/.test(String(x.g)) ? String(x.g) : 't',
+      b: !!x.b
+    })));
+  };
+  const setRow = (i, k, v) => setRows(rows.map((r, j) => j === i ? {
+    ...r,
+    [k]: v
+  } : r));
+  const post = async items => {
+    const body = {
+      v: 1,
+      at: new Date().toISOString(),
+      items
+    };
+    const r = await fetch(inbox, {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: 'review',
+        ref: 'trend-audio',
+        project: 'Trending audio',
+        dname: '',
+        who: 'cc',
+        body: JSON.stringify(body)
+      })
+    });
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok) throw new Error('save');
+    setSt(s => ({
+      ...s,
+      live: body
+    }));
+  };
+  const publish = async () => {
+    const items = cleanAudioList(rows);
+    if (!items.length) {
+      setMsg('Add at least one song with a title.');
+      return;
+    }
+    if (IS_BETA) {
+      setMsg('Publishing is off in the beta copy — use the live Command Centre.');
+      return;
+    }
+    setBusy(true);
+    setMsg('');
+    try {
+      await post(items);
+      setRows(null);
+      setMsg('✓ Published — ' + items.length + ' song' + (items.length === 1 ? '' : 's') + ' are on every agent’s Home tab.');
+    } catch (e) {
+      setMsg('Couldn’t publish — check your connection and try again.');
+    }
+    setBusy(false);
+  };
+  const takeDown = async () => {
+    if (!sure) {
+      setSure(true);
+      return;
+    }
+    if (IS_BETA) {
+      setMsg('Publishing is off in the beta copy — use the live Command Centre.');
+      return;
+    }
+    setBusy(true);
+    setSure(false);
+    try {
+      await post([]);
+      setMsg('✓ Taken down — agents keep the songs they saved.');
+    } catch (e) {
+      setMsg('Couldn’t take it down — try again.');
+    }
+    setBusy(false);
+  };
+  const badLink = (v, kind) => !!String(v || '').trim() && !audioLink(v, kind);
+  const src = st.draft && Array.isArray(st.draft.src) ? st.draft.src.filter(x => typeof x === 'string').slice(0, 8).join(' · ') : '';
+  return React.createElement("div", {
+    className: 'card' + (pending ? ' today' : ''),
+    "data-audio-panel": true
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      flexWrap: 'wrap',
+      gap: 8
+    }
+  }, React.createElement("h3", {
+    style: {
+      marginBottom: 0
+    }
+  }, "🎵 ", pending ? 'This week’s trending audio is ready to check' : 'Trending audio for agents'), React.createElement("span", {
+    className: "spacer"
+  }), !rows && pending && React.createElement("button", {
+    className: "btn sm",
+    "data-audio-review": true,
+    onClick: () => edit(st.draft)
+  }, "Review & publish"), !rows && !pending && React.createElement("button", {
+    className: "btn ghost sm",
+    "data-audio-edit": true,
+    onClick: () => edit(st.live)
+  }, liveN ? 'Edit the live list' : 'Start a list')), React.createElement("p", {
+    className: "small faint",
+    style: {
+      margin: '8px 0 0'
+    }
+  }, pending ? `${draftN} song${draftN === 1 ? '' : 's'} drafted ${when(st.draft)}. Agents see nothing until you publish. ` : '', liveN ? `Live now: ${liveN} song${liveN === 1 ? '' : 's'}, published ${when(st.live)}.` : 'Nothing is live — agents don’t see the card yet.', !rows && liveN > 0 && React.createElement(React.Fragment, null, " ", React.createElement("button", {
+    className: "btn ghost sm",
+    style: {
+      marginLeft: 8
+    },
+    "data-audio-down": true,
+    disabled: busy,
+    onClick: takeDown
+  }, sure ? 'Tap again to take it down' : 'Take it down'))), msg && React.createElement("p", {
+    className: "small",
+    "data-audio-msg": true,
+    style: {
+      margin: '8px 0 0',
+      fontWeight: 700
+    }
+  }, msg), rows && React.createElement("div", {
+    style: {
+      marginTop: 14
+    }
+  }, src && React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginBottom: 10
+    }
+  }, "Drafted from: ", src), rows.map((r, i) => React.createElement("div", {
+    key: i,
+    "data-audio-row": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 10,
+      marginBottom: 8
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, React.createElement("input", {
+    style: {
+      flex: '2 1 180px',
+      minWidth: 0
+    },
+    placeholder: "Song title",
+    maxLength: 90,
+    value: r.t,
+    onChange: e => setRow(i, 't', e.target.value)
+  }), React.createElement("input", {
+    style: {
+      flex: '1 1 140px',
+      minWidth: 0
+    },
+    placeholder: "Artist",
+    maxLength: 90,
+    value: r.a,
+    onChange: e => setRow(i, 'a', e.target.value)
+  }), React.createElement("select", {
+    style: {
+      flex: '0 0 auto',
+      width: 'auto'
+    },
+    value: r.g,
+    onChange: e => setRow(i, 'g', e.target.value)
+  }, AUDIO_GROUPS.map(g => React.createElement("option", {
+    key: g[0],
+    value: g[0]
+  }, g[1]))), React.createElement("button", {
+    className: "btn ghost sm",
+    title: "Remove this song",
+    onClick: () => setRows(rows.filter((_, j) => j !== i))
+  }, "✕")), React.createElement("input", {
+    style: {
+      width: '100%',
+      marginTop: 8
+    },
+    placeholder: "Why it fits (one line agents will read)",
+    maxLength: 180,
+    value: r.n,
+    onChange: e => setRow(i, 'n', e.target.value)
+  }), React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      flexWrap: 'wrap',
+      marginTop: 8,
+      alignItems: 'center'
+    }
+  }, React.createElement("input", {
+    style: {
+      flex: '1 1 220px',
+      minWidth: 0
+    },
+    placeholder: "TikTok link to the sound (optional)",
+    value: r.tt,
+    onChange: e => setRow(i, 'tt', e.target.value)
+  }), audioLink(r.tt, 'tt') && React.createElement("a", {
+    className: "small",
+    href: audioLink(r.tt, 'tt'),
+    target: "_blank",
+    rel: "noopener"
+  }, "test ↗"), React.createElement("input", {
+    style: {
+      flex: '1 1 220px',
+      minWidth: 0
+    },
+    placeholder: "Instagram link to the audio (optional)",
+    value: r.ig,
+    onChange: e => setRow(i, 'ig', e.target.value)
+  }), audioLink(r.ig, 'ig') && React.createElement("a", {
+    className: "small",
+    href: audioLink(r.ig, 'ig'),
+    target: "_blank",
+    rel: "noopener"
+  }, "test ↗")), (badLink(r.tt, 'tt') || badLink(r.ig, 'ig')) && React.createElement("div", {
+    className: "small",
+    style: {
+      color: 'var(--red)',
+      marginTop: 6
+    }
+  }, badLink(r.tt, 'tt') ? 'That isn’t a tiktok.com link — it will be left out. ' : '', badLink(r.ig, 'ig') ? 'That isn’t an instagram.com link — it will be left out.' : ''), React.createElement("label", {
+    className: "small",
+    style: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'center',
+      marginTop: 8,
+      cursor: 'pointer'
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    style: {
+      width: 'auto'
+    },
+    checked: r.b,
+    onChange: e => setRow(i, 'b', e.target.checked)
+  }), " I’ve checked it: OK for business accounts"))), React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      flexWrap: 'wrap',
+      marginTop: 10
+    }
+  }, React.createElement("button", {
+    className: "btn ghost sm",
+    "data-audio-add": true,
+    disabled: rows.length >= 30,
+    onClick: () => setRows([...rows, {
+      t: '',
+      a: '',
+      n: '',
+      tt: '',
+      ig: '',
+      g: 't',
+      b: false
+    }])
+  }, "+ Add a song"), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: () => {
+      setRows(null);
+      setMsg('');
+    }
+  }, "Cancel"), React.createElement("button", {
+    className: "btn sm",
+    "data-audio-publish": true,
+    disabled: busy,
+    onClick: publish
+  }, busy ? 'Publishing…' : 'Publish to agents'))));
+}
 function UsagePanel() {
   const [u, setU] = useState(() => {
     try {
@@ -8302,6 +8662,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-13',
+  items: [['🎵', 'Trending audio for agents', 'Each Monday a draft list of trending TikTok and Instagram songs lands on Home here. Check it, fix anything, and press Publish — it then shows on every agent’s Home tab. Agents can save songs, and saved songs stay with them when the list changes. Nothing reaches agents until you publish.']]
+}, {
   v: '2026.11.16-12',
   items: [['🧰', 'Agent hub: listings, leads, posting plan', 'Agents with listing work get a Listings tab: one card per address with everything made for it, a launch checklist, ready-made Just Listed / Open House graphics, MLS-ready and Instagram-sized photo downloads, and a seller report link. Showing requests and open-house sign-ins collect in a leads inbox. Every new piece gets a suggested post date. Clients who see their balance also get a yearly spending summary.']]
 }, {
@@ -9393,7 +9756,10 @@ function Dashboard({
         });
       }
     }, "✓ Delivered"));
-  })), React.createElement("button", {
+  })), React.createElement(TrendingAudioPanel, {
+    db: db,
+    more: more
+  }), React.createElement("button", {
     type: "button",
     className: 'homemore' + (more ? ' on' : ''),
     "data-home-more": true,
@@ -16090,7 +16456,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-12</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-13</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
