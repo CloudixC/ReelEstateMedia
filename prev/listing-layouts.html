@@ -70,6 +70,7 @@
     '<a style="' + linkCss + '" href="' + live.replace(/"/g, '&quot;') + '">Live →</a>', '#6a2bd9');
 })();
 </script><!--/REM-STAGE-SHIM-->
+
 <meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Listing Layouts</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -3835,7 +3836,19 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         others.map(function(o){ return '<a href="'+esc(o.url)+'" style="display:block;border:1px solid rgba(127,127,127,.35);border-radius:14px;overflow:hidden;text-decoration:none;color:inherit">'+
           (o.hero ? '<span style="display:block;aspect-ratio:3/2;background:url(&quot;'+esc(o.hero)+'&quot;) center/cover"></span>' : '')+
           '<span style="display:block;padding:12px 14px"><b style="display:block;font-size:14.5px">'+esc(o.addr||'Listing')+'</b><span style="font-size:12.5px;opacity:.65">'+esc(o.price||'')+'</span></span></a>'; }).join('')+'</div></div>';
-      if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(sec, anchor); else (stage.firstElementChild || stage).appendChild(sec);
+      // Split Gallery: the root is a two-column grid with a fixed left panel — a block dropped into that grid slid up underneath the panel
+      // and covered the showing form. It belongs at the end of the scrolling photo column instead.
+      var spFlow = stage.querySelector('.sp > .flow');
+      if(spFlow){
+        var endP = spFlow.lastElementChild && /(^|\s)end(\s|$)/.test(spFlow.lastElementChild.className || '') ? spFlow.lastElementChild : null;
+        if(endP) spFlow.insertBefore(sec, endP); else spFlow.appendChild(sec);
+        return;
+      }
+      if(anchor && anchor.parentNode){ anchor.parentNode.insertBefore(sec, anchor); return; }
+      var root = stage.firstElementChild, disp = '';
+      try{ disp = root ? getComputedStyle(root).display : ''; }catch(eD){}
+      if(root && /grid|flex/.test(disp)) root.parentNode.insertBefore(sec, root.nextSibling);   // never become a stray cell of a grid/flex layout
+      else (root || stage).appendChild(sec);
     }
     function injectExtras(){
       try{ offerBanner(); }catch(e){}
@@ -4083,5 +4096,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-1</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-2</div>
 </body></html>

@@ -803,7 +803,14 @@ body.light .kitm input[type=text],body.light .kitm textarea,body.light .kitm sel
 .ksws{display:flex;gap:9px;flex-wrap:wrap}
 .ksw{appearance:none;width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;padding:0;margin:0}
 .ksw.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--txt)}
-.kgv1 .kg3,.kgv1 .kg2{display:none}
+.kgv1 .kg3,.kgv1 .kg2,.kgv1 .kgtip{display:none}
+.kgr{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+.kgnum{display:inline-flex;align-items:center;gap:3px;margin-bottom:4px;color:var(--dim);font-size:12px}
+.kgnum i{font-style:normal}
+.kitm .kgnum input[type=number]{width:58px;padding:4px 6px;font-size:12.5px;text-align:right;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--txt);font-family:var(--sans);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield;margin:0}
+.kitm .kgnum input[type=number]::-webkit-outer-spin-button,.kitm .kgnum input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+body.light .kitm .kgnum input[type=number]{background:#fff}
+.kgtip{margin:6px 0 0 !important;font-size:11.5px !important;opacity:.8}
 /* graphic maker: the preview stays in view while the options scroll */
 .kgwrap{display:flex;flex-direction:column}
 .kgside{display:contents}
@@ -4192,6 +4199,20 @@ window.OneSignalDeferred.push(async function(OneSignal){
      The draw functions announce each element with el(x, o, from, order); without o.anim that does nothing, so a still is drawn exactly as before.
      kind 'slide': elements travel in from outside the frame (left / right / up / down) while fading up; 'fade': they fade in where they stand.
      The photo or home ('fade' / order 0) always comes first. */
+  var BWMAP = (typeof WeakMap === 'function') ? new WeakMap() : null;
+  function grayOf(src){   // a black-and-white copy of a photo or a cut-out (transparency kept, a touch more contrast); made once per source
+    if(!src || !src.width) return src;
+    if(BWMAP && BWMAP.has(src)) return BWMAP.get(src);
+    var w = src.width, h = src.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+    try{
+      var x = c.getContext('2d', {willReadFrequently: true}); x.drawImage(src, 0, 0);
+      var id = x.getImageData(0, 0, w, h), q = id.data;
+      for(var i = 0; i < q.length; i += 4){ var y = (q[i] * 0.299 + q[i + 1] * 0.587 + q[i + 2] * 0.114 - 128) * 1.06 + 128; y = y < 0 ? 0 : (y > 255 ? 255 : y); q[i] = q[i + 1] = q[i + 2] = y; }
+      x.putImageData(id, 0, 0);
+    }catch(e){ return src; }
+    if(BWMAP) BWMAP.set(src, c);
+    return c;
+  }
   var MOTION = {gap: 0.32, dur: 1.05, secs: 6};
   function el(x, o, from, order){
     elEnd(x, o);
@@ -4774,19 +4795,22 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var accent = KIT.gaccent || brandC || (isPin ? '#EA002A' : '#A8733A');
     var mem = (KIT.gfacts = KIT.gfacts || {})[g.key] || {};
     var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
-    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: KIT.gmotion || 'still', play: 0, busy: false,
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null, motion: KIT.gmotion || 'still', play: 0, busy: false, bw: !!KIT.gbw, cutBw: null,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
     var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
       '<div class="kgwrap"><div class="kgopts"><label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Look</label><div class="kchips" id="kg-style">' + [['photo', 'Full photo'], ['card', 'Card'], ['banner', 'Banner'], ['cut1', 'Bold'], ['classic1', 'Classic'], ['cut', 'Poster'], ['classic', 'Window']].map(function(k){ return '<button type="button" class="kchip' + (st.style === k[0] ? ' on' : '') + '" data-gs="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div>' +
+      '<div class="kchips" id="kg-bw" style="margin-top:8px"><button type="button" class="kchip' + (st.bw ? '' : ' on') + '" data-gb="0">Colour photo</button><button type="button" class="kchip' + (st.bw ? ' on' : '') + '" data-gb="1">Black &amp; white</button></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
       '<div class="kg3"><div><label class="kf" for="kg-beds">Beds</label><input type="text" id="kg-beds" maxlength="8"></div><div><label class="kf" for="kg-baths">Baths</label><input type="text" id="kg-baths" maxlength="8"></div><div><label class="kf" for="kg-sqft">Sq ft</label><input type="text" id="kg-sqft" maxlength="12"></div></div>' +
       '<label class="kf">Colour</label><div class="ksws" id="kg-sw">' + swatches.map(function(c){ return '<button type="button" class="ksw' + (c === accent ? ' on' : '') + '" data-gc="' + c + '" style="background:' + c + '" aria-label="Colour ' + c + (c === brandC ? ' (your brand colour)' : '') + '"></button>'; }).join('') + '</div>' +
       '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Still or video</label><div class="kchips" id="kg-motion">' + [['still', 'Still image'], ['slide', 'Video \u00B7 slide in'], ['fade', 'Video \u00B7 fade in']].map(function(k){ return '<button type="button" class="kchip' + (st.motion === k[0] ? ' on' : '') + '" data-gm="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '<button type="button" class="kchip" id="kg-play"' + (st.motion === 'still' ? ' style="display:none"' : '') + '>\u25B6 Play</button></div>' +
-      '<div class="kg2"><div><label class="kf" for="kg-zoom">Zoom the home</label><input type="range" id="kg-zoom" min="0.6" max="1.8" step="0.02" value="1"></div><div><label class="kf" for="kg-slide">Slide left / right</label><input type="range" id="kg-slide" min="-1" max="1" step="0.02" value="0"></div></div>' +
+      '<div class="kg2"><div><div class="kgr"><label class="kf" for="kg-zoom">Zoom the home</label><span class="kgnum"><input type="number" id="kg-zoomn" min="60" max="180" step="1" value="100" inputmode="numeric" aria-label="Zoom, percent"><i>%</i></span></div><input type="range" id="kg-zoom" min="0.6" max="1.8" step="0.01" value="1" title="Double-click to go back to 100%"></div>' +
+      '<div><div class="kgr"><label class="kf" for="kg-slide">Slide left / right</label><span class="kgnum"><input type="number" id="kg-sliden" min="-100" max="100" step="1" value="0" inputmode="numeric" aria-label="Slide, minus is left, plus is right"></span></div><input type="range" id="kg-slide" min="-1" max="1" step="0.01" value="0" title="Double-click to centre it again"></div></div>' +
+      '<div class="bsub kgtip">Double-click (or double-tap) a slider to put it back.</div>' +
       '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kg-cv"></canvas><div class="bsub" id="kg-note"></div></div>' +
       '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">' + (st.motion === 'still' ? 'Download ' : 'Download video ') + '<span class="ar">→</span></button></div></div></div>');
     card.classList.add('kgcard');
@@ -4795,6 +4819,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var paint = function(){
       var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent,
         beds: st.beds, baths: st.baths, sqft: st.sqft, zoom: st.zoom, slide: st.slide, head: st.head, logo: st.logo};
+      if(st.bw && st.img) o.img = grayOf(st.img);   // black & white applies to the photo only — the words and the accent colour stay
       var note = $id('kg-note');
       var v1 = st.style === 'cut1' || st.style === 'classic1';
       card.classList.toggle('kgv1', v1);   // the original looks don't use the facts or the zoom/slide controls
@@ -4807,6 +4832,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
       } else if(isCut){
         if(st.img && !st.cut){ try{ st.cut = skyCut(st.img, 1000); }catch(eC){ st.cut = {ok: false}; } }
         o.cut = st.cut;
+        if(st.bw && st.cut && st.cut.cv){
+          if(!st.cutBw || st.cutBw.src !== st.cut){ var cb = {}; for(var kk in st.cut) cb[kk] = st.cut[kk]; cb.cv = grayOf(st.cut.cv); st.cutBw = {src: st.cut, cut: cb}; }
+          o.cut = st.cutBw.cut; }
         var fk = st.style; KIT.fontsReady = KIT.fontsReady || {};
         if(fk === 'cut1') drawCutV1(cv, o);
         else if(fk === 'classic1'){ drawClassicV1(cv, o); if(!KIT.fontsReady[fk]) ensureSerif().then(function(){ KIT.fontsReady[fk] = true; if(job === KIT.job && st.style === fk) paint(); }); }
@@ -4830,7 +4858,16 @@ window.OneSignalDeferred.push(async function(OneSignal){
     l1.value = st.l1; l2.value = st.l2; hint();
     l1.oninput = function(){ st.l1 = l1.value; paint(); }; l2.oninput = function(){ st.l2 = l2.value; paint(); };
     [['beds', 'kg-beds'], ['baths', 'kg-baths'], ['sqft', 'kg-sqft']].forEach(function(p){ var el = $id(p[1]); el.value = st[p[0]]; el.oninput = function(){ st[p[0]] = el.value; KIT.gfacts[g.key] = {beds: st.beds, baths: st.baths, sqft: st.sqft}; paint(); }; });
-    $id('kg-zoom').oninput = function(){ st.zoom = +this.value || 1; paint(); }; $id('kg-slide').oninput = function(){ st.slide = +this.value || 0; paint(); };
+    var zr = $id('kg-zoom'), zn = $id('kg-zoomn'), sr = $id('kg-slide'), sn = $id('kg-sliden');
+    var setZoom = function(v, from){ v = Math.min(1.8, Math.max(0.6, +v || 1)); st.zoom = v; if(from !== 'r') zr.value = v; if(from !== 'n') zn.value = Math.round(v * 100); paint(); };
+    var setSlide = function(v, from){ v = Math.min(1, Math.max(-1, +v || 0)); st.slide = v; if(from !== 'r') sr.value = v; if(from !== 'n') sn.value = Math.round(v * 100); paint(); };
+    zr.oninput = function(){ setZoom(this.value, 'r'); }; sr.oninput = function(){ setSlide(this.value, 'r'); };
+    zn.oninput = function(){ if(this.value === '' || isNaN(+this.value)) return; setZoom(+this.value / 100, 'n'); }; zn.onchange = function(){ setZoom(this.value === '' ? 1 : +this.value / 100); };
+    sn.oninput = function(){ if(this.value === '' || this.value === '-' || isNaN(+this.value)) return; setSlide(+this.value / 100, 'n'); }; sn.onchange = function(){ setSlide(this.value === '' ? 0 : +this.value / 100); };
+    // double-click (or double-tap) a slider → back to where it started
+    var resetOn = function(el, fn){ el.addEventListener('dblclick', fn); var last = 0;
+      el.addEventListener('touchend', function(){ var n = Date.now(); if(n - last < 350){ last = 0; setTimeout(fn, 40); } else last = n; }, {passive: true}); };
+    resetOn(zr, function(){ setZoom(1); }); resetOn(sr, function(){ setSlide(0); });
     // beds / baths / size come from the listing page when one has been built for this home
     if(d.id && !(st.beds || st.baths || st.sqft)){ fetch(ENDPOINT + '?review=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){
       var L = j && j.state && j.state.listing; if(!L || job !== KIT.job) return;
@@ -4851,6 +4888,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
       if(e.target.closest && e.target.closest('#kg-play')){ playPreview(); return; }
       var gc = e.target.closest ? e.target.closest('[data-gc]') : null;
       if(gc){ st.accent = KIT.gaccent = gc.getAttribute('data-gc'); card.querySelectorAll('[data-gc]').forEach(function(b){ b.classList.toggle('on', b === gc); }); paint(); return; }
+      var gb = e.target.closest ? e.target.closest('[data-gb]') : null;
+      if(gb){ st.bw = KIT.gbw = gb.getAttribute('data-gb') === '1'; card.querySelectorAll('[data-gb]').forEach(function(b){ b.classList.toggle('on', b === gb); }); paint(); if(st.motion !== 'still') playPreview(); return; }
       var gs = e.target.closest ? e.target.closest('[data-gs]') : null;
       if(gs){ st.style = KIT.gstyle = gs.getAttribute('data-gs'); card.querySelectorAll('[data-gs]').forEach(function(b){ b.classList.toggle('on', b === gs); }); paint(); findExterior(); return; }
       var f = e.target.closest ? e.target.closest('[data-gf]') : null;
@@ -5146,7 +5185,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-19</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-20</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
