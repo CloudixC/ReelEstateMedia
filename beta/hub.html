@@ -796,6 +796,12 @@ body.light .kitm input[type=text],body.light .kitm textarea,body.light .kitm sel
   body.kprint #spendsheet{position:static;display:block}
   body.kprint #spendsheet .ssbar{display:none}
 }
+.kg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kitm input[type=range]{width:100%;accent-color:#EA002A;margin:2px 0 0;padding:0}
+.ksws{display:flex;gap:9px;flex-wrap:wrap}
+.ksw{appearance:none;width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,.18);cursor:pointer;padding:0;margin:0}
+.ksw.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--txt)}
 /*END-KIT-CSS*/
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
@@ -4150,17 +4156,18 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var W = o.w, H = o.h; cv.width = W; cv.height = H;
     var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.065);
     x.fillStyle = '#151515'; x.fillRect(0, 0, W, H);
-    if(o.img){ var s = Math.max(W / o.img.width, H / o.img.height), dw = o.img.width * s, dh = o.img.height * s; x.drawImage(o.img, (W - dw) / 2, (H - dh) / 2, dw, dh); }
+    var story = H / W > 1.5, safeT = story ? Math.round(H * 0.11) : 0, safeB = story ? Math.round(H * 0.15) : 0;   // Instagram covers the top and bottom of a story
+    if(o.img){ var s = Math.max(W / o.img.width, H / o.img.height) * Math.min(2.5, Math.max(1, +o.zoom || 1)), dw = o.img.width * s, dh = o.img.height * s; x.drawImage(o.img, (W - dw) / 2 + (+o.slide || 0) * (dw - W) / 2, (H - dh) / 2, dw, dh); }
     var gr = x.createLinearGradient(0, H * 0.38, 0, H); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,0,.62)'); gr.addColorStop(1, 'rgba(0,0,0,.9)');
     x.fillStyle = gr; x.fillRect(0, 0, W, H);
     var gt = x.createLinearGradient(0, 0, 0, H * 0.22); gt.addColorStop(0, 'rgba(0,0,0,.45)'); gt.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gt; x.fillRect(0, 0, W, H * 0.22);
     // label
     x.font = '700 ' + Math.round(W * 0.034) + 'px ' + F; x.textBaseline = 'middle';
     var lab = String(o.label || '').toUpperCase().split('').join(' '), lw = x.measureText(lab).width + M * 0.9, lh = Math.round(W * 0.075);
-    x.fillStyle = o.accent || '#EA002A'; x.fillRect(M, M, lw, lh);
-    x.fillStyle = '#fff'; x.fillText(lab, M + M * 0.45, M + lh / 2 + 1);
+    x.fillStyle = o.accent || '#EA002A'; x.fillRect(M, M + safeT, lw, lh);
+    x.fillStyle = '#fff'; x.fillText(lab, M + M * 0.45, M + safeT + lh / 2 + 1);
     // footer: agent + brokerage
-    var y = H - M;
+    var y = H - M - safeB;
     x.textBaseline = 'alphabetic';
     var f2 = Math.round(W * 0.027);
     x.font = '500 ' + f2 + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.82)';
@@ -4168,8 +4175,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
     if(l3){ x.fillText(wrapLines(x, l3, W - M * 2, 1)[0] || '', M, y); y -= Math.round(f2 * 1.5); }
     if(o.agent){ x.font = '700 ' + Math.round(W * 0.031) + 'px ' + F; x.fillStyle = '#fff'; x.fillText(wrapLines(x, o.agent, W - M * 2, 1)[0] || '', M, y); y -= Math.round(W * 0.05); }
     x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(M, y - Math.round(W * 0.012), W - M * 2, 2); y -= Math.round(W * 0.05);
-    // sub line + address
-    if(o.l2){ x.font = '500 ' + Math.round(W * 0.042) + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.92)'; var s2 = wrapLines(x, o.l2, W - M * 2, 2); for(var i = s2.length - 1; i >= 0; i--){ x.fillText(s2[i], M, y); y -= Math.round(W * 0.056); } y -= Math.round(W * 0.012); }
+    // facts, sub line + address
+    var fx = factsOf(o); if(fx.length){ x.font = '500 ' + Math.round(W * 0.03) + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.82)'; x.fillText(wrapLines(x, fx.join('  \u00B7  '), W - M * 2, 1)[0] || '', M, y); y -= Math.round(W * 0.05); }
+    if(o.l2){ x.font = '600 ' + Math.round(W * 0.046) + 'px ' + F; x.fillStyle = 'rgba(255,255,255,.92)'; var s2 = wrapLines(x, o.l2, W - M * 2, 2); for(var i = s2.length - 1; i >= 0; i--){ x.fillText(s2[i], M, y); y -= Math.round(W * 0.056); } y -= Math.round(W * 0.012); }
     var fs = Math.round(W * 0.078); x.font = '700 ' + fs + 'px ' + F; x.fillStyle = '#fff';
     var a1 = wrapLines(x, o.l1, W - M * 2, 3); for(var j = a1.length - 1; j >= 0; j--){ x.fillText(a1[j], M, y); y -= Math.round(fs * 1.08); }
   }
@@ -4246,152 +4254,241 @@ window.OneSignalDeferred.push(async function(OneSignal){
       ok: frac >= 0.05 && frac <= 0.8 && topCov >= 0.3 && mainTop > hh * 0.04 && real};
   }
   KIT._skyCut = skyCut;
-  function fitFont(x, text, weight, F, maxW, maxPx){ var fs = maxPx; x.font = weight + ' ' + fs + 'px ' + F; var w = x.measureText(text).width; if(w > maxW){ fs = Math.floor(fs * maxW / w); x.font = weight + ' ' + fs + 'px ' + F; } return fs; }
-  function drawCut(cv, o){
-    var W = o.w, H = o.h; cv.width = W; cv.height = H;
-    var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.065);
-    var ink = '#1F1B1A', acc = o.accent || '#EA002A', tall = H / W;
-    x.fillStyle = '#F3EEE8'; x.fillRect(0, 0, W, H);
-    var pg = x.createRadialGradient(W * 0.28, H * 0.16, 0, W * 0.28, H * 0.16, Math.max(W, H) * 0.8); pg.addColorStop(0, 'rgba(255,255,255,.7)'); pg.addColorStop(1, 'rgba(255,255,255,0)');
-    x.fillStyle = pg; x.fillRect(0, 0, W, H);
-    try{ x.letterSpacing = '0px'; }catch(e0){}
-    // agent, top right
-    var y = M + Math.round(W * 0.026);
-    x.textAlign = 'right'; x.textBaseline = 'alphabetic'; x.fillStyle = ink;
-    if(o.agent){ x.font = '700 ' + Math.round(W * 0.027) + 'px ' + F; x.fillText(String(o.agent).toUpperCase(), W - M, y); y += Math.round(W * 0.034); }
-    if(o.brokerage){ x.font = '500 ' + Math.round(W * 0.024) + 'px ' + F; x.fillText(wrapLines(x, o.brokerage, W * 0.6, 1)[0] || '', W - M, y); }
-    // headline: two stacked lines, as large as the page allows
-    var words = String(o.label || '').toUpperCase().split(/\s+/).filter(Boolean), l1 = words[0] || '', l2 = words.slice(1).join(' ');
-    var capPx = Math.min(W * 0.3, H * (tall > 1.5 ? 0.15 : tall > 1.1 ? 0.19 : 0.2));
-    try{ x.letterSpacing = '-' + Math.round(capPx * 0.035) + 'px'; }catch(e1){}
-    var fs = Math.min(fitFont(x, l1, 700, F, W - M * 2, capPx), l2 ? fitFont(x, l2 + '.', 700, F, W - M * 2, capPx) : capPx);
-    x.font = '700 ' + fs + 'px ' + F; x.textAlign = 'left';
-    var hy = M + Math.round(W * (tall > 1.5 ? 0.2 : 0.085)) + Math.round(fs * 0.76);
-    x.fillStyle = ink; x.fillText(l1, M - Math.round(fs * 0.04), hy);
-    if(l2){ hy += Math.round(fs * 0.88); x.fillStyle = acc; x.fillText(l2, M - Math.round(fs * 0.04), hy); var lw = x.measureText(l2).width; x.fillStyle = ink; x.fillText('.', M - Math.round(fs * 0.04) + lw, hy); }
-    try{ x.letterSpacing = '0px'; }catch(e2){}
-    // details row under a hairline
-    var ry = hy + Math.round(W * 0.06);
-    x.fillStyle = 'rgba(31,27,26,.28)'; x.fillRect(M, ry, W - M * 2, 2);
-    var f1 = Math.round(W * 0.031), ly = ry + Math.round(W * 0.052);
-    x.fillStyle = ink; x.font = '700 ' + f1 + 'px ' + F;
-    try{ x.letterSpacing = '1px'; }catch(e3){}
-    var al = wrapLines(x, String(o.l1 || '').toUpperCase(), (W - M * 2) * 0.56, 2), rowBottom = ly;
-    al.forEach(function(t, i2){ x.fillText(t, M, ly + i2 * Math.round(f1 * 1.28)); rowBottom = ly + i2 * Math.round(f1 * 1.28); });
-    x.textAlign = 'right'; var ryy = ly;
-    if(o.l2){ x.fillText(wrapLines(x, o.l2, (W - M * 2) * 0.4, 1)[0] || '', W - M, ryy); ryy += Math.round(f1 * 1.28); }
-    if(o.phone){ x.font = '500 ' + Math.round(W * 0.027) + 'px ' + F; x.fillText(o.phone, W - M, ryy); rowBottom = Math.max(rowBottom, ryy); }
-    try{ x.letterSpacing = '0px'; }catch(e4){}
-    x.textAlign = 'left';
-    drawHome(x, o, rowBottom + Math.round(W * 0.035), null);
+  /* ---- shared pieces for the cut-out looks ---- */
+  var SANS2 = '"Archivo","Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', POSTER = '"Anton","Archivo","Space Grotesk",sans-serif',
+    SERIF = '"Cormorant Garamond",Georgia,"Times New Roman",serif', fontP = {};
+  function ensureFonts(kind){   // the display faces load the first time a look is used; the page repaints when they arrive
+    if(fontP[kind]) return fontP[kind];
+    var fam = kind === 'classic' ? 'family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Archivo:wght@400;500;600;700' : 'family=Anton&family=Archivo:wght@400;500;600;700';
+    var need = (kind === 'classic' ? ['600 80px "Cormorant Garamond"', 'italic 600 80px "Cormorant Garamond"'] : ['400 80px "Anton"']).concat(['500 40px "Archivo"', '600 40px "Archivo"', '700 40px "Archivo"']);
+    try{ var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?' + fam + '&display=swap'; document.head.appendChild(l); }catch(e){}
+    fontP[kind] = new Promise(function(res){
+      var done = false, fin = function(){ if(!done){ done = true; res(); } }, tries = 0;
+      setTimeout(fin, 4500);
+      var go = function(){ try{ Promise.all(need.map(function(f){ return document.fonts.load(f); })).then(function(r){ if(r.every(function(a2){ return a2 && a2.length; }) || tries++ > 14) fin(); else setTimeout(go, 250); }).catch(fin); }catch(e2){ fin(); } };
+      go();
+    });
+    return fontP[kind];
   }
-  /* the home along the bottom of a cut-out page: the cut-out when the photo has sky, the photo in an arch when it doesn't.
-     `arch` (a colour) paints a soft arch behind the cut-out as well. */
-  function drawHome(x, o, zoneTop, arch){
-    var W = o.w, H = o.h, M = Math.round(W * 0.065), zoneH = H - zoneTop;
-    if(zoneH < H * 0.18) return;
-    var cut = o.cut, fx = arch ? Math.round(W * 0.11) : M, fw = W - fx * 2, fy = zoneTop + Math.round(W * 0.01), rad = Math.min(fw / 2, zoneH * 0.55);
-    var archPath = function(c2){ c2.beginPath(); c2.moveTo(fx, H); c2.lineTo(fx, fy + rad); c2.arc(fx + rad, fy + rad, rad, Math.PI, Math.PI * 1.5); c2.lineTo(fx + fw - rad, fy); c2.arc(fx + fw - rad, fy + rad, rad, Math.PI * 1.5, 0); c2.lineTo(fx + fw, H); c2.closePath(); };
-    if(arch){ archPath(x); x.fillStyle = arch; x.fill(); }
-    if(!o.img) return;
+  KIT._ensureFonts = ensureFonts;
+  function sp(x, px){ try{ x.letterSpacing = px + 'px'; }catch(e){} }
+  function fitSize(x, text, fontOf, maxW, maxPx, minPx){ var fs = maxPx; x.font = fontOf(fs); var w = x.measureText(text).width; if(w > maxW){ fs = Math.max(minPx || 10, Math.floor(fs * maxW / w)); x.font = fontOf(fs); } return fs; }
+  function capH(x, sample){ var m = x.measureText(sample || 'H'); return m.actualBoundingBoxAscent || 0; }
+  function factsOf(o){ var a = []; var cl = function(v){ return String(v == null ? '' : v).trim(); };
+    if(cl(o.beds)) a.push(cl(o.beds).replace(/\s*(beds?|bedrooms?|br)\s*$/i, '') + ' Bed');
+    if(cl(o.baths)) a.push(cl(o.baths).replace(/\s*(baths?|bathrooms?|ba)\s*$/i, '') + ' Bath');
+    if(cl(o.sqft)) a.push(cl(o.sqft).replace(/\s*(sq\.?\s*ft\.?|sqft|square feet)\s*$/i, '') + ' Sq Ft');
+    return a; }
+  function circleImg(x, img, cx, cy, r, ring){
+    x.save(); x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.closePath(); x.clip();
+    var s = Math.max(2 * r / img.width, 2 * r / img.height); x.drawImage(img, cx - img.width * s / 2, cy - img.height * s * 0.46, img.width * s, img.height * s);
+    x.restore(); if(ring){ x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.lineWidth = Math.max(2, r * 0.05); x.strokeStyle = ring; x.stroke(); }
+  }
+  /* The home in its space. With a cut-out: scaled so roof-peak-to-ground fills the space, the ground line on the bottom edge, never
+     narrower than the page; anything standing taller than the roof (side trees) dissolves just above it. Without sky: the photo fills the space.
+     o.zoom / o.slide are the agent's own adjustments. */
+  function placeHome(x, o, zTop, zBot, opt){
+    opt = opt || {};
+    var W = o.w, H = o.h, cut = o.cut, zoom = Math.min(2.5, Math.max(0.5, +o.zoom || 1)), slide = Math.min(1, Math.max(-1, +o.slide || 0)), zh = zBot - zTop;
+    if(zh < 20 || !o.img) return;
     var layer = document.createElement('canvas'); layer.width = W; layer.height = H; var lx = layer.getContext('2d');
+    if(opt.clip){ opt.clip(lx); lx.clip(); }
+    lx.imageSmoothingQuality = 'high';
+    try{ lx.filter = 'contrast(1.05) saturate(1.06)'; }catch(e){}
     if(cut && cut.ok){
-      var cw = cut.cv.width, ch = cut.cv.height, mt = cut.top, s0 = W / cw;
-      var s = Math.min(s0 * 2.2, Math.max(s0, zoneH * (arch ? 0.7 : 0.8) / ((1 - mt) * ch)));
-      var yMain = Math.max(H - (1 - mt) * ch * s, zoneTop + zoneH * (arch ? 0.24 : 0.16)), dw = cw * s, dx = Math.min(0, Math.max(W - dw, W / 2 - cut.cx * dw));
-      lx.imageSmoothingQuality = 'high'; lx.drawImage(cut.cv, dx, yMain - mt * ch * s, dw, ch * s);
-      // trees or peaks that reach above the space for the home fade out instead of running into the words
-      var fg = lx.createLinearGradient(0, zoneTop - zoneH * 0.02, 0, zoneTop + zoneH * 0.13); fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(0.5, 'rgba(0,0,0,.5)'); fg.addColorStop(1, 'rgba(0,0,0,1)');
-      lx.globalCompositeOperation = 'destination-in'; lx.fillStyle = fg; lx.fillRect(0, 0, W, H);
+      var cw = cut.cv.width, ch = cut.cv.height, mt = cut.top, gb = Math.min(0.92, Math.max(mt + 0.22, 0.86));
+      var sMin = (opt.minW || W) / cw, s = Math.min(sMin * 2.6, Math.max(sMin, zh * (opt.fill || 0.9) / ((gb - mt) * ch))) * zoom;
+      var bx = opt.rx || 0, bw = opt.rw || W, dw = cw * s, dh = ch * s, x0 = bx + bw / 2 - cut.cx * dw + slide * Math.abs(dw - bw) / 2;
+      if(dw >= bw) x0 = Math.min(bx, Math.max(bx + bw - dw, x0)); else x0 = bx + (bw - dw) / 2 + slide * (bw - dw) / 2;
+      var y0 = zBot + (opt.sink || 0) - gb * dh;
+      if(y0 + mt * dh < zTop + zh * 0.02) y0 = zTop + zh * 0.02 - mt * dh;   // a tall home sinks behind what is below rather than climbing over the words
+      lx.drawImage(cut.cv, x0, y0, dw, dh);
+      try{ lx.filter = 'none'; }catch(e2){}
+      var yPeak = y0 + mt * dh, fg = lx.createLinearGradient(0, yPeak - Math.max(zh * (opt.fade || 0.13), W * 0.085), 0, yPeak - zh * 0.01);
+      fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, 'rgba(0,0,0,1)');
+      lx.globalCompositeOperation = 'destination-in'; lx.fillStyle = fg; lx.fillRect(0, 0, W, H); lx.globalCompositeOperation = 'source-over';
     } else {
-      // no open sky to cut: the photo sits inside the arch instead
-      archPath(lx); lx.clip();
-      var fh = H - fy, sc = Math.max(fw / o.img.width, fh / o.img.height); lx.drawImage(o.img, fx + (fw - o.img.width * sc) / 2, fy + (fh - o.img.height * sc) / 2, o.img.width * sc, o.img.height * sc);
+      var rx = opt.rx != null ? opt.rx : 0, rw = opt.rw || W, sc = Math.max(rw / o.img.width, zh / o.img.height) * zoom, iw = o.img.width * sc, ih = o.img.height * sc;
+      lx.save(); lx.beginPath(); lx.rect(rx, zTop, rw, zh); lx.clip();
+      lx.drawImage(o.img, rx + (rw - iw) / 2 + slide * Math.abs(iw - rw) / 2, zTop + (zh - ih) / 2, iw, ih); lx.restore();
+      try{ lx.filter = 'none'; }catch(e3){}
     }
     x.drawImage(layer, 0, 0);
   }
-  /* ---- classic cut-out: centred, serif, quieter — same cut-out home, standing in front of a soft arch ---- */
-  var SERIF = '"Cormorant Garamond",Georgia,"Times New Roman",serif', serifP = null;
-  function ensureSerif(){
-    if(serifP) return serifP;
-    try{ var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&display=swap'; document.head.appendChild(l); }catch(e){}
-    serifP = new Promise(function(res){
-      var done = false, fin = function(){ if(!done){ done = true; res(); } };
-      setTimeout(fin, 3500);
-      try{ var tries = 0, go = function(){ Promise.all([document.fonts.load('600 80px "Cormorant Garamond"'), document.fonts.load('italic 600 80px "Cormorant Garamond"'), document.fonts.load('500 80px "Cormorant Garamond"')]).then(function(r){ if((r[0] && r[0].length) || tries++ > 12) fin(); else setTimeout(go, 250); }).catch(fin); }; go(); }catch(e2){ fin(); }
-    });
-    return serifP;
+  /* ---- Cut-out · Bold: poster headline, the home overlapping it, everything a buyer scans for in a band along the bottom ---- */
+  function drawCut(cv, o){
+    var W = o.w, H = o.h; cv.width = W; cv.height = H;
+    var x = cv.getContext('2d'), M = Math.round(W * 0.065), tall = H / W, story = tall > 1.5;
+    var ink = '#1B1817', acc = o.accent || '#EA002A', safeT = story ? Math.round(H * 0.13) : M, safeB = story ? Math.round(H * 0.16) : 0;
+    x.fillStyle = '#F4EFE9'; x.fillRect(0, 0, W, H);
+    var pg = x.createRadialGradient(W * 0.3, H * 0.15, 0, W * 0.3, H * 0.15, Math.max(W, H) * 0.8); pg.addColorStop(0, 'rgba(255,255,255,.7)'); pg.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = pg; x.fillRect(0, 0, W, H);
+    x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
+    // brokerage: their logo when the brand kit has one, their name otherwise
+    var y = safeT, topH = 0;
+    if(o.logo){ var lh = Math.round(W * 0.06), lw = o.logo.width * lh / o.logo.height; if(lw > W * 0.42){ lh = lh * W * 0.42 / lw; lw = W * 0.42; } x.drawImage(o.logo, M, y, lw, lh); topH = lh; }
+    else if(o.brokerage){ x.font = '600 ' + Math.round(W * 0.025) + 'px ' + SANS2; sp(x, Math.round(W * 0.003)); x.fillStyle = ink; topH = Math.round(W * 0.03); x.fillText(wrapLines(x, String(o.brokerage).toUpperCase(), W - M * 2, 1)[0] || '', M, y + topH * 0.86); sp(x, 0); }
+    // headline: one line across the page (two in the tall story shape), first word ink, the rest in the accent
+    var words = String(o.label || '').toUpperCase().split(/\s+/).filter(Boolean), w1 = words[0] || '', w2 = words.slice(1).join(' ');
+    var pf = function(fs){ return '400 ' + fs + 'px ' + POSTER; }, maxW = W - M * 2, two = story && !!w2;
+    var fs = two ? Math.min(fitSize(x, w1, pf, maxW, H * 0.125), fitSize(x, w2, pf, maxW, H * 0.125)) : fitSize(x, w1 + (w2 ? ' ' + w2 : ''), pf, maxW, H * 0.2);
+    x.font = pf(fs); var A = capH(x, 'H') || fs * 0.72, hy = y + topH + Math.round(W * 0.045) + A;
+    x.fillStyle = ink; x.fillText(w1, M, hy);
+    if(w2){ x.fillStyle = acc; if(two){ hy += A + Math.round(fs * 0.13); x.fillText(w2, M, hy); } else x.fillText(w2, M + x.measureText(w1 + ' ').width, hy); }
+    // the band, and the home standing on it — its roof reaching up over the foot of the headline
+    var bandH = Math.round(H * (story ? 0.255 : tall > 1.1 ? 0.25 : 0.3)), bandTop = H - safeB - bandH, U = W * (story ? 1.3 : 1);   // the tall story shape gets larger type
+    placeHome(x, o, hy - A * 0.1, bandTop, {fill: 0.97, fade: 0.07, sink: Math.round(H * 0.02)});
+    x.fillStyle = ink; x.fillRect(0, bandTop, W, H - bandTop);
+    x.fillStyle = acc; x.fillRect(0, bandTop, W, Math.max(4, Math.round(W * 0.007)));
+    // right: the agent
+    var padT = Math.round(U * 0.03), by0 = bandTop + padT, bh = bandH - padT * 2, rightW = 0, light = '#FBF8F4', dim = 'rgba(251,248,244,.74)';
+    var nameF = Math.round(U * 0.031), smF = Math.round(U * 0.024), phF = Math.round(U * 0.029);
+    if(story && (o.agent || o.phone)){
+      // tall story: the agent sits on a row of their own under the details, so the address keeps the full width
+      var hs = o.head ? Math.round(U * 0.05) : 0, rowH = Math.max(hs * 2, nameF * 2.5), rowY = bandTop + bandH - padT - rowH, txs = M + (hs ? hs * 2 + Math.round(U * 0.022) : 0);
+      if(hs) circleImg(x, o.head, M + hs, rowY + rowH / 2, hs, 'rgba(251,248,244,.85)');
+      x.textAlign = 'left'; x.fillStyle = light; x.font = '700 ' + nameF + 'px ' + SANS2; x.fillText(o.agent || '', txs, rowY + rowH / 2 - nameF * 0.12);
+      x.fillStyle = dim; x.font = '500 ' + smF + 'px ' + SANS2; x.fillText(wrapLines(x, [o.brokerage, o.phone].filter(Boolean).join('   \u00B7   '), W - M - txs, 1)[0] || '', txs, rowY + rowH / 2 + smF * 1.15);
+      bh = bh - rowH - Math.round(padT * 0.8);
+    } else if(o.agent || o.phone){
+      var r = o.head ? Math.round(Math.min(U * 0.058, bh * 0.36)) : 0, tx = W - M - (r ? r * 2 + Math.round(U * 0.022) : 0);
+      x.textAlign = 'right';
+      x.font = '700 ' + nameF + 'px ' + SANS2; var tw = o.agent ? x.measureText(o.agent).width : 0;
+      x.font = '500 ' + smF + 'px ' + SANS2; tw = Math.max(tw, o.brokerage ? Math.min(W * 0.36, x.measureText(o.brokerage).width) : 0);
+      x.font = '600 ' + phF + 'px ' + SANS2; tw = Math.max(tw, o.phone ? x.measureText(o.phone).width : 0);
+      var lines = (o.agent ? 1 : 0) + (o.brokerage ? 1 : 0) + (o.phone ? 1 : 0), blockH = (o.agent ? nameF * 1.2 : 0) + (o.brokerage ? smF * 1.35 : 0) + (o.phone ? phF * 1.3 : 0);
+      var ay = by0 + (bh - blockH) / 2;
+      if(o.agent){ ay += nameF; x.font = '700 ' + nameF + 'px ' + SANS2; x.fillStyle = light; x.fillText(o.agent, tx, ay); ay += nameF * 0.2; }
+      if(o.brokerage){ ay += smF * 1.1; x.font = '500 ' + smF + 'px ' + SANS2; x.fillStyle = dim; x.fillText(wrapLines(x, o.brokerage, W * 0.36, 1)[0] || '', tx, ay); ay += smF * 0.25; }
+      if(o.phone){ ay += phF * 1.1; x.font = '600 ' + phF + 'px ' + SANS2; x.fillStyle = light; x.fillText(o.phone, tx, ay); }
+      if(r) circleImg(x, o.head, W - M - r, by0 + bh / 2, r, 'rgba(251,248,244,.85)');
+      rightW = tw + (r ? r * 2 + Math.round(U * 0.022) : 0) + Math.round(U * 0.05);
+      x.textAlign = 'left';
+    }
+    // left: address, price, the facts
+    var Lw = W - M * 2 - rightW, facts = factsOf(o), af = function(s2){ return '700 ' + s2 + 'px ' + SANS2; };
+    var aF = Math.round(U * 0.044); x.font = af(aF);
+    var al = wrapLines(x, String(o.l1 || ''), Lw, 2); if(al.length > 1 && bh < U * 0.25){ aF = Math.round(U * 0.037); x.font = af(aF); al = wrapLines(x, String(o.l1 || ''), Lw, 2); }
+    var pF = Math.round(U * 0.05), fF = Math.round(U * 0.027);
+    var total = al.length * aF * 1.16 + (o.l2 ? pF * 1.25 : 0) + (facts.length ? fF * 1.7 : 0), ly = by0 + Math.max(0, (bh - total) / 2);
+    x.fillStyle = light; x.font = af(aF);
+    al.forEach(function(t){ ly += aF; x.fillText(t, M, ly); ly += aF * 0.16; });
+    if(o.l2){ ly += pF * 1.05; x.font = '700 ' + fitSize(x, o.l2, function(s3){ return '700 ' + s3 + 'px ' + SANS2; }, Lw, pF, 22) + 'px ' + SANS2; x.fillStyle = light; x.fillText(o.l2, M, ly); ly += pF * 0.2; }
+    if(facts.length){ ly += fF * 1.35; var ft = facts.join('   ·   ').toUpperCase(); sp(x, Math.round(U * 0.0018)); x.font = '500 ' + fitSize(x, ft, function(s4){ return '500 ' + s4 + 'px ' + SANS2; }, Lw, fF, 16) + 'px ' + SANS2; x.fillStyle = dim; x.fillText(ft, M, ly); sp(x, 0); }
   }
+  /* ---- Cut-out · Classic: centred and quiet — serif headline, the home inside an arched window, the agent along the foot ---- */
   function drawClassic(cv, o){
     var W = o.w, H = o.h; cv.width = W; cv.height = H;
-    var x = cv.getContext('2d'), F = '"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif', M = Math.round(W * 0.075);
-    var ink = '#221E1C', acc = o.accent || '#EA002A', tall = H / W, cxm = W / 2, U = W * (tall > 1.5 ? 1.28 : 1);   // the tall story shape has room for larger type
+    var x = cv.getContext('2d'), M = Math.round(W * 0.075), tall = H / W, story = tall > 1.5, U = W * (story ? 1.36 : 1), cxm = W / 2;
+    var ink = '#221E1C', soft = 'rgba(34,30,28,.72)', acc = o.accent || '#EA002A', safeT = story ? Math.round(H * 0.13) : Math.round(W * 0.07), safeB = story ? Math.round(H * 0.16) : Math.round(W * 0.055);
     x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H);
-    x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-    var sp = function(px){ try{ x.letterSpacing = px + 'px'; }catch(e){} };
-    // who: name over brokerage, small spaced capitals
-    var y = M + Math.round(U * (tall > 1.5 ? 0.09 : 0.02));
-    x.fillStyle = ink; sp(Math.round(U * 0.004));
-    if(o.agent){ x.font = '700 ' + Math.round(U * 0.024) + 'px ' + F; x.fillText(String(o.agent).toUpperCase(), cxm, y); y += Math.round(U * 0.034); }
-    if(o.brokerage){ x.font = '500 ' + Math.round(U * 0.021) + 'px ' + F; x.fillStyle = 'rgba(34,30,28,.72)'; x.fillText(wrapLines(x, String(o.brokerage).toUpperCase(), W - M * 2, 1)[0] || '', cxm, y); }
-    sp(0);
-    // headline: first word upright, the rest in italics, on one line when it fits
+    x.textAlign = 'center'; x.textBaseline = 'alphabetic'; sp(x, 0);
+    // brokerage
+    var y = safeT, topH = 0;
+    if(o.logo){ var lh = Math.round(U * 0.058), lw = o.logo.width * lh / o.logo.height; if(lw > W * 0.44){ lh = lh * W * 0.44 / lw; lw = W * 0.44; } x.drawImage(o.logo, cxm - lw / 2, y, lw, lh); topH = lh; }
+    else if(o.brokerage){ x.font = '600 ' + Math.round(U * 0.023) + 'px ' + SANS2; sp(x, Math.round(U * 0.0045)); x.fillStyle = ink; topH = Math.round(U * 0.028); x.fillText(wrapLines(x, String(o.brokerage).toUpperCase(), W - M * 2, 1)[0] || '', cxm, y + topH * 0.86); sp(x, 0); }
+    // headline: first word upright, the rest in italics
     var words = String(o.label || '').split(/\s+/).filter(Boolean), w1 = words[0] || '', w2 = words.slice(1).join(' ');
-    var cap = Math.min(W * 0.2, H * (tall > 1.5 ? 0.125 : 0.15)), fs = cap, gap, tw;
+    var fs = Math.min(W * 0.2, H * (story ? 0.115 : tall > 1.1 ? 0.135 : 0.15)), gap, tw;
     var measure = function(){ x.font = '600 ' + fs + 'px ' + SERIF; var a = x.measureText(w1).width; gap = fs * 0.22; x.font = 'italic 600 ' + fs + 'px ' + SERIF; return a + (w2 ? gap + x.measureText(w2).width : 0); };
     tw = measure(); if(tw > W - M * 2){ fs = Math.floor(fs * (W - M * 2) / tw); tw = measure(); }
-    var hy = y + Math.round(U * 0.05) + Math.round(fs * 0.82), sx = cxm - tw / 2;
-    x.textAlign = 'left'; x.fillStyle = ink; x.font = '600 ' + fs + 'px ' + SERIF; x.fillText(w1, sx, hy);
+    x.font = '600 ' + fs + 'px ' + SERIF; var A = capH(x, 'J') || fs * 0.66, hy = y + topH + Math.round(U * 0.04) + A, sx = cxm - tw / 2;
+    x.textAlign = 'left'; x.fillStyle = ink; x.fillText(w1, sx, hy);
     if(w2){ var a1 = x.measureText(w1).width; x.fillStyle = acc; x.font = 'italic 600 ' + fs + 'px ' + SERIF; x.fillText(w2, sx + a1 + gap, hy); }
     x.textAlign = 'center';
-    // address, then the second line, then the phone
-    var ay = hy + Math.round(U * 0.092), f1 = Math.round(U * 0.027);
-    x.fillStyle = ink; x.font = '700 ' + f1 + 'px ' + F; sp(Math.round(U * 0.0045));
-    var al = wrapLines(x, String(o.l1 || '').toUpperCase(), W - M * 2.4, 2);
+    // address tight under the headline, then one line with the price and the facts
+    var f1 = Math.round(U * 0.028), ay = hy + Math.round(fs * 0.3) + Math.round(U * 0.038);
+    x.fillStyle = ink; x.font = '600 ' + f1 + 'px ' + SANS2; sp(x, Math.round(U * 0.004));
+    var al = wrapLines(x, String(o.l1 || '').toUpperCase(), W - M * 2.2, 2);
     al.forEach(function(t, i2){ x.fillText(t, cxm, ay + i2 * Math.round(f1 * 1.4)); });
-    var by = ay + (al.length - 1) * Math.round(f1 * 1.4); sp(0);
-    if(o.l2){ by += Math.round(U * 0.062); x.font = '500 ' + Math.round(U * 0.05) + 'px ' + SERIF; x.fillText(wrapLines(x, o.l2, W - M * 2, 1)[0] || '', cxm, by); }
-    if(o.phone){ by += Math.round(U * 0.042); x.font = '500 ' + Math.round(U * 0.024) + 'px ' + F; x.fillStyle = 'rgba(34,30,28,.72)'; sp(Math.round(U * 0.002)); x.fillText(o.phone, cxm, by); sp(0); }
-    x.textAlign = 'left';
-    drawHome(x, o, by + Math.round(U * 0.045), '#E6DCCF');
+    var by = ay + (al.length - 1) * Math.round(f1 * 1.4); sp(x, 0);
+    var bits = (o.l2 ? [o.l2] : []).concat(factsOf(o));
+    if(bits.length){ by += Math.round(U * 0.058); var bt = bits.join('   ·   '); x.font = '500 ' + fitSize(x, bt, function(s2){ return '500 ' + s2 + 'px ' + SANS2; }, W - M * 2, Math.round(U * 0.031), 16) + 'px ' + SANS2; x.fillStyle = ink; x.fillText(bt, cxm, by); }
+    // the agent along the foot: face, name and phone, and the brokerage's name whenever the top carries only a logo
+    var nameF = Math.round(U * 0.03), r = o.head ? Math.round(U * 0.046) : 0, fy = H - safeB - (r ? r : Math.round(U * 0.012));
+    var line2 = o.logo && o.brokerage ? String(o.brokerage) : '';
+    x.font = '700 ' + nameF + 'px ' + SANS2; var n1 = o.agent ? x.measureText(o.agent).width : 0;
+    x.font = '500 ' + nameF + 'px ' + SANS2; var sep = (o.agent && o.phone) ? '   ·   ' : '', n2 = x.measureText(sep + (o.phone || '')).width;
+    var gw = (r ? r * 2 + Math.round(U * 0.02) : 0) + n1 + n2, gx = cxm - gw / 2, footTop = fy - (r ? r : nameF) - Math.round(U * 0.01);
+    if(o.agent || o.phone){
+      if(r){ circleImg(x, o.head, gx + r, fy, r, 'rgba(34,30,28,.18)'); gx += r * 2 + Math.round(U * 0.02); }
+      var ty = fy + nameF * 0.35 - (line2 ? nameF * 0.55 : 0);
+      x.textAlign = 'left'; x.fillStyle = ink; x.font = '700 ' + nameF + 'px ' + SANS2; if(o.agent) x.fillText(o.agent, gx, ty);
+      x.font = '500 ' + nameF + 'px ' + SANS2; x.fillStyle = soft; x.fillText(sep + (o.phone || ''), gx + n1, ty);
+      if(line2){ x.font = '500 ' + Math.round(nameF * 0.82) + 'px ' + SANS2; x.fillText(wrapLines(x, line2, W * 0.6, 1)[0] || '', gx, ty + nameF * 1.15); }
+      x.textAlign = 'center';
+    } else footTop = H - safeB;
+    // the window: one clean arch, the home (or the whole photo) inside it and nothing spilling out
+    var aTop = by + Math.round(U * 0.05), aBot = footTop - Math.round(U * 0.035), ax = Math.round(W * 0.1), aw = W - ax * 2, ah = aBot - aTop;
+    if(ah < H * 0.16) return;
+    var rad = Math.min(aw / 2, ah * 0.62);
+    var arch = function(c2){ c2.beginPath(); c2.moveTo(ax, aBot); c2.lineTo(ax, aTop + rad); c2.arc(ax + rad, aTop + rad, rad, Math.PI, Math.PI * 1.5); c2.lineTo(ax + aw - rad, aTop); c2.arc(ax + aw - rad, aTop + rad, rad, Math.PI * 1.5, 0); c2.lineTo(ax + aw, aBot); c2.closePath(); };
+    arch(x); x.fillStyle = '#E6DCCF'; x.fill();
+    placeHome(x, o, aTop + ((o.cut && o.cut.ok) ? ah * 0.1 : 0), aBot, {clip: arch, fill: 0.84, minW: aw, rx: ax, rw: aw, sink: Math.round(ah * 0.04)});
+    arch(x); x.lineWidth = Math.max(2, Math.round(W * 0.002)); x.strokeStyle = 'rgba(34,30,28,.16)'; x.stroke();
   }
   KIT._drawClassic = drawClassic;
   KIT._drawCut = drawCut;
   KIT._draw = drawGraphic;
   function openGraphic(g, kind){
     var d = dirFor(g) || {}, raw = KIT.raw || {};
-    var accent = '#EA002A'; try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) accent = c1.value; }catch(e){}
+    // colour: the agent's own brand colour when they have a brand kit; otherwise red for Royal LePage Pinnacle hubs and a quiet bronze for everyone else
+    var isPin = true; try{ isPin = !!pin; }catch(eP){}
+    var brandC = ''; try{ var c1 = $id('bk-c1'); if(c1 && /^#[0-9a-f]{6}$/i.test(c1.value) && typeof WELCOME !== 'undefined' && WELCOME.brand) brandC = c1.value.toUpperCase(); }catch(e){}
+    var swatches = (brandC ? [brandC] : []).concat(['#EA002A', '#A8733A', '#1F5B45', '#1E3A5F', '#1B1817']).filter(function(c, i, a2){ return a2.indexOf(c) === i; });
+    var accent = KIT.gaccent || brandC || (isPin ? '#EA002A' : '#A8733A');
+    var mem = (KIT.gfacts = KIT.gfacts || {})[g.key] || {};
     var kinds = ['Just Listed', 'Open House', 'Just Sold', 'Coming Soon', 'Price Improved'];
-    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null,
+    var st = {label: kind || 'Just Listed', l1: d.addr || g.title, l2: d.price || '', fmt: 'p', img: null, style: KIT.gstyle || 'photo', cut: null, beds: mem.beds || '', baths: mem.baths || '', sqft: mem.sqft || '', zoom: 1, slide: 0, head: null, logo: null,
       agent: String(raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || ''), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), accent: accent};
-    var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name and brokerage are added for you.</div>' +
+    var card = openModal('<h3>🖼 Make a graphic</h3><div class="bsub">' + esc(g.title) + ' — pick a photo, check the words, download. Your name, brokerage, logo and photo are added for you.</div>' +
       '<label class="kf">Type</label><div class="kchips" id="kg-kinds">' + kinds.map(function(k){ return '<button type="button" class="kchip' + (k === st.label ? ' on' : '') + '" data-gk="' + esc(k) + '">' + esc(k) + '</button>'; }).join('') + '</div>' +
       '<label class="kf">Look</label><div class="kchips" id="kg-style"><button type="button" class="kchip' + (st.style === 'photo' ? ' on' : '') + '" data-gs="photo">Full photo</button><button type="button" class="kchip' + (st.style === 'cut' ? ' on' : '') + '" data-gs="cut">Cut-out · Bold</button><button type="button" class="kchip' + (st.style === 'classic' ? ' on' : '') + '" data-gs="classic">Cut-out · Classic</button></div>' +
       '<label class="kf">Photo</label><div class="kpick" id="kg-pick"><span class="bsub">Loading photos…</span></div><div class="bsub" id="kg-note" style="margin:6px 0 0"></div>' +
       '<label class="kf" for="kg-l1">Address</label><input type="text" id="kg-l1" maxlength="80">' +
       '<label class="kf" for="kg-l2" id="kg-l2lbl">Second line</label><input type="text" id="kg-l2" maxlength="90">' +
+      '<div class="kg3"><div><label class="kf" for="kg-beds">Beds</label><input type="text" id="kg-beds" maxlength="8"></div><div><label class="kf" for="kg-baths">Baths</label><input type="text" id="kg-baths" maxlength="8"></div><div><label class="kf" for="kg-sqft">Sq ft</label><input type="text" id="kg-sqft" maxlength="12"></div></div>' +
+      '<label class="kf">Colour</label><div class="ksws" id="kg-sw">' + swatches.map(function(c){ return '<button type="button" class="ksw' + (c === accent ? ' on' : '') + '" data-gc="' + c + '" style="background:' + c + '" aria-label="Colour ' + c + (c === brandC ? ' (your brand colour)' : '') + '"></button>'; }).join('') + '</div>' +
       '<label class="kf">Shape</label><div class="kchips" id="kg-fmt">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-gf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
+      '<div class="kg2"><div><label class="kf" for="kg-zoom">Zoom the home</label><input type="range" id="kg-zoom" min="0.6" max="1.8" step="0.02" value="1"></div><div><label class="kf" for="kg-slide">Slide left / right</label><input type="range" id="kg-slide" min="-1" max="1" step="0.02" value="0"></div></div>' +
       '<canvas class="kcanvas" id="kg-cv"></canvas>' +
       '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kg-dl" style="width:auto">Download <span class="ar">→</span></button></div>');
     var job = KIT.job, cv = $id('kg-cv'), l1 = $id('kg-l1'), l2 = $id('kg-l2');
     var hint = function(){ $id('kg-l2lbl').textContent = /open house/i.test(st.label) ? 'When (for example: Sat Nov 21 · 2–4 PM)' : (/sold/i.test(st.label) ? 'Second line (optional)' : 'Price or second line'); };
     var paint = function(){
-      var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent};
+      var f = GFMT[st.fmt], o = {w: f[0], h: f[1], img: st.img, label: st.label, l1: st.l1, l2: st.l2, agent: st.agent, brokerage: st.brokerage, phone: st.phone, accent: st.accent,
+        beds: st.beds, baths: st.baths, sqft: st.sqft, zoom: st.zoom, slide: st.slide, head: st.head, logo: st.logo};
       var note = $id('kg-note');
       if(st.style === 'cut' || st.style === 'classic'){
         if(st.img && !st.cut){ try{ st.cut = skyCut(st.img); }catch(eC){ st.cut = {ok: false}; } }
         o.cut = st.cut;
-        if(st.style === 'classic'){ drawClassic(cv, o); if(!KIT.serifReady) ensureSerif().then(function(){ KIT.serifReady = true; if(job === KIT.job && st.style === 'classic') paint(); }); }
-        else drawCut(cv, o);
+        if(st.style === 'classic') drawClassic(cv, o); else drawCut(cv, o);
+        var fk = st.style; KIT.fontsReady = KIT.fontsReady || {};
+        if(!KIT.fontsReady[fk]) ensureFonts(fk).then(function(){ KIT.fontsReady[fk] = true; if(job === KIT.job && st.style === fk) paint(); });
         if(note) note.textContent = (st.img && st.cut && !st.cut.ok) ? 'This photo has no open sky to cut away, so it’s shown in a frame. A front-of-house shot with sky works best.' : '';
       } else { drawGraphic(cv, o); if(note) note.textContent = ''; }
     };
     l1.value = st.l1; l2.value = st.l2; hint();
     l1.oninput = function(){ st.l1 = l1.value; paint(); }; l2.oninput = function(){ st.l2 = l2.value; paint(); };
+    [['beds', 'kg-beds'], ['baths', 'kg-baths'], ['sqft', 'kg-sqft']].forEach(function(p){ var el = $id(p[1]); el.value = st[p[0]]; el.oninput = function(){ st[p[0]] = el.value; KIT.gfacts[g.key] = {beds: st.beds, baths: st.baths, sqft: st.sqft}; paint(); }; });
+    $id('kg-zoom').oninput = function(){ st.zoom = +this.value || 1; paint(); }; $id('kg-slide').oninput = function(){ st.slide = +this.value || 0; paint(); };
+    // beds / baths / size come from the listing page when one has been built for this home
+    if(d.id && !(st.beds || st.baths || st.sqft)){ fetch(ENDPOINT + '?review=' + encodeURIComponent('ll-' + d.id)).then(function(r){ return r.json(); }).then(function(j){
+      var L = j && j.state && j.state.listing; if(!L || job !== KIT.job) return;
+      [['beds', 'kg-beds'], ['baths', 'kg-baths'], ['sqft', 'kg-sqft']].forEach(function(p){ var el = $id(p[1]); if(el && !el.value && L[p[0]]){ el.value = String(L[p[0]]); st[p[0]] = el.value; } });
+      KIT.gfacts[g.key] = {beds: st.beds, baths: st.baths, sqft: st.sqft}; paint(); }).catch(function(){}); }
+    // their face and logo: from the studio profile and their own brand kit
+    var idOf = function(v){ var m = String(v || '').match(/[-\w]{25,}/); return m ? m[0] : ''; };
+    var loadPic = function(id){ return id ? fetch('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=s400').then(function(r){ if(!r.ok) throw new Error('pic'); return r.blob(); }).then(function(b){ return createImageBitmap(b); }).catch(function(){ return null; }) : Promise.resolve(null); };
+    var bk = {}; try{ bk = (typeof BK !== 'undefined' && BK) || {}; }catch(eB){}
+    loadPic(idOf(raw.hd) || idOf(bk.head)).then(function(bm){ if(bm && job === KIT.job){ st.head = bm; paint(); } });
+    loadPic(idOf(bk.logo)).then(function(bm){ if(bm && job === KIT.job){ st.logo = bm; paint(); } });
     if(/open house|sold/i.test(st.label)){ st.l2 = ''; l2.value = ''; }
     card.addEventListener('click', function(e){
       var k = e.target.closest ? e.target.closest('[data-gk]') : null;
       if(k){ st.label = k.getAttribute('data-gk'); card.querySelectorAll('[data-gk]').forEach(function(b){ b.classList.toggle('on', b === k); }); if(/open house|sold/i.test(st.label) && l2.value === (d.price || '')){ st.l2 = ''; l2.value = ''; } hint(); paint(); return; }
+      var gc = e.target.closest ? e.target.closest('[data-gc]') : null;
+      if(gc){ st.accent = KIT.gaccent = gc.getAttribute('data-gc'); card.querySelectorAll('[data-gc]').forEach(function(b){ b.classList.toggle('on', b === gc); }); paint(); return; }
       var gs = e.target.closest ? e.target.closest('[data-gs]') : null;
       if(gs){ st.style = KIT.gstyle = gs.getAttribute('data-gs'); card.querySelectorAll('[data-gs]').forEach(function(b){ b.classList.toggle('on', b === gs); }); paint(); findExterior(); return; }
       var f = e.target.closest ? e.target.closest('[data-gf]') : null;
@@ -4583,7 +4680,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-12</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-13</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
