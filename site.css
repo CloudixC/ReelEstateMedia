@@ -287,6 +287,7 @@ footer .fleg{grid-column:1/-1;color:var(--faint)}
 .pl .notes li::before{content:'—';position:absolute;left:0;color:var(--red);font-weight:700}
 .pl .wrap > *{max-width:860px}
 button.btn{cursor:pointer;line-height:inherit}
+button.btn.sec{background:transparent}
 @media print{
   body{background:#fff !important;color:#111 !important;background-image:none !important}
   .top .nav,#stick,footer,.close,.hero .acts,.printbtn,#enq,#lb{display:none !important}

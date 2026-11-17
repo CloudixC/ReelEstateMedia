@@ -11,7 +11,7 @@
 
   /* ---- 📈 counts: one row per visit to a page, per Book click and per enquiry. No names, nothing about the visitor.
      Kept by month (ref 'site-YYYY-MM'); the Command Centre reads the totals. The studio's own browser isn't counted. ---- */
-  var studio = false; try{ studio = !!localStorage.getItem('rem_admin_token_v1'); }catch(e){}
+  var studio = false; try{ studio = !!(localStorage.getItem('rem_admin_token_v1') || localStorage.getItem('rem_pipeline_v1') || localStorage.getItem('rem_setup_v1')); }catch(e){}   // any browser that holds the Command Centre
   var now = new Date(), mo = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2);
   function count(label, onceKey){
     if(studio) return;
