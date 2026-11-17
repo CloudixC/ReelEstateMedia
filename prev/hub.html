@@ -815,8 +815,8 @@ body.light .kitm .kgnum input[type=number]{background:#fff}
 .kgwrap{display:flex;flex-direction:column}
 .kgside{display:contents}
 .kgprev{order:-1;position:sticky;top:-22px;z-index:3;margin:8px -22px 0;padding:12px 22px 8px;background:#17171a;border-bottom:1px solid var(--line)}
-.kgprev #kg-note{margin:6px 0 0;text-align:center;min-height:0}
-.kgprev #kg-note:empty{display:none}
+.kgprev #kg-note,.kgprev #kq-note{margin:6px 0 0;text-align:center;min-height:0}
+.kgprev #kg-note:empty,.kgprev #kq-note:empty{display:none}
 .kgcard .bact{position:sticky;bottom:-22px;z-index:3;margin:14px -22px -22px;padding:12px 22px 16px;background:#101013;border-top:1px solid var(--line)}
 body.light .kgprev,body.light .kgcard .bact{background:#fff}
 @media (min-width:860px){
@@ -5527,7 +5527,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var W = o.w, H = o.h; cv.width = W; cv.height = H; var x = cv.getContext('2d'), story = H / W > 1.5, M = Math.round(W * 0.09), acc = o.accent || '#EA002A', ink = '#221E1C';
     var safeT = story ? Math.round(H * 0.13) : Math.round(W * 0.085), safeB = story ? Math.round(H * 0.13) : Math.round(W * 0.075);
     x.fillStyle = '#F5F1EB'; x.fillRect(0, 0, W, H); x.textBaseline = 'alphabetic'; x.textAlign = 'left'; sp(x, 0);
-    // the agent row at the foot
+    // the agent row at the foot (arrives last)
+    el(x, o, 'down', 3);
     var nameF = Math.round(W * 0.03), smF = Math.round(W * 0.024), r = o.head ? Math.round(W * 0.046) : 0, rowH = Math.max(r * 2, nameF + smF * 1.5), yRow = H - safeB - rowH, ruleY = yRow - Math.round(W * 0.035);
     x.fillStyle = 'rgba(34,30,28,.22)'; x.fillRect(M, ruleY, W - M * 2, 2);
     var tx = M + (r ? r * 2 + Math.round(W * 0.022) : 0), cy = yRow + rowH / 2;
@@ -5535,7 +5536,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
     x.fillStyle = ink; x.font = '700 ' + nameF + 'px ' + SANS2; x.fillText(o.agent || '', tx, cy - smF * 0.15);
     x.fillStyle = 'rgba(34,30,28,.7)'; x.font = '500 ' + smF + 'px ' + SANS2; x.fillText(wrapLines(x, [o.brokerage, o.phone].filter(Boolean).join('   ·   '), W - M - tx - (o.logo ? W * 0.24 : 0), 1)[0] || '', tx, cy + smF * 1.15);
     if(o.logo){ var lh0 = Math.min(rowH * 0.8, W * 0.06), lw0 = o.logo.width * lh0 / o.logo.height; if(lw0 > W * 0.22){ lh0 = lh0 * W * 0.22 / lw0; lw0 = W * 0.22; } x.drawImage(o.logo, W - M - lw0, cy - lh0 / 2, lw0, lh0); }
-    // the opening mark and the stars
+    // the opening mark and the stars (first)
+    el(x, o, 'up', 0);
     var markC = lumOf(acc) > 0.8 ? ink : acc;
     x.fillStyle = markC; x.font = '600 ' + Math.round(W * 0.3) + 'px ' + SERIF; x.fillText('“', M - W * 0.012, safeT + Math.round(W * 0.235));
     if(o.stars){ x.font = '400 ' + Math.round(W * 0.042) + 'px ' + SANS2; sp(x, W * 0.008); x.textAlign = 'right'; x.fillText('★★★★★', W - M, safeT + Math.round(W * 0.085)); x.textAlign = 'left'; sp(x, 0); }
@@ -5544,19 +5546,22 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var text = String(o.quote || '').trim() || 'Paste your client’s review and it appears here.', fs = Math.round(W * 0.078), lines = [], lh = 0;
     for(; fs >= Math.round(W * 0.03); fs -= Math.max(1, Math.round(W * 0.002))){ x.font = 'italic 600 ' + fs + 'px ' + SERIF; lines = wrapLines(x, text, W - M * 2, 60); lh = Math.round(fs * 1.22); if(lines.length * lh <= bot - top) break; }
     lines = wrapLines(x, text, W - M * 2, Math.max(1, Math.floor((bot - top) / lh)));
-    x.fillStyle = ink; var y0 = top + fs;
+    el(x, o, 'left', 1);
+    x.font = 'italic 600 ' + fs + 'px ' + SERIF; x.fillStyle = ink; var y0 = top + fs;
     lines.forEach(function(t, i){ x.fillText(t, M, y0 + i * lh); });
+    el(x, o, 'left', 2);
     var yw = y0 + (lines.length - 1) * lh + Math.round(W * 0.085);
     x.fillStyle = markC; x.fillRect(M, yw - W * 0.011, W * 0.06, Math.max(2, W * 0.004));
     x.fillStyle = ink; x.font = '700 ' + Math.round(W * 0.03) + 'px ' + SANS2; sp(x, W * 0.004); x.fillText(String(o.who || '').toUpperCase(), M + W * 0.08, yw); sp(x, 0);
     if(o.sub){ x.fillStyle = 'rgba(34,30,28,.65)'; x.font = '500 ' + Math.round(W * 0.026) + 'px ' + SANS2; x.fillText(wrapLines(x, String(o.sub), W - M * 2 - W * 0.08, 1)[0] || '', M + W * 0.08, yw + Math.round(W * 0.042)); }
+    elEnd(x, o);
   }
   KIT._drawQuote = drawQuote;
   function openReview(){
     var p = gPrefs(), raw = KIT.raw || {}, bc = brandColour();
     var swatches = (bc ? [bc] : []).concat(['#EA002A', '#A8733A', '#1F5B45', '#1E3A5F', '#1B1817']); if(swatches.indexOf(p.accent) < 0) swatches.unshift(p.accent);
     swatches = swatches.filter(function(c, i, a2){ return a2.indexOf(c) === i; });
-    var st = {quote: '', who: '', sub: '', stars: true, fmt: 'p', accent: p.accent, head: null, logo: null};
+    var st = {quote: '', who: '', sub: '', stars: true, fmt: 'p', accent: p.accent, head: null, logo: null, motion: p.motion, play: 0, busy: false, o: null};
     var card = openModal('<h3>⭐ Review graphic</h3><div class="bsub">Paste a client’s review and post it in your colours. Ask your client before sharing their name.</div>' +
       '<div class="kgwrap"><div class="kgopts">' +
       '<label class="kf" for="kq-text">Their words</label><textarea id="kq-text" rows="5" maxlength="600" placeholder="Paste the review here"></textarea>' +
@@ -5565,11 +5570,37 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<div class="kck" style="margin-top:8px"><input type="checkbox" id="kq-stars" checked><label for="kq-stars">Show five stars</label></div>' +
       '<label class="kf">Colour</label><div class="ksws">' + swatches.map(function(c){ return '<button type="button" class="ksw' + (c === st.accent ? ' on' : '') + '" data-qc="' + c + '" style="background:' + c + '" aria-label="Colour ' + c + '"></button>'; }).join('') + '</div>' +
       '<label class="kf">Shape</label><div class="kchips">' + Object.keys(GFMT).map(function(k){ return '<button type="button" class="kchip' + (k === 'p' ? ' on' : '') + '" data-qf="' + k + '">' + GFMT[k][2] + '</button>'; }).join('') + '</div>' +
-      '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kq-cv"></canvas></div>' +
-      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kq-dl" style="width:auto">Download <span class="ar">→</span></button></div></div></div>');
+      '<label class="kf">Still or video</label><div class="kchips" id="kq-motion">' + [['still', 'Still image'], ['slide', 'Video · slide in'], ['fade', 'Video · fade in']].map(function(k){ return '<button type="button" class="kchip' + (st.motion === k[0] ? ' on' : '') + '" data-qm="' + k[0] + '">' + k[1] + '</button>'; }).join('') + '<button type="button" class="kchip" id="kq-play"' + (st.motion === 'still' ? ' style="display:none"' : '') + '>▶ Play</button></div>' +
+      '</div><div class="kgside"><div class="kgprev"><canvas class="kcanvas" id="kq-cv"></canvas><div class="bsub" id="kq-note"></div></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="kq-dl" style="width:auto">' + (st.motion === 'still' ? 'Download ' : 'Download video ') + '<span class="ar">→</span></button></div></div></div>');
     card.classList.add('kgcard');
     var job = KIT.job, cv = $id('kq-cv');
-    var paint = function(){ var f = GFMT[st.fmt]; drawQuote(cv, {w: f[0], h: f[1], quote: st.quote, who: st.who, sub: st.sub, stars: st.stars, accent: st.accent, agent: agentName(), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), head: st.head, logo: st.logo}); };
+    var note = $id('kq-note');
+    var paint = function(){ var f = GFMT[st.fmt]; st.o = {w: f[0], h: f[1], quote: st.quote, who: st.who, sub: st.sub, stars: st.stars, accent: st.accent, agent: agentName(), brokerage: String(raw.brokerage || ''), phone: String(raw.ph || ''), head: st.head, logo: st.logo}; st.play++; drawQuote(cv, st.o); };
+    // 🎞 the same motion as the listing graphics: the mark and stars, the words, the name, then the agent row
+    var playPreview = function(){
+      if(st.motion === 'still' || st.busy) return;
+      paint(); var my = st.play, o2 = {}; for(var k2 in st.o) o2[k2] = st.o[k2];
+      var kind = st.motion, t0 = performance.now(), last = MOTION.gap * 3 + MOTION.dur + 0.25;
+      var step = function(){ if(job !== KIT.job || my !== st.play) return; var t = (performance.now() - t0) / 1000;
+        if(t >= last){ drawQuote(cv, st.o); return; } try{ animFrame(cv, drawQuote, o2, kind, t); }catch(eA){ drawQuote(cv, st.o); return; } requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    };
+    var setMotion = function(m){ st.motion = KIT.gmotion = m; card.querySelectorAll('[data-qm]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-qm') === m); });
+      $id('kq-play').style.display = m === 'still' ? 'none' : ''; $id('kq-dl').firstChild.textContent = m === 'still' ? 'Download ' : 'Download video '; if(note) note.textContent = ''; if(m === 'still') paint(); else playPreview(); };
+    var fileName = function(ext){ return 'Review' + (st.who.trim() ? ' - ' + safeName(st.who).replace(/\.+$/, '') : '') + '.' + ext; };
+    var makeVideo = function(){
+      var btn = $id('kq-dl'); if(st.busy) return;
+      if(!videoMime()){ say('This browser can’t make videos — use Chrome or Safari, or download the still image.'); return; }
+      paint(); st.busy = true; btn.disabled = true; btn.style.opacity = '.5';
+      recordVideo(drawQuote, st.o, st.motion, function(pr){ if(note && job === KIT.job) note.textContent = 'Making your video… ' + Math.round(pr * 100) + '%'; }).then(function(v){
+        st.busy = false; btn.disabled = false; btn.style.opacity = '';
+        if(note && job === KIT.job) note.textContent = v.ext === 'mp4' ? '✓ Video ready (' + MOTION.secs + ' seconds).' : 'Saved as a .webm video — this browser can’t save .mp4, which Instagram needs. Chrome or Safari can.';
+        var name = fileName(v.ext), file = null; try{ file = new File([v.blob], name, {type: v.blob.type}); }catch(e){}
+        if(/iphone|ipad|android/i.test(navigator.userAgent) && file && navigator.canShare && navigator.canShare({files: [file]})) navigator.share({files: [file]}).catch(function(){ dl(v.blob, name); });
+        else dl(v.blob, name);
+      }).catch(function(){ st.busy = false; btn.disabled = false; btn.style.opacity = ''; if(note && job === KIT.job) note.textContent = ''; say('Couldn’t make the video on this device — the still image still works.'); });
+    };
     paint();
     ensureFonts('classic').then(function(){ if(job === KIT.job) paint(); });
     agentPics().then(function(pc){ if(job !== KIT.job) return; st.head = pc.head; st.logo = pc.logo; paint(); });
@@ -5581,13 +5612,18 @@ window.OneSignalDeferred.push(async function(OneSignal){
       var c = e.target.closest ? e.target.closest('[data-qc]') : null;
       if(c){ st.accent = c.getAttribute('data-qc'); card.querySelectorAll('[data-qc]').forEach(function(b){ b.classList.toggle('on', b === c); }); paint(); return; }
       var f = e.target.closest ? e.target.closest('[data-qf]') : null;
-      if(f){ st.fmt = f.getAttribute('data-qf'); card.querySelectorAll('[data-qf]').forEach(function(b){ b.classList.toggle('on', b === f); }); paint(); }
+      if(f){ st.fmt = f.getAttribute('data-qf'); card.querySelectorAll('[data-qf]').forEach(function(b){ b.classList.toggle('on', b === f); }); paint(); if(st.motion !== 'still') playPreview(); return; }
+      var qm = e.target.closest ? e.target.closest('[data-qm]') : null;
+      if(qm){ setMotion(qm.getAttribute('data-qm')); return; }
+      if(e.target.closest && e.target.closest('#kq-play')){ playPreview(); }
     });
     $id('kq-dl').onclick = function(){
       if(!st.quote.trim()){ say('Paste the review first.'); return; }
+      if(st.motion !== 'still'){ makeVideo(); return; }
+      paint();
       cv.toBlob(function(b){
         if(!b){ say('Couldn’t make the image on this device.'); return; }
-        var name = 'Review' + (st.who.trim() ? ' - ' + safeName(st.who).replace(/\.+$/, '') : '') + '.jpg', file = null; try{ file = new File([b], name, {type: 'image/jpeg'}); }catch(e){}
+        var name = fileName('jpg'), file = null; try{ file = new File([b], name, {type: 'image/jpeg'}); }catch(e){}
         if(/iphone|ipad|android/i.test(navigator.userAgent) && file && navigator.canShare && navigator.canShare({files: [file]})) navigator.share({files: [file]}).catch(function(){});
         else dl(b, name);
       }, 'image/jpeg', 0.95);
@@ -5745,7 +5781,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-22</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-23</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
