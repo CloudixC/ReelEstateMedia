@@ -199,6 +199,7 @@
   .pill.partner{background:var(--amber-soft);color:#ff6b72}
   .pill.internal{background:rgba(169,142,222,.15);color:var(--violet)}
   .pill.direct{background:rgba(76,195,138,.13);color:var(--teal)}
+  .pill.package{background:rgba(130,168,217,.16);color:#9dbde8}
 
   .progress{height:7px;background:var(--ink2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
   .progress>div{height:100%;background:linear-gradient(90deg,#a5131b,var(--amber));border-radius:99px;transition:width .4s ease}
@@ -485,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-13) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-14) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1161,9 +1162,19 @@ const TIER_LABEL = {
   partner: 'Royal LePage',
   internal: 'Royal LePage',
   direct: 'Direct · retail',
-  unlimited: 'Unlimited Plan · monthly'
+  unlimited: 'Unlimited Plan · monthly',
+  package: 'Monthly package'
 };
-const rateFor = (tier, s) => tier === 'unlimited' ? 0 : tier === 'direct' ? s.retail : s.partner;
+const isRetailTier = tier => tier === 'direct' || tier === 'package';
+const rateFor = (tier, s) => tier === 'unlimited' ? 0 : isRetailTier(tier) ? s.retail : s.partner;
+const cleanPkg = pkg => (Array.isArray(pkg) ? pkg : []).map(l => ({
+  id: l && l.id || uid(),
+  name: String(l && l.name || '').trim().slice(0, 80),
+  qty: Math.min(999, Math.max(1, Math.round(+(l && l.qty) || 1))),
+  price: Math.max(0, Math.round((+(l && l.price) || 0) * 100) / 100),
+  make: !!l && l.make !== false
+})).filter(l => l.name);
+const pkgTotal = pkg => cleanPkg(pkg).reduce((a, l) => a + l.qty * l.price, 0);
 const CAL_EVENT_SLUG = {
   pod1: 'podcast-teleprompter',
   pod5: 'podcast-teleprompter',
@@ -4275,8 +4286,10 @@ function AppInner({
       addDl = [],
       hubIds = [];
     db.clients.forEach(c => {
-      if (c.tier !== 'unlimited') return;
-      const amt = +(c.retainer !== undefined ? c.retainer : 1750);
+      const isPkg = c.tier === 'package';
+      if (c.tier !== 'unlimited' && !isPkg) return;
+      const lines = isPkg ? cleanPkg(c.pkg) : [];
+      const amt = isPkg ? pkgTotal(lines) : +(c.retainer !== undefined ? c.retainer : 1750);
       if (!(amt > 0)) return;
       const start = /^\d{4}-\d{2}$/.test(String(c.retainerStart || '')) ? String(c.retainerStart) : cur;
       db.orders.forEach(o => {
@@ -4287,21 +4300,26 @@ function AppInner({
         add.push({
           id: uid(),
           clientId: c.id,
-          project: 'Unlimited Plan — ' + moLabel(mo),
+          project: (isPkg ? 'Monthly package — ' : 'Unlimited Plan — ') + moLabel(mo),
           date: mo + '-01',
           payment: 'unpaid',
           hst: true,
           retainer: true,
           rmonth: mo,
-          items: [{
+          items: isPkg ? lines.map(l => ({
+            name: l.name,
+            price: l.price,
+            qty: l.qty
+          })) : [{
             name: 'Unlimited Content Plan (monthly)',
             price: amt,
             qty: 1
           }]
         });
       }
-      if (add.filter(o => o.clientId === c.id && o.retainer).length) logActivity(`🔁 Retainer invoices for ${c.name}: ${add.filter(o => o.clientId === c.id && o.retainer).length} month(s) at ${money(amt)} + HST`);
-      const plan = Array.isArray(c.plan) ? c.plan.filter(x => x && x.serviceId && (+x.qty || 0) > 0) : [];
+      if (add.filter(o => o.clientId === c.id && o.retainer).length) logActivity(`🔁 ${isPkg ? 'Package' : 'Retainer'} invoices for ${c.name}: ${add.filter(o => o.clientId === c.id && o.retainer).length} month(s) at ${money(amt)} + HST`);
+      const made = isPkg ? lines.filter(l => l.make) : [];
+      const plan = isPkg ? made : Array.isArray(c.plan) ? c.plan.filter(x => x && x.serviceId && (+x.qty || 0) > 0) : [];
       if (plan.length && start <= cur && !db.orders.some(o => o.planAuto && o.clientId === c.id && String(o.rmonth) === cur)) {
         const po = {
           id: uid(),
@@ -4312,7 +4330,12 @@ function AppInner({
           hst: true,
           planAuto: true,
           rmonth: cur,
-          items: plan.map(x => {
+          items: isPkg ? made.map(l => ({
+            name: l.name,
+            qty: l.qty,
+            price: 0,
+            per: 1
+          })) : plan.map(x => {
             const sv = svc(x.serviceId);
             return {
               serviceId: x.serviceId,
@@ -4328,7 +4351,7 @@ function AppInner({
         add.push(po);
         addDl.push(...spawnDeliverables(po));
         hubIds.push(c.id);
-        logActivity(`📦 ${c.name}: ${moLabel(cur)} content package created — ${po.items.reduce((a, i) => a + i.qty, 0)} item(s), covered by the retainer`);
+        logActivity(`📦 ${c.name}: ${moLabel(cur)} content package created — ${po.items.reduce((a, i) => a + i.qty, 0)} item(s), covered by the ${isPkg ? 'package' : 'retainer'}`);
       }
     });
     if (!add.length && !drop.length) return;
@@ -5621,7 +5644,7 @@ function AppInner({
     if (cur && patch.payment === 'paid' && cur.payment !== 'paid') {
       const c = db.clients.find(x => x.id === cur.clientId);
       const hk = c && (c.hubKey || c.hubId);
-      const balOn = c && (c.showBalance !== undefined ? !!c.showBalance : c.tier === 'direct' || c.tier === 'unlimited');
+      const balOn = c && (c.showBalance !== undefined ? !!c.showBalance : c.tier === 'direct' || c.tier === 'unlimited' || c.tier === 'package');
       if (hk && db.settings.inboxUrl && balOn) {
         const tot = orderTotals(cur).total;
         const when = new Date().toLocaleDateString('en-CA', {
@@ -8662,6 +8685,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-14',
+  items: [['📦', 'Custom monthly packages', 'A client can now be on a package you build yourself: Edit client → Pricing → “Custom monthly package”. Add a line for each thing (what it is × how many × price each), and untick “Creates work” for ongoing services like managing their page. Each month one invoice lists every line, and the lines that create work appear as a $0 Monthly Content order ready to schedule. Anything extra bills at the retail rate.']]
+}, {
   v: '2026.11.16-13',
   items: [['🎵', 'Trending audio for agents', 'Each Monday a draft list of trending TikTok and Instagram songs lands on Home here. Check it, fix anything, and press Publish — it then shows on every agent’s Home tab. Agents can save songs, and saved songs stay with them when the list changes. Nothing reaches agents until you publish.']]
 }, {
@@ -12691,7 +12717,12 @@ function ClientsPage({
         style: {
           marginLeft: 8
         }
-      }, money(+(c.retainer !== undefined ? c.retainer : 1750)), "/mo", c.retainerStart ? ' since ' + c.retainerStart : '', Array.isArray(c.plan) && c.plan.length ? ' · 📦 ' + c.plan.reduce((a, x) => a + (+x.qty || 0), 0) + ' items/mo' : '')), React.createElement("div", {
+      }, money(+(c.retainer !== undefined ? c.retainer : 1750)), "/mo", c.retainerStart ? ' since ' + c.retainerStart : '', Array.isArray(c.plan) && c.plan.length ? ' · 📦 ' + c.plan.reduce((a, x) => a + (+x.qty || 0), 0) + ' items/mo' : ''), c.tier === 'package' && React.createElement("span", {
+        className: "small faint",
+        style: {
+          marginLeft: 8
+        }
+      }, money(pkgTotal(c.pkg)), "/mo", c.retainerStart ? ' since ' + c.retainerStart : '', cleanPkg(c.pkg).length ? ' · 📦 ' + cleanPkg(c.pkg).length + ' line' + (cleanPkg(c.pkg).length === 1 ? '' : 's') : ' · no lines yet')), React.createElement("div", {
         className: "crows"
       }, em && React.createElement("div", null, "📧 ", React.createElement("a", {
         href: 'mailto:' + em
@@ -13502,7 +13533,7 @@ function BookingCard({
     className: "frow one"
   }, React.createElement("div", null, React.createElement("label", {
     className: "f"
-  }, "Service booked (", tier === 'direct' ? 'retail rate' : 'REM rate', ")"), React.createElement("select", {
+  }, "Service booked (", isRetailTier(tier) ? 'retail rate' : 'REM rate', ")"), React.createElement("select", {
     value: serviceId,
     onChange: e => setServiceId(e.target.value)
   }, CATS.map(cat => React.createElement("optgroup", {
@@ -14927,7 +14958,7 @@ function NewOrderModal({
     onChange: e => setProject(e.target.value)
   }))), React.createElement("label", {
     className: "f"
-  }, "Services (", tier === 'direct' ? 'retail rates' : 'REM rates', ")"), React.createElement("select", {
+  }, "Services (", isRetailTier(tier) ? 'retail rates' : 'REM rates', ")"), React.createElement("select", {
     value: picker,
     onChange: e => addItem(e.target.value),
     style: {
@@ -15109,6 +15140,159 @@ function PlanBuilder({
       marginTop: 4
     }
   }, "Set it once: on the 1st of every month a $0 \"Monthly Content\" order appears with all these deliverables ready to schedule — covered by the retainer. Leave empty to raise months by hand. To tweak one month, edit that order's deliverables (✕ / ✎); the package definition here stays untouched."));
+}
+function PackageBuilder({
+  pkg,
+  setPkg
+}) {
+  const rows = Array.isArray(pkg) ? pkg : [];
+  const set = (i, k, v) => setPkg(rows.map((r, j) => j === i ? {
+    ...r,
+    [k]: v
+  } : r));
+  return React.createElement("div", {
+    style: {
+      marginTop: 10
+    },
+    "data-pkg": true
+  }, React.createElement("label", {
+    className: "f"
+  }, "📦 What’s in the package each month"), rows.map((l, i) => React.createElement("div", {
+    key: l.id,
+    "data-pkg-row": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 8,
+      marginBottom: 6
+    }
+  }, React.createElement("input", {
+    style: {
+      width: '100%'
+    },
+    placeholder: "What it is — e.g. Tier 1 video",
+    maxLength: 80,
+    value: l.name,
+    onChange: e => set(i, 'name', e.target.value)
+  }), React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      alignItems: 'center',
+      marginTop: 6
+    }
+  }, React.createElement("input", {
+    type: "number",
+    min: "1",
+    step: "1",
+    style: {
+      width: 68
+    },
+    title: "How many each month",
+    "aria-label": "How many each month",
+    value: l.qty,
+    onChange: e => set(i, 'qty', e.target.value)
+  }), React.createElement("span", {
+    className: "small faint"
+  }, "a month × $"), React.createElement("input", {
+    type: "number",
+    min: "0",
+    step: "10",
+    style: {
+      width: 96
+    },
+    title: "Price each, before HST",
+    "aria-label": "Price each",
+    value: l.price,
+    onChange: e => set(i, 'price', e.target.value)
+  }), React.createElement("span", {
+    className: "small faint"
+  }, "each"), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("b", {
+    className: "small",
+    style: {
+      textAlign: 'right'
+    }
+  }, money(Math.max(1, Math.round(+l.qty || 1)) * Math.max(0, +l.price || 0))), React.createElement("button", {
+    className: "x",
+    title: "Remove this line",
+    onClick: () => setPkg(rows.filter((_, j) => j !== i))
+  }, "✕")), React.createElement("label", {
+    className: "small muted",
+    style: {
+      display: 'flex',
+      gap: 7,
+      alignItems: 'center',
+      marginTop: 6,
+      cursor: 'pointer'
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    style: {
+      width: 'auto',
+      minHeight: 0
+    },
+    checked: l.make !== false,
+    onChange: e => set(i, 'make', e.target.checked)
+  }), "Creates work to deliver each month ", React.createElement("span", {
+    className: "faint"
+  }, "(untick for an ongoing service, like managing their page)")))), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-pkg-add": true,
+    onClick: () => setPkg([...rows, {
+      id: uid(),
+      name: '',
+      qty: 1,
+      price: 0,
+      make: true
+    }])
+  }, "+ Add a line"), React.createElement("div", {
+    className: "flex",
+    style: {
+      marginTop: 10,
+      alignItems: 'baseline'
+    }
+  }, React.createElement("span", {
+    className: "small faint"
+  }, "Monthly total, before HST"), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("b", {
+    "data-pkg-total": true,
+    style: {
+      fontSize: 18
+    }
+  }, money(pkgTotal(rows)))));
+}
+function PackageFields({
+  pkg,
+  setPkg,
+  retainerStart,
+  setRetainerStart,
+  editing
+}) {
+  return React.createElement("div", {
+    style: {
+      marginTop: 8
+    }
+  }, React.createElement("label", {
+    className: "f"
+  }, "Package started (first billed month)"), React.createElement("input", {
+    type: "month",
+    style: {
+      maxWidth: 220
+    },
+    value: retainerStart,
+    onChange: e => setRetainerStart(e.target.value)
+  }), React.createElement(PackageBuilder, {
+    pkg: pkg,
+    setPkg: setPkg
+  }), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 6
+    }
+  }, "One invoice a month lists every line (plus HST) — raised for each month from the start month through today, then on the 1st. Lines that create work also appear each month as a $0 “Monthly Content” order, ready to schedule. Anything extra you book for them bills at the retail rate.", editing ? ' Changes apply to months not yet invoiced — edit an existing month’s order directly.' : ''));
 }
 function WelcomeAgentModal({
   client,
@@ -15298,9 +15482,10 @@ function NewClientModal({
   const [retainer, setRetainer] = useState(1750);
   const [retainerStart, setRetainerStart] = useState(today().slice(0, 7));
   const [plan, setPlan] = useState([]);
+  const [pkg, setPkg] = useState([]);
   useEffect(() => {
-    if (tier === 'direct' && company === 'Pinnacle') setCompany('');
-    if (tier !== 'direct' && !company) setCompany('Pinnacle');
+    if (isRetailTier(tier) && company === 'Pinnacle') setCompany('');
+    if (!isRetailTier(tier) && !company) setCompany('Pinnacle');
   }, [tier]);
   const build = () => ({
     id: uid(),
@@ -15317,6 +15502,11 @@ function NewClientModal({
       retainer: +retainer || 0,
       retainerStart: retainerStart || today().slice(0, 7),
       plan
+    } : {}),
+    ...(tier === 'package' ? {
+      pkg: cleanPkg(pkg),
+      retainer: pkgTotal(pkg),
+      retainerStart: retainerStart || today().slice(0, 7)
     } : {})
   });
   const attempt = () => {
@@ -15378,7 +15568,14 @@ function NewClientModal({
     value: "direct"
   }, "Direct Client — retail rate, no Pinnacle involvement"), React.createElement("option", {
     value: "unlimited"
-  }, "Unlimited Plan — flat monthly retainer, services included")), tier === 'unlimited' && React.createElement("div", {
+  }, "Unlimited Plan — flat monthly retainer, services included"), React.createElement("option", {
+    value: "package"
+  }, "Custom monthly package — your own line items, billed monthly")), tier === 'package' && React.createElement(PackageFields, {
+    pkg: pkg,
+    setPkg: setPkg,
+    retainerStart: retainerStart,
+    setRetainerStart: setRetainerStart
+  }), tier === 'unlimited' && React.createElement("div", {
     style: {
       marginTop: 8
     }
@@ -15559,10 +15756,11 @@ function EditClientModal({
     fr.readAsDataURL(file);
   };
   const [notes, setNotes] = useState(client.notes || '');
-  const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : client.tier === 'direct' || client.tier === 'unlimited');
+  const [showBalance, setShowBalance] = useState(client.showBalance !== undefined ? !!client.showBalance : client.tier === 'direct' || client.tier === 'unlimited' || client.tier === 'package');
   const [retainer, setRetainer] = useState(client.retainer !== undefined ? client.retainer : 1750);
   const [retainerStart, setRetainerStart] = useState(client.retainerStart || today().slice(0, 7));
   const [plan, setPlan] = useState(Array.isArray(client.plan) ? client.plan : []);
+  const [pkg, setPkg] = useState(Array.isArray(client.pkg) ? client.pkg : []);
   const [hubPin, setHubPin] = useState(client.hubPin || '');
   const [earns, setEarns] = useState(() => earnsMargin({
     ...client,
@@ -15627,7 +15825,15 @@ function EditClientModal({
     value: "direct"
   }, "Direct Client — retail rate, no Pinnacle involvement"), React.createElement("option", {
     value: "unlimited"
-  }, "Unlimited Plan — flat monthly retainer, services included")), tier === 'partner' && React.createElement("label", {
+  }, "Unlimited Plan — flat monthly retainer, services included"), React.createElement("option", {
+    value: "package"
+  }, "Custom monthly package — your own line items, billed monthly")), tier === 'package' && React.createElement(PackageFields, {
+    pkg: pkg,
+    setPkg: setPkg,
+    retainerStart: retainerStart,
+    setRetainerStart: setRetainerStart,
+    editing: true
+  }), tier === 'partner' && React.createElement("label", {
     className: "small muted",
     "data-earns": true,
     style: {
@@ -15924,6 +16130,11 @@ function EditClientModal({
           retainer: +retainer || 0,
           retainerStart: retainerStart || today().slice(0, 7),
           plan
+        } : {}),
+        ...(tier === 'package' ? {
+          pkg: cleanPkg(pkg),
+          retainer: pkgTotal(pkg),
+          retainerStart: retainerStart || today().slice(0, 7)
         } : {})
       });
     }
@@ -16456,7 +16667,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-13</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-14</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
