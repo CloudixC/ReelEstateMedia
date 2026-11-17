@@ -194,6 +194,22 @@ footer .sp{margin-right:auto}
 @media(max-width:560px){body.stuck #stick{display:flex} body.stuck{padding-bottom:76px}}
 @media(prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto !important}}
 
+/* ---- proof: three reels and what they did ---- */
+#proof h2 em{font-style:normal;color:var(--red)}
+.proof{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(10px,2.4vw,22px);margin-top:28px;max-width:780px}
+.pv{display:block;text-decoration:none;color:inherit}
+.pv .ph{position:relative;display:block;aspect-ratio:4/5;border-radius:14px;overflow:hidden;border:1px solid var(--line2);background:#111}
+.pv img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+.pv:hover img,.pv:focus-visible img{transform:scale(1.04)}
+.pv .play{position:absolute;left:9px;bottom:9px;width:26px;height:26px;border-radius:50%;background:rgba(10,10,10,.62);display:grid;place-items:center}
+.pv .play::before{content:'';border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent;margin-left:2px}
+.pv b{display:block;margin-top:12px;font-size:clamp(1.5rem,5.4vw,2.6rem);font-weight:700;letter-spacing:-.03em;line-height:1}
+.pv small{display:block;margin-top:5px;font-family:var(--mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.pv:hover b,.pv:focus-visible b{color:var(--amber)}
+.proofnote{margin-top:22px;color:var(--dim);font-size:.86rem;max-width:62ch}
+.proofnote a{color:var(--mist)}
+#proof .acts{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){.pv img{transition:none}}
 /* ---- shared additions (services, towns, reviews page, enquiry form) ---- */
 [hidden]{display:none !important}
 a.card{text-decoration:none;color:inherit}
