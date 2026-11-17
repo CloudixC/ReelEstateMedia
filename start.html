@@ -13,206 +13,14 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfessionalService","name":"Reel Estate Media","alternateName":"The Content Hub","url":"https://thecontenthub.ca/","email":"hello@reelestatemedia.com","image":"https://thecontenthub.ca/share-card.jpg","areaServed":"Greater Toronto Area","description":"Listing photography and video, reels, headshots and event recaps for real-estate agents."}</script>
 <meta property="og:url" content="https://thecontenthub.ca/">
 <meta name="theme-color" content="#1A1A1A">
+<link rel="canonical" href="https://thecontenthub.ca/start.html">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20120%20120%27%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20rx%3D%2726%27%20fill%3D%27%23EA002A%27/%3E%3Cg%20transform%3D%27translate%286%2C0%29%27%3E%3Cpath%20d%3D%27M%2083%2036%20A%2037%2037%200%201%200%2083%2084%27%20fill%3D%27none%27%20stroke%3D%27%23FAF8F5%27%20stroke-width%3D%2712%27%20stroke-linecap%3D%27round%27/%3E%3Cg%20fill%3D%27%23F2A900%27%3E%3Cpolygon%20points%3D%2755%2C44%2064%2C49%2064%2C71%2055%2C76%27/%3E%3Cpolygon%20points%3D%2766%2C50.5%2073%2C55%2073%2C65%2066%2C69.5%27/%3E%3Cpolygon%20points%3D%2775%2C56%2082%2C60%2075%2C64%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
-<style>
-:root{
-  --ink:#1A1A1A; --ink2:#141414; --panel:#202020; --panel2:#262626;
-  --line:rgba(250,248,245,.10); --line2:rgba(250,248,245,.18);
-  --txt:#FAF8F5; --mist:#d6d2cf; --dim:#9a948f; --faint:#726c72;
-  --red:#EA002A; --amber:#F2A900; --teal:#4cc38a;
-  --sans:'Space Grotesk',system-ui,-apple-system,sans-serif; --mono:'Space Mono',ui-monospace,monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{background:var(--ink);color:var(--txt);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
-  background-image:radial-gradient(900px 480px at 86% -6%, rgba(234,0,42,.20), transparent 60%), radial-gradient(700px 420px at -8% -4%, rgba(242,169,0,.07), transparent 56%);background-repeat:no-repeat}
-a{color:inherit}
-.wrap{max-width:1040px;margin:0 auto;padding:0 clamp(16px,4vw,34px)}
-.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.24em;text-transform:uppercase;color:var(--amber);font-weight:700}
-
-/* top bar */
-.top{display:flex;align-items:center;gap:14px;padding:20px 0}
-.brand{display:flex;align-items:center;gap:11px;text-decoration:none;margin-right:auto}
-.brand svg{width:38px;height:38px;flex:none}
-.brand .bn{display:flex;flex-direction:column;line-height:1.12;min-width:0}
-.brand b{font-weight:700;font-size:1.08rem;letter-spacing:-.01em;white-space:nowrap}
-.brand b em{font-style:normal;color:var(--amber)}
-.brand b i{font-style:normal;color:var(--red)}
-.brand small{font-family:var(--mono);font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:700;margin-top:4px;white-space:nowrap}
-.brand small strong{color:var(--mist);font-weight:700}
-.nav{display:flex;gap:6px;align-items:center}
-.nav a{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;text-decoration:none;padding:9px 12px;border-radius:999px;color:var(--mist)}
-.nav a:hover{color:var(--txt)}
-.nav a.pill{background:var(--red);color:#fff}
-.nav a.login{border:1px solid var(--line2);color:var(--txt);white-space:nowrap}
-.nav a.login:hover{border-color:var(--amber);color:var(--amber)}
-.nav a.login .lg{display:none}
-@media(max-width:560px){
-  .nav a:not(.pill):not(.login){display:none}
-  .nav a.pill{display:none}                       /* the big "Book a shoot" button sits right below on a phone */
-  .nav a.login .sm{display:none} .nav a.login .lg{display:inline}
-  .brand small{letter-spacing:.07em}
-}
-
-/* hero */
-.hero{position:relative;padding:clamp(34px,8vw,84px) 0 clamp(30px,6vw,60px)}
-h1{font-weight:700;font-size:clamp(2.3rem,7.4vw,4.6rem);line-height:.98;letter-spacing:-.035em;max-width:13ch;margin-top:16px}
-h1 em{font-style:normal;color:var(--red)}
-.lede{font-size:clamp(1.02rem,2.2vw,1.22rem);color:var(--mist);max-width:54ch;margin-top:22px}
-.acts{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
-.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:999px;padding:15px 26px;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:transform .2s,box-shadow .2s,border-color .2s}
-.btn.pri{background:var(--red);color:#fff;border:1px solid var(--red)}
-.btn.pri:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(234,0,42,.42)}
-.btn.sec{border:1px solid var(--line2);color:var(--txt)}
-.btn.sec:hover{border-color:var(--amber);color:var(--amber)}
-.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(34px,6vw,58px);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
-.fact{padding:18px 18px 18px 0}
-.fact + .fact{padding-left:18px;border-left:1px solid var(--line)}
-.fact b{display:block;font-size:clamp(1.25rem,3.4vw,1.9rem);font-weight:700;letter-spacing:-.02em;line-height:1.1}
-.fact span{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-@media(max-width:560px){.facts{grid-template-columns:1fr}.fact + .fact{padding-left:0;border-left:0;border-top:1px solid var(--line)}}
-
-section{padding:clamp(38px,7vw,72px) 0}
-h2{font-weight:700;font-size:clamp(1.6rem,4.4vw,2.5rem);letter-spacing:-.025em;line-height:1.06;margin:10px 0 8px;max-width:20ch}
-.sub{color:var(--mist);max-width:58ch}
-
-/* services */
-.svc{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:26px}
-.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;display:flex;flex-direction:column;gap:6px;min-height:168px;transition:border-color .2s,transform .2s}
-.card:hover{border-color:var(--line2);transform:translateY(-2px)}
-.card .ic{font-size:1.35rem}
-.card h3{font-size:1.08rem;font-weight:700;letter-spacing:-.01em}
-.card p{font-size:.9rem;color:var(--dim);line-height:1.5}
-.card .from{margin-top:auto;padding-top:10px;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;color:var(--mist);visibility:hidden}
-.card .from b{color:var(--txt);font-size:.95rem}
-.card .from.on{visibility:visible}
-.more{display:inline-block;margin-top:20px;font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--amber);text-decoration:none;border-bottom:1px solid rgba(242,169,0,.4);padding-bottom:3px}
-
-/* steps */
-.band{background:var(--ink2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:28px;counter-reset:st}
-.step{padding:6px 20px 6px 0;counter-increment:st}
-.step + .step{padding-left:20px;border-left:1px solid var(--line)}
-.step::before{content:'0' counter(st);font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;color:var(--red);font-weight:700}
-.step h3{font-size:1.05rem;font-weight:700;margin:8px 0 4px}
-.step p{font-size:.9rem;color:var(--dim);line-height:1.5}
-@media(max-width:820px){.steps{grid-template-columns:1fr 1fr;row-gap:24px}.step:nth-child(3){padding-left:0;border-left:0}}
-@media(max-width:480px){.steps{grid-template-columns:1fr}.step + .step{padding-left:0;border-left:0}}
-
-/* hub block */
-.hub{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(20px,5vw,48px);align-items:center}
-.hub ul{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:18px}
-.hub li{padding-left:26px;position:relative;color:var(--mist);font-size:.96rem}
-.hub li::before{content:'';position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--red)}
-.hub li b{color:var(--txt);font-weight:600}
-.pipe{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line2);border-radius:20px;padding:20px}
-.pipe .ph{font-family:var(--mono);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
-.pipe .st{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
-.pipe .st:first-of-type{border-top:0}
-.pipe .dot{width:10px;height:10px;border-radius:50%;background:var(--line2);flex:none}
-.pipe .st.done .dot{background:var(--teal)}
-.pipe .st.now .dot{background:var(--amber);box-shadow:0 0 0 5px rgba(242,169,0,.16)}
-.pipe .st b{font-weight:600;font-size:.95rem}
-.pipe .st span{margin-left:auto;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-@media(max-width:780px){.hub{grid-template-columns:1fr}}
-
-/* reviews */
-.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:26px}
-.q{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
-.q p{font-size:1.02rem;line-height:1.5}
-.q .who{margin-top:14px;font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-.q .who b{color:var(--txt)}
-
-/* closing */
-.close{text-align:center}
-.close h2{max-width:none;font-size:clamp(1.9rem,6vw,3.3rem)}
-.close .acts{justify-content:center}
-footer{padding:26px 0 46px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-footer a{text-decoration:none;color:var(--dim)}
-footer a:hover{color:var(--txt)}
-footer .sp{margin-right:auto}
-
-/* recent work */
-.reels{display:flex;gap:12px;overflow-x:auto;padding:4px 0 10px;margin-top:24px;scroll-snap-type:x proximity}
-.reels:empty{display:none}
-.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px}
-.shots:empty{display:none}
-.shot{position:relative;display:block;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);cursor:pointer;padding:0;color:inherit;font:inherit;text-align:left;text-decoration:none}
-.shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s}
-.shot:hover img{transform:scale(1.03)}
-.shots .shot{aspect-ratio:3/2}
-.reels .shot{flex:0 0 clamp(150px,22vw,200px);aspect-ratio:9/16;scroll-snap-align:start}
-.shot .cap{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 10px;font-size:.8rem;line-height:1.35;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))}
-.shot .play{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;color:#fff;font-size:1.1rem;padding-left:3px}
-.shot.ext{display:flex;flex-direction:column;justify-content:flex-end;padding:14px;background:linear-gradient(180deg,var(--panel2),var(--panel))}
-.shot.ext b{font-size:.95rem}
-.shot.ext span{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-top:6px}
-#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.92);display:none;align-items:center;justify-content:center;padding:clamp(12px,4vw,40px)}
-#lb.on{display:flex}
-#lb img{max-width:100%;max-height:100%;border-radius:10px;display:block}
-#lb iframe{width:min(100%,calc((100vh - 80px) * 9 / 16));aspect-ratio:9/16;max-height:100%;border:0;border-radius:12px;background:#000}
-#lb .x{position:absolute;top:14px;right:16px;appearance:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;width:42px;height:42px;font-size:1.1rem;cursor:pointer}
-.towns{margin-top:16px;font-size:.9rem;color:var(--dim)}
-.towns b{color:var(--mist);font-weight:600}
-
-/* tools */
-.tools{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,5vw,48px);align-items:center}
-.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:26px}
-.tgrid .card{min-height:0}
-.mock{display:grid;gap:12px}
-.mk{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line2);border-radius:18px;padding:14px}
-.mk .ph{font-family:var(--mono);font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-.poster{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:center}
-.poster .pg{background:#F5F1EB;border-radius:8px;aspect-ratio:4/5;padding:9px 8px 0;display:flex;flex-direction:column;align-items:center;overflow:hidden;color:#221E1C}
-.poster .pg i{font-style:normal;font-family:var(--mono);font-size:.34rem;letter-spacing:.16em}
-.poster .pg b{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:1.02rem;line-height:1.05;margin-top:3px;white-space:nowrap}
-.poster .pg b em{color:var(--red)}
-.poster .pg u{text-decoration:none;font-family:var(--mono);font-size:.33rem;letter-spacing:.1em;margin-top:3px}
-.poster .pg span{margin-top:auto;width:100%;height:46%;border-radius:60px 60px 0 0;background:linear-gradient(180deg,#8fb3d6 0 38%,#3c4a3f 38% 44%,#6b4a3a 44% 78%,#4d5e48 78%)}
-.poster p{font-size:.9rem;color:var(--mist);line-height:1.45}
-.poster p b{color:var(--txt)}
-.lead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
-.lead b{font-weight:600}
-.lead span{color:var(--dim)}
-.lead em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line2);border-radius:999px;padding:6px 10px;color:var(--txt)}
-.bars{display:grid;gap:7px}
-.bars div{display:grid;grid-template-columns:84px 1fr 26px;gap:10px;align-items:center;font-size:.84rem;color:var(--mist)}
-.bars i{height:7px;border-radius:7px;background:var(--line);overflow:hidden}
-.bars i b{display:block;height:100%;background:var(--red);border-radius:7px}
-.bars em{font-style:normal;text-align:right;color:var(--txt);font-weight:600}
-@media(max-width:780px){.tools{grid-template-columns:1fr}}
-
-/* monthly plans, brokerages */
-.plan{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(20px,5vw,48px);align-items:center}
-.plan ul{list-style:none;display:flex;flex-direction:column;gap:10px}
-.plan li{padding-left:26px;position:relative;color:var(--mist);font-size:.96rem}
-.plan li::before{content:'';position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--red)}
-.plan li b{color:var(--txt);font-weight:600}
-@media(max-width:780px){.plan{grid-template-columns:1fr}}
-.brk{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border:1px solid var(--line2);border-radius:20px;padding:22px 24px;background:linear-gradient(180deg,var(--panel2),var(--panel))}
-.brk div{flex:1 1 280px}
-.brk b{display:block;font-size:1.15rem;letter-spacing:-.01em}
-.brk span{color:var(--dim);font-size:.94rem}
-
-/* questions */
-.faq{margin-top:22px;border-top:1px solid var(--line2)}
-.faq details{border-bottom:1px solid var(--line)}
-.faq summary{list-style:none;cursor:pointer;padding:18px 34px 18px 0;font-weight:600;font-size:1.04rem;position:relative}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';position:absolute;right:4px;top:14px;font-family:var(--mono);font-size:1.2rem;color:var(--amber)}
-.faq details[open] summary::after{content:'–'}
-.faq p{color:var(--mist);padding:0 34px 18px 0;max-width:68ch;white-space:pre-line}
-
-/* phone: the Book button follows you down the page */
-#stick{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(20,20,20,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line2)}
-#stick a{flex:1;justify-content:center;padding:13px 10px}
-#stick a.sec{flex:0 0 auto;padding:13px 16px}
-@media(max-width:560px){body.stuck #stick{display:flex} body.stuck{padding-bottom:76px}}
-@media(prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto !important}}
-</style></head><body>
+<link rel="stylesheet" href="site.css?v=2">
+<script src="site.js?v=2" defer></script>
+</head><body data-page="start">
 
 <div class="wrap">
   <header class="top">
@@ -222,7 +30,7 @@ footer .sp{margin-right:auto}
     </a>
     <nav class="nav" aria-label="Site">
       <a href="#work">What we make</a>
-      <a href="wall.html">Reviews</a>
+      <a href="wall.html" data-rev hidden>Reviews</a>
       <a href="pricing.html">Pricing</a>
       <a class="login" href="login.html" title="Agents: sign in to your hub"><span class="sm">Agent login</span><span class="lg">Log in</span></a>
       <a class="pill" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a>
@@ -258,14 +66,14 @@ footer .sp{margin-right:auto}
   <h2>Everything a listing — or a personal brand — needs.</h2>
   <p class="sub">Book one piece or a whole content day. Every price is a flat rate, listed in full on the price list.</p>
   <div class="svc">
-    <div class="card"><div class="ic">🎬</div><h3>Social reels</h3><p>Filmed and edited reels, up to 30 seconds — singly or as a 5 or 10-reel content day.</p><div class="from" data-price="Dynamic Shoot — 1 Reel">from <b></b></div></div>
-    <div class="card"><div class="ic">🎙</div><h3>Talking-to-camera</h3><p>Podcast and teleprompter reels — scripted or prompted, you on camera.</p><div class="from" data-price="Podcast / Teleprompter — 1 Reel">from <b></b></div></div>
-    <div class="card"><div class="ic">📷</div><h3>Listing photography</h3><p>HDR photo sets from 20 images to full luxury estates.</p><div class="from" data-price="Essential Listing Photos">from <b></b></div></div>
-    <div class="card"><div class="ic">🎥</div><h3>Listing video</h3><p>Vertical walkthroughs through to cinematic property films with drone.</p><div class="from" data-price="Essential Walkthrough Video">from <b></b></div></div>
-    <div class="card"><div class="ic">📦</div><h3>Listing bundles</h3><p>Photos and video together — the best value for a new listing.</p><div class="from" data-price="Essential Listing Bundle">from <b></b></div></div>
-    <div class="card"><div class="ic">🧑‍💼</div><h3>Headshots</h3><p>A professional session with your favourites included.</p><div class="from" data-price="Professional Headshots"><b></b></div></div>
-    <div class="card"><div class="ic">🎉</div><h3>Event recaps</h3><p>Photo and video coverage of open houses, launches and team events.</p><div class="from" data-price="Event Recap"><b></b></div></div>
-    <div class="card"><div class="ic">🗺</div><h3>Tours, plans & add-ons</h3><p>Virtual tours, floor plans, twilight, drone and virtual staging.</p><div class="from on">on the <b>price list</b></div></div>
+    <a class="card" href="social-reels.html"><div class="ic">🎬</div><h3>Social reels</h3><p>Filmed and edited reels, up to 30 seconds — singly or as a 5 or 10-reel content day.</p><div class="from" data-price="Dynamic Shoot — 1 Reel">from <b></b></div></a>
+    <a class="card" href="social-reels.html"><div class="ic">🎙</div><h3>Talking-to-camera</h3><p>Podcast and teleprompter reels — scripted or prompted, you on camera.</p><div class="from" data-price="Podcast / Teleprompter — 1 Reel">from <b></b></div></a>
+    <a class="card" href="listing-photography.html"><div class="ic">📷</div><h3>Listing photography</h3><p>HDR photo sets from 20 images to full luxury estates.</p><div class="from" data-price="Essential Listing Photos">from <b></b></div></a>
+    <a class="card" href="listing-video.html"><div class="ic">🎥</div><h3>Listing video</h3><p>Vertical walkthroughs through to cinematic property films with drone.</p><div class="from" data-price="Essential Walkthrough Video">from <b></b></div></a>
+    <a class="card" href="listing-bundles.html"><div class="ic">📦</div><h3>Listing bundles</h3><p>Photos and video together — the best value for a new listing.</p><div class="from" data-price="Essential Listing Bundle">from <b></b></div></a>
+    <a class="card" href="headshots.html"><div class="ic">🧑‍💼</div><h3>Headshots</h3><p>A professional session with your favourites included.</p><div class="from" data-price="Professional Headshots"><b></b></div></a>
+    <a class="card" href="event-recaps.html"><div class="ic">🎉</div><h3>Event recaps</h3><p>Photo and video coverage of open houses, launches and team events.</p><div class="from" data-price="Event Recap"><b></b></div></a>
+    <a class="card" href="virtual-tours-floor-plans.html"><div class="ic">🗺</div><h3>Tours, plans & add-ons</h3><p>Virtual tours, floor plans, twilight, drone and virtual staging.</p><div class="from on">on the <b>price list</b></div></a>
   </div>
   <a class="more" href="pricing.html">Full price list →</a>
 </div></section>
@@ -307,7 +115,7 @@ footer .sp{margin-right:auto}
       <div class="eyebrow">Built into your hub</div>
       <h2>One shoot becomes a week of marketing.</h2>
       <p class="sub">Your photos and video arrive with the tools to post them, follow up on the people they bring in, and show your seller what you've done.</p>
-      <div class="acts"><a class="btn sec" href="listing-layouts.html?pub=1&amp;lay=split#split" target="_blank" rel="noopener">See a sample listing page</a></div>
+      <div class="acts"><a class="btn sec" data-demo href="listing-layouts.html?pub=1&amp;lay=split#split" target="_blank" rel="noopener">See a sample listing page</a></div>
     </div>
     <div class="mock" aria-hidden="true">
       <div class="mk"><div class="ph">Made in one tap</div>
@@ -334,7 +142,7 @@ footer .sp{margin-right:auto}
     <div class="eyebrow">Monthly plans</div>
     <h2>Content every month, without rebooking.</h2>
     <p class="sub">A set number of videos each month — with someone managing your page, if you want that too. Each plan is built around what you post and how often.</p>
-    <div class="acts"><a class="btn pri" href="mailto:hello@reelestatemedia.com?subject=Monthly%20plan">✉ Ask about a monthly plan</a></div>
+    <div class="acts"><a class="btn pri" href="mailto:hello@reelestatemedia.com?subject=Monthly%20plan" data-enquire="Monthly plan" data-enquire-title="Ask about a monthly plan">✉ Ask about a monthly plan</a></div>
   </div>
   <ul>
     <li><b>You choose what's in it</b> — how many pieces a month, and at what level of production.</li>
@@ -348,6 +156,12 @@ footer .sp{margin-right:auto}
   <h2>What agents say about working with us.</h2>
   <div class="quotes" id="quotes"></div>
   <a class="more" href="wall.html">Read every review →</a>
+</div></section>
+
+<section id="areas" class="band"><div class="wrap">
+  <div class="eyebrow">Where we shoot</div>
+  <h2>Across the Greater Toronto Area.</h2>
+  <div class="areas"><a href="real-estate-photography-toronto.html">Toronto</a><a href="real-estate-photography-brampton.html">Brampton</a><a href="real-estate-photography-mississauga.html">Mississauga</a><a href="real-estate-photography-vaughan.html">Vaughan</a><a href="real-estate-photography-markham.html">Markham</a><a href="real-estate-photography-richmond-hill.html">Richmond Hill</a><a href="real-estate-photography-oakville.html">Oakville</a><a href="real-estate-photography-milton.html">Milton</a><a href="real-estate-photography-caledon.html">Caledon</a><a href="real-estate-photography-burlington.html">Burlington</a></div>
 </div></section>
 
 <section id="questions" hidden><div class="wrap">
@@ -366,108 +180,15 @@ footer .sp{margin-right:auto}
   <h2>Tell us the address. We'll take it from there.</h2>
   <div class="acts" id="closeacts">
     <a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a>
-    <a class="btn sec" href="mailto:hello@reelestatemedia.com?subject=Booking%20enquiry">✉ hello@reelestatemedia.com</a>
+    <a class="btn sec" href="mailto:hello@reelestatemedia.com?subject=Booking%20enquiry" data-enquire="Booking question" data-enquire-title="Ask us anything">✉ Ask a question</a>
   </div>
 </div></section>
 
 <div class="wrap"><footer>
   <span class="sp">The Content Hub · powered by Reel Estate Media</span>
-  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="brokerages.html">Brokerages</a><a id="igfoot" hidden target="_blank" rel="noopener">Instagram</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="login.html" title="Agents: sign in to your hub">Agent login</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
+  <a href="pricing.html">Pricing</a><a href="wall.html" data-rev hidden>Reviews</a><a href="brokerages.html">Brokerages</a><a id="igfoot" hidden target="_blank" rel="noopener">Instagram</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="login.html" title="Agents: sign in to your hub">Agent login</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
 </footer></div>
 
 <div id="stick"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="pricing.html">Prices</a></div>
-<div id="lb" role="dialog" aria-modal="true" aria-label="Viewer"><button type="button" class="x" aria-label="Close">✕</button><div id="lbin"></div></div>
 
-<script>
-/* Prices are never typed here: each "from" figure is read off pricing.html, so the price list stays the single source. */
-(function(){
-  fetch('pricing.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
-    if(!t) return;
-    var doc = new DOMParser().parseFromString(t, 'text/html'), map = {};
-    [].slice.call(doc.querySelectorAll('.row')).forEach(function(row){
-      var n = row.querySelector('.nm b'), p = row.querySelector('.pr');
-      if(n && p && /\d/.test(p.textContent)) map[n.textContent.trim()] = p.textContent.replace(/\s+/g, '');
-    });
-    [].slice.call(document.querySelectorAll('[data-price]')).forEach(function(el){
-      var v = map[el.getAttribute('data-price')]; if(!v) return;
-      el.querySelector('b').textContent = v; el.classList.add('on');
-    });
-  }).catch(function(){});
-})();
-/* Reviews come live from the same wall the agents post to — the section only appears when there are some. */
-(function(){
-  var E = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
-  var esc = function(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
-  fetch(E + '?wall=1').then(function(r){ return r.json(); }).then(function(j){
-    var items = (j && j.ok && j.items) ? j.items.filter(function(t){ return t && t.q; }) : [];
-    if(!items.length) return;
-    document.getElementById('quotes').innerHTML = items.slice(0, 3).map(function(t){
-      var q = String(t.q); if(q.length > 240) q = q.slice(0, 237).replace(/\s+\S*$/, '') + '…';
-      return '<div class="q"><p>“' + esc(q) + '”</p><div class="who"><b>' + esc(t.w) + '</b>' + (t.b ? ' · ' + esc(t.b) : '') + '</div></div>';
-    }).join('');
-    document.getElementById('reviews').hidden = false;
-  }).catch(function(){});
-})();
-/* 📱 on a phone the Book button follows once the first one has scrolled away */
-(function(){
-  var first = document.querySelector('.hero .acts'); if(!first || !('IntersectionObserver' in window)) return;
-  new IntersectionObserver(function(en){ document.body.classList.toggle('stuck', !en[0].isIntersecting && en[0].boundingClientRect.top < 0); }).observe(first);
-})();
-/* 🌐 The parts you manage from the Command Centre (More → Website): recent work, phone, Instagram, towns and questions.
-   Each section stays hidden until there is something to show. Everything is treated as plain text, and links are only
-   used when they point at Google Drive (shown here) or Instagram / YouTube / TikTok / Vimeo (opened in a new tab). */
-(function(){
-  var E = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
-  var esc = function(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML.replace(/"/g, '&quot;'); };
-  var $ = function(id){ return document.getElementById(id); };
-  var driveId = function(u){ u = String(u || ''); if(!/^https:\/\/(drive|docs)\.google\.com\//i.test(u) && !/^https:\/\/lh3\.googleusercontent\.com\/d\//i.test(u)) return '';
-    var m = u.match(/\/d\/([-\w]{25,})/) || u.match(/[?&]id=([-\w]{25,})/); return m ? m[1] : ''; };
-  var extUrl = function(u){ u = String(u || '').trim(); if(u.length > 300 || /["'<>\s\\]/.test(u)) return ''; return /^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com)\//i.test(u) ? u : ''; };
-  var lb = $('lb'), lbin = $('lbin');
-  var shut = function(){ lb.classList.remove('on'); lbin.innerHTML = ''; };
-  lb.addEventListener('click', function(e){ if(e.target === lb || (e.target.closest && e.target.closest('.x'))) shut(); });
-  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') shut(); });
-  document.addEventListener('click', function(e){
-    var t = e.target.closest ? e.target.closest('[data-shot]') : null; if(!t) return;
-    var id = t.getAttribute('data-shot');
-    lbin.innerHTML = t.getAttribute('data-kind') === 'v' ? '<iframe src="https://drive.google.com/file/d/' + id + '/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>' : '<img alt="" src="https://lh3.googleusercontent.com/d/' + id + '=w2000">';
-    lb.classList.add('on');
-  });
-  fetch(E + '?review=site-content').then(function(r){ return r.json(); }).then(function(j){
-    var d = (j && j.state) || null; if(!d || typeof d !== 'object') return;
-    // recent work
-    var show = Array.isArray(d.show) ? d.show.slice(0, 18) : [], reels = '', shots = '';
-    show.forEach(function(x){
-      if(!x || typeof x !== 'object') return;
-      var cap = String(x.c || '').trim().slice(0, 80), vid = x.k === 'v', id = driveId(x.u), ext = id ? '' : extUrl(x.u);
-      if(id){
-        var img = vid ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w600' : 'https://lh3.googleusercontent.com/d/' + id + '=w900';
-        var tile = '<button type="button" class="shot" data-shot="' + id + '" data-kind="' + (vid ? 'v' : 'p') + '" aria-label="' + esc(cap || (vid ? 'Play the video' : 'Open the photo')) + '"><img loading="lazy" alt="" src="' + img + '">' + (vid ? '<span class="play">▶</span>' : '') + (cap ? '<span class="cap">' + esc(cap) + '</span>' : '') + '</button>';
-        if(vid) reels += tile; else shots += tile;
-      } else if(ext){
-        var host = /instagram/i.test(ext) ? 'Instagram' : /youtu/i.test(ext) ? 'YouTube' : /tiktok/i.test(ext) ? 'TikTok' : 'Vimeo';
-        reels += '<a class="shot ext" target="_blank" rel="noopener" href="' + esc(ext) + '"><b>' + esc(cap || 'Watch the reel') + '</b><span>Watch on ' + host + ' ↗</span></a>';
-      }
-    });
-    if(reels || shots){
-      $('reels').innerHTML = reels; $('shots').innerHTML = shots; $('showcase').hidden = false;
-      // a file that isn't shared with "anyone with the link" simply drops out
-      [].slice.call(document.querySelectorAll('#showcase .shot img')).forEach(function(im){ im.addEventListener('error', function(){ var t = im.closest('.shot'); if(t) t.remove(); if(!document.querySelector('#showcase .shot')) $('showcase').hidden = true; }); });
-    }
-    // towns
-    var towns = (Array.isArray(d.towns) ? d.towns : []).map(function(t){ return String(t || '').trim().slice(0, 30); }).filter(Boolean).slice(0, 24);
-    if(towns.length){ $('towns').innerHTML = '<b>Shooting in</b> ' + towns.map(esc).join(' · '); $('towns').hidden = false; }
-    // questions
-    var faq = (Array.isArray(d.faq) ? d.faq : []).filter(function(x){ return x && String(x.q || '').trim() && String(x.a || '').trim(); }).slice(0, 12);
-    if(faq.length){ $('faq').innerHTML = faq.map(function(x){ return '<details><summary>' + esc(String(x.q).trim().slice(0, 140)) + '</summary><p>' + esc(String(x.a).trim().slice(0, 700)) + '</p></details>'; }).join(''); $('questions').hidden = false; }
-    // phone and Instagram
-    var digits = String(d.phone || '').replace(/[^\d+]/g, '');
-    if(digits.replace(/\D/g, '').length >= 10 && digits.length <= 16){
-      var a = document.createElement('a'); a.className = 'btn sec'; a.href = 'tel:' + digits; a.textContent = '📞 ' + String(d.phone).trim().slice(0, 24); $('closeacts').appendChild(a);
-    }
-    var ig = String(d.ig || '').replace(/^@/, '').trim();
-    if(/^[A-Za-z0-9._]{1,30}$/.test(ig)){ var f = $('igfoot'); f.href = 'https://www.instagram.com/' + ig + '/'; f.hidden = false; }
-  }).catch(function(){});
-})();
-</script>
 </body></html>
