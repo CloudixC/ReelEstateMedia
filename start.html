@@ -1,12 +1,16 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Content Hub — powered by Reel Estate Media</title>
-<meta name="description" content="Reels, listing photography and video, headshots and event recaps for real-estate agents — shot, edited and delivered ready to post.">
+<title>Real estate photography and video in the Greater Toronto Area — The Content Hub, powered by Reel Estate Media</title>
+<meta name="description" content="Listing photography and video, reels, headshots and event recaps for real-estate agents across the Greater Toronto Area — shot, edited and delivered ready to post, with a private hub to book, review and download.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Content Hub">
 <meta property="og:title" content="🎬 The Content Hub — powered by Reel Estate Media">
 <meta property="og:description" content="Reels, listing photo & video, headshots and event recaps for real-estate agents.">
-<meta property="og:image" content="https://thecontenthub.ca/ch-app-icon-180.png">
+<meta property="og:image" content="https://thecontenthub.ca/share-card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfessionalService","name":"Reel Estate Media","alternateName":"The Content Hub","url":"https://thecontenthub.ca/","email":"hello@reelestatemedia.com","image":"https://thecontenthub.ca/share-card.jpg","areaServed":"Greater Toronto Area","description":"Listing photography and video, reels, headshots and event recaps for real-estate agents."}</script>
 <meta property="og:url" content="https://thecontenthub.ca/">
 <meta name="theme-color" content="#1A1A1A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -130,6 +134,83 @@ footer{padding:26px 0 46px;border-top:1px solid var(--line);display:flex;gap:14p
 footer a{text-decoration:none;color:var(--dim)}
 footer a:hover{color:var(--txt)}
 footer .sp{margin-right:auto}
+
+/* recent work */
+.reels{display:flex;gap:12px;overflow-x:auto;padding:4px 0 10px;margin-top:24px;scroll-snap-type:x proximity}
+.reels:empty{display:none}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:14px}
+.shots:empty{display:none}
+.shot{position:relative;display:block;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);cursor:pointer;padding:0;color:inherit;font:inherit;text-align:left;text-decoration:none}
+.shot img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s}
+.shot:hover img{transform:scale(1.03)}
+.shots .shot{aspect-ratio:3/2}
+.reels .shot{flex:0 0 clamp(150px,22vw,200px);aspect-ratio:9/16;scroll-snap-align:start}
+.shot .cap{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 10px;font-size:.8rem;line-height:1.35;color:#fff;background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))}
+.shot .play{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;color:#fff;font-size:1.1rem;padding-left:3px}
+.shot.ext{display:flex;flex-direction:column;justify-content:flex-end;padding:14px;background:linear-gradient(180deg,var(--panel2),var(--panel))}
+.shot.ext b{font-size:.95rem}
+.shot.ext span{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-top:6px}
+#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.92);display:none;align-items:center;justify-content:center;padding:clamp(12px,4vw,40px)}
+#lb.on{display:flex}
+#lb img{max-width:100%;max-height:100%;border-radius:10px;display:block}
+#lb iframe{width:min(100%,calc((100vh - 80px) * 9 / 16));aspect-ratio:9/16;max-height:100%;border:0;border-radius:12px;background:#000}
+#lb .x{position:absolute;top:14px;right:16px;appearance:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;width:42px;height:42px;font-size:1.1rem;cursor:pointer}
+.towns{margin-top:16px;font-size:.9rem;color:var(--dim)}
+.towns b{color:var(--mist);font-weight:600}
+
+/* tools */
+.tools{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(20px,5vw,48px);align-items:center}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-top:26px}
+.tgrid .card{min-height:0}
+.mock{display:grid;gap:12px}
+.mk{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line2);border-radius:18px;padding:14px}
+.mk .ph{font-family:var(--mono);font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.poster{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:center}
+.poster .pg{background:#F5F1EB;border-radius:8px;aspect-ratio:4/5;padding:9px 8px 0;display:flex;flex-direction:column;align-items:center;overflow:hidden;color:#221E1C}
+.poster .pg i{font-style:normal;font-family:var(--mono);font-size:.34rem;letter-spacing:.16em}
+.poster .pg b{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:1.02rem;line-height:1.05;margin-top:3px;white-space:nowrap}
+.poster .pg b em{color:var(--red)}
+.poster .pg u{text-decoration:none;font-family:var(--mono);font-size:.33rem;letter-spacing:.1em;margin-top:3px}
+.poster .pg span{margin-top:auto;width:100%;height:46%;border-radius:60px 60px 0 0;background:linear-gradient(180deg,#8fb3d6 0 38%,#3c4a3f 38% 44%,#6b4a3a 44% 78%,#4d5e48 78%)}
+.poster p{font-size:.9rem;color:var(--mist);line-height:1.45}
+.poster p b{color:var(--txt)}
+.lead{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.lead b{font-weight:600}
+.lead span{color:var(--dim)}
+.lead em{font-style:normal;margin-left:auto;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line2);border-radius:999px;padding:6px 10px;color:var(--txt)}
+.bars{display:grid;gap:7px}
+.bars div{display:grid;grid-template-columns:84px 1fr 26px;gap:10px;align-items:center;font-size:.84rem;color:var(--mist)}
+.bars i{height:7px;border-radius:7px;background:var(--line);overflow:hidden}
+.bars i b{display:block;height:100%;background:var(--red);border-radius:7px}
+.bars em{font-style:normal;text-align:right;color:var(--txt);font-weight:600}
+@media(max-width:780px){.tools{grid-template-columns:1fr}}
+
+/* monthly plans, brokerages */
+.plan{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(20px,5vw,48px);align-items:center}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.plan li{padding-left:26px;position:relative;color:var(--mist);font-size:.96rem}
+.plan li::before{content:'';position:absolute;left:0;top:.62em;width:14px;height:2px;background:var(--red)}
+.plan li b{color:var(--txt);font-weight:600}
+@media(max-width:780px){.plan{grid-template-columns:1fr}}
+.brk{display:flex;gap:16px;align-items:center;flex-wrap:wrap;border:1px solid var(--line2);border-radius:20px;padding:22px 24px;background:linear-gradient(180deg,var(--panel2),var(--panel))}
+.brk div{flex:1 1 280px}
+.brk b{display:block;font-size:1.15rem;letter-spacing:-.01em}
+.brk span{color:var(--dim);font-size:.94rem}
+
+/* questions */
+.faq{margin-top:22px;border-top:1px solid var(--line2)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;padding:18px 34px 18px 0;font-weight:600;font-size:1.04rem;position:relative}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';position:absolute;right:4px;top:14px;font-family:var(--mono);font-size:1.2rem;color:var(--amber)}
+.faq details[open] summary::after{content:'–'}
+.faq p{color:var(--mist);padding:0 34px 18px 0;max-width:68ch;white-space:pre-line}
+
+/* phone: the Book button follows you down the page */
+#stick{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(20,20,20,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line2)}
+#stick a{flex:1;justify-content:center;padding:13px 10px}
+#stick a.sec{flex:0 0 auto;padding:13px 16px}
+@media(max-width:560px){body.stuck #stick{display:flex} body.stuck{padding-bottom:76px}}
 @media(prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto !important}}
 </style></head><body>
 
@@ -161,8 +242,16 @@ footer .sp{margin-right:auto}
       <div class="fact"><b>~5 business days</b><span>Video turnaround</span></div>
       <div class="fact"><b>Flat rates</b><span>Across the Greater Toronto Area</span></div>
     </div>
+    <p class="towns" id="towns" hidden></p>
   </div>
 </div>
+
+<section id="showcase" hidden><div class="wrap">
+  <div class="eyebrow">Recent work</div>
+  <h2>See it before you book it.</h2>
+  <div class="reels" id="reels"></div>
+  <div class="shots" id="shots"></div>
+</div></section>
 
 <section id="work"><div class="wrap">
   <div class="eyebrow">What we make</div>
@@ -212,6 +301,48 @@ footer .sp{margin-right:auto}
   </div>
 </div></section>
 
+<section class="band" id="tools"><div class="wrap">
+  <div class="tools">
+    <div>
+      <div class="eyebrow">Built into your hub</div>
+      <h2>One shoot becomes a week of marketing.</h2>
+      <p class="sub">Your photos and video arrive with the tools to post them, follow up on the people they bring in, and show your seller what you've done.</p>
+      <div class="acts"><a class="btn sec" href="listing-layouts.html?pub=1&amp;lay=split#split" target="_blank" rel="noopener">See a sample listing page</a></div>
+    </div>
+    <div class="mock" aria-hidden="true">
+      <div class="mk"><div class="ph">Made in one tap</div>
+        <div class="poster"><div class="pg"><i>YOUR BROKERAGE</i><b>Just <em>Listed</em></b><u>24 MAPLE GROVE AVE</u><span></span></div>
+          <p><b>Just Listed, Open House, Just Sold</b> — in your colours, as an image or a six-second video, sized for the feed, stories and square.</p></div></div>
+      <div class="mk"><div class="ph">A lead from your listing page</div>
+        <div class="lead"><b>Dana W.</b><span>Showing request · 24 Maple Grove Ave</span><em>Text a reply</em></div></div>
+      <div class="mk"><div class="ph">Where the visitors came from</div>
+        <div class="bars"><div><span>Instagram</span><i><b style="width:100%"></b></i><em>12</em></div><div><span>TikTok</span><i><b style="width:33%"></b></i><em>4</em></div><div><span>Email</span><i><b style="width:25%"></b></i><em>3</em></div></div></div>
+    </div>
+  </div>
+  <div class="tgrid">
+    <div class="card"><div class="ic">🚀</div><h3>Launch pack</h3><p>One download for launch day: the Just Listed graphic in three sizes, a short video, photos cropped for Instagram, and captions.</p></div>
+    <div class="card"><div class="ic">🖼</div><h3>Graphics and video maker</h3><p>Seven designs that use your own photos, name and colours. Pick one, check the words, download.</p></div>
+    <div class="card"><div class="ic">🎠</div><h3>Swipe posts</h3><p>A ready-to-post carousel: your cover, the photos you choose, a details slide and your contact slide.</p></div>
+    <div class="card"><div class="ic">📩</div><h3>Leads inbox</h3><p>Showing requests and open-house sign-ins from your listing page land in one list, with a reply ready to send.</p></div>
+    <div class="card"><div class="ic">🚪</div><h3>Open house kit</h3><p>A printable sign with a code visitors scan to sign in on their own phone, and a one-page feature sheet.</p></div>
+    <div class="card"><div class="ic">📊</div><h3>Seller report</h3><p>One link for your seller: what's been done to market the home, how many people viewed it and where they came from.</p></div>
+  </div>
+</div></section>
+
+<section id="plans"><div class="wrap plan">
+  <div>
+    <div class="eyebrow">Monthly plans</div>
+    <h2>Content every month, without rebooking.</h2>
+    <p class="sub">A set number of videos each month — with someone managing your page, if you want that too. Each plan is built around what you post and how often.</p>
+    <div class="acts"><a class="btn pri" href="mailto:hello@reelestatemedia.com?subject=Monthly%20plan">✉ Ask about a monthly plan</a></div>
+  </div>
+  <ul>
+    <li><b>You choose what's in it</b> — how many pieces a month, and at what level of production.</li>
+    <li><b>Your month is ready to schedule</b> — each month's pieces appear in your hub on the 1st.</li>
+    <li><b>One invoice a month</b> — the same amount, with every line listed.</li>
+  </ul>
+</div></section>
+
 <section class="band" id="reviews" hidden><div class="wrap">
   <div class="eyebrow">In their words</div>
   <h2>What agents say about working with us.</h2>
@@ -219,10 +350,21 @@ footer .sp{margin-right:auto}
   <a class="more" href="wall.html">Read every review →</a>
 </div></section>
 
+<section id="questions" hidden><div class="wrap">
+  <div class="eyebrow">Good to know</div>
+  <h2>Questions agents ask.</h2>
+  <div class="faq" id="faq"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="brk"><div><b>Run a brokerage or a team?</b><span>Give every agent a hub, online booking and the same marketing tools.</span></div>
+    <a class="btn sec" href="brokerages.html">How it works for brokerages</a></div>
+</div></section>
+
 <section class="close"><div class="wrap">
   <div class="eyebrow">Ready when you are</div>
   <h2>Tell us the address. We'll take it from there.</h2>
-  <div class="acts">
+  <div class="acts" id="closeacts">
     <a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a>
     <a class="btn sec" href="mailto:hello@reelestatemedia.com?subject=Booking%20enquiry">✉ hello@reelestatemedia.com</a>
   </div>
@@ -230,8 +372,11 @@ footer .sp{margin-right:auto}
 
 <div class="wrap"><footer>
   <span class="sp">The Content Hub · powered by Reel Estate Media</span>
-  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="login.html" title="Agents: sign in to your hub">Agent login</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
+  <a href="pricing.html">Pricing</a><a href="wall.html">Reviews</a><a href="brokerages.html">Brokerages</a><a id="igfoot" hidden target="_blank" rel="noopener">Instagram</a><a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Book</a><a href="login.html" title="Agents: sign in to your hub">Agent login</a><a href="index.html?studio=1" rel="nofollow" title="Studio sign-in">Studio</a>
 </footer></div>
+
+<div id="stick"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="pricing.html">Prices</a></div>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Viewer"><button type="button" class="x" aria-label="Close">✕</button><div id="lbin"></div></div>
 
 <script>
 /* Prices are never typed here: each "from" figure is read off pricing.html, so the price list stays the single source. */
@@ -261,6 +406,67 @@ footer .sp{margin-right:auto}
       return '<div class="q"><p>“' + esc(q) + '”</p><div class="who"><b>' + esc(t.w) + '</b>' + (t.b ? ' · ' + esc(t.b) : '') + '</div></div>';
     }).join('');
     document.getElementById('reviews').hidden = false;
+  }).catch(function(){});
+})();
+/* 📱 on a phone the Book button follows once the first one has scrolled away */
+(function(){
+  var first = document.querySelector('.hero .acts'); if(!first || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function(en){ document.body.classList.toggle('stuck', !en[0].isIntersecting && en[0].boundingClientRect.top < 0); }).observe(first);
+})();
+/* 🌐 The parts you manage from the Command Centre (More → Website): recent work, phone, Instagram, towns and questions.
+   Each section stays hidden until there is something to show. Everything is treated as plain text, and links are only
+   used when they point at Google Drive (shown here) or Instagram / YouTube / TikTok / Vimeo (opened in a new tab). */
+(function(){
+  var E = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  var esc = function(s){ var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML.replace(/"/g, '&quot;'); };
+  var $ = function(id){ return document.getElementById(id); };
+  var driveId = function(u){ u = String(u || ''); if(!/^https:\/\/(drive|docs)\.google\.com\//i.test(u) && !/^https:\/\/lh3\.googleusercontent\.com\/d\//i.test(u)) return '';
+    var m = u.match(/\/d\/([-\w]{25,})/) || u.match(/[?&]id=([-\w]{25,})/); return m ? m[1] : ''; };
+  var extUrl = function(u){ u = String(u || '').trim(); if(u.length > 300 || /["'<>\s\\]/.test(u)) return ''; return /^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com)\//i.test(u) ? u : ''; };
+  var lb = $('lb'), lbin = $('lbin');
+  var shut = function(){ lb.classList.remove('on'); lbin.innerHTML = ''; };
+  lb.addEventListener('click', function(e){ if(e.target === lb || (e.target.closest && e.target.closest('.x'))) shut(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') shut(); });
+  document.addEventListener('click', function(e){
+    var t = e.target.closest ? e.target.closest('[data-shot]') : null; if(!t) return;
+    var id = t.getAttribute('data-shot');
+    lbin.innerHTML = t.getAttribute('data-kind') === 'v' ? '<iframe src="https://drive.google.com/file/d/' + id + '/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>' : '<img alt="" src="https://lh3.googleusercontent.com/d/' + id + '=w2000">';
+    lb.classList.add('on');
+  });
+  fetch(E + '?review=site-content').then(function(r){ return r.json(); }).then(function(j){
+    var d = (j && j.state) || null; if(!d || typeof d !== 'object') return;
+    // recent work
+    var show = Array.isArray(d.show) ? d.show.slice(0, 18) : [], reels = '', shots = '';
+    show.forEach(function(x){
+      if(!x || typeof x !== 'object') return;
+      var cap = String(x.c || '').trim().slice(0, 80), vid = x.k === 'v', id = driveId(x.u), ext = id ? '' : extUrl(x.u);
+      if(id){
+        var img = vid ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w600' : 'https://lh3.googleusercontent.com/d/' + id + '=w900';
+        var tile = '<button type="button" class="shot" data-shot="' + id + '" data-kind="' + (vid ? 'v' : 'p') + '" aria-label="' + esc(cap || (vid ? 'Play the video' : 'Open the photo')) + '"><img loading="lazy" alt="" src="' + img + '">' + (vid ? '<span class="play">▶</span>' : '') + (cap ? '<span class="cap">' + esc(cap) + '</span>' : '') + '</button>';
+        if(vid) reels += tile; else shots += tile;
+      } else if(ext){
+        var host = /instagram/i.test(ext) ? 'Instagram' : /youtu/i.test(ext) ? 'YouTube' : /tiktok/i.test(ext) ? 'TikTok' : 'Vimeo';
+        reels += '<a class="shot ext" target="_blank" rel="noopener" href="' + esc(ext) + '"><b>' + esc(cap || 'Watch the reel') + '</b><span>Watch on ' + host + ' ↗</span></a>';
+      }
+    });
+    if(reels || shots){
+      $('reels').innerHTML = reels; $('shots').innerHTML = shots; $('showcase').hidden = false;
+      // a file that isn't shared with "anyone with the link" simply drops out
+      [].slice.call(document.querySelectorAll('#showcase .shot img')).forEach(function(im){ im.addEventListener('error', function(){ var t = im.closest('.shot'); if(t) t.remove(); if(!document.querySelector('#showcase .shot')) $('showcase').hidden = true; }); });
+    }
+    // towns
+    var towns = (Array.isArray(d.towns) ? d.towns : []).map(function(t){ return String(t || '').trim().slice(0, 30); }).filter(Boolean).slice(0, 24);
+    if(towns.length){ $('towns').innerHTML = '<b>Shooting in</b> ' + towns.map(esc).join(' · '); $('towns').hidden = false; }
+    // questions
+    var faq = (Array.isArray(d.faq) ? d.faq : []).filter(function(x){ return x && String(x.q || '').trim() && String(x.a || '').trim(); }).slice(0, 12);
+    if(faq.length){ $('faq').innerHTML = faq.map(function(x){ return '<details><summary>' + esc(String(x.q).trim().slice(0, 140)) + '</summary><p>' + esc(String(x.a).trim().slice(0, 700)) + '</p></details>'; }).join(''); $('questions').hidden = false; }
+    // phone and Instagram
+    var digits = String(d.phone || '').replace(/[^\d+]/g, '');
+    if(digits.replace(/\D/g, '').length >= 10 && digits.length <= 16){
+      var a = document.createElement('a'); a.className = 'btn sec'; a.href = 'tel:' + digits; a.textContent = '📞 ' + String(d.phone).trim().slice(0, 24); $('closeacts').appendChild(a);
+    }
+    var ig = String(d.ig || '').replace(/^@/, '').trim();
+    if(/^[A-Za-z0-9._]{1,30}$/.test(ig)){ var f = $('igfoot'); f.href = 'https://www.instagram.com/' + ig + '/'; f.hidden = false; }
   }).catch(function(){});
 })();
 </script>
