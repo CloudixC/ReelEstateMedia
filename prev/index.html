@@ -486,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-14) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-15) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -8630,6 +8630,401 @@ function TrendingAudioPanel({
     onClick: publish
   }, busy ? 'Publishing…' : 'Publish to agents'))));
 }
+const SITE_FAQ_DRAFT = [{
+  q: 'How fast do I get my photos and video?',
+  a: 'Photos in about 3 business days, video in about 5.'
+}, {
+  q: 'What areas do you cover?',
+  a: 'Across the Greater Toronto Area.'
+}, {
+  q: 'How do I book, move or cancel a shoot?',
+  a: 'Online. The calendar shows what’s open, and from your hub you can move or cancel a booking yourself.'
+}, {
+  q: 'Can I ask for changes to a video?',
+  a: 'Yes. You watch the cut in your review room and pin a note at the exact second you want changed.'
+}, {
+  q: 'What does it cost?',
+  a: 'Every price is a flat rate, listed in full on the price list.'
+}, {
+  q: 'What happens if the weather is bad on shoot day?',
+  a: ''
+}, {
+  q: 'Can I use the photos on MLS and in my own marketing?',
+  a: ''
+}, {
+  q: 'How do I pay?',
+  a: ''
+}];
+const siteDrive = u => {
+  u = String(u || '');
+  if (!/^https:\/\/(drive|docs)\.google\.com\//i.test(u) && !/^https:\/\/lh3\.googleusercontent\.com\/d\//i.test(u)) return '';
+  const m = u.match(/\/d\/([-\w]{25,})/) || u.match(/[?&]id=([-\w]{25,})/);
+  return m ? m[1] : '';
+};
+const siteExt = u => {
+  u = String(u || '').trim();
+  if (u.length > 300 || /["'<>\s\\]/.test(u)) return '';
+  return /^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com)\//i.test(u) ? u : '';
+};
+const siteRowOk = x => !!siteDrive(x.u) || x.k === 'v' && !!siteExt(x.u);
+function cleanSite(d) {
+  const faqAll = (Array.isArray(d.faq) ? d.faq : []).map(x => ({
+    q: String(x && x.q || '').trim().slice(0, 140),
+    a: String(x && x.a || '').trim().slice(0, 700)
+  })).filter(x => x.q);
+  return {
+    v: 1,
+    show: (Array.isArray(d.show) ? d.show : []).map(x => ({
+      u: String(x && x.u || '').trim().slice(0, 300),
+      c: String(x && x.c || '').trim().slice(0, 80),
+      k: x && x.k === 'v' ? 'v' : 'p'
+    })).filter(siteRowOk).slice(0, 18),
+    phone: String(d.phone || '').trim().slice(0, 24),
+    ig: String(d.ig || '').replace(/^@/, '').trim().slice(0, 30),
+    towns: String(Array.isArray(d.towns) ? d.towns.join(',') : d.towns || '').split(',').map(t => t.trim().slice(0, 30)).filter(Boolean).slice(0, 24),
+    faq: faqAll.filter(x => x.a).slice(0, 12),
+    fd: faqAll.filter(x => !x.a).map(x => x.q).slice(0, 12)
+  };
+}
+function WebsitePanel({
+  db
+}) {
+  const inbox = db.settings.inboxUrl;
+  const [live, setLive] = useState(undefined);
+  const [ed, setEd] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    if (!inbox) return;
+    let dead = false;
+    fetch(inbox + '?review=site-content').then(r => r.json()).then(j => {
+      if (!dead) setLive(j && j.state || null);
+    }).catch(() => {
+      if (!dead) setLive(null);
+    });
+    return () => {
+      dead = true;
+    };
+  }, [inbox]);
+  if (!inbox) return null;
+  const open = () => {
+    const s = live || {};
+    const faq = live ? [...(Array.isArray(s.faq) ? s.faq : []), ...(Array.isArray(s.fd) ? s.fd : []).map(q => ({
+      q,
+      a: ''
+    }))] : SITE_FAQ_DRAFT;
+    setMsg('');
+    setEd({
+      show: (Array.isArray(s.show) ? s.show : []).map(x => ({
+        u: String(x.u || ''),
+        c: String(x.c || ''),
+        k: x.k === 'v' ? 'v' : 'p'
+      })),
+      phone: String(s.phone || ''),
+      ig: String(s.ig || ''),
+      towns: (Array.isArray(s.towns) ? s.towns : []).join(', '),
+      faq: faq.map(x => ({
+        q: String(x.q || ''),
+        a: String(x.a || '')
+      }))
+    });
+  };
+  const setShow = (i, k, v) => setEd({
+    ...ed,
+    show: ed.show.map((r, j) => j === i ? {
+      ...r,
+      [k]: v
+    } : r)
+  });
+  const setFaq = (i, k, v) => setEd({
+    ...ed,
+    faq: ed.faq.map((r, j) => j === i ? {
+      ...r,
+      [k]: v
+    } : r)
+  });
+  const publish = async () => {
+    if (IS_BETA) {
+      setMsg('Publishing is off in the beta copy — use the live Command Centre.');
+      return;
+    }
+    const body = {
+      ...cleanSite(ed),
+      at: new Date().toISOString()
+    };
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await fetch(inbox, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: 'review',
+          ref: 'site-content',
+          project: 'Website',
+          dname: '',
+          who: 'cc',
+          body: JSON.stringify(body)
+        })
+      });
+      const j = await r.json().catch(() => null);
+      if (!j || !j.ok) throw new Error('save');
+      setLive(body);
+      setEd(null);
+      setMsg('✓ Published — the website shows it now.');
+    } catch (e) {
+      setMsg('Couldn’t publish — check your connection and try again.');
+    }
+    setBusy(false);
+  };
+  const n = live ? {
+    s: (live.show || []).length,
+    f: (live.faq || []).length
+  } : null;
+  const when = live && live.at ? new Date(live.at).toLocaleDateString('en-CA', {
+    month: 'short',
+    day: 'numeric'
+  }) : '';
+  const lab = {
+    display: 'block',
+    marginTop: 14
+  };
+  return React.createElement("div", {
+    className: "card",
+    "data-site-panel": true
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      flexWrap: 'wrap',
+      gap: 8
+    }
+  }, React.createElement("h3", {
+    style: {
+      marginBottom: 0
+    }
+  }, "🌐 Website"), React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("a", {
+    className: "btn ghost sm",
+    href: "start.html",
+    target: "_blank",
+    rel: "noopener"
+  }, "View the page ↗"), !ed && React.createElement("button", {
+    className: "btn ghost sm",
+    "data-site-edit": true,
+    disabled: live === undefined,
+    onClick: open
+  }, live === undefined ? 'Loading…' : 'Edit')), React.createElement("p", {
+    className: "small faint",
+    style: {
+      margin: '8px 0 0'
+    }
+  }, live === undefined ? '' : n ? `On the page now: ${n.s} recent-work item${n.s === 1 ? '' : 's'}, ${n.f} question${n.f === 1 ? '' : 's'}${live.phone ? ', your phone' : ''}${live.ig ? ', Instagram' : ''}${when ? ' · published ' + when : ''}.` : 'Nothing published yet — the recent-work, questions and phone sections stay hidden until you publish.'), msg && React.createElement("p", {
+    className: "small",
+    "data-site-msg": true,
+    style: {
+      margin: '8px 0 0',
+      fontWeight: 700
+    }
+  }, msg), ed && React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, React.createElement("label", {
+    className: "f",
+    style: lab
+  }, "Recent work — photos and reels shown near the top of the page"), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginBottom: 8
+    }
+  }, "Paste a Google Drive link to each photo or video (the file must be shared with “Anyone with the link”). For a reel you can also paste its Instagram, YouTube or TikTok link — that one opens in a new tab."), ed.show.map((r, i) => React.createElement("div", {
+    key: i,
+    "data-site-show": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 8,
+      marginBottom: 6
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      alignItems: 'center'
+    }
+  }, React.createElement("input", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    },
+    placeholder: "Link to the photo or video",
+    value: r.u,
+    onChange: e => setShow(i, 'u', e.target.value)
+  }), React.createElement("select", {
+    style: {
+      flex: '0 0 auto',
+      width: 'auto'
+    },
+    value: r.k,
+    onChange: e => setShow(i, 'k', e.target.value)
+  }, React.createElement("option", {
+    value: "p"
+  }, "Photo"), React.createElement("option", {
+    value: "v"
+  }, "Video")), React.createElement("button", {
+    className: "x",
+    title: "Remove",
+    onClick: () => setEd({
+      ...ed,
+      show: ed.show.filter((_, j) => j !== i)
+    })
+  }, "✕")), React.createElement("input", {
+    style: {
+      width: '100%',
+      marginTop: 6
+    },
+    placeholder: "Caption (optional) — e.g. Twilight exterior, Brampton",
+    maxLength: 80,
+    value: r.c,
+    onChange: e => setShow(i, 'c', e.target.value)
+  }), r.u.trim() && !siteRowOk(r) && React.createElement("div", {
+    className: "small",
+    style: {
+      color: 'var(--red)',
+      marginTop: 6
+    }
+  }, siteExt(r.u) ? 'An Instagram, YouTube or TikTok link only works as a Video.' : 'That isn’t a Google Drive, Instagram, YouTube, TikTok or Vimeo link — it will be left out.'))), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-site-addshow": true,
+    disabled: ed.show.length >= 18,
+    onClick: () => setEd({
+      ...ed,
+      show: [...ed.show, {
+        u: '',
+        c: '',
+        k: 'p'
+      }]
+    })
+  }, "+ Add a photo or video"), React.createElement("div", {
+    className: "frow",
+    style: {
+      marginTop: 14
+    }
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "f"
+  }, "Phone (calls and texts)"), React.createElement("input", {
+    placeholder: "(647) 000-0000",
+    maxLength: 24,
+    value: ed.phone,
+    onChange: e => setEd({
+      ...ed,
+      phone: e.target.value
+    })
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "f"
+  }, "Instagram"), React.createElement("input", {
+    placeholder: "@handle",
+    maxLength: 31,
+    value: ed.ig,
+    onChange: e => setEd({
+      ...ed,
+      ig: e.target.value
+    })
+  }))), React.createElement("label", {
+    className: "f",
+    style: lab
+  }, "Towns you shoot in — separated by commas"), React.createElement("input", {
+    style: {
+      width: '100%'
+    },
+    placeholder: "Brampton, Mississauga, Toronto…",
+    value: ed.towns,
+    onChange: e => setEd({
+      ...ed,
+      towns: e.target.value
+    })
+  }), React.createElement("label", {
+    className: "f",
+    style: lab
+  }, "Questions agents ask"), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginBottom: 8
+    }
+  }, "Only questions with an answer are published. The first five answers are drafts taken from what the site already says — check them; the last three are yours to answer."), ed.faq.map((r, i) => React.createElement("div", {
+    key: i,
+    "data-site-faq": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 8,
+      marginBottom: 6
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      alignItems: 'center'
+    }
+  }, React.createElement("input", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    },
+    placeholder: "The question",
+    maxLength: 140,
+    value: r.q,
+    onChange: e => setFaq(i, 'q', e.target.value)
+  }), React.createElement("button", {
+    className: "x",
+    title: "Remove",
+    onClick: () => setEd({
+      ...ed,
+      faq: ed.faq.filter((_, j) => j !== i)
+    })
+  }, "✕")), React.createElement("textarea", {
+    style: {
+      width: '100%',
+      marginTop: 6
+    },
+    rows: 2,
+    placeholder: "Your answer — leave empty to keep it off the page for now",
+    maxLength: 700,
+    value: r.a,
+    onChange: e => setFaq(i, 'a', e.target.value)
+  }))), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-site-addfaq": true,
+    disabled: ed.faq.length >= 20,
+    onClick: () => setEd({
+      ...ed,
+      faq: [...ed.faq, {
+        q: '',
+        a: ''
+      }]
+    })
+  }, "+ Add a question"), React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      flexWrap: 'wrap',
+      marginTop: 14
+    }
+  }, React.createElement("span", {
+    className: "spacer"
+  }), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: () => {
+      setEd(null);
+      setMsg('');
+    }
+  }, "Cancel"), React.createElement("button", {
+    className: "btn sm",
+    "data-site-publish": true,
+    disabled: busy,
+    onClick: publish
+  }, busy ? 'Publishing…' : 'Publish to the website'))));
+}
 function UsagePanel() {
   const [u, setU] = useState(() => {
     try {
@@ -8685,6 +9080,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-15',
+  items: [['🌐', 'Manage the website from here', 'Home → More → Website. Paste Drive links to the photos and reels you want shown as recent work, add your phone, Instagram and the towns you shoot in, and answer the questions agents ask. Press Publish and the public page updates; each section stays hidden until it has something in it.']]
+}, {
   v: '2026.11.16-14',
   items: [['📦', 'Custom monthly packages', 'A client can now be on a package you build yourself: Edit client → Pricing → “Custom monthly package”. Add a line for each thing (what it is × how many × price each), and untick “Creates work” for ongoing services like managing their page. Each month one invoice lists every line, and the lines that create work appear as a $0 Monthly Content order ready to schedule. Anything extra bills at the retail rate.']]
 }, {
@@ -9810,6 +10208,8 @@ function Dashboard({
     updateSettings: updateSettings
   }))), React.createElement(WinBack, {
     db: realDb(db)
+  }), React.createElement(WebsitePanel, {
+    db: db
   }), React.createElement(UsagePanel, null), followN > 0 && React.createElement("div", {
     className: "card today"
   }, React.createElement("h3", null, "Follow-ups"), agedUnpaid.map(o => {
@@ -16667,7 +17067,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-14</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-15</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

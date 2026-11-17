@@ -2060,10 +2060,12 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Loading the listing…</div>';
     // a link that's been opened here before goes straight in — no lookup round-trip
     var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
-    if(_xq){ location.replace(location.pathname + '?' + _xq); return; }
+    // 🔗 a link shared in one place (?src=ig) or the open-house sign (?oh=1) keeps its tag through the hop
+    var _keep = ''; (function(){ var s0 = RQP.get('src'); if(s0 && /^(ig|tt|fb|em|tx|qr)$/.test(s0)) _keep += '&src=' + s0; if(RQP.get('oh') === '1') _keep += '&oh=1'; })();
+    if(_xq){ location.replace(location.pathname + '?' + _xq + _keep); return; }
     fetch('https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec?link=' + encodeURIComponent(R_X))
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(j.ok && j.qs){ try{ localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
+      .then(function(j){ if(j.ok && j.qs){ try{ localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs + _keep); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
       .catch(function(){ document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Couldn’t load — check your connection and refresh.</div>'; });
     return;
   }
@@ -3738,6 +3740,12 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       try{ seen1 = sessionStorage.getItem(seenK) === '1'; }catch(e){}
       if(!seen1){ try{ sessionStorage.setItem(seenK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'view'})})}).catch(function(){}); }
       fetch(R_ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + R_REF)).then(function(x){ return x.json(); }).then(function(j){ if(j && j.ok && j.views != null){ llViews = +j.views || 0; updBar(); } }).catch(function(){});
+      var srcP = RQP.get('src');
+      if(srcP && /^(ig|tt|fb|em|tx|qr)$/.test(srcP)){
+        var srcK = 'llsrc:' + R_REF + ':' + srcP, srcSeen = false;
+        try{ srcSeen = sessionStorage.getItem(srcK) === '1'; }catch(e){}
+        if(!srcSeen){ try{ sessionStorage.setItem(srcK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'link', l:'src:'+srcP})})}).catch(function(){}); }
+      }
     }
 
     // -- listing directory: this agent's released pages cross-link each other --
@@ -3886,7 +3894,8 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(rt === 'residence' || rt === 'monograph' || rt === 'pavilion') return 'kx-pv';
       return 'kx-sg';
     }
-    function openKiosk(){
+    function openKiosk(guest){
+      guest = guest === true;   // true = a visitor who scanned the sign, on their own phone
       var old = document.getElementById('rem-kiosk'); if(old){ old.remove(); return; }
       var tier = kioskTier();
       var hero = photos[0] ? photos[0].url : '';
@@ -3894,7 +3903,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       k.innerHTML =
         (tier === 'kx-pv' && hero ? '<div class="kx-bg" style="background-image:url(&quot;'+hero+'&quot;)"></div><div class="kx-shade"></div>' : '')+
         (tier === 'kx-sg' ? '<div class="kx-photo"'+(hero ? ' style="background-image:url(&quot;'+hero+'&quot;)"' : '')+'></div>' : '')+
-        '<div class="kx-main"><button type="button" class="kx-exit" data-kq>✕ Exit</button>'+
+        '<div class="kx-main"><button type="button" class="kx-exit" data-kq>'+(guest ? '✕ Skip' : '✕ Exit')+'</button>'+
         '<div class="kx-card">'+
         '<p class="kx-kick">Open house</p>'+
         '<h1 class="kx-addr">'+esc(L.address||'')+'</h1>'+
@@ -3909,7 +3918,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         '</div></div></div>';
       document.body.appendChild(k);
       var cnt = 0;
-      k.querySelector('[data-kq]').onclick = function(){ if(confirm('Exit open-house sign-in?')) k.remove(); };
+      k.querySelector('[data-kq]').onclick = function(){ if(guest || confirm('Exit open-house sign-in?')) k.remove(); };
       k.querySelector('[data-kgo]').onclick = function(){
         var n2 = k.querySelector('[data-kn]').value.trim(), p2 = k.querySelector('[data-kp]').value.trim(), e2 = k.querySelector('[data-ke]').value.trim();
         var msg = k.querySelector('[data-kmsg]');
@@ -3918,6 +3927,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
         sendLead('Open house sign-in', n2, p2, e2, '').then(function(){
           cnt++;
           msg.textContent = '✓ Thanks, ' + n2.split(' ')[0] + '! Enjoy the home.';
+          if(guest){ setTimeout(function(){ k.remove(); }, 2200); return; }
           k.querySelector('[data-kcount]').textContent = cnt + ' signed in';
           ['[data-kn]','[data-kp]','[data-ke]'].forEach(function(q){ k.querySelector(q).value=''; });
           setTimeout(function(){ if(msg.textContent.indexOf('Thanks') > -1) msg.textContent=''; }, 2600);
@@ -3925,6 +3935,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       };
     }
 
+    if(R_PUB && RQP.get('oh') === '1' && R_ENDPOINT) setTimeout(function(){ try{ if(!document.getElementById('rem-kiosk')) openKiosk(true); }catch(eK){} }, 700);
     if(R_PUB && R_LAY){
       // 🪶 fonts: only the families this design actually uses (re-checked when the page changes)
       (function(){
@@ -4096,5 +4107,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-2</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-3</div>
 </body></html>
