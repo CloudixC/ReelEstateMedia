@@ -2,7 +2,7 @@
   "name": "Reel Estate Media — Command Centre",
   "short_name": "Command Centre",
   "description": "Production pipeline for Reel Estate Media.",
-  "start_url": "index.html",
+  "start_url": "studio.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0a0a0c",
