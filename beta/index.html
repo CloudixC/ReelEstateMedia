@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-17) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-18) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -8825,7 +8825,7 @@ function WebsitePanel({
     return /headshot/.test(t) ? 'head' : /event|recap/.test(t) ? 'event' : /reel|podcast|teleprompter|dynamic|you shoot/.test(t) ? 'reels' : mediaOf(d) === 'video' ? 'video' : /photo/.test(t) ? 'photo' : '';
   };
   const openPick = () => {
-    const list = db.deliverables.filter(d => d.status === 'Delivered').map(d => ({
+    const list = db.deliverables.filter(d => d.status === 'Delivered' && String(d.id).indexOf('tst') !== 0).map(d => ({
       d,
       ref: finalRefOf(d)
     })).filter(x => x.ref.af || x.ref.fo).sort((a, b) => String(b.d.deliveredDate || '').localeCompare(String(a.d.deliveredDate || ''))).slice(0, 20);
@@ -9625,6 +9625,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-18',
+  items: [['🧹', 'Two small fixes', '“Feature a delivery” no longer lists the sandbox test agent’s jobs. In the agents’ hub, the Escape key now closes the tool windows (trending audio, graphics, captions and the rest).']]
+}, {
   v: '2026.11.16-17',
   items: [['🚪', 'The Command Centre has its own address', 'It now lives at thecontenthub.ca/studio.html, and the bare address is the website itself — faster for visitors and clearer for Google. Your old bookmark and home-screen icon still work: on your devices they forward here. Save the new address when you get a chance.'], ['🌟', 'Feature a delivery on the website', 'Home → More → Website → “Feature a delivery”. Pick a delivered job and tick the photos or videos to show. They appear on the home page and on a new “Our work” page, sorted by kind of work. Up to 48.'], ['📍', 'See where website visitors come from', 'The visits box now splits visitors by Instagram, Google, typed-in and the rest. Put thecontenthub.ca/?src=ig in your Instagram bio so those taps are counted.'], ['📖', 'An agent’s story, and your Google reviews link', 'Two new fields in the Website panel. The story page is published only when you tick that she has agreed. The Google link adds “Google reviews” to the site and invites happy agents to post there.']]
 }, {
@@ -17617,7 +17620,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-17</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-18</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
