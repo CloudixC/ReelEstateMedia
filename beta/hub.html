@@ -1932,6 +1932,7 @@ function ensureRatingModal(){
     ratedSet(cur.dref + ':' + cur.phase, 'done');
     ratingModal.classList.remove('on');
     toast(stars >= 4 ? '🌟 Thank you — that means a lot!' : '🙏 Thanks for the honest feedback — we’ll use it.');
+    if(stars >= 4) setTimeout(googleNudge, 2600);
     btn.disabled = false; btn.innerHTML = 'Send rating <span class="ar">→</span>';
     setTimeout(nextRating, 420);
   });
@@ -2092,6 +2093,29 @@ function saveRename(){
   toast('✏️ Renamed to “' + name + '”');
 }
 var toastEl = null, toastTimer = null;
+/* 🌟 After a 4- or 5-star rating: invite the agent to post on Google too — only once the studio has published its Google
+   link (Command Centre → Website), never in the studio's preview, and at most once a month. */
+function googleNudge(){
+  try{
+    if(PREVIEW) return;
+    var last = +localStorage.getItem('rem_gbp_asked_v1') || 0; if(Date.now() - last < 30 * 864e5) return;
+    fetch(ENDPOINT + '?review=site-content').then(function(r){ return r.json(); }).then(function(j){
+      var u = String((j && j.state && j.state.gbp) || '').trim();
+      if(u.length > 300 || /["'<>\s\\]/.test(u) || !/^https:\/\/(g\.page\/|maps\.app\.goo\.gl\/|goo\.gl\/maps\/|(www\.)?google\.[a-z.]+\/maps[\/?]|search\.google\.com\/local\/|share\.google\/)/i.test(u)) return;
+      if(document.getElementById('gbp-nudge')) return;
+      try{ localStorage.setItem('rem_gbp_asked_v1', String(Date.now())); }catch(e){}
+      var b = document.createElement('div'); b.id = 'gbp-nudge'; b.setAttribute('role', 'status');
+      b.style.cssText = 'position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9000;width:min(92vw,460px);display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:#16130c;color:#f5f2ec;border:1px solid #F2A900;border-radius:16px;padding:12px 14px;font:500 14px/1.35 system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.45)';
+      var t = document.createElement('span'); t.style.cssText = 'flex:1 1 200px'; t.textContent = '🌟 Thank you! Would you share that on Google too? It helps other agents find us.';
+      var a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Post on Google ↗'; a.style.cssText = 'background:#F2A900;color:#1a1205;font-weight:700;border-radius:999px;padding:8px 14px;text-decoration:none;white-space:nowrap';
+      var x = document.createElement('button'); x.type = 'button'; x.textContent = 'Not now'; x.style.cssText = 'background:none;border:0;color:#b9b2a6;font:inherit;cursor:pointer;padding:8px 4px';
+      var close = function(){ if(b.parentNode) b.parentNode.removeChild(b); };
+      a.addEventListener('click', function(){ setTimeout(close, 300); }); x.addEventListener('click', close);
+      b.appendChild(t); b.appendChild(a); b.appendChild(x); document.body.appendChild(b);
+      setTimeout(close, 60000);
+    }).catch(function(){});
+  }catch(e){}
+}
 function toast(msg){
   if(!toastEl){
     toastEl = document.createElement('div');
@@ -5780,7 +5804,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-23</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-24</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;

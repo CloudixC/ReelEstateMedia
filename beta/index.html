@@ -86,19 +86,19 @@
 <meta name="description" content="Reels, listing photo &amp; video, headshots and event recaps for real-estate agents.">
 <script>
 /* 🚪 The site's main address is public.
-   · The bare address (thecontenthub.ca/) ALWAYS shows the front door (start.html) — on every device, the studio's included.
-   · The Command Centre lives at /index.html. There, a browser that has never held studio data is still sent to the
-     front door; it only opens where it already lives, or when asked for explicitly (index.html?studio=1, or a
-     #setup= link on a new device). */
+   · The bare address (thecontenthub.ca/) IS the front door: the site's own index.html — on every device.
+   · The Command Centre lives at /studio.html (it was /index.html until Nov 2026; that address now forwards a studio
+     device here). A browser that has never held studio data is sent to the front door; the Command Centre only opens
+     where it already lives, or when asked for explicitly (studio.html?studio=1, or a #setup= link on a new device). */
 (function(){
   try{
     if(/\/(beta|prev)\//.test(location.pathname)) return;
     var asked = /#setup=/.test(location.hash) || /[?&]studio(=|&|$)/.test(location.search) || /#dl=/.test(location.hash);
     if(asked) return;
-    if(/\/$/.test(location.pathname)){ location.replace('start.html'); return; }
+    if(/\/$/.test(location.pathname)){ location.replace('./'); return; }
     var mine = localStorage.getItem('rem_pipeline_v1') || localStorage.getItem('rem_setup_v1') || sessionStorage.getItem('rem_unlocked');
     if(mine) return;
-    location.replace('start.html');
+    location.replace('./');
   }catch(e){}
 })();
 </script>
@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-16) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-17) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -6435,7 +6435,7 @@ function AppInner({
       "aria-label": "Studio apps"
     }, React.createElement("a", {
       className: "on",
-      href: "index.html",
+      href: location.pathname.split('/').pop() || 'studio.html',
       "aria-current": "page"
     }, "⌂ Command Centre"), React.createElement("a", {
       href: "studio-chat.html",
@@ -8679,6 +8679,25 @@ const siteExt = u => {
   if (u.length > 300 || /["'<>\s\\]/.test(u)) return '';
   return /^https:\/\/(www\.)?(instagram\.com|youtube\.com|youtu\.be|tiktok\.com|vimeo\.com)\//i.test(u) ? u : '';
 };
+const SITE_SVC = [['', 'Kind of work…'], ['photo', 'Listing photos'], ['video', 'Listing video'], ['reels', 'Reels'], ['head', 'Headshots'], ['event', 'Events']];
+const siteGbp = u => {
+  u = String(u || '').trim();
+  return u.length <= 300 && !/["'<>\s\\]/.test(u) && /^https:\/\/(g\.page\/|maps\.app\.goo\.gl\/|goo\.gl\/maps\/|(www\.)?google\.[a-z.]+\/maps[\/?]|search\.google\.com\/local\/|share\.google\/)/i.test(u) ? u : '';
+};
+const cleanStory = st => {
+  st = st || {};
+  const t = (v, n) => String(v || '').trim().slice(0, n);
+  return {
+    ok: st.ok === true,
+    name: t(st.name, 60),
+    role: t(st.role, 80),
+    head: t(st.head, 120),
+    did: t(st.did, 900),
+    quote: t(st.quote, 500),
+    res: String(Array.isArray(st.res) ? st.res.join('\n') : st.res || '').split('\n').map(r => r.trim().slice(0, 90)).filter(Boolean).slice(0, 4)
+  };
+};
+const storyReady = st => !!(st && st.ok === true && st.name && st.head && st.did);
 const siteRowOk = x => !!siteDrive(x.u) || x.k === 'v' && !!siteExt(x.u);
 function cleanSite(d) {
   const faqAll = (Array.isArray(d.faq) ? d.faq : []).map(x => ({
@@ -8686,16 +8705,19 @@ function cleanSite(d) {
     a: String(x && x.a || '').trim().slice(0, 700)
   })).filter(x => x.q);
   return {
-    v: 1,
+    v: 2,
     show: (Array.isArray(d.show) ? d.show : []).map(x => ({
       u: String(x && x.u || '').trim().slice(0, 300),
       c: String(x && x.c || '').trim().slice(0, 80),
-      k: x && x.k === 'v' ? 'v' : 'p'
-    })).filter(siteRowOk).slice(0, 18),
+      k: x && x.k === 'v' ? 'v' : 'p',
+      s: SITE_SVC.some(o => o[0] && o[0] === (x && x.s)) ? x.s : ''
+    })).filter(siteRowOk).slice(0, 48),
     phone: String(d.phone || '').trim().slice(0, 24),
     ig: String(d.ig || '').replace(/^@/, '').trim().slice(0, 30),
     towns: String(Array.isArray(d.towns) ? d.towns.join(',') : d.towns || '').split(',').map(t => t.trim().slice(0, 30)).filter(Boolean).slice(0, 24),
     demo: /^https:\/\/thecontenthub\.ca\/listing-layouts\.html\?[\w=&%.\-]{3,200}$/.test(String(d.demo || '').trim()) ? String(d.demo).trim() : '',
+    gbp: siteGbp(d.gbp),
+    story: (st => storyReady(st) ? st : null)(cleanStory(d.story)),
     faq: faqAll.filter(x => x.a).slice(0, 12),
     fd: faqAll.filter(x => !x.a).map(x => x.q).slice(0, 12)
   };
@@ -8709,6 +8731,7 @@ function WebsitePanel({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [hits, setHits] = useState(null);
+  const [pick, setPick] = useState(null);
   useEffect(() => {
     if (!inbox) return;
     let dead = false;
@@ -8745,12 +8768,24 @@ function WebsitePanel({
       q,
       a: ''
     }))] : SITE_FAQ_DRAFT;
+    let draft = null;
+    try {
+      draft = JSON.parse(localStorage.getItem('rem_site_story_v1') || 'null');
+    } catch (e) {}
+    const st = cleanStory(s.story || draft);
     setMsg('');
+    setPick(null);
     setEd({
+      gbp: String(s.gbp || ''),
+      story: {
+        ...st,
+        res: st.res.join('\n')
+      },
       show: (Array.isArray(s.show) ? s.show : []).map(x => ({
         u: String(x.u || ''),
         c: String(x.c || ''),
-        k: x.k === 'v' ? 'v' : 'p'
+        k: x.k === 'v' ? 'v' : 'p',
+        s: String(x.s || '')
       })),
       phone: String(s.phone || ''),
       ig: String(s.ig || ''),
@@ -8769,6 +8804,81 @@ function WebsitePanel({
       [k]: v
     } : r)
   });
+  const setStory = (k, v) => setEd({
+    ...ed,
+    story: {
+      ...ed.story,
+      [k]: v
+    }
+  });
+  const addShow = (u, k, c, sv) => setEd(e => e.show.length >= 48 || e.show.some(r => r.u === u) ? e : {
+    ...e,
+    show: [...e.show, {
+      u,
+      c: c || '',
+      k,
+      s: sv || ''
+    }]
+  });
+  const svcOf = d => {
+    const t = ((d.name || '') + ' ' + (d.group || '')).toLowerCase();
+    return /headshot/.test(t) ? 'head' : /event|recap/.test(t) ? 'event' : /reel|podcast|teleprompter|dynamic|you shoot/.test(t) ? 'reels' : mediaOf(d) === 'video' ? 'video' : /photo/.test(t) ? 'photo' : '';
+  };
+  const openPick = () => {
+    const list = db.deliverables.filter(d => d.status === 'Delivered').map(d => ({
+      d,
+      ref: finalRefOf(d)
+    })).filter(x => x.ref.af || x.ref.fo).sort((a, b) => String(b.d.deliveredDate || '').localeCompare(String(a.d.deliveredDate || ''))).slice(0, 20);
+    setPick({
+      list
+    });
+  };
+  const pickOne = async x => {
+    const o = db.orders.find(q => q.id === x.d.orderId) || {},
+      sv = svcOf(x.d),
+      vid = mediaOf(x.d) === 'video';
+    if (x.ref.af) {
+      addShow('https://drive.google.com/file/d/' + x.ref.af + '/view', vid ? 'v' : 'p', '', sv);
+      setPick(null);
+      return;
+    }
+    const key = db.settings.driveApiKey;
+    if (!key) {
+      setPick({
+        d: x.d,
+        files: [],
+        err: 'This delivery is a folder. Add your Drive key in Settings to pick files from it — or open the folder and paste a file’s link.'
+      });
+      return;
+    }
+    setPick({
+      d: x.d,
+      files: null,
+      sv
+    });
+    try {
+      const q = "'" + x.ref.fo + "' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')";
+      const j = await fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=' + encodeURIComponent('files(id,name,mimeType,thumbnailLink)') + '&orderBy=name&pageSize=60&key=' + encodeURIComponent(key)).then(r => r.json());
+      const files = (j && Array.isArray(j.files) ? j.files : []).map(f => ({
+        id: f.id,
+        name: String(f.name || ''),
+        vid: /^video\//.test(f.mimeType || ''),
+        th: f.thumbnailLink || ''
+      }));
+      setPick({
+        d: x.d,
+        files,
+        sv,
+        err: files.length ? '' : j && j.error ? 'Drive wouldn’t list that folder — is it shared with “Anyone with the link”?' : 'No photos or videos in that folder.'
+      });
+    } catch (e) {
+      setPick({
+        d: x.d,
+        files: [],
+        err: 'Couldn’t reach Drive — check your connection.'
+      });
+    }
+  };
   const setFaq = (i, k, v) => setEd({
     ...ed,
     faq: ed.faq.map((r, j) => j === i ? {
@@ -8785,6 +8895,9 @@ function WebsitePanel({
       ...cleanSite(ed),
       at: new Date().toISOString()
     };
+    try {
+      localStorage.setItem('rem_site_story_v1', JSON.stringify(cleanStory(ed.story)));
+    } catch (e) {}
     setBusy(true);
     setMsg('');
     try {
@@ -8838,10 +8951,10 @@ function WebsitePanel({
     className: "spacer"
   }), React.createElement("a", {
     className: "btn ghost sm",
-    href: "start.html",
+    href: "./",
     target: "_blank",
     rel: "noopener"
-  }, "View the page ↗"), !ed && React.createElement("button", {
+  }, "View the site ↗"), !ed && React.createElement("button", {
     className: "btn ghost sm",
     "data-site-edit": true,
     disabled: live === undefined,
@@ -8853,7 +8966,7 @@ function WebsitePanel({
     }
   }, live === undefined ? '' : n ? `On the page now: ${n.s} recent-work item${n.s === 1 ? '' : 's'}, ${n.f} question${n.f === 1 ? '' : 's'}${live.phone ? ', your phone' : ''}${live.ig ? ', Instagram' : ''}${when ? ' · published ' + when : ''}.` : 'Nothing published yet — the recent-work, questions and phone sections stay hidden until you publish.'), hits && (() => {
     const sum = (o, f) => Object.keys(o).filter(f).reduce((a, k) => a + (+o[k] || 0), 0);
-    const rows = [['Landing page', k => k === 'v:start'], ['Price list', k => k === 'v:pricing'], ['Service pages', k => k.indexOf('v:svc-') === 0], ['Town pages', k => k.indexOf('v:town-') === 0], ['Brokerages page', k => k === 'v:brokerages'], ['Reviews page', k => k === 'v:wall'], ['Book clicks', k => k === 'book'], ['Enquiries sent', k => k === 'enquiry']];
+    const rows = [['Landing page', k => k === 'v:start'], ['Price list', k => k === 'v:pricing'], ['Service pages', k => k.indexOf('v:svc-') === 0], ['Town pages', k => k.indexOf('v:town-') === 0], ['Brokerages page', k => k === 'v:brokerages'], ['Reviews page', k => k === 'v:wall'], ['Our work', k => k === 'v:work'], ['Shoot builder', k => k === 'v:build'], ['Guides', k => k.indexOf('v:guide') === 0], ['Book clicks', k => k === 'book'], ['Text taps', k => k === 'text'], ['Enquiries sent', k => k === 'enquiry']];
     const any = Object.keys(hits.cur).length + Object.keys(hits.prev).length > 0;
     return React.createElement("div", {
       "data-site-hits": true,
@@ -8891,7 +9004,49 @@ function WebsitePanel({
         minWidth: 44,
         textAlign: 'right'
       }
-    }, "(", sum(hits.prev, r[1]), ")")))));
+    }, "(", sum(hits.prev, r[1]), ")")))), any && (() => {
+      const src = [['Instagram', 's:ig'], ['Google', 's:go'], ['Typed in or saved', 's:direct'], ['Facebook', 's:fb'], ['TikTok', 's:tt'], ['Other search', 's:se'], ['Email link', 's:em'], ['Text link', 's:tx'], ['QR / card', 's:qr'], ['Other sites', 's:other']].filter(x => (+hits.cur[x[1]] || 0) + (+hits.prev[x[1]] || 0) > 0);
+      return React.createElement("div", {
+        "data-site-src": true,
+        style: {
+          marginTop: 10
+        }
+      }, React.createElement("div", {
+        className: "small faint",
+        style: {
+          marginBottom: 6
+        }
+      }, "Where visitors came from"), src.length === 0 ? React.createElement("div", {
+        className: "small faint"
+      }, "Nothing yet — this starts counting from today.") : React.createElement("div", {
+        style: {
+          columns: '2 220px',
+          columnGap: 24
+        }
+      }, src.map(x => React.createElement("div", {
+        key: x[1],
+        className: "flex small",
+        style: {
+          padding: '3px 0',
+          breakInside: 'avoid'
+        }
+      }, React.createElement("span", {
+        style: {
+          flex: 1
+        }
+      }, x[0]), React.createElement("b", null, +hits.cur[x[1]] || 0), React.createElement("span", {
+        className: "faint",
+        style: {
+          minWidth: 44,
+          textAlign: 'right'
+        }
+      }, "(", +hits.prev[x[1]] || 0, ")")))), React.createElement("div", {
+        className: "small faint",
+        style: {
+          marginTop: 6
+        }
+      }, "For your Instagram bio use ", React.createElement("b", null, "thecontenthub.ca/?src=ig"), " — Instagram often hides where a tap came from, and that tag makes sure it is counted."));
+    })());
   })(), msg && React.createElement("p", {
     className: "small",
     "data-site-msg": true,
@@ -8906,7 +9061,7 @@ function WebsitePanel({
   }, React.createElement("label", {
     className: "f",
     style: lab
-  }, "Recent work — photos and reels shown near the top of the page"), React.createElement("p", {
+  }, "Your work — shown near the top of the home page and on the “Our work” page"), React.createElement("p", {
     className: "small faint",
     style: {
       marginBottom: 8
@@ -8924,11 +9079,12 @@ function WebsitePanel({
     className: "flex",
     style: {
       gap: 8,
-      alignItems: 'center'
+      alignItems: 'center',
+      flexWrap: 'wrap'
     }
   }, React.createElement("input", {
     style: {
-      flex: 1,
+      flex: '1 1 220px',
       minWidth: 0
     },
     placeholder: "Link to the photo or video",
@@ -8945,7 +9101,18 @@ function WebsitePanel({
     value: "p"
   }, "Photo"), React.createElement("option", {
     value: "v"
-  }, "Video")), React.createElement("button", {
+  }, "Video")), React.createElement("select", {
+    style: {
+      flex: '0 0 auto',
+      width: 'auto'
+    },
+    "data-site-svc": true,
+    value: r.s || '',
+    onChange: e => setShow(i, 's', e.target.value)
+  }, SITE_SVC.map(o => React.createElement("option", {
+    key: o[0],
+    value: o[0]
+  }, o[1]))), React.createElement("button", {
     className: "x",
     title: "Remove",
     onClick: () => setEd({
@@ -8967,19 +9134,174 @@ function WebsitePanel({
       color: 'var(--red)',
       marginTop: 6
     }
-  }, siteExt(r.u) ? 'An Instagram, YouTube or TikTok link only works as a Video.' : 'That isn’t a Google Drive, Instagram, YouTube, TikTok or Vimeo link — it will be left out.'))), React.createElement("button", {
+  }, siteExt(r.u) ? 'An Instagram, YouTube or TikTok link only works as a Video.' : 'That isn’t a Google Drive, Instagram, YouTube, TikTok or Vimeo link — it will be left out.'))), React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, React.createElement("button", {
     className: "btn ghost sm",
     "data-site-addshow": true,
-    disabled: ed.show.length >= 18,
+    disabled: ed.show.length >= 48,
     onClick: () => setEd({
       ...ed,
       show: [...ed.show, {
         u: '',
         c: '',
-        k: 'p'
+        k: 'p',
+        s: ''
       }]
     })
-  }, "+ Add a photo or video"), React.createElement("div", {
+  }, "+ Add a photo or video"), React.createElement("button", {
+    className: "btn ghost sm",
+    "data-site-pick": true,
+    disabled: ed.show.length >= 48,
+    onClick: openPick
+  }, "🌟 Feature a delivery"), React.createElement("span", {
+    className: "small faint",
+    style: {
+      alignSelf: 'center'
+    }
+  }, ed.show.length, " of 48 · the first 18 show on the home page")), pick && React.createElement("div", {
+    "data-site-picker": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 10,
+      marginTop: 8
+    }
+  }, React.createElement("div", {
+    className: "flex",
+    style: {
+      gap: 8
+    }
+  }, React.createElement("b", {
+    className: "small"
+  }, pick.list ? 'Pick a delivery' : 'Pick the files to show — ' + (pick.d.name || 'delivery')), React.createElement("span", {
+    className: "spacer"
+  }), !pick.list && React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: openPick
+  }, "← Deliveries"), React.createElement("button", {
+    className: "btn ghost sm",
+    onClick: () => setPick(null)
+  }, "Done")), pick.list && (pick.list.length === 0 ? React.createElement("div", {
+    className: "small faint",
+    style: {
+      marginTop: 8
+    }
+  }, "No delivered work with a Drive link yet.") : React.createElement("div", {
+    style: {
+      maxHeight: 260,
+      overflow: 'auto',
+      marginTop: 8
+    }
+  }, pick.list.map(x => {
+    const o = db.orders.find(q => q.id === x.d.orderId) || {};
+    return React.createElement("button", {
+      key: x.d.id,
+      className: "btn ghost sm",
+      "data-site-pickrow": true,
+      style: {
+        display: 'flex',
+        width: '100%',
+        justifyContent: 'flex-start',
+        gap: 8,
+        marginBottom: 4,
+        textAlign: 'left'
+      },
+      onClick: () => pickOne(x)
+    }, React.createElement("span", null, mediaOf(x.d) === 'video' ? '🎬' : '📷'), React.createElement("span", {
+      style: {
+        flex: 1,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }
+    }, x.d.name || 'Deliverable', o.project ? ' · ' + o.project : ''), React.createElement("span", {
+      className: "faint"
+    }, x.ref.fo ? 'folder' : 'file'));
+  }))), !pick.list && pick.files === null && React.createElement("div", {
+    className: "small faint",
+    style: {
+      marginTop: 8
+    }
+  }, "Looking in the folder…"), !pick.list && pick.err && React.createElement("div", {
+    className: "small",
+    style: {
+      marginTop: 8,
+      color: 'var(--red)'
+    }
+  }, pick.err), !pick.list && pick.files && pick.files.length > 0 && React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill,minmax(92px,1fr))',
+      gap: 6,
+      marginTop: 8,
+      maxHeight: 300,
+      overflow: 'auto'
+    }
+  }, pick.files.map(f => {
+    const u = 'https://drive.google.com/file/d/' + f.id + '/view',
+      on = ed.show.some(r => r.u === u);
+    return React.createElement("button", {
+      key: f.id,
+      "data-site-pickfile": true,
+      title: f.name,
+      onClick: () => on ? setEd(e => ({
+        ...e,
+        show: e.show.filter(r => r.u !== u)
+      })) : addShow(u, f.vid ? 'v' : 'p', '', pick.sv),
+      style: {
+        position: 'relative',
+        aspectRatio: '1',
+        border: on ? '2px solid var(--gold, #F2A900)' : '1px solid var(--line2)',
+        borderRadius: 8,
+        overflow: 'hidden',
+        padding: 0,
+        background: '#111',
+        cursor: 'pointer'
+      }
+    }, f.th ? React.createElement("img", {
+      alt: "",
+      src: f.th,
+      referrerPolicy: "no-referrer",
+      style: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        display: 'block'
+      }
+    }) : React.createElement("span", {
+      className: "small faint"
+    }, f.name.slice(0, 18)), f.vid && React.createElement("span", {
+      style: {
+        position: 'absolute',
+        left: 4,
+        bottom: 4,
+        fontSize: 11
+      }
+    }, "🎬"), on && React.createElement("span", {
+      style: {
+        position: 'absolute',
+        right: 4,
+        top: 4,
+        fontSize: 11,
+        fontWeight: 800,
+        background: '#F2A900',
+        color: '#1a1205',
+        borderRadius: 999,
+        padding: '1px 5px'
+      }
+    }, "✓"));
+  })), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 8
+    }
+  }, "Only files shared with “Anyone with the link” can be shown on the website. Ask the agent before featuring their listing or their face.")), React.createElement("div", {
     className: "frow",
     style: {
       marginTop: 14
@@ -9041,6 +9363,132 @@ function WebsitePanel({
       color: 'var(--red)'
     }
   }, " That isn’t a published listing link from thecontenthub.ca — it will be left out.") : null), React.createElement("label", {
+    className: "f",
+    style: lab
+  }, "Google Business Profile — your review or profile link"), React.createElement("input", {
+    style: {
+      width: '100%'
+    },
+    "data-site-gbp": true,
+    placeholder: "https://g.page/r/…/review   or   https://maps.app.goo.gl/…",
+    value: ed.gbp,
+    onChange: e => setEd({
+      ...ed,
+      gbp: e.target.value
+    })
+  }), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 6
+    }
+  }, "Once you have a profile, paste its link. The site’s footer and reviews page then link to it, and an agent who rates you 4 or 5 stars in their hub is invited to post on Google too.", ed.gbp.trim() && !siteGbp(ed.gbp) && React.createElement("b", {
+    style: {
+      color: 'var(--red)'
+    }
+  }, " That doesn’t look like a Google Maps / Business Profile link — it will be left out.")), React.createElement("label", {
+    className: "f",
+    style: lab
+  }, "An agent’s story — a short case study page"), React.createElement("div", {
+    "data-site-story": true,
+    style: {
+      border: '1px solid var(--line2)',
+      borderRadius: 10,
+      padding: 10
+    }
+  }, React.createElement("div", {
+    className: "frow"
+  }, React.createElement("div", null, React.createElement("label", {
+    className: "f"
+  }, "Agent’s name"), React.createElement("input", {
+    maxLength: 60,
+    placeholder: "First and last name",
+    value: ed.story.name,
+    onChange: e => setStory('name', e.target.value)
+  })), React.createElement("div", null, React.createElement("label", {
+    className: "f"
+  }, "Brokerage / role"), React.createElement("input", {
+    maxLength: 80,
+    placeholder: "Sales Representative, …",
+    value: ed.story.role,
+    onChange: e => setStory('role', e.target.value)
+  }))), React.createElement("label", {
+    className: "f",
+    style: {
+      display: 'block',
+      marginTop: 8
+    }
+  }, "Headline"), React.createElement("input", {
+    style: {
+      width: '100%'
+    },
+    maxLength: 120,
+    placeholder: "e.g. Three reels, 136,000 views",
+    value: ed.story.head,
+    onChange: e => setStory('head', e.target.value)
+  }), React.createElement("label", {
+    className: "f",
+    style: {
+      display: 'block',
+      marginTop: 8
+    }
+  }, "What you did together — a blank line starts a new paragraph"), React.createElement("textarea", {
+    style: {
+      width: '100%'
+    },
+    rows: 4,
+    maxLength: 900,
+    placeholder: "What she wanted, what you shot, how often she posts…",
+    value: ed.story.did,
+    onChange: e => setStory('did', e.target.value)
+  }), React.createElement("label", {
+    className: "f",
+    style: {
+      display: 'block',
+      marginTop: 8
+    }
+  }, "Results — up to four, one per line, number first"), React.createElement("textarea", {
+    style: {
+      width: '100%'
+    },
+    rows: 3,
+    placeholder: '62.4K views on one reel\n136K views across three',
+    value: ed.story.res,
+    onChange: e => setStory('res', e.target.value)
+  }), React.createElement("label", {
+    className: "f",
+    style: {
+      display: 'block',
+      marginTop: 8
+    }
+  }, "In her words (optional — only what she actually said)"), React.createElement("textarea", {
+    style: {
+      width: '100%'
+    },
+    rows: 2,
+    maxLength: 500,
+    value: ed.story.quote,
+    onChange: e => setStory('quote', e.target.value)
+  }), React.createElement("label", {
+    className: "flex small",
+    style: {
+      gap: 8,
+      marginTop: 8,
+      alignItems: 'center'
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    "data-site-storyok": true,
+    style: {
+      width: 'auto'
+    },
+    checked: !!ed.story.ok,
+    onChange: e => setStory('ok', e.target.checked)
+  }), " She has agreed to be featured — publish this story"), React.createElement("p", {
+    className: "small faint",
+    style: {
+      marginTop: 6
+    }
+  }, storyReady(cleanStory(ed.story)) ? 'It will be published at thecontenthub.ca/story.html, with a “Read the story” link under the reel numbers.' : 'Not published: it needs her name, a headline, what you did, and the box ticked. Until then your draft stays on this device.')), React.createElement("label", {
     className: "f",
     style: lab
   }, "Questions agents ask"), React.createElement("p", {
@@ -9177,6 +9625,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-17',
+  items: [['🚪', 'The Command Centre has its own address', 'It now lives at thecontenthub.ca/studio.html, and the bare address is the website itself — faster for visitors and clearer for Google. Your old bookmark and home-screen icon still work: on your devices they forward here. Save the new address when you get a chance.'], ['🌟', 'Feature a delivery on the website', 'Home → More → Website → “Feature a delivery”. Pick a delivered job and tick the photos or videos to show. They appear on the home page and on a new “Our work” page, sorted by kind of work. Up to 48.'], ['📍', 'See where website visitors come from', 'The visits box now splits visitors by Instagram, Google, typed-in and the rest. Put thecontenthub.ca/?src=ig in your Instagram bio so those taps are counted.'], ['📖', 'An agent’s story, and your Google reviews link', 'Two new fields in the Website panel. The story page is published only when you tick that she has agreed. The Google link adds “Google reviews” to the site and invites happy agents to post there.']]
+}, {
   v: '2026.11.16-16',
   items: [['🌐', 'Website enquiries and visitor counts', 'The website’s “Ask a question”, “Ask about a monthly plan” and “Talk to us” buttons now open a short form. What people send lands here in your inbox as “🌐 Website enquiry”, with Call, Text and Email buttons. Home → More → Website also shows how many visits each page had this month and last, and has a field for a real listing to use as the sample page.']]
 }, {
@@ -17161,13 +17612,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
 (function(){
   try{
     if(/\/(beta|prev)\//.test(location.pathname)) return;
-    if(/\/$/.test(location.pathname)) history.replaceState(null, '', location.pathname + 'index.html' + location.search + location.hash);
     if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
-      navigator.serviceWorker.register('cc-sw.js', {scope: './index.html'}).catch(function(){});
+      navigator.serviceWorker.register('cc-sw.js', {scope: './' + (location.pathname.split('/').pop() || 'studio.html')}).catch(function(){});
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-16</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-17</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
