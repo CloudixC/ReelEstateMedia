@@ -40,6 +40,14 @@ h1 em{font-style:italic;color:var(--red2)}
 .crow .lbtn{flex:1;padding:13px 10px;font-size:14.5px}
 .ig{margin-top:22px;color:var(--dim);font-size:14.5px;text-decoration:none;display:inline-flex;gap:7px;align-items:center}
 .ig:hover{color:var(--txt)}
+.lsth{margin:34px 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);text-align:left}
+.lst{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left}
+.lcard{position:relative;display:block;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--panel);color:var(--txt);text-decoration:none;transition:transform .14s ease,border-color .14s ease}
+.lcard:hover{transform:translateY(-2px);border-color:var(--acc)}
+.lcard .im{display:block;aspect-ratio:4/3;background:#111 center/cover no-repeat}
+.lcard b{display:block;padding:9px 11px 0;font-size:13.5px;font-weight:600;line-height:1.3}
+.lcard span{display:block;padding:2px 11px 10px;font-size:12.5px;color:var(--dim)}
+.lcard .rb{position:absolute;left:8px;top:8px;background:var(--acc);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border-radius:6px;padding:3px 7px}
 .credit{margin-top:54px;font-size:12.5px;color:var(--faint)}
 .credit svg{width:15px;height:15px;vertical-align:-3px;margin-right:3px}
 .credit a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line2)}
@@ -79,6 +87,7 @@ function render(hub, kit, bio){
   if(hub.email) contact.push('<a class="lbtn biolink" data-bl="Email" href="mailto:' + esc(hub.email) + '">✉️ Email</a>');
   if(contact.length) h += '<div class="crow">' + contact.join('') + '</div>';
   h += '</div>';
+  if(bio.ll) h += '<div id="lst"></div>';
   const ig = String(kit.ig || bio.ig || '').replace(/^@/, '');
   if(ig) h += '<a class="ig biolink" data-bl="Instagram" href="https://instagram.com/' + esc(ig) + '" target="_blank" rel="noopener">📸 @' + esc(ig) + '</a>';
   var pageEmpty = !((bio.links || []).length) && !String(bio.blurb || '').trim() && !String(bio.phone || '').trim();
@@ -88,7 +97,26 @@ function render(hub, kit, bio){
   }
   h += '<div class="credit"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke="#F2A900" stroke-width="13" stroke-linecap="round"/><g fill="#FAF8F5"><polygon points="55,42 64,48 64,72 55,78"/><polygon points="66,49.3 73,54 73,66 66,70.7"/><polygon points="75,55.3 82,60 75,64.7"/></g></svg>Content by <a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Reel Estate Media</a></div>';
   document.getElementById('wrap').innerHTML = h;
+  if(bio.ll) loadListings(Array.isArray(bio.sold) ? bio.sold : []);
   try{ if(!sessionStorage.getItem('rem_biohit_v:' + a)){ sessionStorage.setItem('rem_biohit_v:' + a, '1'); logHit({t: 'view'}); } }catch(eV){ logHit({t: 'view'}); }
+}
+/* 🏡 The agent's published listing pages (only when they ticked "Show my listings" in their hub). The list is the same
+   directory their hub keeps; homes they marked "Just Sold" come last, under "Recently sold". Nothing here is trusted:
+   a link must be one of our listing pages, a picture must be an https image, and all text is escaped. */
+function loadListings(sold){
+  fetch(ENDPOINT + '?review=' + encodeURIComponent('lldir-' + a)).then(r => r.json()).then(function(j){
+    const items = (j && j.state && j.state.items) || {}, box = document.getElementById('lst'); if(!box) return;
+    const img = function(v){ v = String(v || ''); if(/^https:\/\/[^"'<>\s\\]{8,400}$/.test(v)) return v; const m = v.match(/^[-\w]{25,}$/); return m ? 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w600' : ''; };
+    const rows = Object.keys(items).map(function(k){ const d = items[k] || {}; const u = String(d.url || '');
+      if(!d.rel || !/^https:\/\/thecontenthub\.ca\/listing-layouts\.html\?[\w=&%.\-]{3,200}$/.test(u)) return null;
+      return {u: u, addr: String(d.addr || '').trim().slice(0, 90), price: String(d.price || '').trim().slice(0, 24), hero: img(d.hero), sold: sold.indexOf(u) > -1}; }).filter(function(x){ return x && x.addr; }).slice(0, 24);
+    if(!rows.length) return;
+    const card = function(x){ return '<a class="lcard biolink" data-bl="' + (x.sold ? 'Sold listing' : 'Listing') + '" href="' + esc(x.u) + '" target="_blank" rel="noopener">' + (x.sold ? '<i class="rb">Sold</i>' : '') +
+      '<i class="im"' + (x.hero ? ' style="background-image:url(&quot;' + esc(x.hero) + '&quot;)"' : '') + '></i><b>' + esc(x.addr) + '</b><span>' + esc(x.sold ? 'Sold' : (x.price || 'See the home')) + '</span></a>'; };
+    const live = rows.filter(function(x){ return !x.sold; }), done = rows.filter(function(x){ return x.sold; });
+    box.innerHTML = (live.length ? '<div class="lsth">My listings</div><div class="lst">' + live.map(card).join('') + '</div>' : '') +
+      (done.length ? '<div class="lsth">Recently sold</div><div class="lst">' + done.map(card).join('') + '</div>' : '');
+  }).catch(function(){});
 }
 function logHit(o){
   try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: a, project: '', dname: '', who: '', body: JSON.stringify(o)})}); }catch(e){}

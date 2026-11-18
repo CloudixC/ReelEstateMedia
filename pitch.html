@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Selling your home</title>
+<meta name="theme-color" content="#FAF8F5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* PITCH v2026.11.18-1 — an agent's "win the listing" page. Filled from review state 'pitch-<hub>', published from their hub. */
+:root{--acc:#EA002A;--bg:#FAF8F5;--ink:#161616;--mist:#4a4a4a;--dim:#77726c;--line:rgba(22,22,22,.12);--card:#fff;--sans:'Space Grotesk',system-ui,-apple-system,sans-serif;--mono:'Space Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 clamp(18px,4vw,34px)}
+.center{padding:30vh 0;text-align:center;color:var(--dim)}
+.top{display:flex;align-items:center;gap:14px;padding:22px 0;border-bottom:1px solid var(--line)}
+.top img,.top .ph{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#e9e6e0;display:grid;place-items:center;font-size:24px}
+.top b{display:block;font-size:1.05rem;font-weight:700;line-height:1.2}
+.top span{display:block;color:var(--dim);font-size:.9rem}
+.top .acts{margin-left:auto;display:flex;gap:8px}
+.eyebrow{font-family:var(--mono);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--acc);font-weight:700}
+.hero{padding:clamp(34px,8vw,80px) 0 clamp(26px,5vw,50px)}
+h1{font-weight:700;font-size:clamp(2.1rem,7.4vw,4.3rem);letter-spacing:-.035em;line-height:1;margin-top:14px;max-width:16ch}
+.lede{font-size:clamp(1.02rem,2.3vw,1.24rem);color:var(--mist);max-width:56ch;margin-top:22px;white-space:pre-line}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:999px;padding:13px 22px;font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);color:var(--ink);background:transparent;cursor:pointer}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.sm{padding:9px 14px;font-size:.62rem}
+section{padding:clamp(34px,6vw,64px) 0;border-top:1px solid var(--line)}
+h2{font-weight:700;font-size:clamp(1.5rem,4.2vw,2.3rem);letter-spacing:-.025em;line-height:1.08;margin:10px 0 6px;max-width:22ch}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.card .ic{font-size:1.5rem}
+.card h3{font-size:1.06rem;font-weight:700;margin:8px 0 4px}
+.card p{color:var(--mist);font-size:.95rem}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:24px}
+.gal button{aspect-ratio:3/2;border:0;border-radius:14px;overflow:hidden;padding:0;background:#e9e6e0;cursor:zoom-in}
+.gal img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease}
+.gal button:hover img{transform:scale(1.04)}
+.steps{list-style:none;counter-reset:st;display:grid;gap:0;margin-top:22px;max-width:680px}
+.steps li{counter-increment:st;position:relative;padding:16px 0 16px 54px;border-bottom:1px solid var(--line)}
+.steps li::before{content:counter(st);position:absolute;left:0;top:14px;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--acc);color:var(--acc);font-family:var(--mono);font-weight:700;display:grid;place-items:center}
+.steps b{display:block;font-size:1.04rem}
+.steps span{display:block;color:var(--mist);font-size:.95rem}
+.steps a{color:var(--acc)}
+.close{text-align:center}
+.close h2{max-width:none;font-size:clamp(1.8rem,6vw,3rem)}
+.close .btns{justify-content:center}
+footer{padding:26px 0 46px;border-top:1px solid var(--line);font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:center}
+footer a{color:inherit}
+#lb{position:fixed;inset:0;z-index:50;background:rgba(10,10,10,.92);display:none;place-items:center;padding:20px;cursor:zoom-out}
+#lb.on{display:grid}
+#lb img{max-width:100%;max-height:92vh;border-radius:10px}
+@media(max-width:620px){.top .acts{display:none}}
+@media(prefers-reduced-motion:reduce){.gal img{transition:none}html{scroll-behavior:auto}}
+@media print{.btns,.top .acts,#lb,.gal button:nth-child(n+7){display:none !important} section{padding:18px 0}}
+</style></head><body>
+<div id="wrap" class="wrap"><div class="center">Loading…</div></div>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Photo"><img alt=""></div>
+<script>
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+const a = (new URLSearchParams(location.search).get('a') || '').replace(/[^\w-]/g, '').slice(0, 80);
+function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML.replace(/"/g, '&quot;'); }
+function fail(msg){ document.getElementById('wrap').innerHTML = '<div class="center">' + esc(msg) + '</div>'; }
+const CARDS = {
+  ph: ['📷', 'Professional photography', 'Bright, wide photos of every room, edited so your home looks its best online — where buyers see it first.'],
+  vid: ['🎬', 'Video', 'A walkthrough of your home, cut for the listing and for social media, so buyers can feel the layout before they visit.'],
+  page: ['🏡', 'A web page for your home', 'Your address gets its own page with the photos, the details and a form for booking a showing.'],
+  social: ['📣', 'A social media launch', 'Just-listed graphics, short videos and captions go out when your home hits the market.'],
+  oh: ['🚪', 'Open house sign-in', 'Visitors scan a code and sign in on their own phone, so everyone who walks through gets a follow-up.'],
+  report: ['📊', 'A report for you', 'You see how many people have looked at your home’s page and how many asked for a showing.']};
+// Everything below is treated as plain text typed by someone else: it is escaped, capped in length, and links / pictures
+// are only used when they match the exact shape we expect.
+function render(st){
+  const t = (v, n) => String(v == null ? '' : v).trim().slice(0, n), ag = (st.ag && typeof st.ag === 'object') ? st.ag : {};
+  const name = t(ag.n, 60) || 'Your agent', role = [t(ag.t, 60), t(ag.b, 60)].filter(Boolean).join(' · ');
+  const tel = t(ag.ph, 30).replace(/[^\d+]/g, ''), okTel = tel.replace(/\D/g, '').length >= 10 && tel.length <= 16;
+  const em = t(ag.em, 90), okEm = /^[^\s@"'<>]+@[^\s@"'<>]+\.[^\s@"'<>]+$/.test(em);
+  const hd = /^[-\w]{25,60}$/.test(String(ag.hd || '')) ? 'https://drive.google.com/thumbnail?id=' + ag.hd + '&sz=w240' : '';
+  if(/^#[0-9a-f]{6}$/i.test(String(ag.c || '')) && !/^#f{6}$/i.test(ag.c)) document.documentElement.style.setProperty('--acc', ag.c);
+  const head = t(st.head, 90) || ('Selling your home with ' + name), intro = t(st.intro, 500);
+  const cards = (Array.isArray(st.cards) ? st.cards : Object.keys(CARDS)).filter((k, i, arr) => CARDS[k] && arr.indexOf(k) === i).slice(0, 6);
+  const ph = (Array.isArray(st.ph) ? st.ph : []).filter(x => /^[-\w]{25,60}$/.test(String(x))).slice(0, 8);
+  const page = /^https:\/\/thecontenthub\.ca\/listing-layouts\.html\?[\w=&%.\-]{3,200}$/.test(String(st.page || '')) ? String(st.page) : '';
+  document.title = head + ' — ' + name;
+  const contact = (okTel ? '<a class="btn pri" data-hit="Call" href="tel:' + esc(tel) + '">📞 Call ' + esc(name.split(' ')[0]) + '</a><a class="btn" data-hit="Text" href="sms:' + esc(tel) + '">💬 Text</a>' : '') +
+    (okEm ? '<a class="btn' + (okTel ? '' : ' pri') + '" data-hit="Email" href="mailto:' + esc(em) + '?subject=' + encodeURIComponent('Selling my home') + '">✉ Email</a>' : '');
+  let h = '<header class="top">' + (hd ? '<img alt="' + esc(name) + '" src="' + esc(hd) + '" onerror="this.outerHTML=\'<div class=&quot;ph&quot;>🏡</div>\'">' : '<div class="ph">🏡</div>') +
+    '<div><b>' + esc(name) + '</b>' + (role ? '<span>' + esc(role) + '</span>' : '') + '</div>' +
+    (okTel ? '<div class="acts"><a class="btn sm" data-hit="Call" href="tel:' + esc(tel) + '">📞 ' + esc(t(ag.ph, 30)) + '</a></div>' : '') + '</header>';
+  h += '<div class="hero"><div class="eyebrow">For your home</div><h1>' + esc(head) + '</h1>' + (intro ? '<p class="lede">' + esc(intro) + '</p>' : '') + (contact ? '<div class="btns">' + contact + '</div>' : '') + '</div>';
+  if(cards.length) h += '<section><div class="eyebrow">The plan</div><h2>How I market a home.</h2><div class="cards">' +
+    cards.map(k => '<div class="card"><div class="ic">' + CARDS[k][0] + '</div><h3>' + CARDS[k][1] + '</h3><p>' + CARDS[k][2] + '</p></div>').join('') + '</div>' +
+    (page ? '<div class="btns"><a class="btn" data-hit="Sample page" target="_blank" rel="noopener" href="' + esc(page + '&demo=1') + '">See a sample listing page ↗</a></div>' : '') + '</section>';
+  if(ph.length) h += '<section><div class="eyebrow">Recent work</div><h2>Homes I’ve marketed.</h2><div class="gal">' +
+    ph.map(id => '<button type="button" data-ph="' + id + '" aria-label="Open the photo"><img loading="lazy" alt="" src="https://lh3.googleusercontent.com/d/' + id + '=w700"></button>').join('') + '</div></section>';
+  h += '<section><div class="eyebrow">What happens next</div><h2>From hello to “just listed”.</h2><ol class="steps">' +
+    '<li><b>We walk through your home</b><span>We talk about price, timing and anything worth fixing before photos.</span></li>' +
+    '<li><b>You get a short prep guide</b><span>A room-by-room checklist so the home is camera-ready — <a target="_blank" rel="noopener" href="https://thecontenthub.ca/guide-prepare-home-for-listing-photos.html">have a look</a>.</span></li>' +
+    '<li><b>Shoot day</b><span>The photographer comes to your home on the day we choose.</span></li>' +
+    '<li><b>Your home goes live</b><span>The listing and the marketing go out together.</span></li>' +
+    '<li><b>I keep you posted</b><span>You hear how the marketing is doing, and what buyers are saying.</span></li></ol></section>';
+  h += '<section class="close"><div class="eyebrow">Ready when you are</div><h2>Let’s talk about your home.</h2>' + (contact ? '<div class="btns">' + contact + '</div>' : '') + '</section>';
+  h += '<footer>Marketing by <a href="https://thecontenthub.ca/" target="_blank" rel="noopener">The Content Hub · Reel Estate Media</a></footer>';
+  document.getElementById('wrap').innerHTML = h;
+  // a picture that isn't shared publicly simply drops out
+  [].slice.call(document.querySelectorAll('.gal img')).forEach(im => im.addEventListener('error', () => { const b = im.closest('button'); if(b) b.remove(); const g = document.querySelector('.gal'); if(g && !g.children.length) g.closest('section').remove(); }));
+  try{ if(!sessionStorage.getItem('pitchhit:' + a)){ sessionStorage.setItem('pitchhit:' + a, '1'); hit({t: 'view'}); } }catch(e){ hit({t: 'view'}); }
+}
+function hit(o){ try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: 'pitch-' + a, project: '', dname: '', who: '', body: JSON.stringify(o)})}).catch(() => {}); }catch(e){} }
+const lb = document.getElementById('lb');
+document.addEventListener('click', e => {
+  const p = e.target.closest ? e.target.closest('[data-ph]') : null;
+  if(p){ lb.querySelector('img').src = 'https://lh3.googleusercontent.com/d/' + p.getAttribute('data-ph') + '=w2000'; lb.classList.add('on'); return; }
+  if(e.target.closest && e.target.closest('#lb')){ lb.classList.remove('on'); lb.querySelector('img').removeAttribute('src'); return; }
+  const l = e.target.closest ? e.target.closest('[data-hit]') : null; if(l) hit({t: 'link', l: l.getAttribute('data-hit')});
+}, true);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') lb.classList.remove('on'); });
+if(!a) fail('This link is missing its key. Ask your agent to send it again.');
+else fetch(ENDPOINT + '?review=' + encodeURIComponent('pitch-' + a)).then(r => r.json()).then(j => {
+  const st = j && j.state; if(!st || typeof st !== 'object' || !st.on){ fail('This page isn’t available right now.'); return; }
+  render(st);
+}).catch(() => fail('Couldn’t load this page — check your connection and refresh.'));
+</script></body></html>
