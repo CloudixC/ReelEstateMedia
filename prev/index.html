@@ -486,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-18) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-19) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1836,6 +1836,15 @@ const sbxOrder = (db, order) => {
   } : order;
 };
 const IS_BETA = !!window.__REM_BETA;
+window.__INBOX_PV = 0;
+const probeInboxPv = url => {
+  if (!url) return;
+  try {
+    fetch(url + '?pv=1').then(r => r.json()).then(j => {
+      window.__INBOX_PV = +(j && j.pv || 0);
+    }).catch(() => {});
+  } catch (e) {}
+};
 function orderShortfall(db, o) {
   if (o.retainer || o.billingOnly) return [];
   const groups = {};
@@ -3314,6 +3323,9 @@ function AppInner({
 }) {
   const locked = false;
   const [db, setDb] = useState(load);
+  useEffect(() => {
+    probeInboxPv(db.settings.inboxUrl);
+  }, [db.settings.inboxUrl]);
   const [view, setView] = useState('dashboard');
   const [openOrder, setOpenOrder] = useState(null);
   const [cameFrom, setCameFrom] = useState(null);
@@ -4483,7 +4495,8 @@ function AppInner({
         projects,
         pay: db.settings.payUrl || '',
         svc: svcMenu,
-        ...(showBal ? {
+        spb: showBal ? 1 : 0,
+        ...(showBal || (+window.__INBOX_PV || 0) >= 46 ? {
           sp: db.orders.filter(o => (o.clientId === clientId || o.coAgentId === clientId) && o.date && (o.items || []).length).map(o => {
             const t = orderTotals(o);
             const isCo2 = o.coAgentId === clientId && o.clientId !== clientId;
@@ -4497,7 +4510,7 @@ function AppInner({
               s: r2(t.sub * fr),
               x: r2(t.tax * fr),
               a: r2(mine),
-              pd: o.payment === 'paid' ? o.paidAt || o.date : ''
+              pd: showBal && o.payment === 'paid' ? o.paidAt || o.date : ''
             };
           }).filter(r => r.a > 0)
         } : {}),
@@ -9626,6 +9639,9 @@ function UsagePanel() {
   }, "Reset the count")));
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-19',
+  items: [['🧾', 'Every agent can get the yearly summary — privately', 'Agents billed through their brokerage see a year of their orders at the rate they pay (More → Billing → Yearly summary), with no paid or owing. Two conditions keep the amounts private: the inbox script must be Version 46, and the agent needs a hub PIN (set it on their profile). Without a PIN their hub says the summary needs one.'], ['🧰', 'New in the agents’ hub', 'A win-the-listing page they can show sellers, a prep guide to send the seller, tick-to-total on Services & pricing (their picks arrive with the booking message), “Save contact” on leads, an email signature, and their listings on the bio page.']]
+}, {
   v: '2026.11.16-18',
   items: [['🧹', 'Two small fixes', '“Feature a delivery” no longer lists the sandbox test agent’s jobs. In the agents’ hub, the Escape key now closes the tool windows (trending audio, graphics, captions and the rest).']]
 }, {
@@ -17621,7 +17637,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-18</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-19</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
