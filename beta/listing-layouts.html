@@ -2060,8 +2060,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Loading the listing…</div>';
     // a link that's been opened here before goes straight in — no lookup round-trip
     var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
-    // 🪪 a link remembered before Nov 18, 2026 still holds the agent's hub key. Forget it and ask again — the answer now carries a public id instead.
-    var _hasKey = function(q0){ return /(^|&)hk=(?!pub(%3A|:))[^&]/i.test(String(q0 || '')); };
+    // 🪪 a published page's link remembered before Nov 18, 2026 still holds the agent's hub key and the listing's own reference.
+    // Forget it and ask again — the answer now carries public ids instead. (Private links are left alone.)
+    var _hasKey = function(q0){ q0 = String(q0 || ''); return /(^|&)pub=1(&|$)/.test(q0) && /(^|&)(hk|r)=(?!pub(%3A|:))[^&]/i.test(q0); };
     if(_xq && _hasKey(_xq)){ _xq = ''; try{ localStorage.removeItem('ll-x-' + R_X); }catch(eX3){} }
     // 🔗 a link shared in one place (?src=ig) or the open-house sign (?oh=1) keeps its tag through the hop
     var _keep = ''; (function(){ var s0 = RQP.get('src'); if(s0 && /^(ig|tt|fb|em|tx|qr)$/.test(s0)) _keep += '&src=' + s0; if(RQP.get('oh') === '1') _keep += '&oh=1'; if(RQP.get('demo') === '1') _keep += '&demo=1'; })();
@@ -4119,5 +4120,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-5</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-6</div>
 </body></html>
