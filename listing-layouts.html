@@ -2059,12 +2059,15 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Loading the listing…</div>';
     // a link that's been opened here before goes straight in — no lookup round-trip
     var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
+    // 🪪 a link remembered before Nov 18, 2026 still holds the agent's hub key. Forget it and ask again — the answer now carries a public id instead.
+    var _hasKey = function(q0){ return /(^|&)hk=(?!pub(%3A|:))[^&]/i.test(String(q0 || '')); };
+    if(_xq && _hasKey(_xq)){ _xq = ''; try{ localStorage.removeItem('ll-x-' + R_X); }catch(eX3){} }
     // 🔗 a link shared in one place (?src=ig) or the open-house sign (?oh=1) keeps its tag through the hop
     var _keep = ''; (function(){ var s0 = RQP.get('src'); if(s0 && /^(ig|tt|fb|em|tx|qr)$/.test(s0)) _keep += '&src=' + s0; if(RQP.get('oh') === '1') _keep += '&oh=1'; if(RQP.get('demo') === '1') _keep += '&demo=1'; })();
     if(_xq){ location.replace(location.pathname + '?' + _xq + _keep); return; }
     fetch('https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec?link=' + encodeURIComponent(R_X))
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(j.ok && j.qs){ try{ localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs + _keep); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
+      .then(function(j){ if(j.ok && j.qs){ try{ if(!_hasKey(j.qs)) localStorage.setItem('ll-x-' + R_X, j.qs); }catch(eX2){} location.replace(location.pathname + '?' + j.qs + _keep); } else document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">This link looks expired — ask your agent for a fresh one.</div>'; })
       .catch(function(){ document.getElementById('app').innerHTML = '<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;color:#999;font-family:system-ui,sans-serif;text-align:center;padding:20px">Couldn’t load — check your connection and refresh.</div>'; });
     return;
   }
@@ -3709,8 +3712,13 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       if(R_DEMO) return Promise.reject(new Error('demo'));   // the website's sample page: the form is switched off
       var body = '📩 ' + label + ' — ' + (L.address||'') + (L.price ? ' (' + L.price + ')' : '') + '\n' + nm2 + (phn ? ' · ' + phn : '') + (em2 ? ' · ' + em2 : '') + (note ? '\n“' + note + '”' : '');
       var posts = [];
-      if(R_HK) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_HK, project:(R_AN && R_DNAME ? R_AN+' — '+R_DNAME : ''), dname:'', who: nm2 + ' (buyer)', from:'agent', body: body})}));
-      if(R_REF) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_REF, project:R_PROJECT, dname:R_DNAME, who: nm2 + ' (buyer)', from:'agent', body: body})}));
+      var toPage = function(){ return fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_REF, project:R_PROJECT, dname:R_DNAME, who: nm2 + ' (buyer)', from:'agent', body: body})}); };
+      // A lead holds a buyer's name and number, so it goes to ONE place: the agent's hub (their leads inbox). The page's own
+      // thread can be read by anyone who has the page's link, so it only gets the lead when there is no hub to send it to —
+      // or when the hub refuses it, so that a lead is never lost.
+      if(R_HK) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_HK, project:(R_AN && R_DNAME ? R_AN+' — '+R_DNAME : ''), dname:'', who: nm2 + ' (buyer)', from:'agent', body: body})})
+        .then(function(r0){ return r0.json().catch(function(){ return null; }); }).then(function(j0){ if(j0 && j0.ok === false && R_REF) return toPage(); }));
+      else if(R_REF) posts.push(toPage());
       return Promise.all(posts);
     }
     document.getElementById('app').addEventListener('submit', function(e){
@@ -4110,5 +4118,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-4</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-5</div>
 </body></html>
