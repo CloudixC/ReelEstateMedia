@@ -197,6 +197,12 @@ body.light .ratecard{background:#fff}
 .billrow:last-child{border-bottom:none}
 .billamt{font-family:var(--serif);font-size:14px;color:var(--txt);white-space:nowrap}
 body.assist #billingwrap{display:none !important}
+body.assist #kit-more{display:none !important}
+.svcpick{flex:0 0 auto;width:18px;height:18px;margin:0 2px 0 0;accent-color:var(--red);cursor:pointer}
+.svcsum{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px 14px;border:1px solid var(--line2);border-radius:14px;background:var(--panel2)}
+body.light .svcsum{background:#fff}
+.svcsum b{font-size:16px}
+.svcsum span{flex:1;min-width:120px;color:var(--dim);font-size:13px}
 /* ---- sections ---- */
 .sec{display:flex;align-items:baseline;gap:12px;margin:36px 0 14px}
 .sec .no{font-family:var(--serif);font-style:italic;color:var(--red);font-size:15px}
@@ -900,6 +906,126 @@ body.light .aud{background:#fff}
   .fsheet img,.ohsign svg{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 /*END-KIT-CSS*/
+
+/* round 4: tools checklist, what's new, pitch builder, signature */
+.kstart{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);margin-bottom:10px}
+body.light .kstart{background:#fff}
+.kstart.knews{border-color:rgba(242,169,0,.45)}
+.ksh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+.ksc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksx{margin-left:auto;background:none;border:0;color:var(--dim);font-size:14px;cursor:pointer;padding:4px 6px}
+.ksr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ksr .ksi{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);font-size:11px;display:grid;place-items:center;color:transparent}
+.ksr.done .ksi{background:#2f9e6b;border-color:#2f9e6b;color:#fff}
+.ksr.done .kst{color:var(--dim);text-decoration:line-through}
+.ksr .kst{flex:1;min-width:0;font-size:14px}
+.ksn{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ksn b{display:block}
+.ksn small{display:block;color:var(--dim);font-size:12.5px;margin-top:1px}
+.kmt{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.kmt div{flex:1;min-width:0}
+.kmt b{display:block;font-size:14.5px}
+.kmt span{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.kpgrid{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.kpg{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:8px 0 6px}
+.kpg:first-child{margin-top:0}
+.kpt{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.kpp{aspect-ratio:1;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;background:#111;cursor:pointer;position:relative}
+.kpp img{width:100%;height:100%;object-fit:cover;display:block}
+.kpp.on{border-color:#F2A900}
+.kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
+.ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
+.lead .lc a[data-lvcf]{cursor:pointer}
+
+/* round 4: tools checklist, what's new, pitch builder, signature */
+.kstart{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);margin-bottom:10px}
+body.light .kstart{background:#fff}
+.kstart.knews{border-color:rgba(242,169,0,.45)}
+.ksh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+.ksc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksx{margin-left:auto;background:none;border:0;color:var(--dim);font-size:14px;cursor:pointer;padding:4px 6px}
+.ksr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ksr .ksi{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);font-size:11px;display:grid;place-items:center;color:transparent}
+.ksr.done .ksi{background:#2f9e6b;border-color:#2f9e6b;color:#fff}
+.ksr.done .kst{color:var(--dim);text-decoration:line-through}
+.ksr .kst{flex:1;min-width:0;font-size:14px}
+.ksn{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ksn b{display:block}
+.ksn small{display:block;color:var(--dim);font-size:12.5px;margin-top:1px}
+.kmt{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.kmt div{flex:1;min-width:0}
+.kmt b{display:block;font-size:14.5px}
+.kmt span{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.kpgrid{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.kpg{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:8px 0 6px}
+.kpg:first-child{margin-top:0}
+.kpt{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.kpp{aspect-ratio:1;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;background:#111;cursor:pointer;position:relative}
+.kpp img{width:100%;height:100%;object-fit:cover;display:block}
+.kpp.on{border-color:#F2A900}
+.kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
+.ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
+.lead .lc a[data-lvcf]{cursor:pointer}
+
+/* round 4: tools checklist, what's new, pitch builder, signature */
+.kstart{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);margin-bottom:10px}
+body.light .kstart{background:#fff}
+.kstart.knews{border-color:rgba(242,169,0,.45)}
+.ksh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+.ksc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksx{margin-left:auto;background:none;border:0;color:var(--dim);font-size:14px;cursor:pointer;padding:4px 6px}
+.ksr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ksr .ksi{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);font-size:11px;display:grid;place-items:center;color:transparent}
+.ksr.done .ksi{background:#2f9e6b;border-color:#2f9e6b;color:#fff}
+.ksr.done .kst{color:var(--dim);text-decoration:line-through}
+.ksr .kst{flex:1;min-width:0;font-size:14px}
+.ksn{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ksn b{display:block}
+.ksn small{display:block;color:var(--dim);font-size:12.5px;margin-top:1px}
+.kmt{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.kmt div{flex:1;min-width:0}
+.kmt b{display:block;font-size:14.5px}
+.kmt span{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.kpgrid{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.kpg{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:8px 0 6px}
+.kpg:first-child{margin-top:0}
+.kpt{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.kpp{aspect-ratio:1;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;background:#111;cursor:pointer;position:relative}
+.kpp img{width:100%;height:100%;object-fit:cover;display:block}
+.kpp.on{border-color:#F2A900}
+.kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
+.ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
+.lead .lc a[data-lvcf]{cursor:pointer}
+
+/* round 4: tools checklist, what's new, pitch builder, signature */
+.kstart{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);margin-bottom:10px}
+body.light .kstart{background:#fff}
+.kstart.knews{border-color:rgba(242,169,0,.45)}
+.ksh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+.ksc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksx{margin-left:auto;background:none;border:0;color:var(--dim);font-size:14px;cursor:pointer;padding:4px 6px}
+.ksr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ksr .ksi{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);font-size:11px;display:grid;place-items:center;color:transparent}
+.ksr.done .ksi{background:#2f9e6b;border-color:#2f9e6b;color:#fff}
+.ksr.done .kst{color:var(--dim);text-decoration:line-through}
+.ksr .kst{flex:1;min-width:0;font-size:14px}
+.ksn{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ksn b{display:block}
+.ksn small{display:block;color:var(--dim);font-size:12.5px;margin-top:1px}
+.kmt{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.kmt div{flex:1;min-width:0}
+.kmt b{display:block;font-size:14.5px}
+.kmt span{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.kpgrid{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.kpg{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:8px 0 6px}
+.kpg:first-child{margin-top:0}
+.kpt{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.kpp{aspect-ratio:1;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;background:#111;cursor:pointer;position:relative}
+.kpp img{width:100%;height:100%;object-fit:cover;display:block}
+.kpp.on{border-color:#F2A900}
+.kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
+.ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
+.lead .lc a[data-lvcf]{cursor:pointer}
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
    an older device. One saved preference (rem_tele_power_v1) drives this and the teleprompter. */
@@ -964,6 +1090,7 @@ body.light .aud{background:#fff}
   <div class="psub" id="refsub">Send them your personal link — when they book, you get the credit (and our eternal gratitude).</div>
   <button class="go" id="refshare" style="width:auto;display:inline-flex;padding:12px 20px">↗ Share your link</button>
 </div>
+<div class="pcard" id="kit-more"></div>
 <div class="pcard" id="brandwrap">
   <h3>🎨 Your brand kit</h3>
   <div class="psub">Drop your logo, headshot and colours here once — we bake them into every edit without chasing you.</div>
@@ -983,6 +1110,7 @@ body.light .aud{background:#fff}
   <div class="brow"><label>Phone</label><input type="text" id="bio-phone" maxlength="25" placeholder="(905) 555-0123 — adds Call & Text buttons"></div>
   <div id="bio-links"></div>
   <div class="brow"><label>Add button</label><input type="text" id="bio-lt" maxlength="40" placeholder="Label — e.g. My listings"><input type="text" id="bio-lu" maxlength="300" placeholder="https://…"><button class="upbtn" id="bio-add" style="flex:0 0 auto">＋ Add</button></div>
+  <div class="brow"><label>Listings</label><label style="flex:1;display:flex;align-items:center;gap:8px;font-size:14px;text-transform:none;letter-spacing:0;width:auto"><input type="checkbox" id="bio-ll" style="width:18px;height:18px;flex:0 0 auto"> Show my published listing pages on this page</label></div>
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bio-save">Save my page</button><button class="upbtn" id="bio-copy">🔗 Copy my bio link</button><a class="upbtn" id="bio-view" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">👁 Preview</a><button class="upbtn" id="bio-qr">🔳 QR code</button><span class="bstat" id="bio-stat"></span></div>
   <div class="biotaps" id="bio-taps"></div>
 </div>
@@ -1565,7 +1693,29 @@ function loadCalendly(){
   });
   return calReady;
 }
-function openCalendly(base, extra){
+var PICK_CTX = null;   // 🧮 services ticked under "Services & pricing" — sent to the studio with the booking message
+function svcPicks(){ return [].slice.call(document.querySelectorAll('.svcpick:checked')).map(function(i){ return {n: i.getAttribute('data-sn') || '', p: +i.getAttribute('data-sp') || 0, u: i.getAttribute('data-su') || ''}; }); }
+function svcSumPaint(){
+  var bar = document.getElementById('svcsum'); if(!bar) return;
+  var ps = svcPicks(), tot = ps.reduce(function(s0, x){ return s0 + x.p; }, 0);
+  bar.style.display = ps.length ? '' : 'none';
+  document.getElementById('svcsum-t').textContent = '$' + tot.toLocaleString('en-CA');
+  document.getElementById('svcsum-n').textContent = ps.length + (ps.length === 1 ? ' item' : ' items') + ' · before tax';
+}
+document.addEventListener('change', function(e){ if(e.target && e.target.classList && e.target.classList.contains('svcpick')) svcSumPaint(); });
+document.addEventListener('click', function(e){
+  var t0 = e.target; if(!t0 || !t0.closest) return;
+  if(t0.closest('#svcsum-clear')){ [].slice.call(document.querySelectorAll('.svcpick:checked')).forEach(function(i){ i.checked = false; }); svcSumPaint(); return; }
+  if(t0.closest('#svcsum-book')){
+    var ps = svcPicks(); if(!ps.length) return;
+    var tot = ps.reduce(function(s0, x){ return s0 + x.p; }, 0);
+    PICK_CTX = {text: ps.map(function(x){ return x.n + ' ($' + x.p.toLocaleString('en-CA') + ')'; }).join(', ') + ' — $' + tot.toLocaleString('en-CA') + ' before tax'};
+    CREDIT_CTX = null;
+    openCalendly(ps.length === 1 && ps[0].u ? ps[0].u : undefined, undefined, true);   // one pick with its own calendar books that exact shoot
+  }
+});
+function openCalendly(base, extra, keepPicks){
+  if(!keepPicks) PICK_CTX = null;   // picks only travel with a booking started from "Book these"
   if(!extra) CREDIT_CTX = null;   // a normal booking is never mistaken for a credit
   var u = calUrl(base) + (extra || '');
   loadCalendly().then(function(){
@@ -1586,7 +1736,8 @@ function onCalendlyBooked(){
       kind:'msg', ref:a, project:(AGENTNAME || 'Agent') + ' — Content Hub', dname: cx ? 'credit:' + cx.id : '',
       who:AGENTNAME || 'Agent', body: cx
         ? '📅 Just booked a shoot from my order \u201C' + cx.p + '\u201D' + (cx.t && cx.t !== cx.p ? ' (' + cx.t + ')' : '') + ' — waiting on your approval! 🤞'
-        : '📅 Just booked a shoot on your calendar — waiting on your approval! 🤞', from:'' }) });
+        : '📅 Just booked a shoot on your calendar — waiting on your approval! 🤞' + (PICK_CTX ? '\n🧮 What I’d like: ' + PICK_CTX.text : ''), from:'' }) });
+    if(PICK_CTX){ PICK_CTX = null; [].slice.call(document.querySelectorAll('.svcpick:checked')).forEach(function(i){ i.checked = false; }); svcSumPaint(); }
   }catch(e){}
   if(cx){
     credMark(cx.id); BOOKPEND[String(cx.id)] = 1; syncPendingRows();
@@ -1666,7 +1817,7 @@ function render(raw){
     html += '<div class="homeblk"><div class="heroact" style="margin-top:4px"><a class="go soft" href="#">📅 Book a shoot <span class="ar">→</span></a></div></div>';
   }
   // 🧰 toolkit slots on Home: new leads, and anything due on the posting plan
-  html += '<div class="homeblk"><div class="kslot" id="leadslot"></div><div class="kslot" id="planslot"></div><div class="kslot" id="audioslot"></div></div>';
+  html += '<div class="homeblk"><div class="kslot" id="startslot"></div><div class="kslot" id="leadslot"></div><div class="kslot" id="planslot"></div><div class="kslot" id="audioslot"></div></div>';
   if(recap.length){
     html += '<div class="homeblk"><div class="recap"><div class="rh">Since your last visit' +
       (prev && prev.at && ago(prev.at) ? ' · ' + esc(ago(prev.at)) : '') + '</div><ul>' +
@@ -1776,10 +1927,11 @@ function render(raw){
       html += '<div class="svccat">' + esc(cat) + '</div>';
       SVC.filter(function(s){ return s.c === cat; }).forEach(function(s){
         var _was = (pin && s.pub && (+s.pub) > (+s.p || 0)) ? '<span class="svcwas">$' + (+s.pub).toLocaleString('en-CA') + '</span>' : '';
-        html += '<div class="svcrow"><span class="svcn">' + esc(s.n || '') + '</span>' + _was + '<span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook"' + (s.u ? ' data-cal="' + esc(s.u) + '"' : '') + ' title="' + (s.u ? 'Books this exact shoot — your name pre-filled' : 'Opens our calendar') + '">Book</button></div>';
+        html += '<div class="svcrow"><input type="checkbox" class="svcpick" aria-label="Add ' + esc(s.n || '') + ' to your total" data-sn="' + esc(s.n || '') + '" data-sp="' + (+s.p || 0) + '"' + (s.u ? ' data-su="' + esc(s.u) + '"' : '') + '><span class="svcn">' + esc(s.n || '') + '</span>' + _was + '<span class="svcp">$' + (+s.p || 0).toLocaleString('en-CA') + '</span><button class="mini svcbook"' + (s.u ? ' data-cal="' + esc(s.u) + '"' : '') + ' title="' + (s.u ? 'Books this exact shoot — your name pre-filled' : 'Opens our calendar') + '">Book</button></div>';
       });
     });
-    html += '<div class="svcnote">Prices in CAD before tax. Not sure what fits the listing? Ask in chat — we\'ll point you to the right package.</div></div>';
+    html += '<div class="svcsum" id="svcsum" style="display:none"><b id="svcsum-t"></b><span id="svcsum-n"></span><button type="button" class="mini" id="svcsum-clear">Clear</button><button type="button" class="mini" id="svcsum-book" style="background:var(--red);color:#fff;border-color:var(--red)">📅 Book these</button></div>';
+    html += '<div class="svcnote">Tick what you need to see a total — when you book, we get your picks. Prices in CAD before tax. Not sure what fits the listing? Ask in chat — we\'ll point you to the right package.</div></div>';
     html += '</div>';
   }
   html += '<div class="viewblk" data-view="ideas" style="display:none">';
@@ -3330,6 +3482,7 @@ function loadBio(){
     if(j.bio){ BIO = j.bio; BIO.links = BIO.links || []; }
     document.getElementById('bio-blurb').value = BIO.blurb || '';
     document.getElementById('bio-phone').value = BIO.phone || '';
+    var bll = document.getElementById('bio-ll'); if(bll) bll.checked = !!BIO.ll;
     paintBioLinks();
   }).catch(function(){ paintBioLinks(); });
   var vw = document.getElementById('bio-view');
@@ -3367,10 +3520,13 @@ document.getElementById('bio-links').addEventListener('click', function(e){
 document.getElementById('bio-save').addEventListener('click', function(){
   BIO.blurb = (document.getElementById('bio-blurb').value || '').trim();
   BIO.phone = (document.getElementById('bio-phone').value || '').trim();
+  // 🏡 listings on the bio page: on only if ticked; homes marked "Just Sold" in the Listings tab show under "Recently sold"
+  var bll2 = document.getElementById('bio-ll'); BIO.ll = (bll2 && bll2.checked) ? 1 : 0;
+  try{ BIO.sold = (BIO.ll && typeof window.kitSoldUrls === 'function') ? window.kitSoldUrls() : []; }catch(eSold){ BIO.sold = []; }
   var st2 = document.getElementById('bio-stat');
   st2.textContent = 'Saving…';
   fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'bio', ref: a, project: 'Bio page', dname: '', who: AGENTNAME || 'Agent', from: '', body: JSON.stringify(BIO)})})
-    .then(function(){ st2.textContent = '✓ Live at your bio link'; setTimeout(function(){ st2.textContent = ''; }, 3000); })
+    .then(function(){ st2.textContent = '✓ Live at your bio link'; setTimeout(function(){ st2.textContent = ''; }, 3000); try{ if(typeof window.kitBioSaved === 'function') window.kitBioSaved(); }catch(eBs){} })
     .catch(function(){ st2.textContent = 'Couldn&rsquo;t save — try again'; });
 });
 document.getElementById('bio-copy').addEventListener('click', function(){
@@ -3653,11 +3809,14 @@ function pinHash(pin){
   return crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)).then(function(buf){
     return Array.prototype.map.call(new Uint8Array(buf), function(b){ return ('0' + b.toString(16)).slice(-2); }).join(''); });
 }
-function pinGate(h, go){
+function pinGate(h, go, full){
   var want = String((h && h.pn) || '');
+  // 🔒 newer inbox script: the hash never leaves the server. pq:1 = this hub has a PIN; `full` = the server accepted ours.
+  var served = !want && !!(h && h.pq === 1);
   var KEY = 'rem_hub_pinok_v1:' + a, TRY = 'rem_hub_pintry_v1:' + a;
   var ok = ''; try{ ok = localStorage.getItem(KEY) || ''; }catch(e){}
-  if(!want || ok === want || !(window.crypto && crypto.subtle)){ go(); return; }
+  if(served ? !!full : (!want || ok === want || !(window.crypto && crypto.subtle))){ go(); return; }
+  if(served && !(window.crypto && crypto.subtle)){ fail('This page needs a newer browser.', 'Your hub is PIN-protected and this browser can’t check a PIN. Try Safari or Chrome.'); return; }
   var first = String(h.agent || '').split(' ')[0];
   document.getElementById('body').innerHTML = '<div class="center pingate"><div class="big">' + (first ? 'Hi ' + esc(first) + ' — ' : '') + 'enter your PIN<span style="color:var(--red)">.</span></div>' +
     '<div class="sm">This page is private. You only need to do this once on this device.</div>' +
@@ -3673,6 +3832,15 @@ function pinGate(h, go){
     var v = String(inp.value || '').replace(/[^0-9]/g, ''); if(!v) return;
     btn.disabled = true;
     pinHash(v).then(function(hh){
+      if(served){   // ask the server: right → remember the hash and load again with it (that answer carries the private parts)
+        return fetch(ENDPOINT + '?hub=' + encodeURIComponent(HUBREQ) + '&pk=' + hh).then(function(r){ return r.json(); }).then(function(j2){
+          btn.disabled = false;
+          if(j2 && j2.ok && j2.full){ try{ localStorage.setItem(KEY, hh); localStorage.removeItem(TRY); }catch(e){} location.reload(); return; }
+          if(j2 && j2.error === 'locked'){ msg.textContent = 'Too many tries — wait a few hours, or text us and we’ll sort it out.'; return; }
+          var n2 = (tr.n >= 5 ? 0 : tr.n) + 1; try{ localStorage.setItem(TRY, JSON.stringify({n: n2, t: Date.now()})); }catch(e){}
+          msg.textContent = 'That PIN doesn’t match — try again.'; inp.value = ''; inp.focus();
+        });
+      }
       btn.disabled = false;
       if(hh === want){ try{ localStorage.setItem(KEY, want); localStorage.removeItem(TRY); }catch(e){} go(); return; }
       var n = (tr.n >= 5 ? 0 : tr.n) + 1; try{ localStorage.setItem(TRY, JSON.stringify({n: n, t: Date.now()})); }catch(e){}
@@ -3682,6 +3850,17 @@ function pinGate(h, go){
   btn.onclick = submit;
   inp.onkeydown = function(e){ if(e.key === 'Enter') submit(); };
   setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 50);
+}
+var HUBREQ = '';   // the key this page was opened with (an assistant's link stays the assistant's key)
+function hubLoad(key){
+  HUBREQ = key;
+  var KEY = 'rem_hub_pinok_v1:' + key, pk = ''; try{ pk = localStorage.getItem(KEY) || ''; }catch(e){}
+  var get = function(k2){ return fetch(ENDPOINT + '?hub=' + encodeURIComponent(key) + (/^[0-9a-f]{64}$/.test(k2) ? '&pk=' + k2 : '')).then(function(r){ return r.json(); }); };
+  return get(pk).then(function(j){
+    // the PIN was changed since this device last used it → forget ours and load the public part; the gate asks again
+    if(pk && j && !j.ok && (j.error === 'bad pin' || j.error === 'locked')){ try{ localStorage.removeItem(KEY); }catch(e){} return get(''); }
+    return j;
+  });
 }
 function fail(big, sm){
   document.getElementById('body').innerHTML = '<div class="center"><div class="big">' + big + '</div><div class="sm">' + sm + '</div></div>';
@@ -3760,8 +3939,7 @@ function startMessages(h){
   setInterval(function(){ if(document.visibilityState === 'visible') pollThread(); }, 60000);
 }
 if(!a){ fail('This link is missing its key.', 'Ask us for a fresh one and you’ll be right back in.'); }
-else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
-  .then(r => r.json())
+else hubLoad(a)
   .then(j => {
     if(j.ok && j.hub){
       if(j.assist && j.assist.k){ ASSIST = {n: String(j.assist.n || 'Assistant')}; a = String(j.assist.k); document.body.classList.add('assist'); }
@@ -3769,7 +3947,7 @@ else fetch(ENDPOINT + '?hub=' + encodeURIComponent(a))
         render(j.hub);
         loadScripts(); loadSlots();
         if(!ASSIST){ loadBio(); loadAssists(); }
-      });
+      }, !!j.full);
     } else fail('We couldn’t find your page.', 'Ask us for a fresh link — it takes ten seconds.');
   })
   .catch(() => fail('Couldn’t load your content.', 'Check your connection and pull to refresh.'));
@@ -3891,7 +4069,8 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function loadState(){
     return fetch(ENDPOINT + '?review=' + encodeURIComponent('kit-' + a)).then(function(r){ return r.json(); }).then(function(j){
       var s = (j && j.state) || {};
-      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}, au: (s.au && typeof s.au === 'object') ? s.au : {}, gs: (s.gs && typeof s.gs === 'object') ? s.gs : {}};
+      KIT.state = {ld: s.ld || {}, pl: s.pl || {}, ck: s.ck || {}, sr: s.sr || {}, au: (s.au && typeof s.au === 'object') ? s.au : {}, gs: (s.gs && typeof s.gs === 'object') ? s.gs : {},
+        sh: (s.sh && typeof s.sh === 'object') ? s.sh : {}, pt: (s.pt && typeof s.pt === 'object') ? s.pt : {}};
       KIT.stateLoaded = true;
     }).catch(function(){ KIT.stateLoaded = false; });
   }
@@ -3938,7 +4117,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
       '<div class="lh"><b>' + esc(l.name || 'Someone') + '</b><span class="lk' + (l.oh ? ' oh' : '') + '">' + esc(l.label || 'Enquiry') + '</span>' + (wd >= 1 ? '<span class="lk late">Waiting ' + wd + ' day' + (wd === 1 ? '' : 's') + '</span>' : '') + '<span class="lw">' + esc(when(l.ts)) + '</span></div>' +
       (l.addr ? '<div class="la">🏡 ' + esc(l.addr) + '</div>' : '') +
       (l.note ? '<div class="ln">“' + esc(l.note) + '”</div>' : '') +
-      ((tel || em) ? '<div class="lc">' + tel + em + '</div>' : '') +
+      ((tel || em) ? '<div class="lc">' + tel + em + '<a href="#" data-lvcf="1">👤 Save contact</a></div>' : '') +
       '<div class="ls" role="group" aria-label="Status">' + LSTAT.map(function(s){ return '<button type="button" data-ls="' + s[0] + '" class="' + (st === s[0] ? 'on' : '') + '">' + s[1] + '</button>'; }).join('') + '</div></div>';
   }
   function leadsCsv(list){
@@ -4066,6 +4245,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
         '<div class="klbl">Tools for this home</div><div class="ktools">' +
         '<button type="button" class="mini" data-kact="mls">⬇ MLS-ready photos</button>' +
         '<button type="button" class="mini" data-kact="ig">⬇ Instagram crops</button>' +
+        '<button type="button" class="mini" data-kact="prep">📨 Prep guide for the seller</button>' +
         '<button type="button" class="mini" data-kact="ohkit">🚪 Open house kit</button>' +
         '<button type="button" class="mini" data-kact="links">🔗 Share links</button>' +
         '<button type="button" class="mini" data-kact="report">📊 Seller report</button>' +
@@ -5119,7 +5299,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var box = $id('kit-spend'); if(!box) return;
     var ys = {}; spendLines().forEach(function(r){ ys[String(r.d).slice(0, 4)] = 1; });
     var years = Object.keys(ys).sort().reverse();
-    box.innerHTML = years.length ? '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><div class="psub" style="margin:0 0 8px">Need it for your accountant? One page with everything you spent with us in a year.</div><button type="button" class="mini" data-kspend="' + esc(years[0]) + '">🧾 Yearly summary</button></div>' : '';
+    var nb = KIT.raw.spb === 0;
+    if(!years.length){ box.innerHTML = (KIT.raw.pq === 0 && KIT.raw.spb !== undefined) ? '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><div class="psub" style="margin:0">🔒 Your yearly summary is kept behind a PIN, and this hub doesn’t have one yet. Message us and we’ll set one up.</div></div>' : ''; return; }
+    box.innerHTML = years.length ? '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><div class="psub" style="margin:0 0 8px">' + (nb ? 'Need it for your accountant? One page listing a year of your orders with us, at the rate you pay.' : 'Need it for your accountant? One page with everything you spent with us in a year.') + '</div><button type="button" class="mini" data-kspend="' + esc(years[0]) + '">🧾 Yearly summary</button></div>' : '';
   }
   function openSpend(year){
     var sh = $id('spendsheet');
@@ -5127,25 +5309,26 @@ window.OneSignalDeferred.push(async function(OneSignal){
     var all = spendLines(), ys = {}; all.forEach(function(r){ ys[String(r.d).slice(0, 4)] = 1; });
     var years = Object.keys(ys).sort().reverse();
     var rows = all.filter(function(r){ return String(r.d).slice(0, 4) === String(year); }).sort(function(m, n){ return String(m.d).localeCompare(String(n.d)); });
-    var S = 0, X = 0, T = 0, P = 0;
+    var S = 0, X = 0, T = 0, P = 0, nb = KIT.raw.spb === 0;   // nb: no balance shown on this hub — list the orders at their rate, leave paid / owing out
     var body = rows.map(function(r){ var s = +r.s || 0, x = +r.x || 0, t = +r.a || 0; S += s; X += x; T += t; if(r.pd) P += t;
-      return '<tr><td>' + esc(r.d) + '</td><td>' + esc(r.n || 'Order') + '</td><td class="n">' + money(s) + '</td><td class="n">' + money(x) + '</td><td class="n">' + money(t) + '</td><td>' + (r.pd ? 'Paid ' + esc(r.pd) : 'Owing') + '</td></tr>'; }).join('');
+      return '<tr><td>' + esc(r.d) + '</td><td>' + esc(r.n || 'Order') + '</td><td class="n">' + money(s) + '</td><td class="n">' + money(x) + '</td><td class="n">' + money(t) + '</td>' + (nb ? '' : '<td>' + (r.pd ? 'Paid ' + esc(r.pd) : 'Owing') + '</td>') + '</tr>'; }).join('');
     var who = String(KIT.raw.an || (typeof AGENTFULL !== 'undefined' ? AGENTFULL : '') || '');
     sh.innerHTML = '<div class="ssin"><div class="ssbar"><button type="button" data-ssclose="1">← Back</button>' +
       '<select id="ss-year" aria-label="Year">' + years.map(function(y){ return '<option' + (y === String(year) ? ' selected' : '') + '>' + esc(y) + '</option>'; }).join('') + '</select>' +
       '<button type="button" class="prim" data-ssprint="1">Print or save as PDF</button><button type="button" data-sscsv="1">Spreadsheet</button></div>' +
       '<h1>' + esc(String(year)) + ' summary — Reel Estate Media</h1>' +
       '<div class="sssub">Prepared for ' + esc(who || 'you') + (KIT.raw.brokerage ? ' · ' + esc(KIT.raw.brokerage) : '') + '<br>Orders dated ' + esc(String(year)) + ' · generated ' + esc(ymd(new Date())) + '</div>' +
-      '<table><thead><tr><th>Date</th><th>Order</th><th class="n">Subtotal</th><th class="n">HST</th><th class="n">Total</th><th>Status</th></tr></thead><tbody>' + (body || '<tr><td colspan="6">No orders dated ' + esc(String(year)) + '.</td></tr>') + '</tbody>' +
-      '<tfoot><tr><td colspan="2">Total for ' + esc(String(year)) + '</td><td class="n">' + money(S) + '</td><td class="n">' + money(X) + '</td><td class="n">' + money(T) + '</td><td>' + money(P) + ' paid</td></tr></tfoot></table>' +
-      '<div class="ssnote">This is a summary of your orders, not a tax receipt. Individual receipts are in your hub chat — ask us if you need one re-sent.</div></div>';
+      '<table><thead><tr><th>Date</th><th>Order</th><th class="n">Subtotal</th><th class="n">HST</th><th class="n">Total</th>' + (nb ? '' : '<th>Status</th>') + '</tr></thead><tbody>' + (body || '<tr><td colspan="' + (nb ? 5 : 6) + '">No orders dated ' + esc(String(year)) + '.</td></tr>') + '</tbody>' +
+      '<tfoot><tr><td colspan="2">Total for ' + esc(String(year)) + '</td><td class="n">' + money(S) + '</td><td class="n">' + money(X) + '</td><td class="n">' + money(T) + '</td>' + (nb ? '' : '<td>' + money(P) + ' paid</td>') + '</tr></tfoot></table>' +
+      '<div class="ssnote">' + (nb ? 'This lists your orders at the rate you pay. It is a summary, not a tax receipt or a statement of what is owing — ask us if you need a receipt.' : 'This is a summary of your orders, not a tax receipt. Individual receipts are in your hub chat — ask us if you need one re-sent.') + '</div></div>';
     sh.classList.add('on'); sh.scrollTop = 0;
     KIT._spendRows = rows; KIT._spendYear = year;
     $id('ss-year').onchange = function(){ openSpend(this.value); };
   }
   function spendCsv(rows){
     var q = function(v){ return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-    return '﻿' + [['Date', 'Order', 'Subtotal', 'HST', 'Total', 'Paid on']].concat(rows.map(function(r){ return [r.d, r.n, (+r.s || 0).toFixed(2), (+r.x || 0).toFixed(2), (+r.a || 0).toFixed(2), r.pd || '']; })).map(function(r){ return r.map(q).join(','); }).join('\r\n');
+    var nb = KIT.raw.spb === 0;
+    return '﻿' + [['Date', 'Order', 'Subtotal', 'HST', 'Total'].concat(nb ? [] : ['Paid on'])].concat(rows.map(function(r){ return [r.d, r.n, (+r.s || 0).toFixed(2), (+r.x || 0).toFixed(2), (+r.a || 0).toFixed(2)].concat(nb ? [] : [r.pd || '']); })).map(function(r){ return r.map(q).join(','); }).join('\r\n');
   }
 
   /* ---------------- 🎵 trending audio: the weekly list (review state 'trend-audio', published from the Command Centre) + the agent's saved songs ---------------- */
@@ -5735,10 +5918,211 @@ window.OneSignalDeferred.push(async function(OneSignal){
     save(); renderListings();
   }
   function groupOf(el){ var c = el.closest ? el.closest('[data-lk]') : null; if(!c) return null; var k = c.getAttribute('data-lk'); return listings().filter(function(g){ return g.key === k; })[0] || null; }
-  function renderAll(){ renderListings(); renderPlan(); renderHome(); renderAudioHome(); renderSpendBtn(); }
+  /* ================= round 4 — more from the hub: a tools checklist, what's new, the win-the-listing page,
+     a prep note for the seller, leads into contacts, an email signature ================= */
+  function pitchUrl(){ try{ return String(typeof bioUrl === 'function' ? bioUrl() : '').replace(/bio\.html/, 'pitch.html'); }catch(e){ return ''; } }
+  function shState(){ return (KIT.state.sh = KIT.state.sh || {}); }
+  function shMark(k){ var s = shState(); if(s[k]) return; s[k] = 1; save(); renderStart(); }
+  function hasProjects(){ return (KIT.items || []).length > 0; }
+
+  /* ---- ✨ what's new for agents: shown once per device until "Got it" ---- */
+  var NEWS = {id: 'n2026-11c', items: [
+    ['🏆', 'A page that helps you win the listing', 'Show a seller how you market a home, with your own past photos. More → Win-the-listing page.'],
+    ['📨', 'A prep guide to send your seller', 'On any listing: Tools for this home → Prep guide for the seller.'],
+    ['🧮', 'Tick services to see a total', 'Book → Services & pricing. Tick what you need, then book — we get your picks.'],
+    ['👤', 'Leads into your contacts', 'Every lead now has a “Save contact” button.'],
+    ['✉️', 'Your email signature', 'More → Email signature. Copy it into Gmail, Outlook or Apple Mail.']]};
+  function newsSeen(){ try{ return localStorage.getItem('rem_hub_news_v1:' + a) === NEWS.id; }catch(e){ return true; } }
+
+  /* ---- 🧭 "Get more from your hub": for agents who already have work with us (brand-new agents get the welcome list) ---- */
+  function startSteps(){
+    var s = shState(), gs = listings();
+    var ck = KIT.state.ck || {}, anyPost = Object.keys(ck).some(function(k){ var c = ck[k] || {}; return c.jl || c.oh || c.sold; });
+    var styled = !!(KIT.state.gs && KIT.state.gs.style);
+    return [
+      {k: 'g', t: '🖼 Make your first graphic or video', done: !!s.g || anyPost || styled, go: 'listings', lbl: 'Listings →'},
+      {k: 'p', t: '🏡 Publish a listing page', done: gs.some(function(g){ var d = dirFor(g); return !!(d && d.url); }), go: 'listings', lbl: 'Listings →'},
+      {k: 'b', t: '🔗 Set up your link-in-bio page', done: !!s.b, act: 'bio', lbl: 'Set up →'},
+      {k: 'w', t: '🏆 Build your win-the-listing page', done: !!(KIT.state.pt && KIT.state.pt.on), act: 'pitch', lbl: 'Build →'},
+      {k: 's', t: '✉️ Add your email signature', done: !!s.s, act: 'sig', lbl: 'Get it →'}];
+  }
+  function renderStart(){
+    var box = $id('startslot'); if(!box) return;
+    if(!hasProjects() || !KIT.stateLoaded){ box.innerHTML = ''; return; }
+    var h = '';
+    if(!newsSeen()){
+      h += '<div class="kstart knews"><div class="ksh">✨ New in your hub<button type="button" class="ksx" data-knewsok="1" title="Got it">✕</button></div>' +
+        NEWS.items.map(function(n){ return '<div class="ksn"><span>' + n[0] + '</span><div><b>' + esc(n[1]) + '</b><small>' + esc(n[2]) + '</small></div></div>'; }).join('') +
+        '<div class="bact" style="margin-top:8px"><button type="button" class="mini" data-knewsok="1">Got it</button></div></div>';
+    }
+    var steps = startSteps(), n = steps.filter(function(x){ return x.done; }).length;
+    if(!shState().x && n < steps.length){
+      h += '<div class="kstart"><div class="ksh">🧭 Get more from your hub <span class="ksc">' + n + ' / ' + steps.length + '</span><button type="button" class="ksx" data-kstartx="1" title="Hide this">✕</button></div>' +
+        steps.map(function(x){ return '<div class="ksr' + (x.done ? ' done' : '') + '"><span class="ksi">✓</span><span class="kst">' + x.t + '</span>' +
+          (x.done ? '' : '<button type="button" class="mini" ' + (x.go ? 'data-kgo="' + x.go + '"' : 'data-kstart="' + x.act + '"') + '>' + x.lbl + '</button>') + '</div>'; }).join('') + '</div>';
+    }
+    box.innerHTML = h;
+  }
+  function openMoreCard(id){
+    try{ setTab('more'); }catch(e){}
+    setTimeout(function(){ var c = $id(id); if(!c) return; c.classList.remove('fold'); try{ c.scrollIntoView({behavior: 'smooth', block: 'start'}); }catch(e){ c.scrollIntoView(); } }, 150);
+  }
+  function renderMoreTools(){
+    var box = $id('kit-more'); if(!box) return;
+    var on = !!(KIT.state.pt && KIT.state.pt.on);
+    box.innerHTML = '<h3>🧰 Tools for winning business</h3><div class="psub">Made from what’s already in your hub — your name, your brand, your past work.</div>' +
+      '<div class="kmt"><div><b>🏆 Win-the-listing page</b><span>' + (on ? 'Live — open it at your next listing appointment.' : 'Show a seller how you’ll market their home.') + '</span></div><button type="button" class="mini" data-kstart="pitch">' + (on ? 'Edit' : 'Build it') + '</button></div>' +
+      '<div class="kmt"><div><b>✉️ Email signature</b><span>Your photo, name, brokerage and links — ready to paste into your mail app.</span></div><button type="button" class="mini" data-kstart="sig">Get it</button></div>';
+  }
+
+  /* ---- 🏆 win-the-listing page: published to review state 'pitch-<hub>' and shown by pitch.html ---- */
+  var PITCH_CARDS = [['ph', '📷 Photography'], ['vid', '🎬 Video'], ['page', '🏡 A web page for the home'], ['social', '📣 Social media launch'], ['oh', '🚪 Open house sign-in'], ['report', '📊 Seller report']];
+  var PITCH_INTRO = 'Selling a home is a big decision. Here is how I market the homes I list, and some of my recent work.';
+  function idIn(v){ var m = String(v || '').match(/[-\w]{25,}/); return m ? m[0] : ''; }
+  function openPitch(){
+    var saved = KIT.state.pt || {}, raw = KIT.raw || {};
+    var st = {head: String(saved.head || ('Selling your home with ' + (agentName() || 'me'))).slice(0, 90), intro: String(saved.intro || PITCH_INTRO).slice(0, 500),
+      ph: (Array.isArray(saved.ph) ? saved.ph : []).filter(function(x){ return /^[-\w]{25,}$/.test(String(x)); }).slice(0, 8), page: String(saved.page || ''), on: !!saved.on,
+      cards: Array.isArray(saved.cards) ? PITCH_CARDS.map(function(c){ return c[0]; }).filter(function(k){ return saved.cards.indexOf(k) > -1; }) : PITCH_CARDS.map(function(c){ return c[0]; })};
+    var pages = listings().map(function(g){ var d = dirFor(g); return (d && d.url && d.rel) ? {u: d.url, t: g.title} : null; }).filter(Boolean);
+    if(st.page && !pages.some(function(p){ return p.u === st.page; })) st.page = '';
+    var card = openModal('<h3>🏆 Win-the-listing page</h3><div class="bsub">A page to open at a listing appointment — who you are, how you market a home, and your own past work. It only goes live when you publish it.</div>' +
+      '<label class="kf" for="kp-head">Headline</label><input type="text" id="kp-head" maxlength="90" value="' + qa(st.head) + '">' +
+      '<label class="kf" for="kp-intro">A few words from you</label><textarea id="kp-intro" rows="3" maxlength="500">' + esc(st.intro) + '</textarea>' +
+      '<label class="kf">What you do for every listing — untick anything you don’t offer</label><div class="kchips" id="kp-cards">' + PITCH_CARDS.map(function(c){ return '<button type="button" class="kchip' + (st.cards.indexOf(c[0]) > -1 ? ' on' : '') + '" data-kpc="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
+      '<label class="kf">Your work — pick up to 8 photos <span id="kp-count" style="font-weight:400"></span></label><div class="kpgrid" id="kp-grid"><div class="bsub" style="margin:0">Looking for your photos…</div></div>' +
+      (pages.length ? '<label class="kf" for="kp-page">Show a sample listing page</label><select id="kp-page"><option value="">None</option>' + pages.map(function(p){ return '<option value="' + qa(p.u) + '"' + (p.u === st.page ? ' selected' : '') + '>' + esc(p.t) + '</option>'; }).join('') + '</select><div class="bsub" style="margin:4px 0 0">It opens in sample mode: visits aren’t counted and the showing form is switched off.</div>' : '') +
+      '<div id="kp-live"></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="mini" id="kp-off" style="display:none">Take it down</button><button type="button" class="go" id="kp-pub" style="width:auto;padding:11px 18px"></button></div>');
+    var count = function(){ $id('kp-count').textContent = '· ' + st.ph.length + ' of 8'; };
+    var live = function(){
+      $id('kp-pub').textContent = st.on ? 'Update the page' : 'Publish the page'; $id('kp-off').style.display = st.on ? '' : 'none';
+      var u = pitchUrl();
+      $id('kp-live').innerHTML = st.on ? '<label class="kf">Your page</label><div class="klink"><input type="text" readonly value="' + qa(u) + '"><button type="button" class="mini" id="kp-copy">Copy</button></div>' +
+        '<div class="ktools" style="margin-top:8px"><a class="mini" href="' + qa(u) + '" target="_blank" rel="noopener">Open ↗</a><button type="button" class="mini" id="kp-qr">QR code</button><span class="bsub" id="kp-views" style="margin:0;align-self:center"></span></div>' : '';
+      if(st.on){
+        $id('kp-copy').onclick = function(){ copy(u, function(){ say('🔗 Link copied.'); }); };
+        $id('kp-qr').onclick = function(){ try{ if(typeof openQR === 'function') openQR(u, 'Your win-the-listing page'); }catch(e){} };
+        fetch(ENDPOINT + '?biohits=' + encodeURIComponent('pitch-' + a)).then(function(r){ return r.json(); }).then(function(j){ var v = +((j && j.views) || 0), el = $id('kp-views'); if(el) el.textContent = v ? 'Opened ' + v + ' time' + (v === 1 ? '' : 's') : 'Not opened yet'; }).catch(function(){});
+      }
+    };
+    count(); live();
+    // their delivered listing photos, newest homes first
+    var job = KIT.job, groups = listings().filter(function(g){ return photoFolder(g); }).slice(0, 6);
+    Promise.all(groups.map(function(g){ return driveImages(photoFolder(g)).then(function(f){ return {g: g, f: (f || []).slice(0, 10)}; }); })).then(function(sets){
+      if(job !== KIT.job || !$id('kp-grid')) return;
+      var h = '';
+      sets.forEach(function(s){ if(!s.f.length) return;
+        h += '<div class="kpg">' + esc(s.g.title) + '</div><div class="kpt">' + s.f.map(function(f){ var on = st.ph.indexOf(f.id) > -1; return '<button type="button" class="kpp' + (on ? ' on' : '') + '" data-kpp="' + qa(f.id) + '" aria-pressed="' + on + '"><img loading="lazy" alt="" src="' + qa(thumbUrl(f)) + '"></button>'; }).join('') + '</div>'; });
+      $id('kp-grid').innerHTML = h || '<div class="bsub" style="margin:0">Your photos appear here after your first delivered listing shoot. You can publish the page without them.</div>';
+    });
+    card.addEventListener('click', function(e){
+      var kc = e.target.closest ? e.target.closest('[data-kpc]') : null;
+      if(kc){ var ck0 = kc.getAttribute('data-kpc'), ci = st.cards.indexOf(ck0); if(ci > -1) st.cards.splice(ci, 1); else st.cards.push(ck0); kc.classList.toggle('on', st.cards.indexOf(ck0) > -1); return; }
+      var p = e.target.closest ? e.target.closest('[data-kpp]') : null;
+      if(p){ var id = p.getAttribute('data-kpp'), i = st.ph.indexOf(id);
+        if(i > -1) st.ph.splice(i, 1); else if(st.ph.length < 8) st.ph.push(id); else { say('Eight photos is the limit — untick one first.'); return; }
+        p.classList.toggle('on', st.ph.indexOf(id) > -1); p.setAttribute('aria-pressed', String(st.ph.indexOf(id) > -1)); count(); }
+    });
+    var put = function(on){
+      if(!canWrite()){ say('Preview only — nothing is saved.'); return; }
+      st.head = ($id('kp-head').value || '').trim().slice(0, 90); st.intro = ($id('kp-intro').value || '').trim().slice(0, 500);
+      var sel = $id('kp-page'); st.page = sel ? sel.value : '';
+      if(on && !st.head){ say('Add a headline first.'); return; }
+      var bk = {}; try{ bk = (typeof BK !== 'undefined' && BK) || {}; }catch(e){}
+      var body = {v: 1, on: on ? 1 : 0, head: st.head, intro: st.intro, ph: st.ph.slice(0, 8), page: st.page, cards: st.cards.slice(0, 6), at: Date.now(),
+        ag: {n: agentName(), t: String(raw.at || ''), b: String(raw.brokerage || ''), ph: String(raw.ph || ''), em: String(raw.email || ''), hd: idIn(raw.hd) || idIn(bk.head), c: brandColour()}};
+      var btn = $id('kp-pub'); btn.disabled = true;
+      fetch(ENDPOINT, {method: 'POST', body: JSON.stringify({kind: 'review', ref: 'pitch-' + a, project: 'Listing pitch', dname: '', who: (typeof AGENTNAME !== 'undefined' && AGENTNAME) || 'agent', body: JSON.stringify(body)})})
+        .then(function(r){ return r.json(); }).then(function(j){ if(!j || !j.ok) throw new Error('save');
+          st.on = !!on; KIT.state.pt = {on: st.on ? 1 : 0, head: st.head, intro: st.intro, ph: st.ph.slice(0, 8), page: st.page, cards: st.cards.slice(0, 6)}; save();
+          btn.disabled = false; live(); renderStart(); renderMoreTools(); say(on ? '✓ Your page is live.' : 'The page is down.'); })
+        .catch(function(){ btn.disabled = false; say('Couldn’t save — check your connection and try again.'); });
+    };
+    $id('kp-pub').onclick = function(){ put(true); };
+    $id('kp-off').onclick = function(){ put(false); };
+  }
+
+  /* ---- 📨 a prep note for the seller, with the guide link ---- */
+  var PREP_URL = 'https://thecontenthub.ca/guide-prepare-home-for-listing-photos.html';
+  function openPrep(g){
+    var today = ymd(new Date()), up = g.items.filter(function(x){ return !x.dv && x.dt && String(x.dt).slice(0, 10) >= today; }).sort(function(m, n){ return String(m.dt).localeCompare(String(n.dt)); })[0];
+    var d = up ? fromYmd(up.dt) : null, when = d ? ' on ' + d.toLocaleDateString('en-CA', {weekday: 'long', month: 'long', day: 'numeric'}) : '';
+    var first = (agentName().split(' ')[0] || '').trim();
+    var msg = 'Hi! The photo shoot at ' + g.title + ' is coming up' + when + '. Here’s a two-minute guide to getting the home ready for the camera:\n' + PREP_URL + (first ? '\n\n— ' + first : '');
+    var card = openModal('<h3>📨 Prep guide for the seller</h3><div class="bsub">' + esc(g.title) + ' — a short note with our room-by-room prep guide. Change the words, then send it your way.</div>' +
+      '<textarea id="kpr-t" rows="7" style="margin-top:12px">' + esc(msg) + '</textarea>' +
+      '<div class="ktools" style="margin-top:10px"><a class="mini" id="kpr-sms" href="#">💬 Text it</a><a class="mini" id="kpr-mail" href="#">✉ Email it</a><button type="button" class="mini" id="kpr-copy">Copy</button>' + (navigator.share ? '<button type="button" class="mini" id="kpr-share">↗ Share</button>' : '') + '<a class="mini" href="' + PREP_URL + '" target="_blank" rel="noopener">See the guide ↗</a></div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button></div>');
+    var val = function(){ return String($id('kpr-t').value || '').slice(0, 1200); };
+    var sync = function(){ $id('kpr-sms').href = 'sms:?&body=' + encodeURIComponent(val()); $id('kpr-mail').href = 'mailto:?subject=' + encodeURIComponent('Getting ready for the photo shoot — ' + g.title) + '&body=' + encodeURIComponent(val()); };
+    sync(); $id('kpr-t').addEventListener('input', sync);
+    $id('kpr-copy').onclick = function(){ copy(val(), function(){ say('Copied — paste it into a message.'); }); };
+    var sh = $id('kpr-share'); if(sh) sh.onclick = function(){ try{ navigator.share({text: val()}).catch(function(){}); }catch(e){} };
+    return card;
+  }
+
+  /* ---- 👤 a lead as a contact card (.vcf) the phone can save ---- */
+  function vcardOf(l){
+    var v = function(s){ return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1'); };
+    var name = String(l.name || 'Lead').trim(), parts = name.split(/\s+/), last = parts.length > 1 ? parts.pop() : '', first = parts.join(' ');
+    var note = [(l.label || 'Enquiry') + (l.addr ? ' — ' + l.addr : ''), l.ts ? 'Received ' + String(l.ts).slice(0, 10) : '', l.note ? '“' + l.note + '”' : ''].filter(Boolean).join('. ');
+    return ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + v(last) + ';' + v(first) + ';;;', 'FN:' + v(name),
+      l.phone ? 'TEL;TYPE=CELL:' + String(l.phone).replace(/[^\d+]/g, '') : '', l.email ? 'EMAIL;TYPE=INTERNET:' + v(l.email) : '', 'NOTE:' + v(note), 'END:VCARD'].filter(Boolean).join('\r\n') + '\r\n';
+  }
+
+  /* ---- ✉️ email signature: a small table that mail apps accept when pasted ---- */
+  function sigHtml(){
+    var raw = KIT.raw || {}, hu = headUrl(), c = brandColour() || '#EA002A', name = agentName() || 'Your name';
+    var bk = {}; try{ bk = (typeof BK !== 'undefined' && BK) || {}; }catch(e){}
+    var ig = String(bk.ig || '').replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 30), bio = ''; try{ bio = typeof bioUrl === 'function' ? bioUrl() : ''; }catch(e){}
+    var tel = String(raw.ph || '').replace(/[^\d+]/g, '');
+    var line = function(s){ return '<div style="font:13px/1.5 Arial,Helvetica,sans-serif;color:#444">' + s + '</div>'; };
+    var links = [bio ? '<a href="' + qa(bio) + '" style="color:' + c + ';text-decoration:none;font-weight:bold">My listings &amp; links</a>' : '', ig ? '<a href="https://www.instagram.com/' + ig + '/" style="color:' + c + ';text-decoration:none">@' + esc(ig) + '</a>' : ''].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    return '<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>' +
+      (hu ? '<td style="padding:0 14px 0 0;vertical-align:top"><img src="' + qa(hu) + '" width="72" height="72" alt="' + qa(name) + '" style="border-radius:50%;display:block;object-fit:cover"></td>' : '') +
+      '<td style="padding:0 0 0 14px;border-left:3px solid ' + c + ';vertical-align:top">' +
+      '<div style="font:bold 16px/1.3 Arial,Helvetica,sans-serif;color:#111">' + esc(name) + '</div>' +
+      line(esc([raw.at, raw.brokerage].filter(Boolean).join(' · '))) +
+      ((tel || raw.email) ? line([tel ? '<a href="tel:' + qa(tel) + '" style="color:#444;text-decoration:none">' + esc(raw.ph) + '</a>' : '', raw.email ? '<a href="mailto:' + qa(raw.email) + '" style="color:#444;text-decoration:none">' + esc(raw.email) + '</a>' : ''].filter(Boolean).join(' &nbsp;·&nbsp; ')) : '') +
+      (links ? '<div style="font:13px/1.5 Arial,Helvetica,sans-serif;margin-top:4px">' + links + '</div>' : '') +
+      '</td></tr></table>';
+  }
+  function openSig(){
+    var html = sigHtml();
+    var card = openModal('<h3>✉️ Email signature</h3><div class="bsub">Built from your profile and brand kit. Copy it, then paste it into your mail app’s signature box.</div>' +
+      '<div class="ksig" id="ksig-box">' + html + '</div>' +
+      '<div class="bsub" style="margin-top:10px"><b>Gmail:</b> Settings → See all settings → Signature. <b>Outlook:</b> Settings → Mail → Compose and reply. <b>iPhone Mail:</b> Settings → Mail → Signature. If it turns into plain text after pasting, shake the phone and tap Undo.</div>' +
+      '<div class="bsub" style="margin-top:6px">Something wrong or missing? Your name, title and phone come from your profile with us; your photo, colour and Instagram come from your brand kit under More.</div>' +
+      '<div class="bact"><button type="button" class="mini" data-kclose="1">Close</button><button type="button" class="go" id="ksig-copy" style="width:auto;padding:11px 18px">Copy signature</button></div>');
+    $id('ksig-copy').onclick = function(){
+      var done = function(){ say('✓ Copied — paste it into your signature box.'); if(canWrite()) shMark('s'); };
+      var plain = $id('ksig-box').innerText;
+      try{
+        if(navigator.clipboard && window.ClipboardItem){
+          navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html], {type: 'text/html'}), 'text/plain': new Blob([plain], {type: 'text/plain'})})]).then(done).catch(function(){ selCopy(); });
+        } else selCopy();
+      }catch(e){ selCopy(); }
+      function selCopy(){ try{ var r = document.createRange(); r.selectNodeContents($id('ksig-box')); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges(); done(); }catch(e2){ say('Select the signature and copy it by hand.'); } }
+    };
+    return card;
+  }
+
+  /* the listings an agent has marked "Just Sold" — the bio page shows these under "Recently sold" */
+  window.kitSoldUrls = function(){ try{ return listings().map(function(g){ var d = dirFor(g); return (d && d.url && (KIT.state.ck[g.key] || {}).sold) ? d.url : ''; }).filter(Boolean).slice(0, 40); }catch(e){ return []; } };
+  window.kitBioSaved = function(){ if(canWrite()) shMark('b'); };
+
+  function renderAll(){ renderListings(); renderPlan(); renderHome(); renderAudioHome(); renderSpendBtn(); renderStart(); renderMoreTools(); }
   document.addEventListener('click', function(e){
     var t = e.target; if(!t || !t.closest) return;
     if(t.closest('[data-kaudio]')){ openAudio(); return; }
+    if(t.closest('[data-knewsok]')){ try{ localStorage.setItem('rem_hub_news_v1:' + a, NEWS.id); }catch(e0){} renderStart(); return; }
+    if(t.closest('[data-kstartx]')){ if(canWrite()){ shState().x = 1; save(); } else say('Preview only — nothing is saved.'); var sb0 = $id('startslot'); if(sb0){ var kc = sb0.querySelector('.kstart:not(.knews)'); if(kc) kc.remove(); } return; }
+    var ks0 = t.closest('[data-kstart]');
+    if(ks0){ var kv = ks0.getAttribute('data-kstart'); if(kv === 'pitch') openPitch(); else if(kv === 'sig') openSig(); else if(kv === 'bio') openMoreCard('biowrap'); return; }
+    var lv = t.closest('[data-lvcf]');
+    if(lv){ e.preventDefault(); var lvr = lv.closest('[data-lead]'), lvl = lvr ? (KIT.leads || []).filter(function(x){ return String(x.id) === lvr.getAttribute('data-lead'); })[0] : null;
+      if(lvl) dl(new Blob([vcardOf(lvl)], {type: 'text/vcard'}), String(lvl.name || 'Lead').replace(/[^\w .-]+/g, ' ').trim().slice(0, 50) + '.vcf'); return; }
     if(t.closest('[data-kreview]')){ openReview(); return; }
     if(t.closest('[data-kshclose]')){ var ks = $id('kitsheet'); if(ks) ks.classList.remove('on'); return; }
     if(t.closest('[data-kshprint]')){ document.body.classList.add('kprintk'); var offk = function(){ document.body.classList.remove('kprintk'); window.removeEventListener('afterprint', offk); }; window.addEventListener('afterprint', offk); setTimeout(function(){ try{ window.print(); }catch(e3){} }, 50); return; }
@@ -5769,8 +6153,9 @@ window.OneSignalDeferred.push(async function(OneSignal){
       else if(k === 'carousel') openCarousel(g);
       else if(k === 'caps') openCaps(g);
       else if(k === 'ohkit') openOH(g);
+      else if(k === 'prep') openPrep(g);
       else if(k === 'links') openLinks(g);
-      else if(k.indexOf('g:') === 0) openGraphic(g, k.slice(2));
+      else if(k.indexOf('g:') === 0){ openGraphic(g, k.slice(2)); if(canWrite() && KIT.stateLoaded) shMark('g'); }
       else if(k === 'page'){ var d = dirFor(g); var it = g.items.filter(function(x){ return typeof listingUrl === 'function' && listingUrl(x); })[0]; var u = (d && d.rel && d.url) ? d.url : (it ? listingUrl(it) : ''); if(u) location.href = u; else say('The listing page opens once the photos are delivered.'); }
       return; }
     var tg = t.closest('[data-ltoggle]');
@@ -5805,7 +6190,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-25</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-26</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
