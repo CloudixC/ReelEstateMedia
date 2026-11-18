@@ -2061,7 +2061,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
     // a link that's been opened here before goes straight in — no lookup round-trip
     var _xq = ''; try{ _xq = localStorage.getItem('ll-x-' + R_X) || ''; }catch(eX){}
     // 🔗 a link shared in one place (?src=ig) or the open-house sign (?oh=1) keeps its tag through the hop
-    var _keep = ''; (function(){ var s0 = RQP.get('src'); if(s0 && /^(ig|tt|fb|em|tx|qr)$/.test(s0)) _keep += '&src=' + s0; if(RQP.get('oh') === '1') _keep += '&oh=1'; })();
+    var _keep = ''; (function(){ var s0 = RQP.get('src'); if(s0 && /^(ig|tt|fb|em|tx|qr)$/.test(s0)) _keep += '&src=' + s0; if(RQP.get('oh') === '1') _keep += '&oh=1'; if(RQP.get('demo') === '1') _keep += '&demo=1'; })();
     if(_xq){ location.replace(location.pathname + '?' + _xq + _keep); return; }
     fetch('https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec?link=' + encodeURIComponent(R_X))
       .then(function(r){ return r.json(); })
@@ -2071,6 +2071,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   }
   // Published pages open locked onto the chosen design, with no editing chrome.
   var R_PUB = RQP.get('pub') === '1', R_LAY = RQP.get('lay') || '';
+  var R_DEMO = RQP.get('demo') === '1';   // opened from the website's "sample listing page" button
   if(R_PUB && R_LAY){ try{ if((location.hash||'').slice(1) !== R_LAY) location.hash = R_LAY; }catch(e){} }
   var broReleased=false, broRequested=false;
   try{ broRequested = localStorage.getItem('ll-broreq-'+R_REF)==='1'; }catch(e){}
@@ -3706,6 +3707,7 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
 
     // -- leads: every showing/contact form posts for real --
     function sendLead(label, nm2, phn, em2, note){
+      if(R_DEMO) return Promise.reject(new Error('demo'));   // the website's sample page: the form is switched off
       var body = '📩 ' + label + ' — ' + (L.address||'') + (L.price ? ' (' + L.price + ')' : '') + '\n' + nm2 + (phn ? ' · ' + phn : '') + (em2 ? ' · ' + em2 : '') + (note ? '\n“' + note + '”' : '');
       var posts = [];
       if(R_HK) posts.push(fetch(R_ENDPOINT, {method:'POST', body: JSON.stringify({kind:'msg', ref:R_HK, project:(R_AN && R_DNAME ? R_AN+' — '+R_DNAME : ''), dname:'', who: nm2 + ' (buyer)', from:'agent', body: body})}));
@@ -3731,17 +3733,17 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       msg.textContent = 'Sending…';
       sendLead('Showing request', vals.n, vals.p, vals.e, vals.m)
         .then(function(){ msg.textContent = '✓ Sent — ' + (L.agentName||'the agent') + ' will be in touch shortly.'; [].slice.call(f.querySelectorAll('input,textarea')).forEach(function(i){ i.value=''; }); })
-        .catch(function(){ msg.textContent = 'Couldn’t send — call ' + (L.phone || L.email || 'the agent') + '.'; });
+        .catch(function(){ msg.textContent = R_DEMO ? 'This is a sample page, so the form is switched off.' : 'Couldn’t send — call ' + (L.phone || L.email || 'the agent') + '.'; });
     }, true);
 
     // -- views: counted once per visitor session, shown in the studio/agent bar --
     if(R_ENDPOINT && R_REF){
       var seenK = 'llhit:' + R_REF, seen1 = false;
       try{ seen1 = sessionStorage.getItem(seenK) === '1'; }catch(e){}
-      if(!seen1){ try{ sessionStorage.setItem(seenK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'view'})})}).catch(function(){}); }
+      if(!seen1 && !R_DEMO){ try{ sessionStorage.setItem(seenK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'view'})})}).catch(function(){}); }
       fetch(R_ENDPOINT + '?biohits=' + encodeURIComponent('ll-' + R_REF)).then(function(x){ return x.json(); }).then(function(j){ if(j && j.ok && j.views != null){ llViews = +j.views || 0; updBar(); } }).catch(function(){});
       var srcP = RQP.get('src');
-      if(srcP && /^(ig|tt|fb|em|tx|qr)$/.test(srcP)){
+      if(srcP && !R_DEMO && /^(ig|tt|fb|em|tx|qr)$/.test(srcP)){
         var srcK = 'llsrc:' + R_REF + ':' + srcP, srcSeen = false;
         try{ srcSeen = sessionStorage.getItem(srcK) === '1'; }catch(e){}
         if(!srcSeen){ try{ sessionStorage.setItem(srcK, '1'); }catch(e){} fetch(R_ENDPOINT, {method:'POST', keepalive:true, body: JSON.stringify({kind:'biohit', ref:'ll-'+R_REF, project:'', dname:'', who:'', body: JSON.stringify({t:'link', l:'src:'+srcP})})}).catch(function(){}); }
@@ -3935,7 +3937,9 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
       };
     }
 
-    if(R_PUB && RQP.get('oh') === '1' && R_ENDPOINT) setTimeout(function(){ try{ if(!document.getElementById('rem-kiosk')) openKiosk(true); }catch(eK){} }, 700);
+    if(R_DEMO && R_PUB){ var dm = document.createElement('a'); dm.href = 'start.html'; dm.textContent = 'Sample listing page · made with The Content Hub →';
+      dm.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9990;background:rgba(20,20,20,.9);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;padding:10px 14px;border-radius:999px;text-decoration:none;box-shadow:0 6px 20px rgba(0,0,0,.3)'; document.body.appendChild(dm); }
+    if(R_PUB && !R_DEMO && RQP.get('oh') === '1' && R_ENDPOINT) setTimeout(function(){ try{ if(!document.getElementById('rem-kiosk')) openKiosk(true); }catch(eK){} }, 700);
     if(R_PUB && R_LAY){
       // 🪶 fonts: only the families this design actually uses (re-checked when the page changes)
       (function(){
@@ -4107,5 +4111,5 @@ body.t-cin .wb-map, .t-cin .wb-map { --map-land:#18191b; --map-minor:#27282b; --
   })();
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-3</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;left:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">LL v2026.11.16-4</div>
 </body></html>
