@@ -1026,6 +1026,36 @@ body.light .kstart{background:#fff}
 .kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
 .ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
 .lead .lc a[data-lvcf]{cursor:pointer}
+
+/* round 4: tools checklist, what's new, pitch builder, signature */
+.kstart{border:1px solid var(--line2);border-radius:16px;padding:14px 16px;background:linear-gradient(180deg,var(--panel2),var(--panel) 60%);margin-bottom:10px}
+body.light .kstart{background:#fff}
+.kstart.knews{border-color:rgba(242,169,0,.45)}
+.ksh{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;margin-bottom:8px}
+.ksc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:2px 8px}
+.ksx{margin-left:auto;background:none;border:0;color:var(--dim);font-size:14px;cursor:pointer;padding:4px 6px}
+.ksr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ksr .ksi{flex:0 0 20px;height:20px;border-radius:50%;border:1.5px solid var(--line2);font-size:11px;display:grid;place-items:center;color:transparent}
+.ksr.done .ksi{background:#2f9e6b;border-color:#2f9e6b;color:#fff}
+.ksr.done .kst{color:var(--dim);text-decoration:line-through}
+.ksr .kst{flex:1;min-width:0;font-size:14px}
+.ksn{display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ksn b{display:block}
+.ksn small{display:block;color:var(--dim);font-size:12.5px;margin-top:1px}
+.kmt{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.kmt div{flex:1;min-width:0}
+.kmt b{display:block;font-size:14.5px}
+.kmt span{display:block;color:var(--dim);font-size:13px;margin-top:2px}
+.kpgrid{max-height:260px;overflow:auto;border:1px solid var(--line2);border-radius:12px;padding:10px}
+.kpg{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:8px 0 6px}
+.kpg:first-child{margin-top:0}
+.kpt{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.kpp{aspect-ratio:1;border:2px solid transparent;border-radius:8px;overflow:hidden;padding:0;background:#111;cursor:pointer;position:relative}
+.kpp img{width:100%;height:100%;object-fit:cover;display:block}
+.kpp.on{border-color:#F2A900}
+.kpp.on::after{content:'✓';position:absolute;right:4px;top:4px;background:#F2A900;color:#1a1205;font-size:11px;font-weight:800;border-radius:999px;padding:0 5px}
+.ksig{margin-top:12px;background:#fff;color:#111;border:1px solid var(--line2);border-radius:12px;padding:16px;overflow:auto}
+.lead .lc a[data-lvcf]{cursor:pointer}
 </style>
 <script>/* Set lite mode as early as possible so the heavy effects never even paint on
    an older device. One saved preference (rem_tele_power_v1) drives this and the teleprompter. */
@@ -1111,6 +1141,7 @@ body.light .kstart{background:#fff}
   <div id="bio-links"></div>
   <div class="brow"><label>Add button</label><input type="text" id="bio-lt" maxlength="40" placeholder="Label — e.g. My listings"><input type="text" id="bio-lu" maxlength="300" placeholder="https://…"><button class="upbtn" id="bio-add" style="flex:0 0 auto">＋ Add</button></div>
   <div class="brow"><label>Listings</label><label style="flex:1;display:flex;align-items:center;gap:8px;font-size:14px;text-transform:none;letter-spacing:0;width:auto"><input type="checkbox" id="bio-ll" style="width:18px;height:18px;flex:0 0 auto"> Show my published listing pages on this page</label></div>
+  <div class="brow"><label>Agents page</label><label style="flex:1;display:flex;align-items:center;gap:8px;font-size:14px;text-transform:none;letter-spacing:0;width:auto"><input type="checkbox" id="bio-dir" style="width:18px;height:18px;flex:0 0 auto"> <span>List me on The Content Hub&rsquo;s <a href="agents.html" target="_blank" rel="noopener" style="color:inherit">&ldquo;Agents we work with&rdquo;</a> page &mdash; your name, photo, tagline and a link to this page</span></label></div>
   <div class="brow" style="margin-bottom:0"><button class="bsave" id="bio-save">Save my page</button><button class="upbtn" id="bio-copy">🔗 Copy my bio link</button><a class="upbtn" id="bio-view" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">👁 Preview</a><button class="upbtn" id="bio-qr">🔳 QR code</button><span class="bstat" id="bio-stat"></span></div>
   <div class="biotaps" id="bio-taps"></div>
 </div>
@@ -3470,7 +3501,14 @@ function openA2HS(){
 }
 /* ---- 🔗 link-in-bio editor ---- */
 var BIO = {links: []};
-function bioUrl(){ return location.href.split('?')[0].replace(/hub\.html?$/, 'bio.html') + '?a=' + encodeURIComponent(a); }
+/* 🪪 Public id: links an agent shares (bio page, win-the-listing page, signature, QR) carry this instead of the hub key.
+   It is worked out from the key; the key can't be worked back out of it. Until it's ready (a few milliseconds) the old form is used. */
+var PUBID = '';
+function bioUrl(){ return location.href.split('?')[0].replace(/hub\.html?$/, 'bio.html') + (PUBID ? '?p=' + PUBID : '?a=' + encodeURIComponent(a)); }
+(function(){ try{ if(!a) return; crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem-pub-v1:' + a)).then(function(b){
+  PUBID = 'p' + Array.prototype.map.call(new Uint8Array(b).subarray(0, 10), function(x){ return (x < 16 ? '0' : '') + x.toString(16); }).join('');
+  var vw = document.getElementById('bio-view'); if(vw && vw.getAttribute('href') !== '#') vw.href = bioUrl();
+}).catch(function(){}); }catch(ePid){} })();
 function paintBioLinks(){
   var box = document.getElementById('bio-links');
   box.innerHTML = (BIO.links || []).map(function(l, i2){
@@ -3483,6 +3521,7 @@ function loadBio(){
     document.getElementById('bio-blurb').value = BIO.blurb || '';
     document.getElementById('bio-phone').value = BIO.phone || '';
     var bll = document.getElementById('bio-ll'); if(bll) bll.checked = !!BIO.ll;
+    var bdr = document.getElementById('bio-dir'); if(bdr) bdr.checked = BIO.dir === 1;
     paintBioLinks();
   }).catch(function(){ paintBioLinks(); });
   var vw = document.getElementById('bio-view');
@@ -3522,6 +3561,7 @@ document.getElementById('bio-save').addEventListener('click', function(){
   BIO.phone = (document.getElementById('bio-phone').value || '').trim();
   // 🏡 listings on the bio page: on only if ticked; homes marked "Just Sold" in the Listings tab show under "Recently sold"
   var bll2 = document.getElementById('bio-ll'); BIO.ll = (bll2 && bll2.checked) ? 1 : 0;
+  var bdr2 = document.getElementById('bio-dir'); BIO.dir = (bdr2 && bdr2.checked) ? 1 : 0;   // 🤝 opt-in: the public "Agents we work with" page
   try{ BIO.sold = (BIO.ll && typeof window.kitSoldUrls === 'function') ? window.kitSoldUrls() : []; }catch(eSold){ BIO.sold = []; }
   var st2 = document.getElementById('bio-stat');
   st2.textContent = 'Saving…';
@@ -5926,11 +5966,11 @@ window.OneSignalDeferred.push(async function(OneSignal){
   function hasProjects(){ return (KIT.items || []).length > 0; }
 
   /* ---- ✨ what's new for agents: shown once per device until "Got it" ---- */
-  var NEWS = {id: 'n2026-11c', items: [
+  var NEWS = {id: 'n2026-11d', items: [
+    ['🔗', 'Your bio link is new — and safer to share', 'More → Link-in-bio → Copy my bio link, then put it in your Instagram profile. Your old link still works.'],
+    ['🤝', 'Be on our “Agents we work with” page', 'More → Link-in-bio → tick “List me”. It stays off until you turn it on.'],
     ['🏆', 'A page that helps you win the listing', 'Show a seller how you market a home, with your own past photos. More → Win-the-listing page.'],
     ['📨', 'A prep guide to send your seller', 'On any listing: Tools for this home → Prep guide for the seller.'],
-    ['🧮', 'Tick services to see a total', 'Book → Services & pricing. Tick what you need, then book — we get your picks.'],
-    ['👤', 'Leads into your contacts', 'Every lead now has a “Save contact” button.'],
     ['✉️', 'Your email signature', 'More → Email signature. Copy it into Gmail, Outlook or Apple Mail.']]};
   function newsSeen(){ try{ return localStorage.getItem('rem_hub_news_v1:' + a) === NEWS.id; }catch(e){ return true; } }
 
@@ -6190,7 +6230,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-26</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-27</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;

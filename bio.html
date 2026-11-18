@@ -60,10 +60,18 @@ h1 em{font-style:italic;color:var(--red2)}
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
 const q = new URLSearchParams(location.search);
 const a = q.get('a') || '';
+let PID = /^p[0-9a-f]{20}$/.test(q.get('p') || '') ? q.get('p') : '', PUB = false;   // PUB: this page came from the public card, no key involved
+/* 🪪 Public id — worked out from an agent's hub key, never the other way round. Shared links carry this, not the key. */
+function pidOf(key){
+  try{ return crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem-pub-v1:' + key)).then(function(b){
+    return 'p' + Array.prototype.map.call(new Uint8Array(b).subarray(0, 10), function(x){ return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }).catch(function(){ return ''; }); }
+  catch(e){ return Promise.resolve(''); }
+}
+function fromCard(pid){ return fetch(ENDPOINT + '?card=' + pid).then(function(r){ return r.json(); }).then(function(j){ return (j && j.ok && j.card) ? j.card : null; }).catch(function(){ return null; }); }
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 function fail(msg){ document.getElementById('wrap').innerHTML = '<div class="center">' + esc(msg) + '</div>'; }
 function driveImg(id){ return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w400'; }
-function render(hub, kit, bio){
+function render(hub, kit, bio, ll){
   bio = bio || {}; kit = kit || {};
   const name = hub.agent || 'Agent';
   const brok = hub.brokerage || '';
@@ -97,14 +105,14 @@ function render(hub, kit, bio){
   }
   h += '<div class="credit"><svg viewBox="0 0 120 120" aria-hidden="true"><path d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke="#F2A900" stroke-width="13" stroke-linecap="round"/><g fill="#FAF8F5"><polygon points="55,42 64,48 64,72 55,78"/><polygon points="66,49.3 73,54 73,66 66,70.7"/><polygon points="75,55.3 82,60 75,64.7"/></g></svg>Content by <a href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">Reel Estate Media</a></div>';
   document.getElementById('wrap').innerHTML = h;
-  if(bio.ll) loadListings(Array.isArray(bio.sold) ? bio.sold : []);
-  try{ if(!sessionStorage.getItem('rem_biohit_v:' + a)){ sessionStorage.setItem('rem_biohit_v:' + a, '1'); logHit({t: 'view'}); } }catch(eV){ logHit({t: 'view'}); }
+  if(bio.ll) loadListings(Array.isArray(bio.sold) ? bio.sold : [], ll);
+  try{ if(!sessionStorage.getItem('rem_biohit_v:' + (PID || a))){ sessionStorage.setItem('rem_biohit_v:' + (PID || a), '1'); logHit({t: 'view'}); } }catch(eV){ logHit({t: 'view'}); }
 }
 /* 🏡 The agent's published listing pages (only when they ticked "Show my listings" in their hub). The list is the same
    directory their hub keeps; homes they marked "Just Sold" come last, under "Recently sold". Nothing here is trusted:
    a link must be one of our listing pages, a picture must be an https image, and all text is escaped. */
-function loadListings(sold){
-  fetch(ENDPOINT + '?review=' + encodeURIComponent('lldir-' + a)).then(r => r.json()).then(function(j){
+function loadListings(sold, ll){
+  (ll ? Promise.resolve({state: {items: ll}}) : fetch(ENDPOINT + '?review=' + encodeURIComponent('lldir-' + a)).then(r => r.json())).then(function(j){
     const items = (j && j.state && j.state.items) || {}, box = document.getElementById('lst'); if(!box) return;
     const img = function(v){ v = String(v || ''); if(/^https:\/\/[^"'<>\s\\]{8,400}$/.test(v)) return v; const m = v.match(/^[-\w]{25,}$/); return m ? 'https://drive.google.com/thumbnail?id=' + m[0] + '&sz=w600' : ''; };
     const rows = Object.keys(items).map(function(k){ const d = items[k] || {}; const u = String(d.url || '');
@@ -119,7 +127,7 @@ function loadListings(sold){
   }).catch(function(){});
 }
 function logHit(o){
-  try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: a, project: '', dname: '', who: '', body: JSON.stringify(o)})}); }catch(e){}
+  try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: PUB ? 'pub:' + PID : a, project: '', dname: '', who: '', body: JSON.stringify(o)})}); }catch(e){}
 }
 document.addEventListener('click', function(e){
   var b = e.target.closest ? e.target.closest('.biolink') : null;
@@ -163,18 +171,30 @@ function studioPicker(tok){
     document.getElementById('wrap').innerHTML = h;
   }).catch(function(){ fail('Couldn’t load the agent list — check your connection and refresh.'); });
 }
-if(!a){
+function showCard(c){ PUB = true; render({agent: c.agent, brokerage: c.brokerage, email: c.email}, c.kit, c.bio, c.ll || {}); }
+function oldWay(){
+  Promise.all([
+    fetch(ENDPOINT + '?hub=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
+    fetch(ENDPOINT + '?brand=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
+    fetch(ENDPOINT + '?bio=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({}))
+  ]).then(function(rs){
+    if(!rs[0].ok || !rs[0].hub){ fail('We couldn’t find this page.'); return; }
+    render(rs[0].hub, rs[1] && rs[1].kit, rs[2] && rs[2].bio);
+  });
+}
+if(PID) fromCard(PID).then(function(c){ if(c) showCard(c); else fail('We couldn’t find this page.'); });
+else if(!a){
   var tok = '';
   try{ tok = localStorage.getItem('rem_admin_token_v1') || ''; }catch(eT){}
   if(tok) studioPicker(tok);
   else fail('This link is missing its key — each agent has their own page. Ask us for your personal bio link.');
 }
-else Promise.all([
-  fetch(ENDPOINT + '?hub=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
-  fetch(ENDPOINT + '?brand=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({})),
-  fetch(ENDPOINT + '?bio=' + encodeURIComponent(a)).then(r => r.json()).catch(() => ({}))
-]).then(function(rs){
-  if(!rs[0].ok || !rs[0].hub){ fail('We couldn’t find this page.'); return; }
-  render(rs[0].hub, rs[1] && rs[1].kit, rs[2] && rs[2].bio);
+else pidOf(a).then(function(pid){   // an older link that still carries the key: swap it for the public id straight away
+  if(!pid) return oldWay();
+  return fromCard(pid).then(function(c){
+    if(!c) return oldWay();
+    PID = pid; try{ history.replaceState(null, '', location.pathname + '?p=' + pid); }catch(eH){}
+    showCard(c);
+  });
 });
 </script></body></html>

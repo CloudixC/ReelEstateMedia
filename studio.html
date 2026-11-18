@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-19) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-20) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -9637,7 +9637,24 @@ function UsagePanel() {
     }
   }, "Reset the count")));
 }
+const PUBIDS = {};
+function pubIdOf(key) {
+  key = String(key || '');
+  if (!key) return '';
+  if (PUBIDS[key] === undefined) {
+    PUBIDS[key] = '';
+    try {
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem-pub-v1:' + key)).then(b => {
+        PUBIDS[key] = 'p' + Array.from(new Uint8Array(b).subarray(0, 10)).map(x => (x < 16 ? '0' : '') + x.toString(16)).join('');
+      }).catch(() => {});
+    } catch (e) {}
+  }
+  return PUBIDS[key];
+}
 const WHATS_NEW = [{
+  v: '2026.11.16-20',
+  items: [['🪪', 'Shared links no longer carry the hub key', 'An agent’s bio page and win-the-listing page now use a public id (bio.html?p=…) that can’t open their hub. Old links keep working and switch themselves over when opened. 🔗 Bio on a client card copies the new link. Needs inbox script Version 47.'], ['🤝', 'An “Agents we work with” page', 'thecontenthub.ca/agents.html lists agents who tick “List me” in their hub (More → Link-in-bio). Nobody is listed until they opt in; the home page links to it once someone has.']]
+}, {
   v: '2026.11.16-19',
   items: [['🧾', 'Every agent can get the yearly summary — privately', 'Agents billed through their brokerage see a year of their orders at the rate they pay (More → Billing → Yearly summary), with no paid or owing. Two conditions keep the amounts private: the inbox script must be Version 46, and the agent needs a hub PIN (set it on their profile). Without a PIN their hub says the summary needs one.'], ['🧰', 'New in the agents’ hub', 'A win-the-listing page they can show sellers, a prep guide to send the seller, tick-to-total on Services & pricing (their picks arrive with the booking message), “Save contact” on leads, an email signature, and their listings on the bio page.']]
 }, {
@@ -13652,11 +13669,12 @@ function ClientsPage({
         }
       }, c.name), React.createElement("span", {
         className: "spacer"
-      }), (c.hubKey || c.hubId) && React.createElement("button", {
+      }), (c.hubKey || c.hubId) && (pubIdOf(c.hubKey || c.hubId), true) && React.createElement("button", {
         className: "btn ghost sm",
         title: "Open this agent's public link-in-bio page — the one their Instagram bio points to (link is copied too)",
         onClick: () => {
-          const u = new URL('bio.html?a=' + encodeURIComponent(c.hubKey || c.hubId), location.href).href;
+          const pid = pubIdOf(c.hubKey || c.hubId);
+          const u = new URL(pid ? 'bio.html?p=' + pid : 'bio.html?a=' + encodeURIComponent(c.hubKey || c.hubId), location.href).href;
           copyText(u);
           window.open(u, '_blank');
           showToast('🔗 ' + (c.name || 'Agent').split(' ')[0] + '\u2019s bio page opened — link copied');
@@ -17636,7 +17654,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-19</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-20</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

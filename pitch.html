@@ -60,7 +60,16 @@ footer a{color:inherit}
 <div id="lb" role="dialog" aria-modal="true" aria-label="Photo"><img alt=""></div>
 <script>
 const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
-const a = (new URLSearchParams(location.search).get('a') || '').replace(/[^\w-]/g, '').slice(0, 80);
+const QS = new URLSearchParams(location.search);
+const a = (QS.get('a') || '').replace(/[^\w-]/g, '').slice(0, 80);
+let PID = /^p[0-9a-f]{20}$/.test(QS.get('p') || '') ? QS.get('p') : '', PUB = false;   // PUB: this page came from the public card, no key involved
+/* 🪪 Public id — worked out from an agent's hub key, never the other way round. Shared links carry this, not the key. */
+function pidOf(key){
+  try{ return crypto.subtle.digest('SHA-256', new TextEncoder().encode('rem-pub-v1:' + key)).then(function(b){
+    return 'p' + Array.prototype.map.call(new Uint8Array(b).subarray(0, 10), function(x){ return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }).catch(function(){ return ''; }); }
+  catch(e){ return Promise.resolve(''); }
+}
+function fromCard(pid){ return fetch(ENDPOINT + '?card=' + pid).then(function(r){ return r.json(); }).then(function(j){ return (j && j.ok && j.card) ? j.card : null; }).catch(function(){ return null; }); }
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML.replace(/"/g, '&quot;'); }
 function fail(msg){ document.getElementById('wrap').innerHTML = '<div class="center">' + esc(msg) + '</div>'; }
 const CARDS = {
@@ -106,9 +115,9 @@ function render(st){
   document.getElementById('wrap').innerHTML = h;
   // a picture that isn't shared publicly simply drops out
   [].slice.call(document.querySelectorAll('.gal img')).forEach(im => im.addEventListener('error', () => { const b = im.closest('button'); if(b) b.remove(); const g = document.querySelector('.gal'); if(g && !g.children.length) g.closest('section').remove(); }));
-  try{ if(!sessionStorage.getItem('pitchhit:' + a)){ sessionStorage.setItem('pitchhit:' + a, '1'); hit({t: 'view'}); } }catch(e){ hit({t: 'view'}); }
+  try{ if(!sessionStorage.getItem('pitchhit:' + (PID || a))){ sessionStorage.setItem('pitchhit:' + (PID || a), '1'); hit({t: 'view'}); } }catch(e){ hit({t: 'view'}); }
 }
-function hit(o){ try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: 'pitch-' + a, project: '', dname: '', who: '', body: JSON.stringify(o)})}).catch(() => {}); }catch(e){} }
+function hit(o){ try{ fetch(ENDPOINT, {method: 'POST', keepalive: true, body: JSON.stringify({kind: 'biohit', ref: PUB ? 'pub:' + PID + ':pitch' : 'pitch-' + a, project: '', dname: '', who: '', body: JSON.stringify(o)})}).catch(() => {}); }catch(e){} }
 const lb = document.getElementById('lb');
 document.addEventListener('click', e => {
   const p = e.target.closest ? e.target.closest('[data-ph]') : null;
@@ -117,9 +126,21 @@ document.addEventListener('click', e => {
   const l = e.target.closest ? e.target.closest('[data-hit]') : null; if(l) hit({t: 'link', l: l.getAttribute('data-hit')});
 }, true);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') lb.classList.remove('on'); });
-if(!a) fail('This link is missing its key. Ask your agent to send it again.');
-else fetch(ENDPOINT + '?review=' + encodeURIComponent('pitch-' + a)).then(r => r.json()).then(j => {
-  const st = j && j.state; if(!st || typeof st !== 'object' || !st.on){ fail('This page isn’t available right now.'); return; }
-  render(st);
-}).catch(() => fail('Couldn’t load this page — check your connection and refresh.'));
+function oldWay(){
+  fetch(ENDPOINT + '?review=' + encodeURIComponent('pitch-' + a)).then(r => r.json()).then(j => {
+    const st = j && j.state; if(!st || typeof st !== 'object' || !st.on){ fail('This page isn’t available right now.'); return; }
+    render(st);
+  }).catch(() => fail('Couldn’t load this page — check your connection and refresh.'));
+}
+function showCard(c){ PUB = true; const st = c.pitch; if(!st || typeof st !== 'object' || !st.on){ fail('This page isn’t available right now.'); return; } render(st); }
+if(PID) fromCard(PID).then(c => { if(c) showCard(c); else fail('This page isn’t available right now.'); });
+else if(!a) fail('This link is missing its key. Ask your agent to send it again.');
+else pidOf(a).then(pid => {   // an older link that still carries the key: swap it for the public id straight away
+  if(!pid) return oldWay();
+  return fromCard(pid).then(c => {
+    if(!c) return oldWay();
+    PID = pid; try{ history.replaceState(null, '', location.pathname + '?p=' + pid); }catch(eH){}
+    showCard(c);
+  });
+});
 </script></body></html>

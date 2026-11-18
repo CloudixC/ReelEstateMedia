@@ -172,6 +172,28 @@
       if(/^https:\/\/thecontenthub\.ca\/listing-layouts\.html\?[\w=&%.\-]{3,200}$/.test(demo)) all('[data-demo]').forEach(function(l){ l.href = demo + '&demo=1'; });
     }).catch(function(){ storyPage(null); });
   }
+  /* ---- 🤝 agents we work with: only agents who ticked "List me" in their own hub. The footer link shows once someone has.
+     The home page and the agents page ask; the count is remembered for six hours so the other pages don't have to. ---- */
+  (function(){
+    var box = $('aglist'), links = all('[data-ags]'); if(!box && !links.length) return;
+    var K = 'site_ags_v1', n = -1;
+    try{ var c = JSON.parse(localStorage.getItem(K) || 'null'); if(c && Date.now() - c.at < 216e5) n = +c.n || 0; }catch(e){}
+    var showLinks = function(k){ if(k > 0) links.forEach(function(l){ l.hidden = false; }); };
+    if(n >= 0) showLinks(n);
+    if(!box && (n >= 0 || page !== 'start')) return;
+    var none = function(){ if(box) box.innerHTML = '<div class="empty">No one is listed here yet — this page fills in as agents choose to be on it.</div>'; };
+    fetch(E + '?agents=1').then(function(r){ return r.json(); }).then(function(j){
+      var list = ((j && j.ok && Array.isArray(j.agents)) ? j.agents : []).filter(function(x){ return x && /^p[0-9a-f]{20}$/.test(String(x.p || '')) && String(x.n || '').trim(); }).slice(0, 200);
+      try{ localStorage.setItem(K, JSON.stringify({n: list.length, at: Date.now()})); }catch(e){}
+      showLinks(list.length);
+      if(!box) return;
+      if(!list.length){ none(); return; }
+      box.innerHTML = list.map(function(x){
+        var hd = /^[-\w]{25,60}$/.test(String(x.h || '')) ? 'https://drive.google.com/thumbnail?id=' + x.h + '&sz=w240' : '';
+        return '<a class="agcard" target="_blank" rel="noopener" href="bio.html?p=' + x.p + '"><i class="ph"' + (hd ? ' style="background-image:url(&quot;' + hd + '&quot;)"' : '') + ' aria-hidden="true">' + (hd ? '' : '🏡') + '</i><span class="tx"><b>' + esc(String(x.n).trim().slice(0, 60)) + '</b>' +
+          (String(x.b || '').trim() ? '<small>' + esc(String(x.b).trim().slice(0, 60)) + '</small>' : '') + (String(x.t || '').trim() ? '<span class="tg">' + esc(String(x.t).trim().slice(0, 140)) + '</span>' : '') + '</span></a>'; }).join('');
+    }).catch(none);
+  })();
   function gbpOk(u){ return u.length <= 300 && !/["'<>\s\\]/.test(u) && /^https:\/\/(g\.page\/|maps\.app\.goo\.gl\/|goo\.gl\/maps\/|(www\.)?google\.[a-z.]+\/maps[\/?]|search\.google\.com\/local\/|share\.google\/)/i.test(u); }
   /* 📖 one agent's story — written in the Command Centre, shown only once it is published there with her OK */
   function storyOf(d){
