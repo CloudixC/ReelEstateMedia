@@ -256,16 +256,18 @@
         var title = h.textContent.replace(/\s+/g, ' ').trim().slice(0, 40);
         var rows = [].slice.call(c.querySelectorAll('.row')).map(function(row){
           var n = row.querySelector('.nm b'), sub = row.querySelector('.nm .sub');
-          return n ? {n: n.textContent.trim().slice(0, 60), sub: sub ? sub.textContent.trim().slice(0, 90) : ''} : null;
+          var bk = row.querySelector('a.rowbook'), cal = bk ? String(bk.getAttribute('href') || '') : '';
+          if(!/^https:\/\/calendly\.com\/hello-reelestatemedia\/[a-z0-9-]+$/.test(cal)) cal = '';
+          return n ? {n: n.textContent.trim().slice(0, 60), sub: sub ? sub.textContent.trim().slice(0, 90) : '', cal: cal} : null;
         }).filter(Boolean);
         if(rows.length) groups.push({t: title, rows: rows});
       });
       if(!groups.length){ fail(); return; }
       box.innerHTML = groups.map(function(g){
         return '<fieldset class="bgroup"><legend>' + esc(g.t) + '</legend>' + g.rows.map(function(r){
-          return '<label class="bitem"><input type="checkbox" data-n="' + esc(r.n) + '" data-g="' + esc(g.t) + '"><span class="bn"><b>' + esc(r.n) + '</b>' + (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</span></label>'; }).join('') + '</fieldset>';
+          return '<label class="bitem"><input type="checkbox" data-n="' + esc(r.n) + '" data-g="' + esc(g.t) + '" data-cal="' + esc(r.cal || '') + '"><span class="bn"><b>' + esc(r.n) + '</b>' + (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</span></label>'; }).join('') + '</fieldset>';
       }).join('');
-      var bar = $('bsum'), picked = function(){ return all('#builder input:checked').map(function(i){ return {n: i.getAttribute('data-n'), g: i.getAttribute('data-g')}; }); };
+      var bar = $('bsum'), picked = function(){ return all('#builder input:checked').map(function(i){ return {n: i.getAttribute('data-n'), g: i.getAttribute('data-g'), c: i.getAttribute('data-cal') || ''}; }); };
       var upd = function(){
         var ps = picked();
         $('btot').textContent = String(ps.length); $('bcount').textContent = ps.length ? (ps.length === 1 ? 'item picked' : 'items picked') : 'Nothing picked yet';
@@ -275,6 +277,8 @@
         $('bhint').hidden = !(hasP && hasV && !hasB);
         var msg = ps.length ? 'I’d like to book:\n' + ps.map(function(x){ return '• ' + x.n; }).join('\n') + '\n\nAddress / preferred date: ' : '';
         $('bsend').setAttribute('data-enquire-msg', msg);
+        // 📅 everything picked lives on one Calendly page → Book opens that page; otherwise the full list
+        var bb = $('bbook'); if(bb){ var cs = {}; ps.forEach(function(x){ cs[x.c || '*'] = 1; }); var ks = Object.keys(cs); bb.href = (ks.length === 1 && ks[0] !== '*') ? ks[0] : bb.getAttribute('data-all'); }
       };
       box.addEventListener('change', upd); upd();
     }).catch(fail);

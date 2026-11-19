@@ -383,3 +383,9 @@ body[data-page^="guide-"] h1{font-size:clamp(2rem,5.4vw,3.3rem);max-width:18ch}
 .pl .row .rowgo:hover{color:var(--amber)}
 #bsum .tot{display:flex;align-items:baseline;gap:10px}
 #bsum .tot span{margin:0}
+
+/* ---- Nov 19, 2026: a Book button beside each service ---- */
+.prow .rbook,.pl .row .rowbook{flex:0 0 auto;align-self:center;font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--amber);text-decoration:none;border:1px solid var(--line2);border-radius:999px;padding:8px 13px;white-space:nowrap}
+.prow .rbook:hover,.pl .row .rowbook:hover{border-color:var(--amber)}
+#pick{scroll-margin-top:96px}
+.pl .row .rowgo{align-self:center}
