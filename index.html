@@ -48,12 +48,16 @@
 .rv{position:relative;margin:0}
 .rv .fr{position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
 .rv video{display:block;width:100%;height:100%;object-fit:cover}
-.rv .pl{position:absolute;inset:0;display:grid;place-items:center;border:0;background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 45%);cursor:pointer;color:#fff}
+.rv .pl{position:absolute;inset:0;display:grid;place-items:center;border:0;padding:0;background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 45%);cursor:pointer;color:#fff}
 .rv .pl i{width:72px;height:72px;border-radius:50%;background:rgba(234,0,42,.92);display:grid;place-items:center;box-shadow:0 12px 30px rgba(0,0,0,.45);transition:transform .2s}
 .rv .pl i::before{content:'';border-left:20px solid #fff;border-top:12px solid transparent;border-bottom:12px solid transparent;margin-left:5px}
 .rv .pl:hover i,.rv .pl:focus-visible i{transform:scale(1.08)}
-.rv .pl span{position:absolute;left:14px;bottom:14px;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase}
-.rv.on .pl{display:none}
+.rv .pl span{position:absolute;left:12px;bottom:12px;font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;background:rgba(20,20,20,.66);border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:8px 12px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.rv.on .pl{background:linear-gradient(0deg,rgba(0,0,0,.38),rgba(0,0,0,0) 26%)}
+.rv.on .pl i{display:none}
+.rv.snd .pl span{background:rgba(234,0,42,.94);border-color:transparent}
+.rv.snd .fr{border-color:var(--red)}
+.rv .pl:focus-visible{outline:2px solid var(--amber);outline-offset:-4px;border-radius:18px}
 .rv figcaption{margin-top:12px}
 .rv figcaption b{display:block;font-size:1.05rem}
 .rv figcaption small{display:block;color:var(--dim);font-size:.84rem;margin-top:2px}
@@ -64,12 +68,12 @@
 #film .fbox{position:relative;aspect-ratio:4/3;max-height:84vh;margin:auto;border-radius:14px;overflow:hidden;background:#000}#film iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 #film .x{position:absolute;top:-46px;right:0;background:none;border:0;color:#fff;font-size:1.9rem;cursor:pointer;line-height:1}
 #film{overflow:visible}
-@media(prefers-reduced-motion:reduce){.vhero .vbg{display:none}.vhero{background:url(media/hero-poster.jpg) center/cover}}
+@media(prefers-reduced-motion:reduce){.vhero .vbg{display:none}.vhero{background:url(media/hero-poster.jpg?m=2) center/cover}}
 </style>
 </head><body data-page="start">
 
 <div class="vhero">
-<video class="vbg" id="vbg" autoplay muted loop playsinline preload="metadata" poster="media/hero-poster.jpg" aria-hidden="true"></video>
+<video class="vbg" id="vbg" autoplay muted loop playsinline preload="metadata" poster="media/hero-poster.jpg?m=2" aria-hidden="true"></video>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="./" aria-label="The Content Hub, powered by Reel Estate Media">
@@ -125,11 +129,11 @@
 <section id="reels-play"><div class="wrap">
   <div class="eyebrow">Recent work</div>
   <h2>Press play.</h2>
-  <p class="sub">Three recent pieces for agents and brokerages — a recruiting reel, an event promo and a listing reel. Sound on.</p>
+  <p class="sub">Three recent pieces for agents and brokerages — a recruiting reel, an event promo and a listing reel. Tap one to hear it.</p>
   <div class="reelrow">
-    <figure class="rv"><div class="fr"><video src="media/reel-recruiting.mp4" poster="media/reel-recruiting.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Brokerage recruiting reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Brokerage recruiting reel</b><small>Shot on location at the brokerage, with on-screen titles.</small></figcaption></figure>
-    <figure class="rv"><div class="fr"><video src="media/reel-event-promo.mp4" poster="media/reel-event-promo.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Event promo"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event promo</b><small>Date, place and a reason to sign up — in half a minute.</small></figcaption></figure>
-    <figure class="rv"><div class="fr"><video src="media/reel-listing.mp4" poster="media/reel-listing.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Listing reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Listing reel</b><small>The home and the agent, cut for Instagram.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-recruiting.mp4?m=2" poster="media/reel-recruiting.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Brokerage recruiting reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Brokerage recruiting reel</b><small>Shot on location at the brokerage, with on-screen titles.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-event-promo.mp4?m=2" poster="media/reel-event-promo.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Event promo"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event promo</b><small>Date, place and a reason to sign up — in half a minute.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-listing.mp4?m=2" poster="media/reel-listing.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Listing reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Listing reel</b><small>The home and the agent, cut for Instagram.</small></figcaption></figure>
   </div>
   <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="social-reels.html">About social reels</a></div>
 </div></section>
@@ -280,25 +284,47 @@
   var v=document.getElementById('vbg');
   var calm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   var save=navigator.connection&&navigator.connection.saveData;
-  if(v&&!calm&&!save){v.src=(window.innerWidth<=780?'media/hero-loop-sm.mp4':'media/hero-loop.mp4');var p=v.play();if(p&&p.catch)p.catch(function(){});}
+  var heroOn=!!v&&!calm&&!save, heroVis=true, filmOpen=false;
+  function hero(){ if(!heroOn) return; if(heroVis&&!filmOpen&&!document.hidden){var p=v.play();if(p&&p.catch)p.catch(function(){});} else v.pause(); }
+  if(heroOn){v.src=(window.innerWidth<=780?'media/hero-loop-sm.mp4?m=2':'media/hero-loop.mp4?m=2');hero();
+    if('IntersectionObserver' in window) new IntersectionObserver(function(es){heroVis=es[es.length-1].isIntersecting;hero();}).observe(v.parentNode);}
   // film lightbox
   var d=document.getElementById('film'),fv=d&&d.querySelector('iframe');
   document.querySelectorAll('[data-film]').forEach(function(a){a.addEventListener('click',function(e){
     if(!d||!d.showModal)return; e.preventDefault();
-    fv.src=a.getAttribute('data-film'); d.showModal(); if(v)v.pause();
+    fv.src=a.getAttribute('data-film'); d.showModal(); filmOpen=true; hero(); hush(null);
   });});
   function shut(){d.close();}
-  if(d){d.querySelector('.x').addEventListener('click',shut);d.addEventListener('click',function(e){if(e.target===d)shut();});d.addEventListener('close',function(){fv.src='about:blank';if(v&&!calm&&!save)v.play().catch(function(){});});}
-  // reels: tap to play with sound, one at a time
-  var rs=[].slice.call(document.querySelectorAll('.rv'));
+  if(d){d.querySelector('.x').addEventListener('click',shut);d.addEventListener('click',function(e){if(e.target===d)shut();});d.addEventListener('close',function(){fv.src='about:blank';filmOpen=false;hero();});}
+  // reels: each one plays silently on a loop while it is on screen; a tap turns its sound on (one at a time), another tap turns it off.
+  // Less motion / less data asked for, or autoplay refused by the browser: nothing moves until a tap, which plays it with sound.
+  var rs=[].slice.call(document.querySelectorAll('.rv')), auto=!calm&&!save&&('IntersectionObserver' in window);
+  function paint(f){var rv=f.querySelector('video'),b=f.querySelector('.pl'),t=(f.querySelector('figcaption b')||{}).textContent||'reel',on=f.classList.contains('on'),snd=on&&!rv.muted;
+    f.classList.toggle('snd',snd);
+    b.querySelector('span').textContent=!on?'\u25B6 Play \u00B7 sound on':snd?'\uD83D\uDD0A Sound on \u00B7 tap to mute':'\uD83D\uDD07 Tap for sound';
+    b.setAttribute('aria-label',(!on?'Play with sound: ':snd?'Turn the sound off: ':'Turn the sound on: ')+t);
+    b.setAttribute('aria-pressed',snd?'true':'false');}
+  function hush(keep){rs.forEach(function(o){var ov=o.querySelector('video');if(o!==keep&&!ov.muted){ov.muted=true;paint(o);}});}
+  function go(rv){var p=rv.play();if(p&&p.catch)p.catch(function(){});}
   rs.forEach(function(f){var rv=f.querySelector('video');
+    rv.muted=true; rv.loop=true;
+    rv.addEventListener('playing',function(){f.classList.add('on');paint(f);});
+    rv.addEventListener('pause',function(){if(!auto||!f.classList.contains('seen')){f.classList.remove('on');paint(f);}});
     f.querySelector('.pl').addEventListener('click',function(){
-      rs.forEach(function(o){if(o!==f){o.querySelector('video').pause();}});
-      f.classList.add('on'); rv.controls=true; var p=rv.play(); if(p&&p.catch)p.catch(function(){});
+      if(rv.paused){hush(f);rv.muted=false;var p=rv.play();if(p&&p.catch)p.catch(function(){rv.muted=true;go(rv);});}   // not moving yet → start it, with sound
+      else if(!auto&&!rv.muted){rv.pause();}                                                                             // tap-to-play mode: a second tap stops it
+      else if(rv.muted){hush(f);rv.muted=false;}
+      else rv.muted=true;
+      paint(f);
     });
-    rv.addEventListener('play',function(){rs.forEach(function(o){if(o!==f)o.querySelector('video').pause();});if(v)v.pause();});
-    rv.addEventListener('pause',function(){if(v&&!calm&&!save&&!rs.some(function(o){return !o.querySelector('video').paused;}))v.play().catch(function(){});});
+    paint(f);
   });
+  if(auto){var io=new IntersectionObserver(function(es){es.forEach(function(e){var f=e.target,rv=f.querySelector('video');
+      if(e.intersectionRatio>=.4){f.classList.add('seen');if(!document.hidden)go(rv);}
+      else{if(!rv.muted){rv.muted=true;paint(f);}rv.pause();}
+    });},{threshold:[0,.4,.75]});
+    rs.forEach(function(f){io.observe(f);});}
+  document.addEventListener('visibilitychange',function(){if(document.hidden)hush(null);hero();});
 })();
 </script>
 </body></html>
