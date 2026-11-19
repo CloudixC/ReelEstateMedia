@@ -1,5 +1,5 @@
 /* The Content Hub — shared behaviour for the public pages (landing, services, towns, guides, portfolio, shoot builder,
-   brokerages, reviews, price list, privacy).
+   brokerages, reviews, services, privacy). No page shows a price.
    Every part looks for its own elements and does nothing on a page that doesn't have them. */
 (function(){
   var E = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
@@ -45,18 +45,7 @@
     if(k) count('s:' + k, 'sitesrc:' + mo);
   })();
 
-  /* ---- prices are never typed on these pages: each figure is read off the price list ---- */
-  if(document.querySelector('[data-price]')){
-    fetch('pricing.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
-      if(!t) return;
-      var doc = new DOMParser().parseFromString(t, 'text/html'), map = {};
-      [].slice.call(doc.querySelectorAll('.row')).forEach(function(row){
-        var n = row.querySelector('.nm b'), p = row.querySelector('.pr');
-        if(n && p && /\d/.test(p.textContent)) map[n.textContent.trim()] = p.textContent.replace(/\s+/g, '');
-      });
-      all('[data-price]').forEach(function(el){ var v = map[el.getAttribute('data-price')]; if(!v) return; (el.querySelector('b') || el).textContent = v; el.classList.add('on'); });
-    }).catch(function(){});
-  }
+  /* (Nov 19, 2026) The public site shows no prices — agents see them in their hub. Nothing here reads or prints one. */
 
   /* ---- reviews: the links to the reviews page, and the reviews themselves, appear only once there are some ---- */
   if(document.querySelector('[data-rev]') || $('quotes') || $('wallgrid')){
@@ -256,39 +245,38 @@
     enq.classList.add('on'); try{ $('enqf').elements.n.focus(); }catch(e2){}
   });
 
-  /* ---- 🧮 build your shoot: tick what you need, see the total. Every price is read off the price list. ---- */
+  /* ---- 🧮 build your shoot: tick what you need and send the list. The choices are read off the services page; no prices. ---- */
   (function(){
     var box = $('builder'); if(!box) return;
-    fetch('pricing.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+    var fail = function(){ box.innerHTML = '<div class="empty">Couldn’t load the services — <a href="services.html">open the full list</a>.</div>'; };
+    fetch('services.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
       var doc = new DOMParser().parseFromString(t || '', 'text/html'), groups = [];
-      [].slice.call(doc.querySelectorAll('.cat, .bundles')).forEach(function(c){
+      [].slice.call(doc.querySelectorAll('.pl .cat')).forEach(function(c){
         var h = c.querySelector('h2'); if(!h) return;
-        var title = (h.firstChild && h.firstChild.nodeType === 3 ? h.firstChild.textContent : h.textContent).replace(/\s+/g, ' ').trim().slice(0, 40);
+        var title = h.textContent.replace(/\s+/g, ' ').trim().slice(0, 40);
         var rows = [].slice.call(c.querySelectorAll('.row')).map(function(row){
-          var n = row.querySelector('.nm b'), sub = row.querySelector('.nm .sub'), p = row.querySelector('.pr');
-          var num = p ? parseFloat(p.textContent.replace(/[^\d.]/g, '')) : NaN;
-          return (n && isFinite(num) && num > 0) ? {n: n.textContent.trim().slice(0, 60), sub: sub ? sub.textContent.trim().slice(0, 90) : '', p: num} : null;
+          var n = row.querySelector('.nm b'), sub = row.querySelector('.nm .sub');
+          return n ? {n: n.textContent.trim().slice(0, 60), sub: sub ? sub.textContent.trim().slice(0, 90) : ''} : null;
         }).filter(Boolean);
-        if(rows.length) groups.push({t: title, rows: rows, bundle: c.classList.contains('bundles')});
+        if(rows.length) groups.push({t: title, rows: rows});
       });
-      if(!groups.length){ box.innerHTML = '<div class="empty">Couldn’t load the prices — <a href="pricing.html">open the price list</a>.</div>'; return; }
-      var money = function(v){ return '$' + Math.round(v).toLocaleString('en-CA'); }, id = 0;
+      if(!groups.length){ fail(); return; }
       box.innerHTML = groups.map(function(g){
-        return '<fieldset class="bgroup' + (g.bundle ? ' bund' : '') + '"><legend>' + esc(g.t) + '</legend>' + g.rows.map(function(r){ id++;
-          return '<label class="bitem"><input type="checkbox" data-n="' + esc(r.n) + '" data-p="' + r.p + '" data-g="' + esc(g.t) + '"><span class="bn"><b>' + esc(r.n) + '</b>' + (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</span><span class="bp">' + money(r.p) + '</span></label>'; }).join('') + '</fieldset>';
+        return '<fieldset class="bgroup"><legend>' + esc(g.t) + '</legend>' + g.rows.map(function(r){
+          return '<label class="bitem"><input type="checkbox" data-n="' + esc(r.n) + '" data-g="' + esc(g.t) + '"><span class="bn"><b>' + esc(r.n) + '</b>' + (r.sub ? '<small>' + esc(r.sub) + '</small>' : '') + '</span></label>'; }).join('') + '</fieldset>';
       }).join('');
-      var bar = $('bsum'), picked = function(){ return all('#builder input:checked').map(function(i){ return {n: i.getAttribute('data-n'), p: +i.getAttribute('data-p'), g: i.getAttribute('data-g')}; }); };
+      var bar = $('bsum'), picked = function(){ return all('#builder input:checked').map(function(i){ return {n: i.getAttribute('data-n'), g: i.getAttribute('data-g')}; }); };
       var upd = function(){
-        var ps = picked(), tot = ps.reduce(function(a, x){ return a + x.p; }, 0);
-        $('btot').textContent = money(tot); $('bcount').textContent = ps.length ? ps.length + (ps.length === 1 ? ' item' : ' items') + ' · plus HST' : 'Nothing picked yet';
+        var ps = picked();
+        $('btot').textContent = String(ps.length); $('bcount').textContent = ps.length ? (ps.length === 1 ? 'item picked' : 'items picked') : 'Nothing picked yet';
         bar.classList.toggle('on', ps.length > 0);
         all('#builder .bitem').forEach(function(l){ l.classList.toggle('on', l.querySelector('input').checked); });
-        var hasP = ps.some(function(x){ return /photograph/i.test(x.g); }), hasV = ps.some(function(x){ return /listing video/i.test(x.g); }), hasB = ps.some(function(x){ return /bundle/i.test(x.g); });
+        var hasP = ps.some(function(x){ return x.n === 'Listing Photos'; }), hasV = ps.some(function(x){ return x.n === 'Listing Video'; }), hasB = ps.some(function(x){ return /Photo Package|Film Package/i.test(x.n); });
         $('bhint').hidden = !(hasP && hasV && !hasB);
-        var msg = ps.length ? 'I’d like to book:\n' + ps.map(function(x){ return '• ' + x.n + ' — ' + money(x.p); }).join('\n') + '\nTotal: ' + money(tot) + ' + HST\n\nAddress / preferred date: ' : '';
+        var msg = ps.length ? 'I’d like to book:\n' + ps.map(function(x){ return '• ' + x.n; }).join('\n') + '\n\nAddress / preferred date: ' : '';
         $('bsend').setAttribute('data-enquire-msg', msg);
       };
       box.addEventListener('change', upd); upd();
-    }).catch(function(){ box.innerHTML = '<div class="empty">Couldn’t load the prices — <a href="pricing.html">open the price list</a>.</div>'; });
+    }).catch(fail);
   })();
 })();
