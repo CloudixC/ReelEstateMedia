@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-23) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-24) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1037,7 +1037,7 @@ const SVC_NEXT = {
   b3: 'lux'
 };
 const liveSvcId = id => id && SVC_NEXT[id] || id || '';
-const HUBS_REV = '2026-11-19-prices-b';
+const HUBS_REV = '2026-11-19-prices-c';
 const CATS_BASE = ['Content Creation', 'Event Coverage', 'Real Estate Media'];
 const CUSTOM_CAT = 'Custom';
 const cleanCustomSvc = list => (Array.isArray(list) ? list : []).map(x => {
@@ -1476,15 +1476,20 @@ const CAL_EVENT_SLUG = {
   yse5: 'you-shoot-we-edit',
   yse10: 'you-shoot-we-edit',
   evr: 'event-recap',
-  evp: 'event-recap',
-  evv: 'event-recap',
+  evp: 'event-recap-package-photo-coverage-2-hours',
+  evv: 'event-recap-package-video-coverage-2-hours',
   hs: '30min',
-  lp: 'professional-listing-photos-35-hdr',
-  lv: 'professional-listing-video-30s-cinematic',
-  lpk: 'pro-listing-bundle',
-  lux: 'luxury-property-film'
+  ptr: 'project-tour-reel',
+  lp: 'essential-listing-photos-20-hdr-clone',
+  lv: 'listing-video',
+  lpk: 'professional-listing-video-photo-package',
+  lux: 'luxury-property-film-package'
 };
 const CAL_OLD_SLUG = {
+  'professional-listing-photos-35-hdr': 'lp',
+  'professional-listing-video-30s-cinematic': 'lv',
+  'pro-listing-bundle': 'lpk',
+  'luxury-property-film': 'lux',
   'essential-listing-photos-20-hdr': 'lp',
   'premium-listing-photos-50-hdr': 'lp',
   'luxury-estate-photos-60-hdr': 'lp',
@@ -10024,6 +10029,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-24',
+  items: [['📅', 'Every service has its own Calendly page', 'Your Calendly page now lists everything on the price list under its proper name — the listing photos, listing video, the two listing packages, the Project Tour Reel and the three Event Recap Packages each have their own page. The Book buttons in every agent’s hub go to the matching page (hubs update a few seconds after you open the Command Centre), and a booking made on any of them comes in as the right service.']]
+}, {
   v: '2026.11.16-23',
   items: [['🏠', 'Hubs get the price list by themselves', 'The price list sits inside each agent’s hub file, and that file used to be re-sent only when something about that agent changed — so the new prices never reached the hubs. Now every hub is updated once whenever the price list changes (it happens a few seconds after you open the Command Centre), and again when you add or change a custom service that hubs show. Money → Schedule A also has “Send to every hub now”.']]
 }, {
@@ -18313,7 +18321,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-23</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-24</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
