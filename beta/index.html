@@ -486,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-21) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-22) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -574,21 +574,12 @@ const CATALOG_BASE = [{
   credits: 10,
   unit: 'Reel'
 }, {
-  id: 'pre1',
+  id: 'ptr',
   cat: 'Content Creation',
-  name: 'Project Tour Reel — Standard',
-  retail: 95,
-  pub: 95,
-  partner: 70,
-  credits: 1,
-  unit: 'Project Tour Reel'
-}, {
-  id: 'pre2',
-  cat: 'Content Creation',
-  name: 'Project Tour Reel — Advanced',
-  retail: 150,
-  pub: 150,
-  partner: 120,
+  name: 'Project Tour Reel (30 sec reel)',
+  retail: 80,
+  pub: 80,
+  partner: 50,
   credits: 1,
   unit: 'Project Tour Reel'
 }, {
@@ -673,6 +664,26 @@ const CATALOG_BASE = [{
   components: ['Luxury Property Film', 'Drone Shots', 'Tier 1 Insta Reel', 'MLS Link']
 }];
 const CATALOG_GONE = [{
+  id: 'pre1',
+  cat: 'Content Creation',
+  name: 'Project Tour Reel — Standard',
+  retail: 95,
+  pub: 95,
+  partner: 70,
+  credits: 1,
+  unit: 'Project Tour Reel',
+  gone: true
+}, {
+  id: 'pre2',
+  cat: 'Content Creation',
+  name: 'Project Tour Reel — Advanced',
+  retail: 150,
+  pub: 150,
+  partner: 120,
+  credits: 1,
+  unit: 'Project Tour Reel',
+  gone: true
+}, {
   id: 'pod1',
   cat: 'Content Creation',
   name: 'Podcast / Teleprompter (1 Reel)',
@@ -1001,6 +1012,8 @@ const CATALOG_GONE = [{
   gone: true
 }];
 const SVC_NEXT = {
+  pre1: 'ptr',
+  pre2: 'ptr',
   pod1: 't2_1',
   pod5: 't2_5',
   pod10: 't2_10',
@@ -1505,7 +1518,7 @@ function guessServiceId(title, eventMap) {
   if (cat) return cat.id;
   if (/head\s?shot|portrait/.test(tl)) return 'hs';
   if (/you\s*shoot/.test(tl)) return 'yse1';
-  if (/pre-?con|project tour|preview day/.test(tl)) return /advanced/.test(tl) ? 'pre2' : 'pre1';
+  if (/pre-?con|project tour|preview day/.test(tl)) return 'ptr';
   if (/dynamic|\btier\s*1\b/.test(tl)) return 't1_1';
   if (/podcast|teleprompter|\btier\s*2\b/.test(tl)) return 't2_1';
   if (/event|recap|coverage/.test(tl)) return /photo/.test(tl) && !/video/.test(tl) ? 'evp' : /video/.test(tl) && !/photo/.test(tl) ? 'evv' : 'evr';
@@ -9976,6 +9989,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-22',
+  items: [['🎬', 'Project Tour Reel is one service at $80', 'As on the brokerage’s store: a 30-second project tour reel, $80 to the agent, $50 to you. The Standard ($95) and Advanced ($150) lines are gone from the price list.']]
+}, {
   v: '2026.11.16-21',
   items: [['💲', 'The 2026 price list is in', 'Dynamic Shoot · Tier 1 and Podcast / Teleprompter · Tier 2 at the new rates, You Shoot, We Edit, Project Tour Reel (pre-con), Professional Headshots, the Event Recap Package (photo, video or both), Listing Photos, Listing Video, the video + photo package and the luxury film package — named as on the brokerage’s store. Everything else is retired: it no longer appears in any picker, but older orders that used it read as before. See Money → Schedule A.'], ['🔒', 'Prices live in the hubs only', 'Agents see the price list in their hub (Book → Services & pricing). The public website now lists the services with no prices.'], ['⭐', 'Custom services', 'Money → “My custom services”: create a service once (name, what the agent pays, what you get, deliverables) and pick it anywhere — new orders, existing orders, bookings, monthly plans. You can show it on every agent’s hub or on one agent’s. For a one-off, the New order form now has “✨ Custom service” too.']]
 }, {
@@ -18248,7 +18264,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-21</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-22</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
