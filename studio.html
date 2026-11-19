@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-22) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-23) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1037,6 +1037,7 @@ const SVC_NEXT = {
   b3: 'lux'
 };
 const liveSvcId = id => id && SVC_NEXT[id] || id || '';
+const HUBS_REV = '2026-11-19-prices-b';
 const CATS_BASE = ['Content Creation', 'Event Coverage', 'Real Estate Media'];
 const CUSTOM_CAT = 'Custom';
 const cleanCustomSvc = list => (Array.isArray(list) ? list : []).map(x => {
@@ -5882,6 +5883,41 @@ function AppInner({
       ids.forEach((cid, i) => setTimeout(() => pushHub(cid), i * 400));
     }, 1500);
   };
+  const pushAllHubs = quiet => {
+    const cur = dbRef.current;
+    if (!cur.settings.inboxUrl) return 0;
+    const ids = cur.clients.filter(c => c.hubKey || c.hubId).map(c => c.id);
+    ids.forEach((id, i) => setTimeout(() => {
+      try {
+        pushHub(id, true);
+      } catch (e) {}
+    }, i * 450));
+    if (ids.length && !quiet) showToast('🏠 Sending the current price list to ' + ids.length + ' hub' + (ids.length === 1 ? '' : 's') + '…');
+    return ids.length;
+  };
+  window.__pushAllHubs = pushAllHubs;
+  useEffect(() => {
+    if (!db.settings.inboxUrl || db.settings.hubsRev === HUBS_REV) return;
+    const iv = setInterval(() => {
+      if (!window.__bootDone) return;
+      clearInterval(iv);
+      const cur = dbRef.current;
+      if (cur.settings.hubsRev === HUBS_REV) return;
+      pushAllHubs();
+      updateSettings({
+        hubsRev: HUBS_REV
+      });
+    }, window.__HUBS_MS || 4000);
+    return () => clearInterval(iv);
+  }, [db.settings.inboxUrl, db.settings.hubsRev]);
+  const hubSvcSig = JSON.stringify(cleanCustomSvc(db.settings.customServices).filter(x => x.show).map(x => [x.name, x.retail, x.show]));
+  const hubSvcSeen = React.useRef(hubSvcSig);
+  useEffect(() => {
+    if (hubSvcSeen.current !== hubSvcSig) {
+      hubSvcSeen.current = hubSvcSig;
+      pushAllHubs();
+    }
+  }, [hubSvcSig]);
   const applyApproval = (dref, ts, who, body) => {
     if (!dref) return;
     const cur0 = dbRef.current || db;
@@ -9988,6 +10024,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-23',
+  items: [['🏠', 'Hubs get the price list by themselves', 'The price list sits inside each agent’s hub file, and that file used to be re-sent only when something about that agent changed — so the new prices never reached the hubs. Now every hub is updated once whenever the price list changes (it happens a few seconds after you open the Command Centre), and again when you add or change a custom service that hubs show. Money → Schedule A also has “Send to every hub now”.']]
+}, {
   v: '2026.11.16-22',
   items: [['🎬', 'Project Tour Reel is one service at $80', 'As on the brokerage’s store: a 30-second project tour reel, $80 to the agent, $50 to you. The Standard ($95) and Advanced ($150) lines are gone from the price list.']]
 }, {
@@ -16070,7 +16109,18 @@ function RateCard() {
     style: {
       margin: '-4px 0 10px'
     }
-  }, "The 2026 price list — the only services offered. Agents see the Pinnacle rate in their hub; the public website shows no prices."), CATS_BASE.map(cat => React.createElement("div", {
+  }, "The 2026 price list — the only services offered. Agents see the Pinnacle rate in their hub; the public website shows no prices.", ' ', React.createElement("button", {
+    className: "btn ghost sm",
+    "data-push-hubs": true,
+    style: {
+      marginLeft: 6
+    },
+    title: "Hubs get the price list by themselves when it changes. Use this if a hub ever looks out of date.",
+    onClick: () => {
+      const n = window.__pushAllHubs ? window.__pushAllHubs() : 0;
+      if (!n) uiAlert('No hubs to update yet.');
+    }
+  }, "🏠 Send to every hub now")), CATS_BASE.map(cat => React.createElement("div", {
     className: "catgroup",
     key: cat
   }, React.createElement("h4", null, cat), React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, React.createElement("th", null, "Service"), React.createElement("th", {
@@ -18263,7 +18313,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-22</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-23</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
