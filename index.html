@@ -30,8 +30,46 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20120%20120%27%3E%3Crect%20width%3D%27120%27%20height%3D%27120%27%20rx%3D%2726%27%20fill%3D%27%23EA002A%27/%3E%3Cg%20transform%3D%27translate%286%2C0%29%27%3E%3Cpath%20d%3D%27M%2083%2036%20A%2037%2037%200%201%200%2083%2084%27%20fill%3D%27none%27%20stroke%3D%27%23FAF8F5%27%20stroke-width%3D%2712%27%20stroke-linecap%3D%27round%27/%3E%3Cg%20fill%3D%27%23F2A900%27%3E%3Cpolygon%20points%3D%2755%2C44%2064%2C49%2064%2C71%2055%2C76%27/%3E%3Cpolygon%20points%3D%2766%2C50.5%2073%2C55%2073%2C65%2066%2C69.5%27/%3E%3Cpolygon%20points%3D%2775%2C56%2082%2C60%2075%2C64%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="site.css?v=7">
 <script src="site.js?v=7" defer></script>
+<style>
+/* ---- video hero (Nov 19, 2026) ---- */
+.vhero{position:relative;overflow:hidden;isolation:isolate;min-height:clamp(600px,90vh,900px);display:flex;flex-direction:column}
+.vhero>.wrap{width:100%;flex:1;display:flex;flex-direction:column}
+.vhero .hero{margin-top:auto;margin-bottom:auto}
+.vhero .vbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;background:#111}
+.vhero::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:linear-gradient(90deg,rgba(20,20,20,.93) 0%,rgba(20,20,20,.80) 36%,rgba(20,20,20,.30) 72%,rgba(20,20,20,.18) 100%),
+ linear-gradient(0deg,var(--ink) 0%,rgba(26,26,26,0) 26%),linear-gradient(180deg,rgba(20,20,20,.75) 0%,rgba(20,20,20,0) 20%)}
+.vhero .facts{background:rgba(20,20,20,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.vcap{position:absolute;right:clamp(16px,4vw,34px);bottom:18px;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mist);opacity:.8;max-width:46ch;text-align:right}
+.btn.film{background:rgba(250,248,245,.08);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+@media(max-width:780px){.vhero::before{background:linear-gradient(0deg,var(--ink) 0%,rgba(20,20,20,.70) 35%,rgba(20,20,20,.62) 100%)}.vhero{min-height:0}.vcap{position:static;text-align:left;padding:0 clamp(16px,4vw,34px) 14px}}
+/* ---- reels players ---- */
+.reelrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
+.rv{position:relative;margin:0}
+.rv .fr{position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
+.rv video{display:block;width:100%;height:100%;object-fit:cover}
+.rv .pl{position:absolute;inset:0;display:grid;place-items:center;border:0;background:linear-gradient(0deg,rgba(0,0,0,.55),rgba(0,0,0,0) 45%);cursor:pointer;color:#fff}
+.rv .pl i{width:72px;height:72px;border-radius:50%;background:rgba(234,0,42,.92);display:grid;place-items:center;box-shadow:0 12px 30px rgba(0,0,0,.45);transition:transform .2s}
+.rv .pl i::before{content:'';border-left:20px solid #fff;border-top:12px solid transparent;border-bottom:12px solid transparent;margin-left:5px}
+.rv .pl:hover i,.rv .pl:focus-visible i{transform:scale(1.08)}
+.rv .pl span{position:absolute;left:14px;bottom:14px;font-family:var(--mono);font-size:.6rem;letter-spacing:.14em;text-transform:uppercase}
+.rv.on .pl{display:none}
+.rv figcaption{margin-top:12px}
+.rv figcaption b{display:block;font-size:1.05rem}
+.rv figcaption small{display:block;color:var(--dim);font-size:.84rem;margin-top:2px}
+@media(max-width:700px){.reelrow{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin-left:calc(-1*clamp(16px,4vw,34px));margin-right:calc(-1*clamp(16px,4vw,34px));padding:0 clamp(16px,4vw,34px) 6px}.reelrow .rv{flex:0 0 72%;scroll-snap-align:center}}
+/* ---- film lightbox ---- */
+#film{border:0;padding:0;background:transparent;max-width:min(1100px,94vw);width:100%;margin:auto}
+#film::backdrop{background:rgba(10,10,10,.88)}
+#film .fbox{position:relative;aspect-ratio:4/3;max-height:84vh;margin:auto;border-radius:14px;overflow:hidden;background:#000}#film iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#film .x{position:absolute;top:-46px;right:0;background:none;border:0;color:#fff;font-size:1.9rem;cursor:pointer;line-height:1}
+#film{overflow:visible}
+@media(prefers-reduced-motion:reduce){.vhero .vbg{display:none}.vhero{background:url(media/hero-poster.jpg) center/cover}}
+</style>
 </head><body data-page="start">
 
+<div class="vhero">
+<video class="vbg" id="vbg" autoplay muted loop playsinline preload="metadata" poster="media/hero-poster.jpg" aria-hidden="true"></video>
 <div class="wrap">
   <header class="top">
     <a class="brand" href="./" aria-label="The Content Hub, powered by Reel Estate Media">
@@ -54,6 +92,7 @@
     <div class="acts">
       <a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a>
       <a class="btn sec" href="services.html">See all services</a>
+      <a class="btn sec film" href="https://drive.google.com/file/d/1fOZyYxSvsEhCBBieVfJOqQVPzaZoGUah/view" target="_blank" rel="noopener" data-film="https://drive.google.com/file/d/1fOZyYxSvsEhCBBieVfJOqQVPzaZoGUah/preview">▶ Watch the film</a>
     </div>
     <div class="facts">
       <div class="fact"><b>~3 business days</b><span>Photo turnaround</span></div>
@@ -62,6 +101,8 @@
     </div>
     <p class="towns" id="towns" hidden></p>
   </div>
+</div>
+<p class="vcap">On screen: our recap of Royal LePage’s 2026 National Sales Conference, Niagara Falls</p>
 </div>
 
 <section id="proof" class="band"><div class="wrap">
@@ -79,6 +120,18 @@
   </div>
   <p class="proofnote">View counts as shown on Instagram for <a href="https://www.instagram.com/realtorayeshaali/reels/" target="_blank" rel="noopener">@realtorayeshaali</a>, November 2026. Tap a reel to watch it there.</p>
   <div class="acts"><a class="btn sec" data-story hidden href="story.html">📖 Read the story</a><a class="btn sec" href="https://www.instagram.com/thecontenthub.ca/" target="_blank" rel="noopener">More of our work · @thecontenthub.ca</a></div>
+</div></section>
+
+<section id="reels-play"><div class="wrap">
+  <div class="eyebrow">Recent work</div>
+  <h2>Press play.</h2>
+  <p class="sub">Three recent pieces for agents and brokerages — a recruiting reel, an event promo and a listing reel. Sound on.</p>
+  <div class="reelrow">
+    <figure class="rv"><div class="fr"><video src="media/reel-recruiting.mp4" poster="media/reel-recruiting.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Brokerage recruiting reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Brokerage recruiting reel</b><small>Shot on location at the brokerage, with on-screen titles.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-event-promo.mp4" poster="media/reel-event-promo.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Event promo"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event promo</b><small>Date, place and a reason to sign up — in half a minute.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-listing.mp4" poster="media/reel-listing.jpg" preload="none" playsinline></video><button class="pl" type="button" aria-label="Play: Listing reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Listing reel</b><small>The home and the agent, cut for Instagram.</small></figcaption></figure>
+  </div>
+  <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="social-reels.html">About social reels</a></div>
 </div></section>
 
 <section id="showcase" hidden><div class="wrap">
@@ -220,4 +273,32 @@
 
 <div id="stick"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="services.html">Services</a></div>
 
+<dialog id="film" aria-label="Event film"><button class="x" type="button" aria-label="Close">✕</button><div class="fbox"><iframe title="Event film" allow="autoplay; fullscreen" allowfullscreen></iframe></div></dialog>
+<script>
+(function(){
+  // hero loop: smaller file on phones, none when the visitor asks for less motion or less data
+  var v=document.getElementById('vbg');
+  var calm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var save=navigator.connection&&navigator.connection.saveData;
+  if(v&&!calm&&!save){v.src=(window.innerWidth<=780?'media/hero-loop-sm.mp4':'media/hero-loop.mp4');var p=v.play();if(p&&p.catch)p.catch(function(){});}
+  // film lightbox
+  var d=document.getElementById('film'),fv=d&&d.querySelector('iframe');
+  document.querySelectorAll('[data-film]').forEach(function(a){a.addEventListener('click',function(e){
+    if(!d||!d.showModal)return; e.preventDefault();
+    fv.src=a.getAttribute('data-film'); d.showModal(); if(v)v.pause();
+  });});
+  function shut(){d.close();}
+  if(d){d.querySelector('.x').addEventListener('click',shut);d.addEventListener('click',function(e){if(e.target===d)shut();});d.addEventListener('close',function(){fv.src='about:blank';if(v&&!calm&&!save)v.play().catch(function(){});});}
+  // reels: tap to play with sound, one at a time
+  var rs=[].slice.call(document.querySelectorAll('.rv'));
+  rs.forEach(function(f){var rv=f.querySelector('video');
+    f.querySelector('.pl').addEventListener('click',function(){
+      rs.forEach(function(o){if(o!==f){o.querySelector('video').pause();}});
+      f.classList.add('on'); rv.controls=true; var p=rv.play(); if(p&&p.catch)p.catch(function(){});
+    });
+    rv.addEventListener('play',function(){rs.forEach(function(o){if(o!==f)o.querySelector('video').pause();});if(v)v.pause();});
+    rv.addEventListener('pause',function(){if(v&&!calm&&!save&&!rs.some(function(o){return !o.querySelector('video').paused;}))v.play().catch(function(){});});
+  });
+})();
+</script>
 </body></html>
