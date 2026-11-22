@@ -45,7 +45,6 @@
 @media(max-width:780px){.vhero::before{background:linear-gradient(0deg,var(--ink) 0%,rgba(20,20,20,.70) 35%,rgba(20,20,20,.62) 100%)}.vhero{min-height:0}.vcap{position:static;text-align:left;padding:0 clamp(16px,4vw,34px) 14px}}
 /* ---- reels players ---- */
 .reelrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
-.widerow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
 .rv{position:relative;margin:0}
 .rv .fr{position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
 .rv video{display:block;width:100%;height:100%;object-fit:cover}
@@ -59,9 +58,18 @@
 .rv.snd .pl span{background:rgba(234,0,42,.94);border-color:transparent}
 .rv.snd .fr{border-color:var(--red)}
 .rv .pl:focus-visible{outline:2px solid var(--amber);outline-offset:-4px;border-radius:18px}
+.rv.wide{margin-top:28px}
 .rv.wide .fr{aspect-ratio:16/9}
-.widerow + .reelrow{margin-top:clamp(18px,3vw,30px)}
-@media(max-width:700px){.widerow{grid-template-columns:1fr}}
+.rv.wide + .reelrow{margin-top:clamp(18px,3vw,30px)}
+.reelrow + .rv.wide{margin-top:clamp(24px,3.6vw,40px)}
+/* ---- headshots ---- */
+#headshots h2 em{font-style:normal;color:var(--red)}
+.hsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,2vw,20px);margin-top:28px}
+.hs{margin:0;aspect-ratio:4/5;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
+.hs img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s}
+.hs:hover img{transform:scale(1.03)}
+@media(max-width:700px){.hsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.hs img{transition:none}.hs:hover img{transform:none}}
 .rv figcaption{margin-top:12px}
 .rv figcaption b{display:block;font-size:1.05rem}
 .rv figcaption small{display:block;color:var(--dim);font-size:.84rem;margin-top:2px}
@@ -169,20 +177,36 @@
   <div class="eyebrow">Recent work</div>
   <h2>Press play.</h2>
   <p class="sub">Recent pieces for agents and brokerages — project tours, new communities, recruiting, events and personal brand. Tap one to hear it.</p>
-  <div class="widerow">
-    <figure class="rv wide"><div class="fr"><video src="media/reel-tour.mp4?m=3" data-hls="media/tour.m3u8?m=3" poster="media/reel-tour.jpg?m=3" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Project tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Project tour reel</b><small>A pre-construction sales centre, walked through on camera.</small></figcaption></figure>
-    <figure class="rv wide"><div class="fr"><video src="media/reel-doc.mp4?m=4" poster="media/reel-doc.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Documentary-style reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Documentary-style reel</b><small>A story-led piece, shot wide like a series trailer.</small></figcaption></figure>
-  </div>
+  <figure class="rv wide"><div class="fr"><video src="media/reel-tour.mp4?m=3" data-hls="media/tour.m3u8?m=3" poster="media/reel-tour.jpg?m=3" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Project tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Project tour reel</b><small>A pre-construction sales centre, walked through on camera.</small></figcaption></figure>
   <div class="reelrow">
     <figure class="rv"><div class="fr"><video src="media/reel-recruiting.mp4?m=2" poster="media/reel-recruiting.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Brokerage recruiting reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Brokerage recruiting reel</b><small>Shot on location at the brokerage, with on-screen titles.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-event-promo.mp4?m=2" poster="media/reel-event-promo.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Event promo"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event promo</b><small>Date, place and a reason to sign up — in half a minute.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-listing.mp4?m=2" poster="media/reel-listing.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Listing reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Listing reel</b><small>The home and the agent, cut for Instagram.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-doc-tall.mp4?m=5" poster="media/reel-doc-tall.jpg?m=5" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Documentary-style reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Documentary-style reel</b><small>Shot wide — turn your phone sideways for the full frame.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-fiveoaks.mp4?m=4" poster="media/reel-fiveoaks.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Community launch reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Community launch reel</b><small>A new townhome release, introduced on location.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-walkthrough.mp4?m=4" poster="media/reel-walkthrough.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: New-build tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>New-build tour reel</b><small>A walk through a new bungalow, with animated titles.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-arkfield.mp4?m=4" poster="media/reel-arkfield.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Pre-construction reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Pre-construction reel</b><small>A new community, presented from the sales centre.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-gwagon.mp4?m=4" data-hls="media/gwagon.m3u8?m=4" poster="media/reel-gwagon.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Personal brand reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Personal brand reel</b><small>A new-car day, filmed like a commercial.</small></figcaption></figure>
   </div>
+  <figure class="rv wide"><div class="fr"><video src="media/reel-social.mp4?m=5" data-hls="media/social.m3u8?m=5" data-hls-sm="media/social-lo.m3u8?m=5" poster="media/reel-social.jpg?m=5" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Event recap film"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event recap film</b><small>A brokerage summer social — the whole night in under a minute and a half.</small></figcaption></figure>
   <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="social-reels.html">About social reels</a></div>
+</div></section>
+
+<section id="headshots" class="band"><div class="wrap">
+  <div class="eyebrow">Headshots</div>
+  <h2>A headshot that looks like <em>you on a good day</em>.</h2>
+  <p class="sub">For your signs, your listings, your profile and your business card — an individual session, retouched and delivered to your hub.</p>
+  <div class="hsgrid">
+    <figure class="hs"><img src="media/headshot-1.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-2.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-3.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-4.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-5.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-6.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-7.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-8.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+  </div>
+  <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia/30min" target="_blank" rel="noopener">📅 Book headshots</a><a class="btn sec" href="headshots.html">About headshots</a></div>
 </div></section>
 
 <section id="showcase" hidden><div class="wrap">
@@ -382,9 +406,9 @@
     b.setAttribute('aria-pressed',snd?'true':'false');}
   function hush(keep){rs.forEach(function(o){var ov=o.querySelector('video');if(o!==keep&&!ov.muted){ov.muted=true;paint(o);}});}
   function play(rv){var p=rv.play();if(p&&p.catch)p.catch(function(){});}
-  function go(rv){var hu=rv.getAttribute('data-hls');
-    if(hu&&!rv._tried&&window.innerWidth>700&&(nativeHls||mse)){rv._tried=1;rv._wait=1;   // sharper stream for bigger screens; if it can't be used, the mp4 on the tag plays
-      hlsOn(rv,hu,true,function(){rv._wait=0;if(rv._want)play(rv);});}
+  function go(rv){var big=window.innerWidth>700,hu=big?rv.getAttribute('data-hls'):rv.getAttribute('data-hls-sm');
+    if(hu&&!rv._tried&&(nativeHls||mse)){rv._tried=1;rv._wait=1;   // bigger screens: the sharp stream; phones: the lighter stream when the reel names one (long pieces); otherwise, or if streams can't be used, the mp4 on the tag plays
+      hlsOn(rv,hu,big,function(){rv._wait=0;if(rv._want)play(rv);});}
     rv._want=1; if(!rv._wait)play(rv);}
   rs.forEach(function(f){var rv=f.querySelector('video');
     rv.muted=true; rv.loop=true;
