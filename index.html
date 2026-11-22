@@ -81,6 +81,7 @@
 .hs img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .hs:hover img{transform:scale(1.03)}
 @media(max-width:700px){.hsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hscut2{grid-row:3 / span 2}.hscut2 img{width:108%}}
+@media(min-width:701px){.hsgrid .hs:nth-child(1){order:1}.hsgrid .hs:nth-child(2){order:2}.hsgrid .hs:nth-child(6){order:3}.hsgrid .hs:nth-child(4){order:4}.hsgrid .hs:nth-child(5){order:5}.hsgrid .hs:nth-child(3){order:6}}
 @media(prefers-reduced-motion:reduce){.hs img{transition:none}.hs:hover img{transform:none}}
 .rv figcaption{margin-top:12px}
 .rv figcaption b{display:block;font-size:1.05rem}
