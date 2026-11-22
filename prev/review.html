@@ -71,7 +71,6 @@
 })();
 </script><!--/REM-STAGE-SHIM-->
 
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ready for your review · Reel Estate Media</title>
 <meta name="description" content="Your new content is ready — tap to watch, leave time-stamped feedback, and approve. From Reel Estate Media.">
@@ -241,6 +240,15 @@ textarea{flex:1;min-width:200px}
 .resbtn{border-radius:999px;padding:6px 13px;font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;cursor:pointer;background:transparent;border:1px solid var(--line2);color:var(--mist);white-space:nowrap;transition:all .22s}
 .resbtn.fixed{background:rgba(76,195,138,.14);border-color:var(--teal);color:var(--teal)}
 .resbtn.open{background:rgba(234,0,42,.12);border-color:var(--red);color:var(--redsoft)}
+/* ✓ Approve stays within reach: a slim bar pinned to the bottom whenever the real button is off screen */
+#stickbar{position:fixed;left:0;right:0;bottom:0;z-index:68;display:none;gap:10px;align-items:center;justify-content:center;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:rgba(12,12,12,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line)}
+#stickbar.on{display:flex}
+#stickbar button{border-radius:999px;padding:13px 18px;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+#stickbar .sb-ok{flex:1 1 auto;max-width:340px;background:var(--red);color:#fff;border:1px solid var(--red)}
+#stickbar .sb-note{flex:0 0 auto;background:transparent;color:var(--mist);border:1px solid var(--line2)}
+body.hasbar{padding-bottom:76px}
+body.hasbar .revfab{bottom:84px}
+body.hasbar .chatdrawer{bottom:150px}
 .actions{display:flex;align-items:center;gap:12px;margin-top:28px;padding-top:24px;border-top:1px solid var(--line);flex-wrap:wrap}
 .send{flex:1;min-width:220px;background:var(--red);color:#fff;border:1px solid var(--red);border-radius:999px;padding:14px 24px;font-family:var(--mono);font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;transition:transform .22s,box-shadow .22s}
 .send:hover{transform:translateY(-2px);box-shadow:0 14px 34px var(--glow)}
@@ -414,6 +422,10 @@ h1#brand em{font-style:normal;color:var(--amber)}
     <textarea id="tmsg" rows="2" placeholder="Message us here — we'll reply right in this page…"></textarea>
     <button class="tsend" onclick="sendMsg()" title="Message goes straight to Reel Estate Media">Send</button>
   </div>
+</div>
+<div id="stickbar" role="region" aria-label="Approve or leave a note">
+  <button type="button" class="sb-note" id="sbnote" title="Jump to the note box">✎ Leave a note</button>
+  <button type="button" class="sb-ok" id="sbok" title="Approve — locks in this version and unlocks your downloads">✓ Approve</button>
 </div>
 <button class="revfab" id="revfab" title="Messages">💬<span class="fbadge" id="revbadge">0</span></button>
 <div class="dl" id="dlpanel">
@@ -1324,6 +1336,35 @@ function approve(){
   if(pickMode){ try{ renderMedia(); }catch(e){} }
   const dp = document.getElementById('dlpanel'); if(dp.style.display === 'block') dp.scrollIntoView({behavior:'smooth'}); }
 function delCmt(id){ cmts = cmts.filter(c => c.id !== id); save(); renderList(); }
+/* ✓ sticky Approve bar — shown only while the real Approve button is off screen, never once approved,
+   never over the keyboard, the messages drawer or a full-screen photo */
+(function(){
+  var bar = document.getElementById('stickbar'); if(!bar) return;
+  function mainBtn(){ return document.querySelector('.actions .ok'); }
+  function want(){
+    var b = mainBtn(); if(!b || b.offsetParent === null) return false;        // no Approve on this page/mode → no bar
+    try{ if(curApproved()) return false; }catch(e){ return false; }
+    try{ if(!versions || !versions.length) return false; }catch(e1){ return false; }
+    var ae = document.activeElement;
+    if(ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) return false;
+    var th = document.getElementById('thread'); if(th && getComputedStyle(th).display !== 'none') return false;
+    if(document.querySelector('#lbov, #presov, #picksov')) return false;
+    var r = b.getBoundingClientRect();
+    return r.top > window.innerHeight - 8 || r.bottom < 0;
+  }
+  function tick(){ var on = want(); if(bar.classList.contains('on') !== on){ bar.classList.toggle('on', on); document.body.classList.toggle('hasbar', on); } }
+  document.getElementById('sbok').addEventListener('click', function(){ approve(); tick(); });
+  document.getElementById('sbnote').addEventListener('click', function(){
+    var t = document.getElementById('ctext'); if(!t) return;
+    try{ t.scrollIntoView({behavior: 'smooth', block: 'center'}); }catch(e){ t.scrollIntoView(); }
+    setTimeout(function(){ try{ t.focus({preventScroll: true}); }catch(e2){ t.focus(); } }, 350);
+  });
+  window.addEventListener('scroll', tick, {passive: true});
+  window.addEventListener('resize', tick);
+  document.addEventListener('focusin', tick); document.addEventListener('focusout', function(){ setTimeout(tick, 60); });
+  setInterval(tick, 900);
+  setTimeout(tick, 400);
+})();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cmts)); }catch(e){} scheduleAutoSend(); pushReview(); }
 function setRes(id, val){
   const c = cmts.find(x => x.id === id);
@@ -1984,4 +2025,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">REVIEW v2026.11.16-3</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-4</div></div></body></html>
