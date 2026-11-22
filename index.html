@@ -64,6 +64,15 @@
 .reelrow + .rv.wide{margin-top:clamp(24px,3.6vw,40px)}
 /* ---- headshots ---- */
 #headshots h2 em{font-style:normal;color:var(--red)}
+.hshead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(18px,4vw,56px);align-items:center}
+.hstxt{padding-bottom:clamp(14px,2.6vw,30px)}
+.hstxt .acts{margin-top:22px}
+.hscut{position:relative;align-self:end;width:clamp(230px,29vw,350px);margin:0}
+.hscut::before{content:'';position:absolute;left:50%;bottom:4%;width:158%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(234,0,42,.5),rgba(234,0,42,.2) 52%,rgba(234,0,42,0) 76%)}
+.hscut img{position:relative;display:block;width:100%;height:auto;-webkit-mask-image:linear-gradient(180deg,#000 80%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 80%,rgba(0,0,0,0) 100%)}
+#headshots{overflow:hidden}
+.hshead + .hsgrid{margin-top:0}
+@media(max-width:700px){.hshead{grid-template-columns:1fr;justify-items:start}.hscut{justify-self:center;width:min(64vw,260px)}.hstxt{padding-bottom:0}}
 .hsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,2vw,20px);margin-top:28px}
 .hs{margin:0;aspect-ratio:4/5;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
 .hs img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s}
@@ -193,20 +202,25 @@
 </div></section>
 
 <section id="headshots" class="band"><div class="wrap">
-  <div class="eyebrow">Headshots</div>
-  <h2>A headshot that looks like <em>you on a good day</em>.</h2>
-  <p class="sub">For your signs, your listings, your profile and your business card — an individual session, retouched and delivered to your hub.</p>
-  <div class="hsgrid">
-    <figure class="hs"><img src="media/headshot-1.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-2.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-3.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-4.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-5.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-6.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-7.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-8.jpg?m=5" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+  <div class="hshead">
+    <div class="hstxt">
+      <div class="eyebrow">Headshots</div>
+      <h2>A headshot that looks like <em>you on a good day</em>.</h2>
+      <p class="sub">For your signs, your listings, your profile and your business card — an individual session, retouched and delivered to your hub.</p>
+      <div class="acts"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia/30min" target="_blank" rel="noopener">📅 Book headshots</a><a class="btn sec" href="headshots.html">About headshots</a></div>
+    </div>
+    <figure class="hscut"><img src="media/headshot-cutout.webp?m=6" alt="A real-estate agent, smiling, from a studio headshot session" width="653" height="1000" decoding="async"></figure>
   </div>
-  <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia/30min" target="_blank" rel="noopener">📅 Book headshots</a><a class="btn sec" href="headshots.html">About headshots</a></div>
+  <div class="hsgrid">
+    <figure class="hs"><img src="media/headshot-1.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-2.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-3.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-4.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-5.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-6.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-7.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-8.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+  </div>
 </div></section>
 
 <section id="showcase" hidden><div class="wrap">
