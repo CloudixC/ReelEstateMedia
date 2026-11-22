@@ -44,7 +44,8 @@
 .btn.film{background:rgba(250,248,245,.08);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 @media(max-width:780px){.vhero::before{background:linear-gradient(0deg,var(--ink) 0%,rgba(20,20,20,.70) 35%,rgba(20,20,20,.62) 100%)}.vhero{min-height:0}.vcap{position:static;text-align:left;padding:0 clamp(16px,4vw,34px) 14px}}
 /* ---- reels players ---- */
-.reelrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
+.reelrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
+.widerow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,2.4vw,24px);margin-top:28px}
 .rv{position:relative;margin:0}
 .rv .fr{position:relative;aspect-ratio:9/16;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
 .rv video{display:block;width:100%;height:100%;object-fit:cover}
@@ -58,9 +59,9 @@
 .rv.snd .pl span{background:rgba(234,0,42,.94);border-color:transparent}
 .rv.snd .fr{border-color:var(--red)}
 .rv .pl:focus-visible{outline:2px solid var(--amber);outline-offset:-4px;border-radius:18px}
-.rv.wide{margin-top:28px}
 .rv.wide .fr{aspect-ratio:16/9}
-.rv.wide + .reelrow{margin-top:clamp(18px,3vw,30px)}
+.widerow + .reelrow{margin-top:clamp(18px,3vw,30px)}
+@media(max-width:700px){.widerow{grid-template-columns:1fr}}
 .rv figcaption{margin-top:12px}
 .rv figcaption b{display:block;font-size:1.05rem}
 .rv figcaption small{display:block;color:var(--dim);font-size:.84rem;margin-top:2px}
@@ -167,12 +168,19 @@
 <section id="reels-play"><div class="wrap">
   <div class="eyebrow">Recent work</div>
   <h2>Press play.</h2>
-  <p class="sub">Recent pieces for agents and brokerages — a project tour, a recruiting reel, an event promo and a listing reel. Tap one to hear it.</p>
-  <figure class="rv wide"><div class="fr"><video src="media/reel-tour.mp4?m=3" data-hls="media/tour.m3u8?m=3" poster="media/reel-tour.jpg?m=3" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Project tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Project tour reel</b><small>A pre-construction sales centre, walked through on camera.</small></figcaption></figure>
+  <p class="sub">Recent pieces for agents and brokerages — project tours, new communities, recruiting, events and personal brand. Tap one to hear it.</p>
+  <div class="widerow">
+    <figure class="rv wide"><div class="fr"><video src="media/reel-tour.mp4?m=3" data-hls="media/tour.m3u8?m=3" poster="media/reel-tour.jpg?m=3" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Project tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Project tour reel</b><small>A pre-construction sales centre, walked through on camera.</small></figcaption></figure>
+    <figure class="rv wide"><div class="fr"><video src="media/reel-doc.mp4?m=4" poster="media/reel-doc.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Documentary-style reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Documentary-style reel</b><small>A story-led piece, shot wide like a series trailer.</small></figcaption></figure>
+  </div>
   <div class="reelrow">
     <figure class="rv"><div class="fr"><video src="media/reel-recruiting.mp4?m=2" poster="media/reel-recruiting.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Brokerage recruiting reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Brokerage recruiting reel</b><small>Shot on location at the brokerage, with on-screen titles.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-event-promo.mp4?m=2" poster="media/reel-event-promo.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Event promo"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Event promo</b><small>Date, place and a reason to sign up — in half a minute.</small></figcaption></figure>
     <figure class="rv"><div class="fr"><video src="media/reel-listing.mp4?m=2" poster="media/reel-listing.jpg?m=2" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Listing reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Listing reel</b><small>The home and the agent, cut for Instagram.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-fiveoaks.mp4?m=4" poster="media/reel-fiveoaks.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Community launch reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Community launch reel</b><small>A new townhome release, introduced on location.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-walkthrough.mp4?m=4" poster="media/reel-walkthrough.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: New-build tour reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>New-build tour reel</b><small>A walk through a new bungalow, with animated titles.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-arkfield.mp4?m=4" poster="media/reel-arkfield.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Pre-construction reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Pre-construction reel</b><small>A new community, presented from the sales centre.</small></figcaption></figure>
+    <figure class="rv"><div class="fr"><video src="media/reel-gwagon.mp4?m=4" data-hls="media/gwagon.m3u8?m=4" poster="media/reel-gwagon.jpg?m=4" preload="none" playsinline muted loop></video><button class="pl" type="button" aria-label="Play: Personal brand reel"><i></i><span>▶ Play · sound on</span></button></div><figcaption><b>Personal brand reel</b><small>A new-car day, filmed like a commercial.</small></figcaption></figure>
   </div>
   <div class="acts" style="margin-top:22px"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia" target="_blank" rel="noopener">📅 Book a shoot</a><a class="btn sec" href="social-reels.html">About social reels</a></div>
 </div></section>
