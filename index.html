@@ -74,10 +74,13 @@
 .hshead + .hsgrid{margin-top:0}
 @media(max-width:700px){.hshead{grid-template-columns:1fr;justify-items:start}.hscut{justify-self:center;width:min(64vw,260px)}.hstxt{padding-bottom:0}}
 .hsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,2vw,20px);margin-top:28px}
-.hs{margin:0;aspect-ratio:4/5;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#111}
+.hs{margin:0;aspect-ratio:4/5;border-radius:18px;overflow:hidden;border:1px solid var(--line2);background:#fff;position:relative;z-index:1}
+.hscut2{position:relative;z-index:0;margin:0;min-height:0;grid-column:1;grid-row:1 / span 2}
+.hscut2::before{content:'';position:absolute;left:50%;bottom:16%;width:178%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(234,0,42,.46),rgba(234,0,42,.18) 52%,rgba(234,0,42,0) 76%)}
+.hscut2 img{position:absolute;left:50%;bottom:0;width:112%;max-width:none;height:auto;transform:translateX(-50%);-webkit-mask-image:linear-gradient(180deg,#000 84%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 84%,rgba(0,0,0,0) 100%)}
 .hs img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .hs:hover img{transform:scale(1.03)}
-@media(max-width:700px){.hsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.hsgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hscut2{grid-row:3 / span 2}.hscut2 img{width:108%}}
 @media(prefers-reduced-motion:reduce){.hs img{transition:none}.hs:hover img{transform:none}}
 .rv figcaption{margin-top:12px}
 .rv figcaption b{display:block;font-size:1.05rem}
@@ -212,14 +215,13 @@
     <figure class="hscut"><img src="media/headshot-cutout.webp?m=6" alt="A real-estate agent, smiling, from a studio headshot session" width="653" height="1000" decoding="async"></figure>
   </div>
   <div class="hsgrid">
-    <figure class="hs"><img src="media/headshot-1.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-2.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-3.jpg?m=7" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-4.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-5.jpg?m=7" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-6.jpg?m=7" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-7.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
-    <figure class="hs"><img src="media/headshot-8.jpg?m=6" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-1.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-2.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-3.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-4.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-5.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hs"><img src="media/headshot-6.jpg?m=8" alt="Studio headshot of a real-estate agent" loading="lazy" decoding="async" width="900" height="1125"></figure>
+    <figure class="hscut2"><img src="media/headshot-cutout-2.webp?m=8" alt="A real-estate agent with her arms crossed, from a studio headshot session" loading="lazy" decoding="async" width="651" height="1300"></figure>
   </div>
 </div></section>
 
