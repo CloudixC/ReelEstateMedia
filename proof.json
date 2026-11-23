@@ -1,0 +1,74 @@
+{
+ "_about": "View counts for reels Reel Estate Media shot or edited, read from each Instagram profile's Reels grid. Every reel on 'pages' counts; agent reels are listed one by one. A reel shared on two profiles is counted once. Updated each morning.",
+ "updated": "2026-11-22",
+ "pages": [
+  "thecontenthub.ca"
+ ],
+ "featured": [
+  "DeTXhmApyZH",
+  "Dcq6mpIJfsg",
+  "Dd6jkEiJP1r"
+ ],
+ "reels": {
+  "Dd6jkEiJP1r": {
+   "page": "thecontenthub.ca",
+   "views": 35700,
+   "approx": true,
+   "seen": "2026-11-22",
+   "also": "realtorayeshaali"
+  },
+  "Dc2An3RPiXD": {
+   "page": "thecontenthub.ca",
+   "views": 822,
+   "seen": "2026-11-22"
+  },
+  "DcMr8LIhvxG": {
+   "page": "thecontenthub.ca",
+   "views": 3177,
+   "seen": "2026-11-22"
+  },
+  "Db8nUPZknfb": {
+   "page": "thecontenthub.ca",
+   "views": 24300,
+   "approx": true,
+   "seen": "2026-11-22"
+  },
+  "Db6nD_1E_4s": {
+   "page": "thecontenthub.ca",
+   "views": 3428,
+   "seen": "2026-11-22"
+  },
+  "Db3koS-Dcu0": {
+   "page": "thecontenthub.ca",
+   "views": 5163,
+   "seen": "2026-11-22"
+  },
+  "DbrMFzZDIbO": {
+   "page": "thecontenthub.ca",
+   "views": 1610,
+   "seen": "2026-11-22"
+  },
+  "DbD4t0oBF1s": {
+   "page": "thecontenthub.ca",
+   "views": 3314,
+   "seen": "2026-11-22"
+  },
+  "Da1HhbEvRyd": {
+   "page": "thecontenthub.ca",
+   "views": 2748,
+   "seen": "2026-11-22"
+  },
+  "DeTXhmApyZH": {
+   "page": "realtorayeshaali",
+   "views": 62700,
+   "approx": true,
+   "seen": "2026-11-22"
+  },
+  "Dcq6mpIJfsg": {
+   "page": "realtorayeshaali",
+   "views": 48500,
+   "approx": true,
+   "seen": "2026-11-22"
+  }
+ }
+}

@@ -283,4 +283,34 @@
       box.addEventListener('change', upd); upd();
     }).catch(fail);
   })();
+
+  /* ---- 📈 the reel numbers: read from proof.json, which a scheduled job refreshes each morning from Instagram.
+     The page ships with the last numbers baked in, so nothing looks empty if the file can't be read. ---- */
+  (function(){
+    var tiles = all('#proof .pv'), tot = $('proofall'); if(!tiles.length && !tot) return;
+    var short = function(v){ v = +v || 0; return v >= 1e6 ? (Math.floor(v / 1e5) / 10).toFixed(1).replace(/\.0$/, '') + 'M' : v >= 1e4 ? (Math.floor(v / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'K' : v.toLocaleString('en-CA'); };
+    var floorK = function(v){ return (Math.floor((+v || 0) / 1000) * 1000).toLocaleString('en-CA'); };
+    var mon = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    fetch('proof.json', {cache: 'no-cache'}).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if(!d || !d.reels) return;
+      var R = d.reels, seen = 0;
+      tiles.forEach(function(a){
+        var m = /\/reel\/([\w-]+)/.exec(a.getAttribute('href') || ''), r = m && R[m[1]]; if(!r || !(r.views > 0)) return;
+        var b = a.querySelector('b'); if(b) b.textContent = short(r.views);
+        a.setAttribute('aria-label', 'Watch the reel on Instagram — ' + short(r.views) + ' views'); seen += r.views;
+      });
+      var sub = document.querySelector('#proof .sub');
+      if(sub && seen && tiles.length === 3) sub.textContent = 'Three reels we shot and edited for one agent’s Instagram. Together they’ve been watched more than ' + floorK(seen) + ' times.';
+      var dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.updated || ''), when = dm ? mon[+dm[2] - 1] + ' ' + (+dm[3]) + ', ' + dm[1] : '';
+      var note = document.querySelector('#proof .proofnote');
+      if(note && when){ var a0 = note.querySelector('a'); note.innerHTML = 'View counts as shown on Instagram' + (a0 ? ' for ' + a0.outerHTML : '') + ', updated ' + esc(when) + '. Tap a reel to watch it there.'; }
+      if(tot){
+        var ks = Object.keys(R).filter(function(k){ return R[k] && R[k].views > 0; }), sum = ks.reduce(function(s, k){ return s + R[k].views; }, 0);
+        var tb = tot.querySelector('[data-total]'), tc = tot.querySelector('[data-count]'), tw = tot.querySelector('[data-when]');
+        if(tb && sum) tb.textContent = floorK(sum) + '+';
+        if(tc) tc.textContent = String(ks.length);
+        if(tw && when) tw.textContent = when;
+      }
+    }).catch(function(){});
+  })();
 })();
