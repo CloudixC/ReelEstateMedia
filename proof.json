@@ -2,7 +2,8 @@
  "_about": "View counts for reels Reel Estate Media shot or edited, read from each Instagram profile's Reels grid. Every reel on 'pages' counts; agent reels are listed one by one. A reel shared on two profiles is counted once. Updated each morning. Entries with views 0 and a 'waiting' note are listed but not counted until a number can be read.",
  "updated": "2026-11-23",
  "pages": [
-  "thecontenthub.ca"
+  "thecontenthub.ca",
+  "thereelestatemedia"
  ],
  "featured": [
   "DeTXhmApyZH",
@@ -12,7 +13,7 @@
  "reels": {
   "Dd6jkEiJP1r": {
    "page": "thecontenthub.ca",
-   "views": 35859,
+   "views": 35760,
    "seen": "2026-11-23",
    "also": "realtorayeshaali"
   },
@@ -23,7 +24,7 @@
   },
   "DcMr8LIhvxG": {
    "page": "thecontenthub.ca",
-   "views": 3472,
+   "views": 3178,
    "seen": "2026-11-23"
   },
   "Db8nUPZknfb": {
@@ -48,22 +49,22 @@
   },
   "DbD4t0oBF1s": {
    "page": "thecontenthub.ca",
-   "views": 3583,
+   "views": 3314,
    "seen": "2026-11-23"
   },
   "Da1HhbEvRyd": {
    "page": "thecontenthub.ca",
-   "views": 2973,
+   "views": 2749,
    "seen": "2026-11-23"
   },
   "DeTXhmApyZH": {
    "page": "realtorayeshaali",
-   "views": 62731,
+   "views": 62717,
    "seen": "2026-11-23"
   },
   "Dcq6mpIJfsg": {
    "page": "realtorayeshaali",
-   "views": 48651,
+   "views": 48557,
    "seen": "2026-11-23"
   },
   "Df70MOADX2T": {
@@ -73,7 +74,7 @@
   },
   "Dfk6_-3ixEy": {
    "page": "royallepagepinnacle",
-   "views": 8075,
+   "views": 8034,
    "seen": "2026-11-23"
   },
   "DfiVJyRCRCc": {
@@ -185,7 +186,8 @@
   "DYyJ2U7MqYB": {
    "page": "teamdurrani",
    "views": 7934,
-   "seen": "2026-11-23"
+   "seen": "2026-11-23",
+   "also": "thereelestatemedia"
   },
   "Df5Dbl9yrUo": {
    "page": "safwat.butt.realestate",
@@ -211,6 +213,219 @@
    "page": "faiztahirhomes",
    "views": 5921,
    "seen": "2026-11-23"
+  },
+  "DgFfAMbO5Pe": {
+   "page": "thereelestatemedia",
+   "views": 121,
+   "seen": "2026-11-23",
+   "also": "tejvirdhugga_remax"
+  },
+  "Df_F0sGuk13": {
+   "page": "thereelestatemedia",
+   "views": 1865,
+   "seen": "2026-11-23",
+   "also": "tejvirdhugga_remax"
+  },
+  "DfYWumNAx6E": {
+   "page": "thereelestatemedia",
+   "views": 3616,
+   "seen": "2026-11-23",
+   "also": "tejvirdhugga_remax"
+  },
+  "DfP0CFothCg": {
+   "page": "thereelestatemedia",
+   "views": 4949,
+   "seen": "2026-11-23",
+   "also": "_pree.c"
+  },
+  "DZL5d6qsfLF": {
+   "page": "thereelestatemedia",
+   "views": 9769,
+   "seen": "2026-11-23",
+   "also": "hayajumaaofficial"
+  },
+  "DSvXqzoAd28": {
+   "page": "thereelestatemedia",
+   "views": 9967,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DZWKvcwsg35": {
+   "page": "thereelestatemedia",
+   "views": 5623,
+   "seen": "2026-11-23",
+   "also": "hayajumaaofficial"
+  },
+  "DaBFMNyuvXG": {
+   "page": "thereelestatemedia",
+   "views": 6159,
+   "seen": "2026-11-23",
+   "also": "sehr_mcs"
+  },
+  "DXN05m4tdGN": {
+   "page": "thereelestatemedia",
+   "views": 7276,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DZWSMp2shLI": {
+   "page": "thereelestatemedia",
+   "views": 2654,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "Dd4HRwaxIs6": {
+   "page": "thereelestatemedia",
+   "views": 1585,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DdmnXljx-rl": {
+   "page": "thereelestatemedia",
+   "views": 805,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DcL9OuHu4gX": {
+   "page": "thereelestatemedia",
+   "views": 1338,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "Db23nNzRvjA": {
+   "page": "thereelestatemedia",
+   "views": 857,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "Day0eF3xSCF": {
+   "page": "thereelestatemedia",
+   "views": 517,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DajaF_Zxz1Y": {
+   "page": "thereelestatemedia",
+   "views": 1445,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DZ_Rh5FBsld": {
+   "page": "thereelestatemedia",
+   "views": 2298,
+   "seen": "2026-11-23"
+  },
+  "DZ_OSRWly-h": {
+   "page": "thereelestatemedia",
+   "views": 842,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DZ8_0cHsY-s": {
+   "page": "thereelestatemedia",
+   "views": 1776,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DUEvTfNjFJH": {
+   "page": "thereelestatemedia",
+   "views": 5262,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DXLR5tYsZUm": {
+   "page": "thereelestatemedia",
+   "views": 4009,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DXQavs-M2H0": {
+   "page": "thereelestatemedia",
+   "views": 5843,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DXDVJn2EVMl": {
+   "page": "thereelestatemedia",
+   "views": 4530,
+   "seen": "2026-11-23"
+  },
+  "DXF4G5Ds3TA": {
+   "page": "thereelestatemedia",
+   "views": 5008,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DWFErNtxay0": {
+   "page": "thereelestatemedia",
+   "views": 14379,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DWaUOpOsEx9": {
+   "page": "thereelestatemedia",
+   "views": 3578,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DWc2BBTsf1v": {
+   "page": "thereelestatemedia",
+   "views": 3799,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DTTDG0njvT5": {
+   "page": "thereelestatemedia",
+   "views": 3027,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DXIpqZbswpO": {
+   "page": "thereelestatemedia",
+   "views": 3200,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DYOF2pXs8jQ": {
+   "page": "thereelestatemedia",
+   "views": 806,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DWUx1vAxrMM": {
+   "page": "thereelestatemedia",
+   "views": 4297,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DVXMx6mjHo8": {
+   "page": "thereelestatemedia",
+   "views": 3741,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DTyd9PjEV39": {
+   "page": "thereelestatemedia",
+   "views": 6417,
+   "seen": "2026-11-23"
+  },
+  "DTa7pqTCUbX": {
+   "page": "thereelestatemedia",
+   "views": 3918,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DSd4Wx2DHAI": {
+   "page": "thereelestatemedia",
+   "views": 3801,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
+  },
+  "DSV-TDhDDvs": {
+   "page": "thereelestatemedia",
+   "views": 1903,
+   "seen": "2026-11-23",
+   "also": "teamdurrani"
   }
  }
 }
