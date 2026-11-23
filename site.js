@@ -307,7 +307,7 @@
       if(tot){
         var ks = Object.keys(R).filter(function(k){ return R[k] && R[k].views > 0; }), sum = ks.reduce(function(s, k){ return s + R[k].views; }, 0);
         var tb = tot.querySelector('[data-total]'), tc = tot.querySelector('[data-count]'), tw = tot.querySelector('[data-when]');
-        if(tb && sum) tb.textContent = floorK(sum) + '+';
+        if(tb && sum) tb.textContent = sum.toLocaleString('en-CA');   // the exact sum, so the daily change shows
         if(tc) tc.textContent = String(ks.length);
         if(tw && when) tw.textContent = when;
       }
