@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-26) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-27) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1192,7 +1192,7 @@ async function makeWebPreview(file, onPct, ctl) {
   v.playsInline = true; v.preload = 'auto'; v.src = url;
   const cleanup = [];
   try {
-    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('this browser can’t open ' + (file.name || 'the file'))); setTimeout(() => rej(new Error('timed out opening the file')), 60000); });
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('this browser can’t open ' + (file.name || 'the file') + ' (try exporting H.264)')); setTimeout(() => rej(new Error('timed out opening the file')), 60000); });
     const W = v.videoWidth, H = v.videoHeight, dur = v.duration;
     if (!W || !H || !(dur > 0) || !isFinite(dur)) throw new Error('could not read the video size or length');
     const sc = Math.min(1, MAX / Math.max(W, H));
@@ -1205,12 +1205,14 @@ async function makeWebPreview(file, onPct, ctl) {
     const poster = cv.toDataURL('image/jpeg', 0.85);
     await seek(0);
     let aTracks = [];
+    const needsTap = () => { const e = new Error('Chrome needs a tap to play the sound'); e.needsTap = true; return e; };
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    cleanup.push(() => { try { ac.close(); } catch (e) {} });
+    if (ac.state !== 'running') await Promise.race([ac.resume().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
+    if (ac.state !== 'running') throw needsTap();
     try {
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
       const src = ac.createMediaElementSource(v), dst = ac.createMediaStreamDestination();
       src.connect(dst); aTracks = dst.stream.getAudioTracks();
-      if (ac.state === 'suspended') await ac.resume();
-      cleanup.push(() => { try { ac.close(); } catch (e) {} });
     } catch (e) { aTracks = []; }
     const stream = new MediaStream([...cv.captureStream(FPS).getVideoTracks(), ...aTracks]);
     const bits = Math.round(Math.min(3.2e6, Math.max(1.2e6, w * h * FPS * 0.08)));
@@ -1225,8 +1227,18 @@ async function makeWebPreview(file, onPct, ctl) {
     const ended = new Promise((res, rej) => { v.onended = res; v.onerror = () => rej(new Error('playback failed')); });
     rec.start(1000);
     draw();
-    try { await v.play(); } catch (e) { throw new Error('the browser blocked playback with sound (' + (e && e.name || 'error') + ')'); }
-    await Promise.race([ended, new Promise((r, j) => { const t = setInterval(() => { if (ctl && ctl.cancelled) { clearInterval(t); try { v.pause(); rec.stop(); } catch (e) {} j(new Error('cancelled')); } }, 400); cleanup.push(() => clearInterval(t)); })]);
+    try { await Promise.race([v.play(), new Promise((r, j) => setTimeout(() => j(Object.assign(new Error('timeout'), {name: 'NotAllowedError'})), 8000))]); } catch (e) {
+      alive = false; try { rec.stop(); } catch (e2) {}
+      if (e && e.name === 'NotAllowedError') throw needsTap();
+      throw new Error('the browser couldn’t play the file (' + (e && e.name || 'error') + ')');
+    }
+    let lastT = -1, lastMove = Date.now();
+    await Promise.race([ended, new Promise((r, j) => { const t = setInterval(() => {
+      if (ctl && ctl.cancelled) { clearInterval(t); try { v.pause(); rec.stop(); } catch (e) {} j(new Error('cancelled')); return; }
+      if (document.hidden || rec.state === 'paused') { lastMove = Date.now(); return; }
+      if (v.currentTime !== lastT) { lastT = v.currentTime; lastMove = Date.now(); }
+      else if (Date.now() - lastMove > 20000) { clearInterval(t); try { v.pause(); rec.stop(); } catch (e) {} j(new Error('playback stalled')); }
+    }, 400); cleanup.push(() => clearInterval(t)); })]);
     cx.drawImage(v, 0, 0, w, h);
     await new Promise(r => setTimeout(r, 250));
     alive = false; rec.stop(); await stopped;
@@ -5551,7 +5563,20 @@ function AppInner({
             if (ctl.cancelled) throw new Error('cancelled');
             const row = UPPANEL.file('🎞 Web preview · ' + f.name);
             try {
-              const o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl);
+              let o;
+              try {
+                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl);
+              } catch (pe0) {
+                if (!(pe0 && pe0.needsTap)) throw pe0;
+                row.pct(0);
+                const go = await uiConfirm('🎞 The originals are up. Tap ▶ Start to make the 720p web preview' + (vids.length > 1 ? 's' : '') + ' — each video plays once, so it takes about as long as the video. Keep this tab in front.\n\n(Chrome only lets a page play sound right after you tap something on it.)', {
+                  title: 'Web preview',
+                  ok: '▶ Start',
+                  cancel: 'Skip the preview'
+                });
+                if (!go) throw new Error('skipped');
+                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl);
+              }
               await upToFolder(inbox, tok, pvId, o.file, p => row.pct(75 + Math.round(p * 0.25)), ctl);
               if (!poster) poster = o.poster;
               row.done();
@@ -10356,6 +10381,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-27',
+  items: [['🎞', 'Web preview: tap ▶ Start when asked', 'Chrome only lets a page play sound right after you tap something on it, and the web preview has to play the video with its sound. If Chrome needs that tap, the upload now asks “▶ Start” as soon as the originals are up — tap it and the preview runs. Before, it waited silently and never finished.']]
+}, {
   v: '2026.11.16-26',
   items: [['🎞', 'Every video upload makes its own web preview', 'When you upload video with 📦, the Command Centre also makes a light 720p copy (it plays the file once, so allow about the length of the video) and puts it in its own “web preview” folder. The review room plays that copy, so it streams smoothly; the full-quality files only appear as a download once the client approves. Keep this tab in front while it works — if you switch away it pauses and carries on when you come back.'], ['🔒', 'Lock the review until paid', 'Each piece has a “Lock the review until paid” switch — on by default for agents outside Pinnacle, off for Pinnacle. While the order is unpaid, their review link shows a watermarked still, the amount and your pay link instead of the video, and their hub holds back the files. Mark the order Paid and the same link opens by itself; their chat gets a message.']]
 }, {
@@ -18693,7 +18721,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-26</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-27</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
