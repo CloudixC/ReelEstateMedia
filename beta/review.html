@@ -366,12 +366,34 @@ h1#brand em{font-style:normal;color:var(--amber)}
 .smoothbtn{position:absolute;top:10px;right:10px;z-index:6;display:inline-flex;align-items:center;gap:6px;background:rgba(15,13,15,.72);border:1px solid var(--line2);color:var(--txt);font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:7px 11px;border-radius:999px;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:border-color .2s,background .2s}
 .smoothbtn:hover{border-color:var(--redsoft);background:rgba(15,13,15,.85)}
 .smoothbtn.auto{border-color:rgba(242,169,0,.5);color:#f4ba2e}
-</style></head><body><div class="wrap">
+
+/* 🔒 locked until paid */
+html.locked .wrap > :not(.topbar):not(.proj):not(#lockbox):not(#verstamp):not(#thread):not(#revfab){display:none !important}
+html.locked #stickbar{display:none !important}
+#lockbox{display:none}
+html.locked #lockbox{display:block;margin:18px 0 8px}
+.lkcard{position:relative;border-radius:18px;overflow:hidden;background:#111;border:1px solid rgba(255,255,255,.08);max-width:560px;margin:0 auto}
+.lkcard img{display:block;width:100%;max-height:62vh;object-fit:cover;filter:saturate(.9)}
+.lkcard .lknoimg{aspect-ratio:16/10;background:radial-gradient(120% 90% at 50% 20%,#2a2a2e,#111)}
+.lkcard .lkbadge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.lkcard .lkbadge span{width:74px;height:74px;border-radius:50%;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:30px}
+.lkbody{max-width:560px;margin:18px auto 0;text-align:center}
+.lkbody h2{font-size:22px;margin:0 0 8px;letter-spacing:-.01em}
+.lkbody p{color:var(--dim);margin:0 0 14px;line-height:1.5}
+.lkamt{display:inline-block;font-weight:700;font-size:20px;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);margin:4px 0 16px}
+.lkacts{display:flex;flex-direction:column;gap:10px;align-items:center}
+.lkacts a,.lkacts button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:250px;padding:13px 18px;border-radius:999px;font:inherit;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid rgba(255,255,255,.16);background:transparent;color:inherit}
+.lkacts .lkpay{background:#EA002A;border-color:#EA002A;color:#fff}
+.lkfine{font-size:13px;color:var(--dim);margin-top:16px;line-height:1.5}
+</style>
+<script>try{ if(new URLSearchParams(location.search).get('lock') === '1') document.documentElement.classList.add('locked'); }catch(e){}</script>
+</head><body><div class="wrap">
 <div class="topbar">
   <div class="lock"><svg class="cmark" viewBox="0 0 120 120" aria-hidden="true"><path class="ring" d="M 83 34 A 39 39 0 1 0 83 86" fill="none" stroke-width="13" stroke-linecap="round"/><polygon class="peak" points="55,42 64,48 64,72 55,78"/><polygon class="peak" points="66,49.3 73,54 73,66 66,70.7"/><polygon class="peak" points="75,55.3 82,60 75,64.7"/></svg><div><h1 id="brand"></h1><div class="sub" id="subline"></div></div></div>
   <div class="crumbs"><span class="remnav" id="remnav"></span><a href="#" class="wholine" id="wholine" onclick="changeWho();return false;"></a></div>
 </div>
 <div class="proj" id="proj"></div>
+<div id="lockbox" aria-live="polite"></div>
 <p class="reviewing">Star the shots you love — <b>pause any video to pin a note at that exact second.</b></p>
 <div id="duebanner"></div>
 <div id="pickbar" style="display:none"></div>
@@ -2015,6 +2037,56 @@ if(endpoint && ref){
   setInterval(loadFeedback, 60000);
 }
 </script><script>
+/* 🔒 Locked until paid: the link carries no video — only a watermarked still, the amount and how to pay. */
+(function(){
+  var qq = new URLSearchParams(location.search);
+  if(qq.get('lock') !== '1') return;
+  var box = document.getElementById('lockbox'); if(!box) return;
+  var esc = function(t){ var d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; };
+  var pv = (qq.get('pv') || '').replace(/[^-\w]/g, '');
+  var amt = parseFloat(qq.get('amt') || '');
+  var pay = qq.get('pay') || '';
+  if(!/^https:\/\//i.test(pay)) pay = '';
+  var what = (qq.get('ty') || '').trim();
+  var who = (qq.get('n') || '').trim();
+  var mail = 'hello@reelestatemedia.com';
+  var money = isFinite(amt) && amt > 0 ? '$' + amt.toLocaleString('en-CA', {minimumFractionDigits: amt % 1 ? 2 : 0, maximumFractionDigits: 2}) : '';
+  box.innerHTML =
+    '<div class="lkcard">' + (pv ? '<img alt="" src="https://lh3.googleusercontent.com/d/' + pv + '=w1100" onerror="this.onerror=null;this.src=\'https://drive.google.com/thumbnail?id=' + pv + '&sz=w1100\'">' : '<div class="lknoimg"></div>') +
+    '<div class="lkbadge"><span>🔒</span></div></div>' +
+    '<div class="lkbody"><h2>' + (who ? esc(who) + ', your ' : 'Your ') + (what ? esc(what.toLowerCase()) : 'content') + ' is ready</h2>' +
+    '<p>It unlocks as soon as payment is received — then this same link plays it, and you can leave notes and approve.</p>' +
+    (money ? '<div class="lkamt">Amount due: ' + money + '</div>' : '') +
+    '<div class="lkacts">' + (pay ? '<a class="lkpay" href="' + esc(pay) + '" target="_blank" rel="noopener">💳 Pay online</a>' : '') +
+    '<button type="button" class="' + (pay ? '' : 'lkpay') + '" id="lkmail">✉ E-transfer to ' + mail + '</button>' +
+    '<button type="button" id="lkmsg">💬 Message us</button></div>' +
+    '<div class="lkfine" id="lkfine">Already paid? This page opens by itself once it’s confirmed — no need to refresh.</div></div>';
+  var mb = document.getElementById('lkmail');
+  if(mb) mb.onclick = function(){
+    var done = function(){ mb.textContent = '✓ Copied: ' + mail; };
+    try{ navigator.clipboard.writeText(mail).then(done, done); }catch(e){ done(); }
+  };
+  var mg = document.getElementById('lkmsg');
+  if(mg) mg.onclick = function(){ var f = document.getElementById('revfab'); if(f) f.click(); else location.href = 'mailto:' + mail; };
+  // opens by itself: ask the short link what it holds now
+  var lx = (qq.get('lx') || '').replace(/[^a-z0-9]/gi, '');
+  var api = 'https://script.google.com/macros/s/AKfycbyALH9lG_dzg13ooj1brWBifZfAWVcZ3JgtJc617PPLii4kK1igFyU4Gu41Lzwy5gGEiw/exec';
+  if(!lx) return;
+  var busy = false;
+  var check = function(){
+    if(busy || document.hidden) return; busy = true;
+    fetch(api + '?link=' + encodeURIComponent(lx) + '&_=' + Date.now()).then(function(r){ return r.json(); }).then(function(j){
+      busy = false;
+      if(j && j.ok && j.qs && new URLSearchParams(j.qs).get('lock') !== '1'){
+        var f = document.getElementById('lkfine'); if(f) f.textContent = '🔓 Payment confirmed — opening…';
+        location.replace(location.pathname + '?' + j.qs);
+      }
+    }).catch(function(){ busy = false; });
+  };
+  setInterval(check, 45000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) check(); });
+})();
+</script><script>
 /* 🧭 one agent side: the same Hub / Library / Review pills on every agent page */
 (function(){
   try{
@@ -2027,4 +2099,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-5</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-6</div></div></body></html>
