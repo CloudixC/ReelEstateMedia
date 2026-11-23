@@ -579,15 +579,17 @@ try{ cmts = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){}
 
 document.getElementById('brand').innerHTML = pin ? 'Content <em>Hub</em>' : 'Reel Estate <em>Media</em>';
 document.getElementById('subline').textContent = (pin ? 'Royal LePage Pinnacle · ' : '') + 'Client Review';
-// The big line is what the piece is CALLED (its own name, else the event / property); the type of shoot, anything
-// the name doesn't already say, and who it's for go on one quiet line underneath. New links carry ty (type) and
-// de ("name · event/property"); old links only have project + dname.
+// The big line is the DESCRIPTION — the event / property / project the piece belongs to (the last part of de). The type of
+// shoot, the piece's own name when it says something the big line doesn't ("Reel 2 of 5"), and who it's for go on one quiet
+// line underneath. New links carry ty (type) and de ("name · event/property"); old links only have project + dname and keep
+// their piece name on top. (Until Nov 22, 2026 the name was the big line and the description sat below.)
 const _parts = String(dispType ? dispDesc : (dname || '')).split(' \u00B7 ').map(v => v.trim()).filter(Boolean);
-const _top = _parts[0] || dispType || project;
+const _swap = !!dispType && _parts.length > 1;
+const _top = (_swap ? _parts[_parts.length - 1] : _parts[0]) || dispType || project;
 const _ty = dispType || (dname ? project : '');
 const _subBits = [];
 if(_ty && _ty !== _top) _subBits.push(_ty);
-_parts.slice(1).forEach(v => { if(_top.toLowerCase().indexOf(v.toLowerCase()) < 0 && _subBits.indexOf(v) < 0) _subBits.push(v); });
+(_swap ? _parts.slice(0, -1) : _parts.slice(1)).forEach(v => { if(_top.toLowerCase().indexOf(v.toLowerCase()) < 0 && _subBits.indexOf(v) < 0) _subBits.push(v); });
 if(who) _subBits.push('for ' + who);
 document.getElementById('proj').innerHTML = escT(_top) + (_subBits.length ? '<span class="projsub">' + escT(_subBits.join(' \u00B7 ')) + '</span>' : '');
 document.title = 'Review — ' + _top;
@@ -2025,4 +2027,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-4</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-5</div></div></body></html>
