@@ -58,7 +58,7 @@
         return '<div class="q"><p>“' + esc(q) + '”</p><div class="who"><b>' + esc(t.w) + '</b>' + (t.b ? ' · ' + esc(t.b) : '') + '</div></div>'; };
       if($('quotes')){ $('quotes').innerHTML = items.slice(0, 3).map(function(t){ return card(t, 240); }).join(''); if($('reviews')) $('reviews').hidden = false; }
       if(g) g.innerHTML = items.map(function(t){ return card(t, 0); }).join('');
-    }).catch(function(){ var g = $('wallgrid'); if(g) g.innerHTML = '<div class="empty">Couldn’t load the reviews — refresh to try again.</div>'; });
+    }).catch(function(){ var g = $('wallgrid'); if(g) g.innerHTML = '<div class="empty">Couldn’t load the reviews. Refresh to try again.</div>'; });
   }
 
   /* ---- 📱 on a phone the Book button follows once the first one has scrolled away ---- */
@@ -170,7 +170,7 @@
     var showLinks = function(k){ if(k > 0) links.forEach(function(l){ l.hidden = false; }); };
     if(n >= 0) showLinks(n);
     if(!box && (n >= 0 || page !== 'start')) return;
-    var none = function(){ if(box) box.innerHTML = '<div class="empty">No one is listed here yet — this page fills in as agents choose to be on it.</div>'; };
+    var none = function(){ if(box) box.innerHTML = '<div class="empty">No one is listed here yet. This page fills in as agents choose to be on it.</div>'; };
     fetch(E + '?agents=1').then(function(r){ return r.json(); }).then(function(j){
       var list = ((j && j.ok && Array.isArray(j.agents)) ? j.agents : []).filter(function(x){ return x && /^p[0-9a-f]{20}$/.test(String(x.p || '')) && String(x.n || '').trim(); }).slice(0, 200);
       try{ localStorage.setItem(K, JSON.stringify({n: list.length, at: Date.now()})); }catch(e){}
@@ -196,7 +196,7 @@
     if(st) all('[data-story]').forEach(function(l){ l.hidden = false; });
     var box = $('story'); if(!box) return;
     if(!st){ box.innerHTML = '<div class="empty">This story isn’t published yet. <a href="./">Back to the home page →</a></div>'; return; }
-    document.title = st.head + ' — The Content Hub';
+    document.title = st.head + ' | The Content Hub';
     box.innerHTML = '<div class="eyebrow">Agent story</div><h1>' + esc(st.head) + '</h1><p class="lede"><b>' + esc(st.name) + '</b>' + (st.role ? ' · ' + esc(st.role) : '') + '</p>' +
       (st.res.length ? '<div class="facts">' + st.res.map(function(r){ var m = r.match(/^(\S+)\s+(.*)$/); return '<div class="fact"><b>' + esc(m ? m[1] : r) + '</b><span>' + esc(m ? m[2] : '') + '</span></div>'; }).join('') + '</div>' : '') +
       '<div class="storybody">' + st.did.split(/\n{2,}/).map(function(p){ return '<p class="prose">' + esc(p.trim()) + '</p>'; }).join('') + '</div>' +
@@ -225,12 +225,12 @@
       if(!n){ msg.textContent = 'Please add your name.'; return; }
       var okP = p.replace(/\D/g, '').length >= 7, okE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
       if(!okP && !okE){ msg.textContent = 'Add a phone number or an email so we can reply.'; return; }
-      var done = function(){ $('enq-fields').style.display = 'none'; msg.textContent = '✓ Sent — we’ll be in touch shortly.'; };
+      var done = function(){ $('enq-fields').style.display = 'none'; msg.textContent = '✓ Sent. We’ll be in touch shortly.'; };
       if(v('company') || Date.now() - openedAt < 2500){ done(); return; }           // a form filled by a script: say thanks, send nothing
-      if(Date.now() - lastSent < 20000){ msg.textContent = 'Already sent — give it a moment.'; return; }
+      if(Date.now() - lastSent < 20000){ msg.textContent = 'Already sent. Give it a moment.'; return; }
       var btn = f.querySelector('button[type=submit]'); btn.disabled = true; msg.textContent = 'Sending…';
       fetch(E, {method: 'POST', body: JSON.stringify({kind: 'enquiry', ref: 'website', project: 'Website enquiry', dname: topic, who: n.slice(0, 60), from: 'web',
-        body: 'About: ' + topic + '\nName: ' + n + '\nPhone: ' + (p || '—') + '\nEmail: ' + (em || '—') + '\nPage: ' + page + (m ? '\n\n' + m : '')})})
+        body: 'About: ' + topic + '\nName: ' + n + '\nPhone: ' + (p || 'not given') + '\nEmail: ' + (em || 'not given') + '\nPage: ' + page + (m ? '\n\n' + m : '')})})
         .then(function(r){ return r.json(); }).then(function(j){ btn.disabled = false; if(!j || !j.ok) throw new Error('no'); lastSent = Date.now(); done(); count('enquiry'); })
         .catch(function(){ btn.disabled = false; msg.innerHTML = 'Couldn’t send just now. Email <a href="mailto:hello@reelestatemedia.com?subject=' + encodeURIComponent(topic) + '">hello@reelestatemedia.com</a> instead.'; });
     });
@@ -248,7 +248,7 @@
   /* ---- 🧮 build your shoot: tick what you need and send the list. The choices are read off the services page; no prices. ---- */
   (function(){
     var box = $('builder'); if(!box) return;
-    var fail = function(){ box.innerHTML = '<div class="empty">Couldn’t load the services — <a href="services.html">open the full list</a>.</div>'; };
+    var fail = function(){ box.innerHTML = '<div class="empty">Couldn’t load the services. <a href="services.html">Open the full list</a>.</div>'; };
     fetch('services.html').then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
       var doc = new DOMParser().parseFromString(t || '', 'text/html'), groups = [];
       [].slice.call(doc.querySelectorAll('.pl .cat')).forEach(function(c){
@@ -297,7 +297,7 @@
       tiles.forEach(function(a){
         var m = /\/reel\/([\w-]+)/.exec(a.getAttribute('href') || ''), r = m && R[m[1]]; if(!r || !(r.views > 0)) return;
         var b = a.querySelector('b'); if(b) b.textContent = short(r.views);
-        a.setAttribute('aria-label', 'Watch the reel on Instagram — ' + short(r.views) + ' views'); seen += r.views;
+        a.setAttribute('aria-label', 'Watch the reel on Instagram, ' + short(r.views) + ' views'); seen += r.views;
       });
       var sub = document.querySelector('#proof .sub');
       if(sub && seen && tiles.length === 3) sub.textContent = 'Three reels we shot and edited for one agent’s Instagram. Together they’ve been watched more than ' + floorK(seen) + ' times.';
