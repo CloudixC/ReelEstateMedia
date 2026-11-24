@@ -25,11 +25,9 @@ async function mwpMeasure(blob) {
   } finally { try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} URL.revokeObjectURL(url); }
 }
 /* 🔥 Warm-up. A recorder that has sat idle for a few seconds lines its picture and sound up differently from one that has just
-   been used (its encoders start cold). So unless a recording ended moments ago, a half-second throwaway recording runs first,
-   which puts every real recording, and the sync check, in the same state. */
-let MWP_LAST = 0;
+   been used (its encoders start cold; measured on a Mac: 12 ms apart, sometimes 40). So a half-second throwaway recording runs
+   right before every real recording and every sync check, which puts them all in the same state. */
 async function mwpWarm(w, h, mime, bits) {
-  if (MWP_LAST && performance.now() - MWP_LAST < 2500) return;
   let ac = null;
   try {
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d');
@@ -46,12 +44,12 @@ async function mwpWarm(w, h, mime, bits) {
     while (performance.now() - t0 < 500) { cx.fillStyle = n++ % 2 ? '#0b0b0b' : '#000'; cx.fillRect(0, 0, w, h); if (push) push();
       await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); r(); }); }); }
     rec.stop(); await Promise.race([stopped, new Promise(r => setTimeout(r, 1500))]);
-  } catch (e) {} finally { try { if (ac) ac.close(); } catch (e) {} MWP_LAST = performance.now(); }
+  } catch (e) {} finally { try { if (ac) ac.close(); } catch (e) {} }
 }
 async function mwpLag(ctl, w, h, mime) {
   const k = w + 'x' + h;
   if (MWP_LAG[k] !== undefined) return MWP_LAG[k];
-  const KEY = 'rem_pvsync_v4'; let all = {}, hist = [], m = null, note = '';
+  const KEY = 'rem_pvsync_v5'; let all = {}, hist = [], m = null, note = '';
   try { all = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; hist = (Array.isArray(all[k]) ? all[k] : []).filter(x => typeof x === 'number' && Math.abs(x) <= 250).slice(-7); } catch (e) { all = {}; hist = []; }
   try {
     const bin = atob(MWP_SYNC_CLIP), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
@@ -154,7 +152,7 @@ async function makeWebPreview(file, onPct, ctl, opt) {
       else if (Date.now() - lastMove > 20000) { clearInterval(t); try { v.pause(); rec.stop(); } catch (e) {} j(new Error('playback stalled')); }
     }, 400); cleanup.push(() => clearInterval(t)); })]);
     await new Promise(r => setTimeout(r, Math.max(aDly, vDly) * 1000 + 300));
-    alive = false; rec.stop(); await stopped; MWP_LAST = performance.now();
+    alive = false; rec.stop(); await stopped;
     const isMp4 = /mp4/.test(mime), type = isMp4 ? 'video/mp4' : 'video/webm';
     const base = String(file.name || 'video').replace(/\.[^.]+$/, '');
     const out = new File(chunks, base + ' (web preview).' + (isMp4 ? 'mp4' : 'webm'), { type });
