@@ -1,6 +1,6 @@
 {
  "_about": "View counts for reels Reel Estate Media shot or edited, read from each Instagram profile's Reels grid. Every reel on 'pages' counts; agent reels are listed one by one. A reel shared on two profiles is counted once. Updated each morning. Entries with views 0 and a 'waiting' note are listed but not counted until a number can be read.",
- "updated": "2026-11-23",
+ "updated": "2026-11-24",
  "pages": [
   "thecontenthub.ca",
   "thereelestatemedia"
@@ -13,59 +13,63 @@
  "reels": {
   "Dd6jkEiJP1r": {
    "page": "thecontenthub.ca",
-   "views": 35760,
-   "seen": "2026-11-23",
-   "also": "realtorayeshaali"
+   "views": 35800,
+   "seen": "2026-11-24",
+   "also": "realtorayeshaali",
+   "approx": true
   },
   "Dc2An3RPiXD": {
    "page": "thecontenthub.ca",
-   "views": 824,
-   "seen": "2026-11-23"
+   "views": 828,
+   "seen": "2026-11-24"
   },
   "DcMr8LIhvxG": {
    "page": "thecontenthub.ca",
-   "views": 3178,
-   "seen": "2026-11-23"
+   "views": 3478,
+   "seen": "2026-11-24"
   },
   "Db8nUPZknfb": {
    "page": "thecontenthub.ca",
-   "views": 24388,
-   "seen": "2026-11-23"
+   "views": 24300,
+   "seen": "2026-11-24",
+   "approx": true
   },
   "Db6nD_1E_4s": {
    "page": "thecontenthub.ca",
-   "views": 3430,
-   "seen": "2026-11-23"
+   "views": 3433,
+   "seen": "2026-11-24"
   },
   "Db3koS-Dcu0": {
    "page": "thecontenthub.ca",
-   "views": 5165,
-   "seen": "2026-11-23"
+   "views": 5169,
+   "seen": "2026-11-24"
   },
   "DbrMFzZDIbO": {
    "page": "thecontenthub.ca",
-   "views": 1611,
-   "seen": "2026-11-23"
+   "views": 1613,
+   "seen": "2026-11-24"
   },
   "DbD4t0oBF1s": {
    "page": "thecontenthub.ca",
-   "views": 3314,
-   "seen": "2026-11-23"
+   "views": 3585,
+   "seen": "2026-11-24"
   },
   "Da1HhbEvRyd": {
    "page": "thecontenthub.ca",
-   "views": 2749,
-   "seen": "2026-11-23"
+   "views": 2975,
+   "seen": "2026-11-24"
   },
   "DeTXhmApyZH": {
    "page": "realtorayeshaali",
-   "views": 62717,
-   "seen": "2026-11-23"
+   "views": 62700,
+   "seen": "2026-11-24",
+   "approx": true
   },
   "Dcq6mpIJfsg": {
    "page": "realtorayeshaali",
-   "views": 48557,
-   "seen": "2026-11-23"
+   "views": 48600,
+   "seen": "2026-11-24",
+   "approx": true
   },
   "Df70MOADX2T": {
    "page": "royallepagepinnacle",
@@ -94,105 +98,105 @@
   },
   "DfSwg9vipLu": {
    "page": "royallepagepinnacle",
-   "views": 1542,
-   "seen": "2026-11-23"
+   "views": 1562,
+   "seen": "2026-11-24"
   },
   "DfLARHOC8rO": {
    "page": "royallepagepinnacle",
-   "views": 1334,
-   "seen": "2026-11-23"
+   "views": 1341,
+   "seen": "2026-11-24"
   },
   "DervWJJjHe6": {
    "page": "royallepagepinnacle",
-   "views": 2471,
-   "seen": "2026-11-23"
+   "views": 2489,
+   "seen": "2026-11-24"
   },
   "DefW9g_jRPO": {
    "page": "royallepagepinnacle",
-   "views": 1136,
-   "seen": "2026-11-23"
+   "views": 1139,
+   "seen": "2026-11-24"
   },
   "DeZ87CDiaVA": {
    "page": "royallepagepinnacle",
-   "views": 2200,
-   "seen": "2026-11-23"
+   "views": 2213,
+   "seen": "2026-11-24"
   },
   "DePYxa7Ae4W": {
    "page": "royallepagepinnacle",
-   "views": 1384,
-   "seen": "2026-11-23"
+   "views": 1385,
+   "seen": "2026-11-24"
   },
   "DeM8BgklMAX": {
    "page": "royallepagepinnacle",
-   "views": 1272,
-   "seen": "2026-11-23"
+   "views": 1274,
+   "seen": "2026-11-24"
   },
   "Ddm3lpxCSUY": {
    "page": "faiztahirhomes",
-   "views": 2880,
-   "seen": "2026-11-23"
+   "views": 2891,
+   "seen": "2026-11-24"
   },
   "DalRLXiABMP": {
    "page": "realtorayeshaali",
-   "views": 7551,
-   "seen": "2026-11-23",
+   "views": 7558,
+   "seen": "2026-11-24",
    "also": "royallepagepinnacle"
   },
   "Dd9Tig4jMy2": {
    "page": "royallepagepinnacle",
-   "views": 1112,
-   "seen": "2026-11-23"
+   "views": 1113,
+   "seen": "2026-11-24"
   },
   "Dd6ywXfgVo5": {
    "page": "royallepagepinnacle",
-   "views": 1022,
-   "seen": "2026-11-23"
+   "views": 1025,
+   "seen": "2026-11-24"
   },
   "Dd11Gu3EqZB": {
    "page": "royallepagepinnacle",
-   "views": 1822,
-   "seen": "2026-11-23"
+   "views": 1826,
+   "seen": "2026-11-24"
   },
   "DcRadk6jD2T": {
    "page": "royallepagepinnacle",
    "views": 2870,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DbbD31UjwEM": {
    "page": "royallepagepinnacle",
    "views": 1906,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DbEhQgaklFc": {
    "page": "royallepagepinnacle",
    "views": 1681,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DaLsG9JjVU1": {
    "page": "royallepagepinnacle",
    "views": 1382,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DbGkmS9CcY2": {
    "page": "royallepagepinnacle",
-   "views": 4459,
-   "seen": "2026-11-23"
+   "views": 4478,
+   "seen": "2026-11-24"
   },
   "DZgPNr4RthG": {
    "page": "teamdurrani",
    "views": 2381,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DYyJ2U7MqYB": {
    "page": "teamdurrani",
-   "views": 7934,
-   "seen": "2026-11-23",
+   "views": 7944,
+   "seen": "2026-11-24",
    "also": "thereelestatemedia"
   },
   "Df5Dbl9yrUo": {
    "page": "safwat.butt.realestate",
-   "views": 1990,
-   "seen": "2026-11-23"
+   "views": 2006,
+   "seen": "2026-11-24"
   },
   "DZplfmSMPlS": {
    "page": "safwat.butt.realestate",
@@ -201,18 +205,18 @@
   },
   "DbZTU7vPTxk": {
    "page": "safwat.butt.realestate",
-   "views": 1091,
-   "seen": "2026-11-23"
+   "views": 1094,
+   "seen": "2026-11-24"
   },
   "DeNYgh-PUqK": {
    "page": "safwat.butt.realestate",
-   "views": 961,
-   "seen": "2026-11-23"
+   "views": 970,
+   "seen": "2026-11-24"
   },
   "DbB3GYlEX64": {
    "page": "faiztahirhomes",
-   "views": 5921,
-   "seen": "2026-11-23"
+   "views": 5925,
+   "seen": "2026-11-24"
   },
   "DgFfAMbO5Pe": {
    "page": "thereelestatemedia",
@@ -228,21 +232,22 @@
   },
   "DfYWumNAx6E": {
    "page": "thereelestatemedia",
-   "views": 3616,
-   "seen": "2026-11-23",
+   "views": 3623,
+   "seen": "2026-11-24",
    "also": "tejvirdhugga_remax"
   },
   "DfP0CFothCg": {
    "page": "thereelestatemedia",
-   "views": 4949,
-   "seen": "2026-11-23",
+   "views": 4994,
+   "seen": "2026-11-24",
    "also": "_pree.c"
   },
   "DZL5d6qsfLF": {
    "page": "thereelestatemedia",
-   "views": 9769,
-   "seen": "2026-11-23",
-   "also": "hayajumaaofficial"
+   "views": 12400,
+   "seen": "2026-11-24",
+   "also": "hayajumaaofficial",
+   "approx": true
   },
   "DSvXqzoAd28": {
    "page": "thereelestatemedia",
@@ -252,8 +257,8 @@
   },
   "DZWKvcwsg35": {
    "page": "thereelestatemedia",
-   "views": 5623,
-   "seen": "2026-11-23",
+   "views": 7132,
+   "seen": "2026-11-24",
    "also": "hayajumaaofficial"
   },
   "DaBFMNyuvXG": {
@@ -270,61 +275,61 @@
   },
   "DZWSMp2shLI": {
    "page": "thereelestatemedia",
-   "views": 2654,
-   "seen": "2026-11-23",
+   "views": 2655,
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "Dd4HRwaxIs6": {
    "page": "thereelestatemedia",
-   "views": 1585,
-   "seen": "2026-11-23",
+   "views": 1587,
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DdmnXljx-rl": {
    "page": "thereelestatemedia",
    "views": 805,
-   "seen": "2026-11-23",
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DcL9OuHu4gX": {
    "page": "thereelestatemedia",
-   "views": 1338,
-   "seen": "2026-11-23",
+   "views": 1339,
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "Db23nNzRvjA": {
    "page": "thereelestatemedia",
-   "views": 857,
-   "seen": "2026-11-23",
+   "views": 858,
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "Day0eF3xSCF": {
    "page": "thereelestatemedia",
    "views": 517,
-   "seen": "2026-11-23",
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DajaF_Zxz1Y": {
    "page": "thereelestatemedia",
    "views": 1445,
-   "seen": "2026-11-23",
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DZ_Rh5FBsld": {
    "page": "thereelestatemedia",
    "views": 2298,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DZ_OSRWly-h": {
    "page": "thereelestatemedia",
    "views": 842,
-   "seen": "2026-11-23",
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DZ8_0cHsY-s": {
    "page": "thereelestatemedia",
-   "views": 1776,
-   "seen": "2026-11-23",
+   "views": 1777,
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DUEvTfNjFJH": {
@@ -389,7 +394,7 @@
   "DYOF2pXs8jQ": {
    "page": "thereelestatemedia",
    "views": 806,
-   "seen": "2026-11-23",
+   "seen": "2026-11-24",
    "also": "teamdurrani"
   },
   "DWUx1vAxrMM": {
@@ -444,18 +449,18 @@
   },
   "Ddo2EgiS_g6": {
    "page": "zain.realestate",
-   "views": 1092,
-   "seen": "2026-11-23"
+   "views": 1094,
+   "seen": "2026-11-24"
   },
   "DdozE73S0Y4": {
    "page": "zain.realestate",
-   "views": 1426,
-   "seen": "2026-11-23"
+   "views": 1428,
+   "seen": "2026-11-24"
   },
   "Dc3xmGCh6bp": {
    "page": "zain.realestate",
    "views": 1963,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DfpZlKlxFlt": {
    "page": "alimansoorrealestate",
@@ -471,17 +476,17 @@
    "page": "alimansoorrealestate",
    "views": 18500,
    "approx": true,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "Dd4Lo1BRm1a": {
    "page": "alimansoorrealestate",
-   "views": 1267,
-   "seen": "2026-11-23"
+   "views": 1269,
+   "seen": "2026-11-24"
   },
   "DdogopYRT-H": {
    "page": "alimansoorrealestate",
-   "views": 4625,
-   "seen": "2026-11-23"
+   "views": 4627,
+   "seen": "2026-11-24"
   },
   "DeSEnpLCNy7": {
    "page": "sofiabadruddin",
@@ -491,12 +496,12 @@
   "DZngB7SiT8R": {
    "page": "sofiabadruddin",
    "views": 1747,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DZs9QTzpCes": {
    "page": "alyssamacneil.realtor",
-   "views": 1432,
-   "seen": "2026-11-23"
+   "views": 1433,
+   "seen": "2026-11-24"
   },
   "Dfzh7OhuqJZ": {
    "page": "jc_realtyteam",
@@ -510,28 +515,83 @@
   },
   "DfiVjzWuhXe": {
    "page": "jc_realtyteam",
-   "views": 823,
-   "seen": "2026-11-23"
+   "views": 826,
+   "seen": "2026-11-24"
   },
   "DeURH62OK6e": {
    "page": "jc_realtyteam",
    "views": 714,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DeO2l1QuXyp": {
    "page": "jc_realtyteam",
    "views": 1151,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DePEBgzOaZg": {
    "page": "salmansyed.realtor",
    "views": 436,
-   "seen": "2026-11-23"
+   "seen": "2026-11-24"
   },
   "DcQ80L8OnZ0": {
    "page": "salmansyed.realtor",
    "views": 748,
    "seen": "2026-11-23"
+  },
+  "DaQpv-fxDid": {
+   "page": "thereelestatemedia",
+   "views": 375,
+   "seen": "2026-11-24"
+  },
+  "DYvaZEZxKZc": {
+   "page": "thereelestatemedia",
+   "views": 759,
+   "seen": "2026-11-24"
+  },
+  "DYtEKSRsh30": {
+   "page": "thereelestatemedia",
+   "views": 573,
+   "seen": "2026-11-24"
+  },
+  "DYqUSFuxiQo": {
+   "page": "thereelestatemedia",
+   "views": 478,
+   "seen": "2026-11-24"
+  },
+  "DYn7zE9Mg9R": {
+   "page": "thereelestatemedia",
+   "views": 667,
+   "seen": "2026-11-24"
+  },
+  "DYlWHMYM4i-": {
+   "page": "thereelestatemedia",
+   "views": 689,
+   "seen": "2026-11-24"
+  },
+  "DYi3-8CsBjs": {
+   "page": "thereelestatemedia",
+   "views": 629,
+   "seen": "2026-11-24"
+  },
+  "DYgV6HsMvs5": {
+   "page": "thereelestatemedia",
+   "views": 749,
+   "seen": "2026-11-24"
+  },
+  "DYDpGXIuF_W": {
+   "page": "thereelestatemedia",
+   "views": 896,
+   "seen": "2026-11-24"
+  },
+  "DX2_hQ8s3NL": {
+   "page": "thereelestatemedia",
+   "views": 1139,
+   "seen": "2026-11-24"
+  },
+  "DXsrwoKDN06": {
+   "page": "thereelestatemedia",
+   "views": 790,
+   "seen": "2026-11-24"
   }
  }
 }
