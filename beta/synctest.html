@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Sync check</title>
+<style>body{font:14px/1.5 system-ui;background:#111;color:#eee;padding:20px}button{font:inherit;padding:10px 16px;margin:4px;border-radius:8px;border:1px solid #555;background:#222;color:#fff;cursor:pointer}pre{white-space:pre-wrap;background:#000;padding:12px;border-radius:8px}</style></head><body>
+<h3>Web preview sync check (internal test page)</h3>
+<p>Each button makes a web preview of a flash-and-beep test clip, then measures how far the beep lands from the flash in the result.</p>
+<div id="btns"></div><pre id="out">ready</pre>
+<script>
+const IMPLS = ['synctest-live.js', 'synctest-cal.js'], SRCS = ['synctest-30.mp4', 'synctest-24.mp4', 'synctest-60.mp4'];
+window.__res = []; window.__busy = false;
+const log = t => { document.getElementById('out').textContent = t + '\n' + document.getElementById('out').textContent; };
+async function analyse(blob) {
+  // sound: where each beep starts
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const ab = await ac.decodeAudioData(await blob.arrayBuffer()); try { ac.close(); } catch (e) {}
+  const ch = ab.getChannelData(0), sr = ab.sampleRate, beeps = []; let last = -1e9;
+  for (let i = 0; i < ch.length; i++) if (Math.abs(ch[i]) > 0.08) { if (i - last > sr * 0.1) beeps.push(i / sr); last = i; }
+  // picture: the time of the first bright frame of each flash, as a player shows it
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(blob);
+  await new Promise((r, j) => { v.onloadeddata = r; v.onerror = () => j(new Error('cannot open the result')); });
+  const c = document.createElement('canvas'); c.width = 8; c.height = 8; const x = c.getContext('2d', { willReadFrequently: true });
+  const frames = [];
+  await new Promise(res => { const f = (now, md) => { x.drawImage(v, 0, 0, 8, 8); const d = x.getImageData(0, 0, 8, 8).data; let s = 0; for (let i = 0; i < d.length; i += 4) s += d[i]; frames.push([md.mediaTime, s / 64]); if (!v.ended) v.requestVideoFrameCallback(f); };
+    v.requestVideoFrameCallback(f); v.onended = () => setTimeout(res, 200); v.play(); });
+  URL.revokeObjectURL(v.src);
+  const flashes = []; let prev = 0; frames.forEach(([t, y]) => { if (y > 120 && prev <= 120) flashes.push(t); prev = y; });
+  const diffs = []; beeps.forEach(b => { let best = null; flashes.forEach(f => { if (best === null || Math.abs(f - b) < Math.abs(best - b)) best = f; }); if (best !== null && Math.abs(best - b) < 0.5) diffs.push(Math.round((b - best) * 1000)); });
+  const gaps = frames.slice(1).map((f, i) => Math.round((f[0] - frames[i][0]) * 1000)).sort((a, b) => a - b);
+  return { frames: frames.length, flashes: flashes.length, beeps: beeps.length, soundMinusPictureMs: diffs, mean: diffs.length ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length) : null, gapMs: [gaps[0], gaps[gaps.length >> 1], gaps[gaps.length - 1]] };
+}
+async function run(impl, src, keep) {
+  if (window.__busy) return; window.__busy = true; log('… ' + impl + ' on ' + src);
+  try {
+    const code = await (await fetch(impl + '?cb=' + Date.now())).text();
+    (0, eval)(code + '\n;window.__mwp = makeWebPreview;'); const fn = window.__mwp;
+    const blob = await (await fetch(src)).blob(); const file = new File([blob], src, { type: 'video/mp4' });
+    const t0 = performance.now(); const o = await fn(file, null, { cancelled: false });
+    const r = { impl, src, sync: window.__mwpSync || null, type: o.file.type, w: o.w, h: o.h, kb: Math.round(o.file.size / 1024), secs: Math.round((performance.now() - t0) / 100) / 10 };
+    if (keep) window.__last = o.file;
+    Object.assign(r, await analyse(o.file)); window.__res.push(r); log(JSON.stringify(r));
+  } catch (e) { const r = { impl, src, error: String(e && e.message || e), needsTap: !!(e && e.needsTap) }; window.__res.push(r); log(JSON.stringify(r)); }
+  window.__busy = false;
+}
+window.runCheck = run; window.analyse = analyse;
+IMPLS.forEach(i => SRCS.forEach(s => { const b = document.createElement('button'); b.textContent = i.replace('synctest-', '').replace('.js', '') + ' · ' + s.replace('synctest-', '').replace('.mp4', ' fps'); b.id = 'b_' + i.replace(/\W/g, '') + '_' + s.replace(/\W/g, ''); b.onclick = () => run(i, s, true); document.getElementById('btns').appendChild(b); }));
+</script></body></html>
