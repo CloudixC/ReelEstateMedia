@@ -24,10 +24,34 @@ async function mwpMeasure(blob) {
     d.sort((a, b) => a - b); return Math.round(d[d.length >> 1]);
   } finally { try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} URL.revokeObjectURL(url); }
 }
+/* 🔥 Warm-up. A recorder that has sat idle for a few seconds lines its picture and sound up differently from one that has just
+   been used (its encoders start cold). So unless a recording ended moments ago, a half-second throwaway recording runs first,
+   which puts every real recording, and the sync check, in the same state. */
+let MWP_LAST = 0;
+async function mwpWarm(w, h, mime, bits) {
+  if (MWP_LAST && performance.now() - MWP_LAST < 2500) return;
+  let ac = null;
+  try {
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d');
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state !== 'running') await Promise.race([ac.resume().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
+    if (ac.state !== 'running') return;
+    const dst = ac.createMediaStreamDestination(), g = ac.createGain(), osc = ac.createOscillator(); g.gain.value = 0; osc.connect(g); g.connect(dst); osc.start();
+    let cst = cv.captureStream(0), push = null; const vt = cst.getVideoTracks()[0];
+    push = vt && vt.requestFrame ? () => vt.requestFrame() : cst.requestFrame ? () => cst.requestFrame() : null;
+    if (!push) cst = cv.captureStream(30);
+    const rec = new MediaRecorder(new MediaStream([...cst.getVideoTracks(), ...dst.stream.getAudioTracks()]), { mimeType: mime, videoBitsPerSecond: bits, audioBitsPerSecond: 128000 });
+    const stopped = new Promise(r => { rec.onstop = r; }); rec.ondataavailable = () => {};
+    rec.start(1000); const t0 = performance.now(); let n = 0;
+    while (performance.now() - t0 < 500) { cx.fillStyle = n++ % 2 ? '#0b0b0b' : '#000'; cx.fillRect(0, 0, w, h); if (push) push();
+      await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); r(); }); }); }
+    rec.stop(); await Promise.race([stopped, new Promise(r => setTimeout(r, 1500))]);
+  } catch (e) {} finally { try { if (ac) ac.close(); } catch (e) {} MWP_LAST = performance.now(); }
+}
 async function mwpLag(ctl, w, h, mime) {
   const k = w + 'x' + h;
   if (MWP_LAG[k] !== undefined) return MWP_LAG[k];
-  const KEY = 'rem_pvsync_v3'; let all = {}, hist = [], m = null, note = '';
+  const KEY = 'rem_pvsync_v4'; let all = {}, hist = [], m = null, note = '';
   try { all = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; hist = (Array.isArray(all[k]) ? all[k] : []).filter(x => typeof x === 'number' && Math.abs(x) <= 250).slice(-7); } catch (e) { all = {}; hist = []; }
   try {
     const bin = atob(MWP_SYNC_CLIP), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
@@ -84,6 +108,7 @@ async function makeWebPreview(file, onPct, ctl, opt) {
     if (!push) cst = cv.captureStream(FPS);
     const stream = new MediaStream([...cst.getVideoTracks(), ...aTracks]);
     const bits = Math.round(Math.min(3.2e6, Math.max(1.2e6, w * h * FPS * 0.08)));
+    await mwpWarm(w, h, mime, bits);
     const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bits, audioBitsPerSecond: 128000 });
     const chunks = []; rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
     const stopped = new Promise(r => { rec.onstop = r; });
@@ -129,7 +154,7 @@ async function makeWebPreview(file, onPct, ctl, opt) {
       else if (Date.now() - lastMove > 20000) { clearInterval(t); try { v.pause(); rec.stop(); } catch (e) {} j(new Error('playback stalled')); }
     }, 400); cleanup.push(() => clearInterval(t)); })]);
     await new Promise(r => setTimeout(r, Math.max(aDly, vDly) * 1000 + 300));
-    alive = false; rec.stop(); await stopped;
+    alive = false; rec.stop(); await stopped; MWP_LAST = performance.now();
     const isMp4 = /mp4/.test(mime), type = isMp4 ? 'video/mp4' : 'video/webm';
     const base = String(file.name || 'video').replace(/\.[^.]+$/, '');
     const out = new File(chunks, base + ' (web preview).' + (isMp4 ? 'mp4' : 'webm'), { type });
