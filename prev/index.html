@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-27) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-28) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -5420,7 +5420,7 @@ function AppInner({
     const c = o && db.clients.find(x => x.id === o.clientId);
     if (c && (c.hubKey || c.hubId) && db.settings.inboxUrl) setTimeout(() => pushHub(c.id), 900);
   };
-  const runDeliverUpload = async (dlId, files) => {
+  const runDeliverUpload = async (dlId, files, mode) => {
     if (window.__upBusy) {
       showToast('⏳ An upload is already running — let it finish (or cancel it) first.');
       return;
@@ -5438,7 +5438,8 @@ function AppInner({
       return;
     }
     let newVer = 0;
-    if (cur.dlvFolder && (STATUSES.indexOf(cur.status) >= STATUSES.indexOf('Editing') || (cur.reviewVersions || []).length)) {
+    if (mode === 'ver' && (cur.dlvFolder || String(cur.link || '').trim())) newVer = (+cur.upVer || 1) + 1;
+    else if (mode !== 'ver' && mode !== 'add' && cur.dlvFolder && (STATUSES.indexOf(cur.status) >= STATUSES.indexOf('Editing') || (cur.reviewVersions || []).length)) {
       const nextN = (+cur.upVer || 1) + 1;
       const isChanges = /^Changes/.test(cur.status);
       const opts = [{
@@ -5691,7 +5692,7 @@ function AppInner({
   };
   window.runDeliverUpload = runDeliverUpload;
   window.upToFolder = upToFolder;
-  const deliverFilesFor = dlId => {
+  const deliverFilesFor = (dlId, mode) => {
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.multiple = true;
@@ -5700,7 +5701,7 @@ function AppInner({
     inp.onchange = () => {
       const files = [...(inp.files || [])];
       document.body.removeChild(inp);
-      runDeliverUpload(dlId, files);
+      runDeliverUpload(dlId, files, mode);
     };
     inp.click();
   };
@@ -10381,6 +10382,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-28',
+  items: [['🆕', 'Upload a new version — its own menu option', 'On a piece that already has files, the ⋯ menu now has two uploads: “📦 Upload more files” adds to the same folder, and “🆕 Upload a new version (V2, V3…)” starts the next version in its own folder. The earlier cut is kept under “Earlier versions — drafts”, any approval is cleared, and the agent only sees the new one. No question to answer after you pick the files. Dragging files onto a piece still asks which you meant.']]
+}, {
   v: '2026.11.16-27',
   items: [['🎞', 'Web preview: tap ▶ Start when asked', 'Chrome only lets a page play sound right after you tap something on it, and the web preview has to play the video with its sound. If Chrome needs that tap, the upload now asks “▶ Start” as soon as the originals are up — tap it and the preview runs. Before, it waited silently and never finished.']]
 }, {
@@ -13473,8 +13477,12 @@ function DeliverableRow({
   }, open ? 'Close' : 'Brief'), React.createElement(RowMenu, {
     items: [{
       label: d.dlvFolder ? '📦 Upload more files' : '📦 Upload files',
-      title: 'Upload the photo/video files into this piece’s Drive folder',
-      act: () => window.deliverFilesFor && window.deliverFilesFor(d.id)
+      title: d.dlvFolder ? 'Add files to the folder this piece already has — same version' : 'Upload the photo/video files into this piece’s Drive folder',
+      act: () => window.deliverFilesFor && window.deliverFilesFor(d.id, d.dlvFolder ? 'add' : '')
+    }, (d.dlvFolder || String(d.link || '').trim()) && {
+      label: '🆕 Upload a new version (V' + ((+d.upVer || 1) + 1) + ')',
+      title: 'Upload a fresh cut as the next version, in its own folder. The earlier files are kept as a draft; the agent only sees the new one.',
+      act: () => window.deliverFilesFor && window.deliverFilesFor(d.id, 'ver')
     }, d.dlvFolderUrl && {
       label: '🗂 Open Drive folder' + (d.upVer > 1 ? ' (V' + d.upVer + ')' : ''),
       act: () => window.open(d.dlvFolderUrl, '_blank')
@@ -18721,7 +18729,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-27</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-28</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
