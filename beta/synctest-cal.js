@@ -28,9 +28,9 @@ async function mwpMeasure(blob) {
    been used (its encoders start cold; measured on a Mac: 12 ms apart, sometimes 40). So a half-second throwaway recording runs
    right before every real recording and every sync check, which puts them all in the same state. */
 async function mwpWarm(w, h, mime, bits) {
-  let ac = null;
+  let ac = null, cv = null;
   try {
-    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d');
+    cv = document.createElement('canvas'); cv.width = w; cv.height = h; const cx = cv.getContext('2d');
     ac = new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state !== 'running') await Promise.race([ac.resume().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
     if (ac.state !== 'running') return;
@@ -44,7 +44,7 @@ async function mwpWarm(w, h, mime, bits) {
     while (performance.now() - t0 < 500) { cx.fillStyle = n++ % 2 ? '#0b0b0b' : '#000'; cx.fillRect(0, 0, w, h); if (push) push();
       await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); r(); }); }); }
     rec.stop(); await Promise.race([stopped, new Promise(r => setTimeout(r, 1500))]);
-  } catch (e) {} finally { try { if (ac) ac.close(); } catch (e) {} }
+  } catch (e) {} finally { try { if (ac) ac.close(); } catch (e) {} if (cv) { cv.width = 0; cv.height = 0; } }
 }
 async function mwpLag(ctl, w, h, mime) {
   const k = w + 'x' + h;
@@ -115,8 +115,9 @@ async function makeWebPreview(file, onPct, ctl, opt) {
        then put on the recorded canvas a fixed time later (vDly); the sound goes through a fixed delay too (aDly). The two differ by
        `lag`, what this browser's recorder itself adds between picture and sound (measured by mwpLag). Before, frames were drawn
        whenever the page got round to it and nothing made up for the recorder. */
-    const RING = 18, ring = [], q = [];
+    const RING = Math.min(18, Math.ceil(vDly * FPS) + 5), ring = [], q = [];
     for (let i = 0; i < RING; i++) { const c = document.createElement('canvas'); c.width = w; c.height = h; ring.push({ c, x: c.getContext('2d') }); }
+    cleanup.push(() => { ring.forEach(r => { r.c.width = 0; r.c.height = 0; }); cv.width = 0; cv.height = 0; });   /* hand the picture memory back now, not whenever the browser tidies up */
     let wr = 0, lastM = -1, endedAt = 0;
     const clock = () => endedAt ? dur + (performance.now() - endedAt) / 1000 : v.currentTime;
     const grab = (now, md) => { if (!alive) return;
@@ -125,9 +126,10 @@ async function makeWebPreview(file, onPct, ctl, opt) {
       if (onPct) onPct(Math.min(99, Math.round(v.currentTime / dur * 100)));
       if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(grab); else requestAnimationFrame(grab); };
     const emit = () => { if (!alive) return;
-      const t = clock(); let due = null;
-      while (q.length && q[0].m + vDly - LEAD <= t) due = q.shift();
-      if (due) { cx.drawImage(due.s.c, 0, 0); if (push) push(); }
+      const t = clock(); let n = 0;
+      while (n < q.length && q[n].m + vDly - LEAD <= t) n++;
+      if (n > 2) q.splice(0, n - 1);   /* fell well behind: jump to the newest frame that is due */
+      if (n) { const due = q.shift(); cx.drawImage(due.s.c, 0, 0); if (push) push(); }   /* one frame per screen refresh, oldest first */
       requestAnimationFrame(emit); };
     const draw = () => { cx.drawImage(v, 0, 0, w, h); if (push) push(); grab(); emit(); };
     const vis = () => { if (document.hidden) { if (rec.state === 'recording') { rec.pause(); v.pause(); } } else if (rec.state === 'paused') { v.play().then(() => rec.resume()).catch(() => {}); } };
