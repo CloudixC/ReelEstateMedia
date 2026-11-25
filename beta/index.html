@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-29) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-30) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1248,6 +1248,24 @@ async function mwpLag(ctl, w, h, mime) {
   MWP_LAG[k] = lag; window.__mwpSync = { size: k, lagMs: lag, now: m, checks: hist.length, note };
   return lag;
 }
+/* 💧 Review watermark. One see-through layer the size of the preview, drawn over every recorded frame, so a copy saved from the
+   review page carries the watermark across the whole picture (tiled on a slant, so it can't be cropped away); the clean
+   full-quality file only comes with approval. Pinnacle agents (pin) get "CONTENT HUB · REEL REVIEW", everyone else
+   "REEL ESTATE MEDIA · REEL PREVIEW". Made once per preview, not per frame. The poster frame stays clean. */
+function mwpMark(w, h, pin) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'), txt = pin ? 'CONTENT HUB \u00B7 REEL REVIEW' : 'REEL ESTATE MEDIA \u00B7 REEL PREVIEW', px = Math.min(w, h) / 19;
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.font = '800 ' + px + 'px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif';
+  try { x.letterSpacing = (px * 0.14).toFixed(1) + 'px'; } catch (e) {}
+  x.lineWidth = Math.max(1, px / 14); x.strokeStyle = 'rgba(0,0,0,.11)'; x.fillStyle = 'rgba(255,255,255,.2)';
+  x.translate(w / 2, h / 2); x.rotate(-Math.PI / 7.5);
+  const stepX = x.measureText(txt).width + px * 3.2, stepY = px * 5.4, R = Math.hypot(w, h) / 2 + stepY;
+  let r = 0;
+  for (let y = -Math.ceil(R / stepY) * stepY; y <= R; y += stepY, r++)
+    for (let dx = -Math.ceil(R / stepX) * stepX + (r % 2 ? stepX / 2 : 0); dx <= R + stepX; dx += stepX) { x.strokeText(txt, dx, y); x.fillText(txt, dx, y); }
+  return c;
+}
 async function makeWebPreview(file, onPct, ctl, opt) {
   const MAX = 1280, FPS = 30, DLY = 0.12, LEAD = 0.008, PRE = 150;
   if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) throw new Error('this browser can’t make previews');
@@ -1272,6 +1290,8 @@ async function makeWebPreview(file, onPct, ctl, opt) {
     cx.drawImage(v, 0, 0, w, h);
     const poster = cv.toDataURL('image/jpeg', 0.85);
     await seek(0);
+    let wm = null; if (!(opt && (opt.cal || opt.mark === false))) { try { wm = mwpMark(w, h, !!(opt && opt.pin)); } catch (e) { wm = null; } }
+    const mark = () => { if (wm) cx.drawImage(wm, 0, 0); };
     let aTracks = [];
     const needsTap = () => { const e = new Error('Chrome needs a tap to play the sound'); e.needsTap = true; return e; };
     const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -1300,7 +1320,7 @@ async function makeWebPreview(file, onPct, ctl, opt) {
        whenever the page got round to it and nothing made up for the recorder. */
     const RING = Math.min(18, Math.ceil(vDly * FPS) + 5), ring = [], q = [];
     for (let i = 0; i < RING; i++) { const c = document.createElement('canvas'); c.width = w; c.height = h; ring.push({ c, x: c.getContext('2d') }); }
-    cleanup.push(() => { ring.forEach(r => { r.c.width = 0; r.c.height = 0; }); cv.width = 0; cv.height = 0; });   /* hand the picture memory back now, not whenever the browser tidies up */
+    cleanup.push(() => { ring.forEach(r => { r.c.width = 0; r.c.height = 0; }); cv.width = 0; cv.height = 0; if (wm) { wm.width = 0; wm.height = 0; } });   /* hand the picture memory back now, not whenever the browser tidies up */
     let wr = 0, lastM = -1, endedAt = 0;
     const clock = () => endedAt ? dur + (performance.now() - endedAt) / 1000 : v.currentTime;
     const grab = (now, md) => { if (!alive) return;
@@ -1312,16 +1332,16 @@ async function makeWebPreview(file, onPct, ctl, opt) {
       const t = clock(); let n = 0;
       while (n < q.length && q[n].m + vDly - LEAD <= t) n++;
       if (n > 2) q.splice(0, n - 1);   /* fell well behind: jump to the newest frame that is due */
-      if (n) { const due = q.shift(); cx.drawImage(due.s.c, 0, 0); if (push) push(); }   /* one frame per screen refresh, oldest first */
+      if (n) { const due = q.shift(); cx.drawImage(due.s.c, 0, 0); mark(); if (push) push(); }   /* one frame per screen refresh, oldest first */
       requestAnimationFrame(emit); };
-    const draw = () => { cx.drawImage(v, 0, 0, w, h); if (push) push(); grab(); emit(); };
+    const draw = () => { cx.drawImage(v, 0, 0, w, h); mark(); if (push) push(); grab(); emit(); };
     const vis = () => { if (document.hidden) { if (rec.state === 'recording') { rec.pause(); v.pause(); } } else if (rec.state === 'paused') { v.play().then(() => rec.resume()).catch(() => {}); } };
     document.addEventListener('visibilitychange', vis); cleanup.push(() => document.removeEventListener('visibilitychange', vis));
     const ended = new Promise((res, rej) => { v.onended = () => { endedAt = performance.now(); res(); }; v.onerror = () => rej(new Error('playback failed')); });
     rec.start(1000);
     /* lead-in: hold the first frame for a moment so the recorder's picture and sound encoders are both running before the video
        starts — without it the gap between picture and sound changed from one recording to the next */
-    { const tp = performance.now(); while (performance.now() - tp < PRE && !(ctl && ctl.cancelled)) { cx.drawImage(v, 0, 0, w, h); if (push) push();
+    { const tp = performance.now(); while (performance.now() - tp < PRE && !(ctl && ctl.cancelled)) { cx.drawImage(v, 0, 0, w, h); mark(); if (push) push();
         await new Promise(r => { const t = setTimeout(r, 60); requestAnimationFrame(() => { clearTimeout(t); r(); }); }); } }
     draw();
     try { await Promise.race([v.play(), new Promise((r, j) => setTimeout(() => j(Object.assign(new Error('timeout'), {name: 'NotAllowedError'})), 8000))]); } catch (e) {
@@ -5662,7 +5682,7 @@ function AppInner({
             try {
               let o;
               try {
-                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl);
+                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl, { pin: isPinnacle(c) });
               } catch (pe0) {
                 if (!(pe0 && pe0.needsTap)) throw pe0;
                 row.pct(0);
@@ -5672,7 +5692,7 @@ function AppInner({
                   cancel: 'Skip the preview'
                 });
                 if (!go) throw new Error('skipped');
-                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl);
+                o = await makeWebPreview(f, p => row.pct(Math.round(p * 0.75)), ctl, { pin: isPinnacle(c) });
               }
               await upToFolder(inbox, tok, pvId, o.file, p => row.pct(75 + Math.round(p * 0.25)), ctl);
               if (!poster) poster = o.poster;
@@ -10478,6 +10498,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-30',
+  items: [['💧', 'Web preview carries a watermark', 'Every 720p web preview made from now on has a watermark tiled lightly across the picture, so a copy saved from the review page is clearly a review copy: "CONTENT HUB · REEL REVIEW" for Pinnacle agents, "REEL ESTATE MEDIA · REEL PREVIEW" for everyone else. The clean full-quality file still unlocks as a download the moment they approve. The Library thumbnail stays clean. Previews made before this update have no watermark until the video is uploaded again.']]
+}, {
   v: '2026.11.16-29',
   items: [['🔊', 'Web preview: sound and picture stay together', 'The 720p web preview was coming out with its sound slightly behind the picture. The Command Centre now checks, once per session, how this browser lines the two up (a two-second flash-and-beep test you never see) and corrects for it, and it places every frame by its exact time in the video. The first web preview of a session takes about eight seconds longer; each one starts with the first frame held for about a third of a second.']]
 }, {
@@ -14071,7 +14094,7 @@ function DeliverableRow({
     style: {
       marginTop: 8
     }
-  }, "🎞 The review plays the 720p web preview · the full-quality files unlock as a download once they approve"), React.createElement("label", {
+  }, "🎞 The review plays the watermarked 720p web preview · the clean full-quality files unlock as a download once they approve"), React.createElement("label", {
     className: "small",
     "data-paylock": true,
     style: {
@@ -18828,7 +18851,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-29</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-30</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
