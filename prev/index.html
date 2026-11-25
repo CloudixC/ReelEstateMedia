@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-32) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-33) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -496,8 +496,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Dynamic Shoot · Tier 1 (1 Reel)',
   retail: 150,
-  pub: 150,
+  pub: 200,
   partner: 120,
+  remax: 150,
+  out: 200,
   credits: 1,
   unit: 'Reel'
 }, {
@@ -505,8 +507,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Dynamic Shoot · Tier 1 (5 Reels)',
   retail: 575,
-  pub: 575,
+  pub: 850,
   partner: 500,
+  remax: 575,
+  out: 850,
   credits: 5,
   unit: 'Reel'
 }, {
@@ -514,8 +518,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Dynamic Shoot · Tier 1 (10 Reels)',
   retail: 1000,
-  pub: 1000,
+  pub: 1500,
   partner: 850,
+  remax: 1000,
+  out: 1500,
   credits: 10,
   unit: 'Reel'
 }, {
@@ -523,8 +529,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Podcast / Teleprompter · Tier 2 (1 Reel)',
   retail: 95,
-  pub: 95,
+  pub: 150,
   partner: 70,
+  remax: 115,
+  out: 150,
   credits: 1,
   unit: 'Reel'
 }, {
@@ -532,8 +540,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Podcast / Teleprompter · Tier 2 (5 Reels)',
   retail: 350,
-  pub: 350,
+  pub: 675,
   partner: 300,
+  remax: 500,
+  out: 675,
   credits: 5,
   unit: 'Reel'
 }, {
@@ -541,8 +551,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Podcast / Teleprompter · Tier 2 (10 Reels)',
   retail: 650,
-  pub: 650,
+  pub: 1150,
   partner: 550,
+  remax: 900,
+  out: 1150,
   credits: 10,
   unit: 'Reel'
 }, {
@@ -552,6 +564,8 @@ const CATALOG_BASE = [{
   retail: 100,
   pub: 100,
   partner: 80,
+  remax: 80,
+  out: 100,
   credits: 1,
   unit: 'Reel'
 }, {
@@ -561,6 +575,8 @@ const CATALOG_BASE = [{
   retail: 375,
   pub: 375,
   partner: 325,
+  remax: 375,
+  out: 375,
   credits: 5,
   unit: 'Reel'
 }, {
@@ -570,6 +586,8 @@ const CATALOG_BASE = [{
   retail: 650,
   pub: 650,
   partner: 550,
+  remax: 650,
+  out: 650,
   credits: 10,
   unit: 'Reel'
 }, {
@@ -577,8 +595,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Project Tour Reel (30 sec reel)',
   retail: 80,
-  pub: 80,
+  pub: 100,
   partner: 50,
+  remax: 100,
+  out: 0,
   credits: 1,
   unit: 'Project Tour Reel'
 }, {
@@ -586,8 +606,10 @@ const CATALOG_BASE = [{
   cat: 'Content Creation',
   name: 'Professional Headshots',
   retail: 100,
-  pub: 100,
+  pub: 150,
   partner: 80,
+  remax: 125,
+  out: 150,
   credits: 1,
   unit: 'Headshot Session'
 }, {
@@ -595,8 +617,10 @@ const CATALOG_BASE = [{
   cat: 'Event Coverage',
   name: 'Event Recap Package — Photo Coverage (2 Hours)',
   retail: 350,
-  pub: 350,
+  pub: 400,
   partner: 300,
+  remax: 350,
+  out: 400,
   credits: 1,
   unit: 'Event Photos'
 }, {
@@ -604,8 +628,10 @@ const CATALOG_BASE = [{
   cat: 'Event Coverage',
   name: 'Event Recap Package — Video Coverage (2 Hours)',
   retail: 350,
-  pub: 350,
+  pub: 400,
   partner: 300,
+  remax: 350,
+  out: 400,
   credits: 1,
   unit: 'Event Video'
 }, {
@@ -613,8 +639,10 @@ const CATALOG_BASE = [{
   cat: 'Event Coverage',
   name: 'Event Recap Package — Photo & Video (2 Hours)',
   retail: 600,
-  pub: 600,
+  pub: 700,
   partner: 450,
+  remax: 600,
+  out: 700,
   credits: 1,
   unit: 'Event Recap'
 }, {
@@ -632,8 +660,10 @@ const CATALOG_BASE = [{
   cat: 'Real Estate Media',
   name: 'Listing Photos',
   retail: 200,
-  pub: 200,
+  pub: 250,
   partner: 175,
+  remax: 225,
+  out: 250,
   credits: 1,
   unit: 'Photo Set'
 }, {
@@ -641,8 +671,10 @@ const CATALOG_BASE = [{
   cat: 'Real Estate Media',
   name: 'Listing Video',
   retail: 200,
-  pub: 200,
+  pub: 250,
   partner: 175,
+  remax: 225,
+  out: 250,
   credits: 1,
   unit: 'Listing Video'
 }, {
@@ -650,16 +682,20 @@ const CATALOG_BASE = [{
   cat: 'Real Estate Media',
   name: 'Professional Listing Video + Photo Package',
   retail: 300,
-  pub: 300,
+  pub: 450,
   partner: 250,
+  remax: 400,
+  out: 450,
   components: ['Listing Photos', 'Listing Video']
 }, {
   id: 'lux',
   cat: 'Real Estate Media',
   name: 'Luxury Property Film Package',
   retail: 650,
-  pub: 650,
+  pub: 1000,
   partner: 500,
+  remax: 850,
+  out: 1000,
   components: ['Luxury Property Film', 'Drone Shots', 'Tier 1 Insta Reel', 'MLS Link']
 }];
 const CATALOG_GONE = [{
@@ -1037,7 +1073,7 @@ const SVC_NEXT = {
   b3: 'lux'
 };
 const liveSvcId = id => id && SVC_NEXT[id] || id || '';
-const HUBS_REV = '2026-11-19-prices-d';
+const HUBS_REV = '2026-11-25-rate-cards';
 const CATS_BASE = ['Content Creation', 'Event Coverage', 'Real Estate Media'];
 const CUSTOM_CAT = 'Custom';
 const cleanCustomSvc = list => (Array.isArray(list) ? list : []).map(x => {
@@ -1772,15 +1808,25 @@ const TIER_LABEL = {
   package: 'Monthly package'
 };
 const isRetailTier = tier => tier === 'direct' || tier === 'package';
-const rateFor = (tier, s) => tier === 'unlimited' ? 0 : isRetailTier(tier) ? s.retail : s.partner;
-const itemFromSvc = (s, tier, qty, price) => s.custom ? {
+/* 💲 Three rate cards. Pinnacle agents (tier partner): the agent pays `retail`, you bill `partner` and Pinnacle keeps the difference.
+   Everyone you bill directly (tier direct, or extras on a monthly package) is on one of two cards, told apart by the company on
+   their record: a company that includes RE/MAX pays `remax`; anyone else pays `out` (outside). A service with `out: 0` is not
+   offered outside (if you add it to an outside order anyway it uses the RE/MAX price). Custom services have one price for all. */
+const isRemax = c => /re\s*\/?\s*max/i.test(String(c && c.company || ''));
+const cardOf = c => !c || !isRetailTier(c.tier) ? 'pin' : isRemax(c) ? 'remax' : 'out';
+const CARD_LABEL = { pin: 'Pinnacle', remax: 'RE/MAX', out: 'Outside' };
+const remaxPrice = s => +s.remax > 0 ? s.remax : s.retail;
+const outPrice = s => +s.out > 0 ? s.out : remaxPrice(s);
+const agentPays = (s, c) => { const k = cardOf(c); return k === 'remax' ? remaxPrice(s) : k === 'out' ? outPrice(s) : s.retail; };
+const rateFor = (tier, s, c) => tier === 'unlimited' ? 0 : isRetailTier(tier) ? (c && isRemax(c) ? remaxPrice(s) : outPrice(s)) : s.partner;
+const itemFromSvc = (s, tier, qty, price, c) => s.custom ? {
   serviceId: '',
   custom: true,
   name: s.name,
   group: s.name,
   unit: s.unit || s.name,
   qty: qty || 1,
-  price: price != null ? price : rateFor(tier, s),
+  price: price != null ? price : rateFor(tier, s, c),
   retail: s.retail,
   per: s.credits,
   ...(s.credits === 0 ? {
@@ -1790,8 +1836,8 @@ const itemFromSvc = (s, tier, qty, price) => s.custom ? {
   serviceId: s.id,
   name: s.name,
   qty: qty || 1,
-  price: price != null ? price : rateFor(tier, s),
-  retail: s.retail
+  price: price != null ? price : rateFor(tier, s, c),
+  retail: isRetailTier(tier) && price == null ? rateFor(tier, s, c) : s.retail
 };
 const cleanPkg = pkg => (Array.isArray(pkg) ? pkg : []).map(l => ({
   id: l && l.id || uid(),
@@ -5281,10 +5327,10 @@ function AppInner({
       }).sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = isPinnacle(c);
       const co = companyOf(c);
-      const svcMenu = CATALOG.filter(s => s.retail && !s.own && (!s.custom || s.show === 'all' || s.show === c.id)).map(s => ({
+      const svcMenu = CATALOG.filter(s => s.retail && !s.own && (!s.custom || s.show === 'all' || s.show === c.id) && !(s.out === 0 && cardOf(c) === 'out')).map(s => ({
         c: s.custom ? 'Just for you' : s.cat,
         n: s.name,
-        p: s.retail,
+        p: agentPays(s, c),
         ...(CAL_EVENT_SLUG[s.id] ? {
           u: 'https://calendly.com/hello-reelestatemedia/' + CAL_EVENT_SLUG[s.id]
         } : {})
@@ -5375,7 +5421,7 @@ function AppInner({
     const s = svc(serviceId);
     if (!o || !s) return;
     const tier = clientTier(o.clientId);
-    const item = itemFromSvc(s, tier);
+    const item = itemFromSvc(s, tier, undefined, undefined, db.clients.find(x => x.id === o.clientId));
     if (s.custom && o.items.some(it => itemGroup(it) === s.name)) {
       uiAlert('This order already has a "' + s.name + '" line — change its quantity instead.');
       return;
@@ -7024,7 +7070,7 @@ function AppInner({
       hst: true,
       notes: `Booked via Calendly · ${bk.invitee_email}`,
       payment: 'unpaid',
-      items: [itemFromSvc(s, tier)]
+      items: [itemFromSvc(s, tier, undefined, undefined, db.clients.find(x => x.id === clientId))]
     });
     const ds = spawnDeliverables(order);
     if (ds[0]) {
@@ -10622,6 +10668,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-33',
+  items: [['💲', 'Three rate cards: Pinnacle, RE/MAX and outside', 'The price list now holds the RE/MAX and outside rates from your rate card sheet, next to the Pinnacle rates (unchanged). A direct client whose company includes RE/MAX is priced at the RE/MAX rate; every other direct client at the outside rate. New orders, added services, Calendly bookings and each agent\u2019s hub use their own card. Orders already made keep their prices. Project Tour Reel is not offered outside, so it is left off outside hubs. See Services for the full table.']]
+}, {
   v: '2026.11.16-32',
   items: [['🔒', 'The web preview is never a download', 'After approval the review page now offers only the full-resolution files. Before, a Photo & Video piece also showed a folder button that opened the web preview, an older approved version linked to its preview, and Chrome\u2019s player menu had a Download item; all three are gone. In the hub, a piece approved on an earlier version no longer points at that version\u2019s preview folder.']]
 }, {
@@ -12839,8 +12888,8 @@ function OrderDetail({
       const s = svc(i.serviceId);
       return s && !s.tbd ? {
         ...i,
-        price: rateFor(newTier, s),
-        retail: s.retail
+        price: rateFor(newTier, s, db.clients.find(c => c.id === newId)),
+        retail: isRetailTier(newTier) ? rateFor(newTier, s, db.clients.find(c => c.id === newId)) : s.retail
       } : i;
     }) : o.items;
     updateOrder(id, {
@@ -13027,7 +13076,7 @@ function OrderDetail({
   }, CATALOG.filter(s => s.cat === cat).map(s => React.createElement("option", {
     key: s.id,
     value: s.id
-  }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(clientTier(o.clientId), s))))))), (() => {
+  }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(clientTier(o.clientId), s, db.clients.find(c => c.id === o.clientId)))))))), (() => {
     const short = orderShortfall(db, o).reduce((n, g) => n + Math.max(0, g.short), 0);
     return short > 0 ? React.createElement("button", {
       className: "btn sm",
@@ -15473,9 +15522,9 @@ function BookingCard({
         color: '#08130d',
         fontWeight: 700
       },
-      title: 'Everything matched — one tap creates the order, schedules the shoot, and approves it on their hub:\n' + (gc.name || '') + ' · ' + gs.name + ' · ' + money(rateFor(gt, gs)),
+      title: 'Everything matched — one tap creates the order, schedules the shoot, and approves it on their hub:\n' + (gc.name || '') + ' · ' + gs.name + ' · ' + money(rateFor(gt, gs, gc)),
       onClick: () => applyBookingNew(bk, guessedClient, guessedService)
-    }, "⚡ Book it · ", money(rateFor(gt, gs)));
+    }, "⚡ Book it · ", money(rateFor(gt, gs, gc)));
   })(), React.createElement("button", {
     className: "btn ghost sm",
     title: "Approve the shoot on the agent's hub now (⏳ → ✅ + ping) — sort the order below whenever",
@@ -15570,7 +15619,7 @@ function BookingCard({
     className: "frow one"
   }, React.createElement("div", null, React.createElement("label", {
     className: "f"
-  }, "Service booked (", isRetailTier(tier) ? 'retail rate' : 'REM rate', ")"), React.createElement("select", {
+  }, "Service booked (", isRetailTier(tier) ? CARD_LABEL[cardOf(db.clients.find(c => c.id === clientId))] + ' rate' : 'REM rate', ")"), React.createElement("select", {
     value: serviceId,
     onChange: e => setServiceId(e.target.value)
   }, CATS.map(cat => React.createElement("optgroup", {
@@ -15579,7 +15628,7 @@ function BookingCard({
   }, CATALOG.filter(x => x.cat === cat).map(x => React.createElement("option", {
     key: x.id,
     value: x.id
-  }, x.name, " — ", x.tbd ? 'TBD' : money(rateFor(tier, x))))))))), React.createElement("div", {
+  }, x.name, " — ", x.tbd ? 'TBD' : money(rateFor(tier, x, db.clients.find(c => c.id === clientId)))))))))), React.createElement("div", {
     className: "flex",
     style: {
       marginTop: 12
@@ -16777,7 +16826,7 @@ function RateCard() {
     style: {
       margin: '-4px 0 10px'
     }
-  }, "The 2026 price list — the only services offered. Agents see the Pinnacle rate in their hub; the public website shows no prices.", ' ', React.createElement("button", {
+  }, "The 2026 price list, the only services offered. Three rate cards: Pinnacle agents pay the Pinnacle rate (you bill the Reel Estate Media rate), a client whose company includes RE/MAX pays the RE/MAX rate, and every other direct client pays the outside rate. Each hub shows its own card; the public website shows no prices.", ' ', React.createElement("button", {
     className: "btn ghost sm",
     "data-push-hubs": true,
     style: {
@@ -16807,6 +16856,14 @@ function RateCard() {
     style: {
       width: 100
     }
+  }, "RE/MAX Rate"), React.createElement("th", {
+    style: {
+      width: 100
+    }
+  }, "Outside Rate"), React.createElement("th", {
+    style: {
+      width: 100
+    }
   }, "Deliverables"))), React.createElement("tbody", null, CATALOG.filter(s => s.cat === cat).map(s => React.createElement("tr", {
     key: s.id
   }, React.createElement("td", null, s.name), React.createElement("td", {
@@ -16815,7 +16872,7 @@ function RateCard() {
     className: "amber"
   }, s.tbd ? 'TBD' : money(s.partner)), React.createElement("td", {
     className: "teal"
-  }, s.tbd ? 'TBD' : money((s.retail - s.partner) * (1 + HST))), React.createElement("td", {
+  }, s.tbd ? 'TBD' : money((s.retail - s.partner) * (1 + HST))), React.createElement("td", null, s.tbd ? 'TBD' : money(remaxPrice(s))), React.createElement("td", null, s.tbd ? 'TBD' : s.out === 0 ? 'not offered' : money(outPrice(s))), React.createElement("td", {
     className: "muted small"
   }, s.own ? 'add-on · not on price lists' : s.components ? s.components.length + ' components' : s.credits + (s.credits > 1 ? ' credits' : '')))))))));
 }
@@ -17108,7 +17165,7 @@ function NewOrderModal({
     setQTeam('');
   };
   const tier = (db.clients.find(c => c.id === clientId) || {}).tier || 'partner';
-  const rateOf = s => rateFor(tier, s);
+  const rateOf = s => rateFor(tier, s, db.clients.find(c => c.id === clientId));
   const addItem = async sid => {
     if (!sid) return;
     setPicker('');
@@ -17120,7 +17177,7 @@ function NewOrderModal({
     }
     const s = svc(sid);
     if (!s) return;
-    setItems(p => s.custom && p.some(x => x.custom && x.name === s.name) ? p : [...p, itemFromSvc(s, tier)]);
+    setItems(p => s.custom && p.some(x => x.custom && x.name === s.name) ? p : [...p, itemFromSvc(s, tier, undefined, undefined, db.clients.find(c => c.id === clientId))]);
   };
   useEffect(() => {
     setItems(p => p.map(i => {
@@ -17266,7 +17323,7 @@ function NewOrderModal({
     onChange: e => setProject(e.target.value)
   }))), React.createElement("label", {
     className: "f"
-  }, "Services (", isRetailTier(tier) ? 'retail rates' : 'REM rates', ")"), React.createElement("select", {
+  }, "Services (", isRetailTier(tier) ? CARD_LABEL[cardOf(db.clients.find(c => c.id === clientId))] + ' rates' : 'REM rates', ")"), React.createElement("select", {
     value: picker,
     "data-neworder-picker": true,
     onChange: e => addItem(e.target.value),
@@ -17283,7 +17340,7 @@ function NewOrderModal({
   }, CATALOG.filter(s => s.cat === cat).map(s => React.createElement("option", {
     key: s.id,
     value: s.id
-  }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(tier, s))))))), items.map((i, ix) => React.createElement("div", {
+  }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(tier, s, db.clients.find(c => c.id === clientId)))))))), items.map((i, ix) => React.createElement("div", {
     className: "lineitem",
     key: ix
   }, React.createElement("input", {
@@ -18981,7 +19038,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-32</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-33</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
