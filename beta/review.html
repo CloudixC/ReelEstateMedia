@@ -758,7 +758,7 @@ function drawMarkers(){
 }
 function driveVideoEl(id, onFail){
   const v = document.createElement('video');
-  v.controls = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata';
+  v.controls = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'metadata'; v.setAttribute('controlslist', 'nodownload');
   const sources = [];
   if(gkey) sources.push('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media&key=' + gkey);
   sources.push('https://drive.google.com/uc?export=download&id=' + id);
@@ -830,7 +830,7 @@ function renderSingle(url){
   const p = document.getElementById('player');
   const r = resolve(url);
   if(r.kind === 'video'){
-    p.innerHTML = '<video controls playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
+    p.innerHTML = '<video controls controlslist="nodownload" playsinline preload="metadata" src="' + r.src.replace(/"/g,'&quot;') + '"></video>';
     attachVid(p.querySelector('video'));
   } else if(r.kind === 'img'){
     if(pickMode && !curApproved()){ p.innerHTML = ''; p.appendChild(wmCanvas(r.src, 260)); }
@@ -977,7 +977,7 @@ function syncGallery(){
       '</div>';
   }
   else if(g.dvid){
-    bw.innerHTML = '<video controls playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
+    bw.innerHTML = '<video controls controlslist="nodownload" playsinline preload="metadata" src="' + g.big.replace(/"/g,'&quot;') + '"></video>';
     const dv = bw.querySelector('video');
     fsOnPlay(dv);
     dv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(dv.currentTime); });
@@ -1518,6 +1518,9 @@ function addDlAllBtn(box){
   n.textContent = 'Comes as a single zip when possible; on some phones files may arrive one by one.';
   box.appendChild(n);
 }
+// 🎞 A version whose folder holds web previews ("… (web preview).mp4", made by the Command Centre) is a review copy:
+// it plays on this page and is never offered as a download. The full-quality files come from the hq link once approved.
+function pvVersion(){ return gallery.some(g => g.isVid && /\(web preview\)\s*$/i.test(g.name || '')); }
 function renderDl(){
   const dp = document.getElementById('dlpanel');
   const approved = cmts.some(c => c.ver === cur && c.txt.indexOf('✓ APPROVED') === 0);
@@ -1537,8 +1540,9 @@ function renderDl(){
   const parts = (versions[cur] || '').split(',').map(s => s.trim()).filter(Boolean);
   // 🎞 Approved → hand over the high-quality master (not the web preview she watched).
   if(hqLinks.length && cur === versions.length - 1){
-    // In a photo+video delivery the photos still come from the folder; only the video is swapped to HQ.
-    if(mboth && parts.length){
+    // In a photo+video delivery with its own photo folder, the photos still come from that folder; only the video is swapped to HQ.
+    // Not when the folder being reviewed is the web-preview folder: then the hq folder already holds everything.
+    if(mboth && parts.length && !pvVersion() && (!gkey || gallery.some(g => !g.isVid))){
       const dp0 = dlLink(parts[0]);
       const pa = document.createElement('a'); pa.className = 'dlbtn'; pa.href = dp0.href; pa.target = '_blank'; pa.rel = 'noreferrer'; pa.textContent = '⬇ 📷 ' + dp0.label.replace('⬇ ', '');
       box.appendChild(pa);
@@ -1553,8 +1557,15 @@ function renderDl(){
       if(d.note){ const n = document.createElement('div'); n.className = 'dlnote'; n.textContent = d.note; box.appendChild(n); }
     });
     const note = document.createElement('div'); note.className = 'dlnote';
-    note.textContent = '✓ Approved — this is your full-resolution master. (The player above uses a lighter web copy for smooth streaming.)';
+    note.textContent = '✓ Approved. This is your full-resolution master, with no watermark. (The player above shows the lighter review copy.)';
     box.appendChild(note);
+    renderPostReady();
+    return;
+  }
+  if(pvVersion()){
+    const n = document.createElement('div'); n.className = 'dlnote';
+    n.textContent = 'This version was a review copy. The full-quality files are with the latest approved version.';
+    box.appendChild(n);
     renderPostReady();
     return;
   }
@@ -2095,4 +2106,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-7</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-8</div></div></body></html>
