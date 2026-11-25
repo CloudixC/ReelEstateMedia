@@ -851,15 +851,13 @@ function renderSingle(url){
       p.innerHTML = '';
       const v = driveVideoEl(r.id, showSmooth);   // only if it genuinely can't load
       p.appendChild(v);
-      vidSwitchBtn(p, '⚡ Smooth streaming', 'Choppy on this device? Tap for Google Drive’s adaptive stream (busier controls, but smoother on a heavy file).', showSmooth);
       attachVid(v);
     };
     // ⚡ Manual fallback: Drive's adaptive streaming player (busier UI). Notes by typing the time.
     const showSmooth = () => {
       vid = null;
       p.innerHTML = '<iframe src="' + r.src + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-      composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add. For a cleaner player + exact-second pinning, tap ✎ Clean player.');
-      vidSwitchBtn(p, '✎ Clean player', 'Back to the clean player — pause anywhere to pin a note at that exact second.', showClean);
+      composer('manual', '1:24', 'Type the time from the player (like 1:24), your note, then Add.');
     };
     showClean();
   } else {
@@ -989,14 +987,12 @@ function syncGallery(){
     bw.innerHTML = '';
     const gv = driveVideoEl(g.fileId, () => { g.smooth = true; if(gallery[curImg] === g) syncGallery(); });
     bw.appendChild(gv);
-    vidSwitchBtn(bw, '⚡ Smooth streaming', 'Choppy on this device? Tap for Google Drive’s adaptive stream (busier controls, but smoother on a heavy file).', () => { g.smooth = true; syncGallery(); });
     fsOnPlay(gv);
     gv.addEventListener('pause', () => { const t = document.getElementById('tman'); if(t) t.value = fmt(gv.currentTime); });
   }
   else if(g.isVid){
     // ⚡ manual fallback: Drive's adaptive streaming player (busier UI)
     bw.innerHTML = '<iframe class="vprev" src="' + g.big + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-    if(g.fileId) vidSwitchBtn(bw, '✎ Clean player', 'Back to the clean player — pause to pin a note at that exact second.', () => { g.smooth = false; syncGallery(); });
   }
   else if(!g.isVid && wmShown(g.name)){
     const oldc = bw.querySelector('canvas.bigimg');
@@ -2099,4 +2095,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-6</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-7</div></div></body></html>
