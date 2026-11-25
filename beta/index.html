@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-33) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-34) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -527,7 +527,7 @@ const CATALOG_BASE = [{
 }, {
   id: 't2_1',
   cat: 'Content Creation',
-  name: 'Podcast / Teleprompter · Tier 2 (1 Reel)',
+  name: 'Podcast / Sitdown Shoot · Tier 2 (1 Reel)',
   retail: 95,
   pub: 150,
   partner: 70,
@@ -538,7 +538,7 @@ const CATALOG_BASE = [{
 }, {
   id: 't2_5',
   cat: 'Content Creation',
-  name: 'Podcast / Teleprompter · Tier 2 (5 Reels)',
+  name: 'Podcast / Sitdown Shoot · Tier 2 (5 Reels)',
   retail: 350,
   pub: 675,
   partner: 300,
@@ -549,7 +549,7 @@ const CATALOG_BASE = [{
 }, {
   id: 't2_10',
   cat: 'Content Creation',
-  name: 'Podcast / Teleprompter · Tier 2 (10 Reels)',
+  name: 'Podcast / Sitdown Shoot · Tier 2 (10 Reels)',
   retail: 650,
   pub: 1150,
   partner: 550,
@@ -1073,7 +1073,7 @@ const SVC_NEXT = {
   b3: 'lux'
 };
 const liveSvcId = id => id && SVC_NEXT[id] || id || '';
-const HUBS_REV = '2026-11-25-rate-cards';
+const HUBS_REV = '2026-11-25-rate-cards-b';
 const CATS_BASE = ['Content Creation', 'Event Coverage', 'Real Estate Media'];
 const CUSTOM_CAT = 'Custom';
 const cleanCustomSvc = list => (Array.isArray(list) ? list : []).map(x => {
@@ -1113,15 +1113,15 @@ const ORIENTATIONS = ['Vertical', 'Horizontal', 'Both'];
 const EDIT_STYLES = ['Cinematic', 'Fast-Paced Social', 'Clean & Minimal', 'Luxury', 'Documentary', 'Talking Head', 'Custom'];
 const HST = 0.13;
 const SEC_PER_CREDIT = 30;
-const REEL_TYPES = ['Dynamic Shoot · Tier 1', 'Podcast / Teleprompter · Tier 2', 'You Shoot We Edit'];
+const REEL_TYPES = ['Dynamic Shoot · Tier 1', 'Podcast / Sitdown Shoot · Tier 2', 'You Shoot We Edit'];
 const dlCredits = d => Math.max(1, d && +d.credits || 1);
 const reelSeconds = d => dlCredits(d) * SEC_PER_CREDIT;
-const isReelDl = d => /\breel\b|podcast|teleprompter|dynamic|you\s*shoot/i.test((d && d.name || '') + ' ' + (d && d.group || ''));
+const isReelDl = d => /\breel\b|podcast|sit\s?-?down|teleprompter|dynamic|you\s*shoot/i.test((d && d.name || '') + ' ' + (d && d.group || ''));
 const reelTypeOf = d => {
   const t = ((d && d.name || '') + ' ' + (d && d.group || '')).toLowerCase();
   if (/you\s*shoot/.test(t)) return 'You Shoot We Edit';
   if (/dynamic|\btier\s*1\b/.test(t)) return 'Dynamic Shoot · Tier 1';
-  if (/podcast|teleprompter|\btier\s*2\b/.test(t)) return 'Podcast / Teleprompter · Tier 2';
+  if (/podcast|sit\s?-?down|teleprompter|\btier\s*2\b/.test(t)) return 'Podcast / Sitdown Shoot · Tier 2';
   return '';
 };
 const DEFAULT_BRIEF = {
@@ -1810,11 +1810,13 @@ const TIER_LABEL = {
 const isRetailTier = tier => tier === 'direct' || tier === 'package';
 /* 💲 Three rate cards. Pinnacle agents (tier partner): the agent pays `retail`, you bill `partner` and Pinnacle keeps the difference.
    Everyone you bill directly (tier direct, or extras on a monthly package) is on one of two cards, told apart by the company on
-   their record: a company that includes RE/MAX pays `remax`; anyone else pays `out` (outside). A service with `out: 0` is not
-   offered outside (if you add it to an outside order anyway it uses the RE/MAX price). Custom services have one price for all. */
-const isRemax = c => /re\s*\/?\s*max/i.test(String(c && c.company || ''));
+   their record: a company that includes Skyway (RE/MAX Skyway) pays `remax`; anyone else, another RE/MAX office included,
+   pays `out` (outside). A service with `out: 0` (Project Tour Reel) is only for Pinnacle and RE/MAX Skyway: it is left off
+   outside hubs and outside order menus. Custom services have one price for all. */
+const isRemax = c => /sky\s*-?\s*way/i.test(String(c && c.company || ''));
+const offeredTo = (s, c) => !(s.out === 0 && cardOf(c) === 'out');
 const cardOf = c => !c || !isRetailTier(c.tier) ? 'pin' : isRemax(c) ? 'remax' : 'out';
-const CARD_LABEL = { pin: 'Pinnacle', remax: 'RE/MAX', out: 'Outside' };
+const CARD_LABEL = { pin: 'Pinnacle', remax: 'RE/MAX Skyway', out: 'Outside' };
 const remaxPrice = s => +s.remax > 0 ? s.remax : s.retail;
 const outPrice = s => +s.out > 0 ? s.out : remaxPrice(s);
 const agentPays = (s, c) => { const k = cardOf(c); return k === 'remax' ? remaxPrice(s) : k === 'out' ? outPrice(s) : s.retail; };
@@ -1907,7 +1909,7 @@ function guessServiceId(title, eventMap) {
   if (/you\s*shoot/.test(tl)) return 'yse1';
   if (/pre-?con|project tour|preview day/.test(tl)) return 'ptr';
   if (/dynamic|\btier\s*1\b/.test(tl)) return 't1_1';
-  if (/podcast|teleprompter|\btier\s*2\b/.test(tl)) return 't2_1';
+  if (/podcast|sit\s?-?down|teleprompter|\btier\s*2\b/.test(tl)) return 't2_1';
   if (/event|recap|coverage/.test(tl)) return /photo/.test(tl) && !/video/.test(tl) ? 'evp' : /video/.test(tl) && !/photo/.test(tl) ? 'evv' : 'evr';
   if (/luxury|film/.test(tl)) return 'lux';
   if (/photo/.test(tl) && /video|package|bundle/.test(tl)) return 'lpk';
@@ -2022,6 +2024,12 @@ function migrate(d) {
         ...x,
         deliveredDate: x.shootDate || orderDate[x.orderId] || today()
       } : x);
+    }
+    {
+      const T2_OLD = 'Podcast / Teleprompter · Tier 2', T2_NEW = 'Podcast / Sitdown Shoot · Tier 2', t2 = v => typeof v === 'string' && v.indexOf(T2_OLD) > -1 ? v.split(T2_OLD).join(T2_NEW) : v;
+      if (d.orders) d.orders.forEach(o => { (o.items || []).forEach(i => { if (i) { i.name = t2(i.name); if (i.group) i.group = t2(i.group); } }); });
+      if (d.deliverables) d.deliverables.forEach(x => { if (x) { x.name = t2(x.name); x.group = t2(x.group); } });
+      const em = d.settings.eventMap; Object.keys(em).forEach(k => { const k2 = k.split('Podcast / Teleprompter').join('Podcast / Sitdown Shoot'); if (k2 !== k && !(k2 in em)) em[k2] = em[k]; });
     }
     d.clients = d.clients.map(c => {
       const c2 = {
@@ -5327,7 +5335,7 @@ function AppInner({
       }).sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
       const pin = isPinnacle(c);
       const co = companyOf(c);
-      const svcMenu = CATALOG.filter(s => s.retail && !s.own && (!s.custom || s.show === 'all' || s.show === c.id) && !(s.out === 0 && cardOf(c) === 'out')).map(s => ({
+      const svcMenu = CATALOG.filter(s => s.retail && !s.own && (!s.custom || s.show === 'all' || s.show === c.id) && offeredTo(s, c)).map(s => ({
         c: s.custom ? 'Just for you' : s.cat,
         n: s.name,
         p: agentPays(s, c),
@@ -10668,6 +10676,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-34',
+  items: [['🎙', 'Tier 2 is now Podcast / Sitdown Shoot', 'The Tier 2 service is called Podcast / Sitdown Shoot here, in every hub, on the website and on Calendly. Anything already saved under the old name is renamed with it.'], ['💲', 'RE/MAX card is RE/MAX Skyway', 'The RE/MAX rate now applies to RE/MAX Skyway only (a direct client whose company includes Skyway). Another RE/MAX office is on the outside rate. Project Tour Reel is offered to Pinnacle and RE/MAX Skyway only, so it is left off every other hub and order menu.']]
+}, {
   v: '2026.11.16-33',
   items: [['💲', 'Three rate cards: Pinnacle, RE/MAX and outside', 'The price list now holds the RE/MAX and outside rates from your rate card sheet, next to the Pinnacle rates (unchanged). A direct client whose company includes RE/MAX is priced at the RE/MAX rate; every other direct client at the outside rate. New orders, added services, Calendly bookings and each agent\u2019s hub use their own card. Orders already made keep their prices. Project Tour Reel is not offered outside, so it is left off outside hubs. See Services for the full table.']]
 }, {
@@ -13073,7 +13084,7 @@ function OrderDetail({
   }, "✨ Custom service — your own name, price and deliverables…"), CATS.map(cat => React.createElement("optgroup", {
     key: cat,
     label: cat
-  }, CATALOG.filter(s => s.cat === cat).map(s => React.createElement("option", {
+  }, CATALOG.filter(s => s.cat === cat && offeredTo(s, db.clients.find(c => c.id === o.clientId))).map(s => React.createElement("option", {
     key: s.id,
     value: s.id
   }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(clientTier(o.clientId), s, db.clients.find(c => c.id === o.clientId)))))))), (() => {
@@ -16826,7 +16837,7 @@ function RateCard() {
     style: {
       margin: '-4px 0 10px'
     }
-  }, "The 2026 price list, the only services offered. Three rate cards: Pinnacle agents pay the Pinnacle rate (you bill the Reel Estate Media rate), a client whose company includes RE/MAX pays the RE/MAX rate, and every other direct client pays the outside rate. Each hub shows its own card; the public website shows no prices.", ' ', React.createElement("button", {
+  }, "The 2026 price list, the only services offered. Three rate cards: Pinnacle agents pay the Pinnacle rate (you bill the Reel Estate Media rate), a direct client whose company includes Skyway (RE/MAX Skyway) pays the RE/MAX Skyway rate, and every other direct client pays the outside rate. Project Tour Reel is only for Pinnacle and RE/MAX Skyway. Each hub shows its own card; the public website shows no prices.", ' ', React.createElement("button", {
     className: "btn ghost sm",
     "data-push-hubs": true,
     style: {
@@ -16856,7 +16867,7 @@ function RateCard() {
     style: {
       width: 100
     }
-  }, "RE/MAX Rate"), React.createElement("th", {
+  }, "RE/MAX Skyway Rate"), React.createElement("th", {
     style: {
       width: 100
     }
@@ -17337,7 +17348,7 @@ function NewOrderModal({
   }, "✨ Custom service — your own name, price and deliverables…"), CATS.map(cat => React.createElement("optgroup", {
     key: cat,
     label: cat
-  }, CATALOG.filter(s => s.cat === cat).map(s => React.createElement("option", {
+  }, CATALOG.filter(s => s.cat === cat && offeredTo(s, db.clients.find(c => c.id === clientId))).map(s => React.createElement("option", {
     key: s.id,
     value: s.id
   }, s.name, " — ", s.tbd ? 'TBD' : money(rateFor(tier, s, db.clients.find(c => c.id === clientId)))))))), items.map((i, ix) => React.createElement("div", {
@@ -19038,7 +19049,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-33</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-34</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

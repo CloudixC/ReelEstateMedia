@@ -71,7 +71,6 @@
 })();
 </script><!--/REM-STAGE-SHIM-->
 
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Content</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1251,7 +1250,7 @@ body.light .kstart{background:#fff}
     <div class="frow2"><span class="fi">📅</span><span><b>Book a shoot in two minutes</b> — the calendar opens right here, your details pre-filled, confirmation lands in your chat instantly.</span></div>
     <div class="frow2"><span class="fi">⚡</span><span><b>Next openings, one tap</b> — the next few open shoot slots show at the top; tap one and it’s yours.</span></div>
     <div class="frow2"><span class="fi">🎬</span><span><b>Prep reminders</b> — the day before every shoot, a 60-second checklist arrives so shoot day runs smooth.</span></div>
-    <div class="frow2"><span class="fi">📋</span><span><b>Smart shoot briefs</b> — tell us the plan before we roll up. The form shapes itself to the shoot — listing, Dynamic Shoot (Tier 1), Podcast / Teleprompter (Tier 2), or event — so we ask exactly the right questions. Rather talk? Drop a voice note instead.</span></div>
+    <div class="frow2"><span class="fi">📋</span><span><b>Smart shoot briefs</b> — tell us the plan before we roll up. The form shapes itself to the shoot — listing, Dynamic Shoot (Tier 1), Podcast / Sitdown Shoot (Tier 2), or event — so we ask exactly the right questions. Rather talk? Drop a voice note instead.</span></div>
     <div class="fsec">📍 Live pipeline</div>
     <div class="frow2"><span class="fi">📍</span><span><b>Watch every project move</b> across 6 stages in real time — automatic updates in your chat when things enter editing, hit review, or get delivered.</span></div>
     <div class="frow2"><span class="fi">👀</span><span><b>“Since your last visit” recap</b> — open your hub after a few days and it catches you up instantly. Confetti when finals land. 🎉</span></div>
@@ -1813,7 +1812,7 @@ function calPageFor(x, label){
     (typeof SVC !== 'undefined' && SVC || []).forEach(function(s0){ if(!hit && s0 && s0.u && s0.n && t.indexOf(String(s0.n).toLowerCase()) > -1) hit = s0.u; });
     if(hit) return hit;
     var sl = /head\s?shot/.test(t) ? '30min' : /you\s*shoot/.test(t) ? 'you-shoot-we-edit' : /project tour|pre-?con/.test(t) ? 'project-tour-reel' :
-      /podcast|teleprompter|tier 2/.test(t) ? 'podcast-teleprompter' : /dynamic|tier 1/.test(t) ? 'dynamic-shoot' :
+      /podcast|sit\s?-?down|teleprompter|tier 2/.test(t) ? 'podcast-teleprompter' : /dynamic|tier 1/.test(t) ? 'dynamic-shoot' :
       /event|recap/.test(t) ? (/photo/.test(t) && !/video/.test(t) ? 'event-recap-package-photo-coverage-2-hours' : /video/.test(t) && !/photo/.test(t) ? 'event-recap-package-video-coverage-2-hours' : 'event-recap') :
       /luxury|property film/.test(t) ? 'luxury-property-film-package' : /photo/.test(t) && /video|package|bundle/.test(t) ? 'professional-listing-video-photo-package' :
       /listing|property/.test(t) ? (/video|walkthrough/.test(t) ? 'listing-video' : /photo/.test(t) ? 'essential-listing-photos-20-hdr-clone' : '') : '';
@@ -3086,7 +3085,7 @@ var BRIEF_TYPES = {
     {k:'refs', l:'Vibe & references', i:'✨', ph:'Paste links to reels whose feel you love'},
     {k:'props', l:'Props / extras', i:'🎒', ph:'Car, coffee, signage, SOLD rider…'},
     {k:'notes', l:'Notes for the crew', i:'📝', ta:true, ph:'Anything else we should know.'} ] },
-  teleprompter: { icon:'🎤', label:'Teleprompter · Tier 2', fields:[
+  teleprompter: { icon:'🎤', label:'Podcast / Sitdown Shoot · Tier 2', fields:[
     {k:'loc', l:'Location', i:'📍', ph:'Where are we filming?'},
     {k:'script', l:'Script', i:'🎬', ta:true, ph:'Paste your script here — or note it’s ready in the Script tool / ask us to draft it'},
     {k:'wardrobe', l:'Wardrobe / looks', i:'👔', ph:'What you’ll be wearing'},
@@ -3110,8 +3109,8 @@ var BRIEF_TYPES = {
 var BF_TYPE = 'listing';
 function guessType(name){
   var n = (name || '').toLowerCase();
-  // Nov 2026 price list: Podcast / Teleprompter is Tier 2, Dynamic Shoot is Tier 1; a Project Tour Reel (pre-con) is filmed on location
-  if(/teleprompt|podcast|talking|piece to camera|\bptc\b|\bvsl\b|scripted|\btier\s*2\b/.test(n)) return 'teleprompter';
+  // Nov 2026 price list: Podcast / Sitdown Shoot (was Podcast / Teleprompter) is Tier 2, Dynamic Shoot is Tier 1; a Project Tour Reel (pre-con) is filmed on location
+  if(/teleprompt|podcast|sit\s?-?down|talking|piece to camera|\bptc\b|\bvsl\b|scripted|\btier\s*2\b/.test(n)) return 'teleprompter';
   if(/\btier\s*1\b|project tour|pre-?con/.test(n)) return 'dynamic';
   if(/open house|\bevent\b|recap|gala|party|launch|seminar|mixer|ribbon/.test(n)) return 'event';
   if(/reel|dynamic|social|b-?roll|lifestyle|personal brand|branding|content day/.test(n)) return 'dynamic';
@@ -6344,7 +6343,7 @@ window.OneSignalDeferred.push(async function(OneSignal){
   };
 })();
 /*END-KIT-JS*/
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-30</div></div><script>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:26px auto 0;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;user-select:none">HUB v2026.11.16-31</div></div><script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
   var el = document.getElementById('verstamp'); if(!el) return;
