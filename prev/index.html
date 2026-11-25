@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-31) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-32) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -2435,7 +2435,11 @@ function finalRefOf(d) {
   };
   const isFile = u => /\/file\/d\//.test(String(u || '')),
     isFold = u => /\/drive\/(?:u\/\d+\/)?folders\//.test(String(u || ''));
-  const first = String(d.approved && d.approved.src || '').split(d.pvFolder && d.dlvFolder ? d.pvFolder : '\u0000').join(d.dlvFolder || '').split(',').map(p => p.trim()).filter(p => /drive\.google|docs\.google/.test(p))[0] || '';
+  const pvm = { ...(d.pvMap || {}) }; if (d.pvFolder && d.dlvFolder && !pvm[d.pvFolder]) pvm[d.pvFolder] = d.pvFor || d.dlvFolder;
+  let asrc = String(d.approved && d.approved.src || ''), swapped = false; Object.keys(pvm).forEach(k => { if (k && pvm[k] && asrc.indexOf(k) > -1) { asrc = asrc.split(k).join(pvm[k]); swapped = true; } });
+  const nVers = (d.reviewVersions || []).length, older = !!(d.approved && d.approved.ver && nVers > d.approved.ver);
+  if (older && !swapped && (d.pvFolder || Object.keys(pvm).length)) return {};
+  const first = asrc.split(',').map(p => p.trim()).filter(p => /drive\.google|docs\.google/.test(p))[0] || '';
   if (first && isFile(first)) return {
     af: idOf(first)
   };
@@ -5869,6 +5873,7 @@ function AppInner({
               pvFolder: pvId,
               pvFolderUrl: pvUrl,
               pvFor: fol,
+              pvMap: { ...(d.pvMap || {}), [pvId]: fol },
               ...(lockPoster ? {
                 lockPoster
               } : {})
@@ -10617,6 +10622,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-32',
+  items: [['🔒', 'The web preview is never a download', 'After approval the review page now offers only the full-resolution files. Before, a Photo & Video piece also showed a folder button that opened the web preview, an older approved version linked to its preview, and Chrome\u2019s player menu had a Download item; all three are gone. In the hub, a piece approved on an earlier version no longer points at that version\u2019s preview folder.']]
+}, {
   v: '2026.11.16-31',
   items: [['📼', 'Web preview plays at full length everywhere', 'A one-minute reel showed as about 20 seconds on the review page. The recording itself was complete, but Chrome saves it as a chain of short pieces that not every player follows to the end (Safari on Mac and iPhone is the likely one). Every web preview is now saved as an ordinary MP4 with its true length written in, and the Command Centre checks the length against the original before uploading it (one automatic retry; if it is still short, the review plays the originals instead). Previews made before this update need the video uploaded again.']]
 }, {
@@ -18973,7 +18981,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-31</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-32</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
