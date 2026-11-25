@@ -70,7 +70,7 @@
 .hscut{position:relative;align-self:end;width:clamp(230px,29vw,350px);margin:0}
 .hscut::before{content:'';position:absolute;left:50%;bottom:4%;width:158%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(234,0,42,.5),rgba(234,0,42,.2) 52%,rgba(234,0,42,0) 76%)}
 .hscut img{position:relative;display:block;width:100%;height:auto;-webkit-mask-image:linear-gradient(180deg,#000 80%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 80%,rgba(0,0,0,0) 100%)}
-#headshots{overflow:hidden}
+#headshots{overflow:hidden}.hsstage{--u:clamp(96px,17.5vw,252px);display:flex;justify-content:center;align-items:flex-end;margin:30px auto 0;position:relative}.hsc{position:relative;margin:0;flex:none}.hsc::before{content:"";position:absolute;left:50%;bottom:14%;width:150%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(234,0,42,.42),rgba(234,0,42,.16) 52%,rgba(234,0,42,0) 76%);z-index:-1}.hsc img{display:block;width:100%;height:auto;-webkit-mask-image:linear-gradient(180deg,#000 84%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 84%,rgba(0,0,0,0) 100%)}.hsc-m{width:var(--u);z-index:1}.hsc-s{width:calc(var(--u)*1.33);z-index:2;margin:0 calc(var(--u)*-.1)}.hsc-l{width:calc(var(--u)*1.49);height:calc(var(--u)*1.997);z-index:1}.hsc-l .clip{display:block;height:100%;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 82%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(180deg,#000 82%,rgba(0,0,0,0) 100%)}.hsc-l .clip img{-webkit-mask-image:none;mask-image:none}.hsc .hsn{left:50%;transform:translateX(-50%);bottom:6%}.hsrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(8px,2vw,20px);max-width:800px;margin:clamp(18px,3vw,30px) auto 0}@media(max-width:700px){.hsstage{--u:27vw;margin-top:22px}.hsc .hsn{bottom:4%;font-size:.66rem;padding:4px 8px}}
 .hshead + .hsgrid{margin-top:0}
 @media(max-width:700px){.hshead{grid-template-columns:1fr;justify-items:start}.hscut{justify-self:center;width:min(64vw,260px)}.hstxt{padding-bottom:0}}
 .hsgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(10px,2vw,20px);margin-top:28px}
@@ -303,15 +303,16 @@
       <p class="sub">For your signs, your listings, your profile and your business card. An individual session, retouched and delivered to your hub.</p>
       <div class="acts"><a class="btn pri" href="https://calendly.com/hello-reelestatemedia/30min" target="_blank" rel="noopener">📅 Book headshots</a><a class="btn sec" href="headshots.html">About headshots</a></div>
     </div>
-    <figure class="hscut"><img src="media/headshot-cutout.webp?m=6" alt="Lavinia Ambrus, studio headshot by Reel Estate Media" width="653" height="1000" decoding="async"><figcaption class="hsn">Lavinia Ambrus</figcaption></figure>
   </div>
-  <div class="hsgrid">
-    <figure class="hs"><img src="media/headshot-1.jpg?m=8" alt="Saad Iqbal, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="900" height="1125"><figcaption class="hsn">Saad Iqbal</figcaption></figure>
+  <div class="hsstage">
+    <figure class="hsc hsc-m"><img src="media/headshot-cutout-2.webp?m=8" alt="Mariam Riyal, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="651" height="1300"><figcaption class="hsn">Mariam Riyal</figcaption></figure>
+    <figure class="hsc hsc-s"><img src="media/headshot-cutout-3.webp?m=1" alt="Saad Iqbal, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="866" height="1302"><figcaption class="hsn">Saad Iqbal</figcaption></figure>
+    <figure class="hsc hsc-l"><span class="clip"><img src="media/headshot-cutout.webp?m=6" alt="Lavinia Ambrus, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="653" height="1000"></span><figcaption class="hsn">Lavinia Ambrus</figcaption></figure>
+  </div>
+  <div class="hsrow">
     <figure class="hs"><img src="media/headshot-6.jpg?m=8" alt="Tahir Sheikh, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="900" height="1125"><figcaption class="hsn">Tahir Sheikh</figcaption></figure>
     <figure class="hs"><img src="media/headshot-5.jpg?m=8" alt="Mubina Qazi, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="900" height="1125"><figcaption class="hsn">Mubina Qazi</figcaption></figure>
     <figure class="hs"><img src="media/headshot-3.jpg?m=8" alt="Humza Khan, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="900" height="1125"><figcaption class="hsn">Humza Khan</figcaption></figure>
-    <figure class="hscut3"><span class="clip"><img src="media/headshot-cutout.webp?m=6" alt="Lavinia Ambrus, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="653" height="1000"></span><figcaption class="hsn">Lavinia Ambrus</figcaption></figure>
-    <figure class="hscut2"><img src="media/headshot-cutout-2.webp?m=8" alt="Mariam Riyal, studio headshot by Reel Estate Media" loading="lazy" decoding="async" width="651" height="1300"><figcaption class="hsn">Mariam Riyal</figcaption></figure>
   </div>
 </div></section>
 
