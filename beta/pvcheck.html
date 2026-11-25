@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>Preview length check</title>
+<style>body{font:14px/1.5 system-ui;background:#111;color:#eee;padding:20px}button{font:inherit;padding:14px 22px;border-radius:10px;border:1px solid #555;background:#222;color:#fff;cursor:pointer}pre{white-space:pre-wrap;background:#000;padding:12px;border-radius:8px}</style></head><body>
+<h3>Web preview length check (internal test page)</h3>
+<p>Makes a web preview of a one-minute test reel, then checks how long the result really is. Keep this tab in front while it runs.</p>
+<button id="go">Run the check</button> <button id="go2">Run (short clip)</button><pre id="out">ready</pre>
+<script src="pvcheck-maker.js"></script><script src="pvcheck-flat.js"></script>
+<script>
+window.__vis = []; document.addEventListener('visibilitychange', () => window.__vis.push([Math.round(performance.now() / 1000), document.visibilityState]));
+const log = t => { document.getElementById('out').textContent = t; };
+async function chromeDur(blob, seekTo) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; const u = URL.createObjectURL(blob); v.src = u;
+  try { await new Promise((r, j) => { v.onloadedmetadata = r; v.onerror = () => j(new Error('cannot open')); setTimeout(() => j(new Error('timeout')), 15000); });
+    const d = v.duration; let seekOk = null, at = null;
+    if (seekTo) { seekOk = await new Promise(r => { const t = setTimeout(() => r(false), 6000); v.onseeked = () => { clearTimeout(t); r(true); }; v.currentTime = seekTo; }); at = Math.round(v.currentTime * 10) / 10; }
+    return { duration: isFinite(d) ? Math.round(d * 100) / 100 : String(d), seekOk, at, w: v.videoWidth, h: v.videoHeight };
+  } catch (e) { return { error: String(e.message) }; } finally { try { v.removeAttribute('src'); v.load(); } catch (e) {} URL.revokeObjectURL(u); } }
+async function rawFacts(blob) { const rd = async (a, b) => new DataView(await blob.slice(a, b).arrayBuffer()); const fcc = (d, o) => String.fromCharCode(d.getUint8(o), d.getUint8(o + 1), d.getUint8(o + 2), d.getUint8(o + 3));
+  const top = []; let moov = null; for (let o = 0; o + 8 <= blob.size;) { const h = await rd(o, Math.min(blob.size, o + 16)); let z = h.getUint32(0); const t = fcc(h, 4); if (z === 1) z = h.getUint32(8) * 4294967296 + h.getUint32(12); if (z < 8) break; top.push([t, z]); if (t === 'moov') moov = [o, z]; o += z; }
+  const out = { kb: Math.round(blob.size / 1024), order: top.slice(0, 4).map(x => x[0]).join(' ') + ' … ' + top.slice(-2).map(x => x[0]).join(' '), moof: top.filter(x => x[0] === 'moof').length, mfra: top.some(x => x[0] === 'mfra'), tkhdSecs: [], mehd: false };
+  if (moov) { const d = await rd(moov[0], moov[0] + moov[1]); const walk = (s, e, dep) => { let o = s; while (o + 8 <= e) { const z = d.getUint32(o), t = fcc(d, o + 4); if (z < 8) break;
+        if (t === 'mvhd') { const v = d.getUint8(o + 8); out.mvhdTs = d.getUint32(o + 8 + (v ? 20 : 12)); out.mvhdDur = v ? d.getUint32(o + 8 + 28) : d.getUint32(o + 8 + 16); }
+        if (t === 'tkhd') { const v = d.getUint8(o + 8); out.tkhdSecs.push(v ? d.getUint32(o + 8 + 32) : d.getUint32(o + 8 + 20)); }
+        if (t === 'mehd') out.mehd = true;
+        if (t === 'trak' || t === 'mvex' || t === 'edts') { if (t === 'edts') out.edts = true; walk(o + 8, o + z, dep + 1); }
+        o += z; } }; walk(8, moov[1], 0); if (out.mvhdTs) out.tkhdSecs = out.tkhdSecs.map(x => Math.round(x / out.mvhdTs * 100) / 100); }
+  return out; }
+async function run(src) { if (window.__busy) return; window.__busy = true; window.__done = null; const t0 = performance.now(); log('working… keep this tab in front');
+  const r = { src, ua: navigator.userAgent.replace(/^.*(Chrome\/[\d.]+).*$/, '$1'), mac: /Mac/.test(navigator.platform) };
+  try { const blob = await (await fetch(src)).blob(); const file = new File([blob], 'check.mp4', { type: 'video/mp4' });
+    const o = await makeWebPreview(file, p => { if (p % 10 === 0) log('recording… ' + p + '%'); }, { cancelled: false }, { pin: true });
+    r.type = o.file.type; r.srcSecs = Math.round(o.dur * 10) / 10; r.makeSecs = Math.round((performance.now() - t0) / 100) / 10; r.sync = window.__mwpSync || null;
+    r.raw = await rawFacts(o.file); r.rawInChrome = await chromeDur(o.file, 50);
+    try { const f = await mwpFlatten(o.file); r.flat = { kb: Math.round(f.blob.size / 1024), dur: Math.round(f.dur * 100) / 100, vDur: Math.round(f.vDur * 100) / 100, aDur: Math.round(f.aDur * 100) / 100, frags: f.frags, tracks: f.info.tracks };
+      r.flatFacts = await rawFacts(f.blob); r.flatInChrome = await chromeDur(f.blob, 50); window.__flat = f.blob; } catch (e) { r.flatError = String(e && e.message || e); }
+    window.__raw = o.file;
+  } catch (e) { r.error = String(e && e.message || e); r.needsTap = !!(e && e.needsTap); }
+  r.vis = window.__vis; window.__done = r; window.__busy = false; log(JSON.stringify(r, null, 1)); }
+document.getElementById('go').onclick = () => run('/media/reel-feat.mp4');
+document.getElementById('go2').onclick = () => run('synctest-30.mp4');
+</script></body></html>
