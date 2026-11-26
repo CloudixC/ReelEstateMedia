@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-34) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-35) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -5241,6 +5241,71 @@ function AppInner({
     return true;
   };
   window.__revRelink = revRelink;
+  /* 🔒 Hold finished files until the order is paid. The lock already existed for reviews sent out locked; this makes it work
+     on a piece at any stage, also one that is delivered and approved:
+     · revAdopt: a review link made before the lock existed has no saved copy of its own contents here, so it is read back
+       from the server (the same lookup the review page does) and can then be swapped for the locked version;
+     · holdPiece: sets the switch, swaps the review link, and re-sends the hub (which stops offering the files, see pushHub);
+     · holdOrder: the same for every piece of an order. Marking the order Paid opens everything again by itself. */
+  const revAdopt = dlId => {
+    const db0 = dbRef.current, d = db0.deliverables.find(x => x.id === dlId);
+    if (!d || d.reviewQsFull && d.reviewCode || !db0.settings.inboxUrl) return Promise.resolve(false);
+    const code = (String(d.reviewUrl || '').match(/[?&]x=([a-z0-9]+)/) || [])[1];
+    if (!code) return Promise.resolve(false);
+    return fetch(db0.settings.inboxUrl + '?link=' + encodeURIComponent(code) + '&_=' + Date.now()).then(r => r.json()).then(j => {
+      if (!j || !j.ok || !j.qs || new URLSearchParams(j.qs).get('lock') === '1') return false;
+      setDb(p => ({
+        ...p,
+        deliverables: p.deliverables.map(x => x.id === dlId ? {
+          ...x,
+          reviewQsFull: j.qs,
+          reviewCode: code
+        } : x)
+      }));
+      return true;
+    }).catch(() => false);
+  };
+  const holdPiece = (dlId, on, quiet) => {
+    setDb(p => ({
+      ...p,
+      deliverables: p.deliverables.map(x => x.id === dlId ? {
+        ...x,
+        payLock: !!on
+      } : x)
+    }));
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    return wait(300).then(() => revAdopt(dlId)).then(() => wait(900)).then(() => {
+      let did = false;
+      try {
+        did = revRelink(dlId);
+      } catch (e) {}
+      const db1 = dbRef.current, d = db1.deliverables.find(x => x.id === dlId) || {}, o = db1.orders.find(x => x.id === d.orderId) || {}, c = db1.clients.find(x => x.id === o.clientId) || {};
+      const live = lockOnFor(d, o, c), linkOpen = !!(live && d.reviewUrl && !d.reviewLocked && !did);
+      if (!did && c.id) setTimeout(() => pushHub(c.id), 600);
+      if (!quiet && linkOpen) showToast('🔒 Held in their hub. The review link for this piece is an older kind that could not be locked: tap 🎬 Review room to send a fresh one.');
+      return {
+        live,
+        linkOpen
+      };
+    });
+  };
+  window.__holdPiece = holdPiece;
+  const holdOrder = (orderId, on) => {
+    const ids = dbRef.current.deliverables.filter(x => x.orderId === orderId).map(x => x.id);
+    let open = 0;
+    return ids.reduce((p, dlId) => p.then(() => holdPiece(dlId, on, true)).then(r => {
+      if (r && r.linkOpen) open++;
+    }), Promise.resolve()).then(() => {
+      const o = dbRef.current.orders.find(x => x.id === orderId) || {};
+      logActivity((on ? '🔒 Files held until paid: ' : '🔓 Files released: ') + (o.project || 'order') + ' (' + ids.length + ' piece' + (ids.length === 1 ? '' : 's') + ')');
+      if (o.clientId) setTimeout(() => pushHub(o.clientId), 900);
+      return {
+        n: ids.length,
+        open
+      };
+    });
+  };
+  window.__holdOrder = holdOrder;
   const pushHub = (clientId, skipCo) => {
     try {
       const db = dbRef.current;
@@ -5307,7 +5372,7 @@ function AppInner({
           amt: owing ? Math.round(myTotal * 100) / 100 : 0,
           url: d.reviewUrl || '',
           dt: d.deliveredDate || d.reviewDate || d.shootDate || '',
-          ...(d.reviewLocked && lockOnFor(d, o, db.clients.find(x => x.id === o.clientId) || c) ? {
+          ...((d.reviewLocked || d.payLock === true) && lockOnFor(d, o, db.clients.find(x => x.id === o.clientId) || c) ? {
             pl: 1,
             ...(d.lockPoster ? {
               th: d.lockPoster
@@ -10676,6 +10741,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-35',
+  items: [['🔒', 'Hold files until paid, also after delivery', 'An unpaid order now has a \u201c🔒 Hold files until paid\u201d button beside Invoice. It stops offering every piece of that order: the review links show a still, the amount and your pay link, and the agent\u2019s hub holds the downloads back. It works on pieces that are already delivered and approved, and for Pinnacle agents too. Mark the order Paid and everything opens by itself. The switch on a single piece does the same for that piece. It cannot take back a file they already downloaded, and someone who saved the Drive folder link can still open it.']]
+}, {
   v: '2026.11.16-34',
   items: [['🎙', 'Tier 2 is now Podcast / Sitdown Shoot', 'The Tier 2 service is called Podcast / Sitdown Shoot here, in every hub, on the website and on Calendly. Anything already saved under the old name is renamed with it.'], ['💲', 'RE/MAX card is RE/MAX Skyway', 'The RE/MAX rate now applies to RE/MAX Skyway only (a direct client whose company includes Skyway). Another RE/MAX office is on the outside rate. Project Tour Reel is offered to Pinnacle and RE/MAX Skyway only, so it is left off every other hub and order menu.']]
 }, {
@@ -12994,7 +13062,35 @@ function OrderDetail({
       kind: 'order',
       orderId: id
     })
-  }, "🖨 Invoice"), React.createElement("button", {
+  }, "🖨 Invoice"), (() => {
+    const c0 = db.clients.find(c => c.id === o.clientId) || {},
+      mine = db.deliverables.filter(d => d.orderId === id);
+    if (!mine.length || o.payment === 'paid' || !(orderTotals(o).total > 0) || !window.__holdOrder) return null;
+    const held = mine.every(d => payLockWanted(d, c0));
+    return React.createElement("button", {
+      className: "btn ghost sm",
+      "data-holdorder": held ? 'on' : 'off',
+      style: {
+        alignSelf: 'flex-end',
+        ...(held ? {
+          borderColor: 'var(--amber)',
+          color: 'var(--amber)'
+        } : {})
+      },
+      title: held ? 'Every piece of this order is held until it is marked Paid: review links show the amount and your pay link, and their hub does not offer the files. Tap to release them now without marking it Paid.' : 'For an order that has not been paid: stop offering its files. Review links show a still, the amount and your pay link instead of the content, and their hub holds the downloads back. Works on pieces already delivered and approved. Marking the order Paid opens everything again.',
+      onClick: async () => {
+        const n = mine.length + ' piece' + (mine.length === 1 ? '' : 's');
+        const go = await uiConfirm(held ? 'Release the files on this order now, before it is paid?\n\n' + n + ': the review links open again and their hub offers the downloads.' : 'Hold the files on this order until it is paid?\n\n' + n + ': their review links show a still, the amount owing and your pay link instead of the content, and their hub stops offering the downloads. Mark the order Paid and everything opens by itself.\n\nThis cannot take back a file they already downloaded.', {
+          title: held ? 'Release files' : 'Hold files until paid',
+          ok: held ? '🔓 Release' : '🔒 Hold until paid',
+          cancel: 'Cancel'
+        });
+        if (!go) return;
+        const r = await window.__holdOrder(id, !held);
+        uiAlert(held ? '🔓 Released ' + n + '.' : '🔒 Held ' + n + ' until this order is marked Paid.' + (r && r.open ? '\n\n' + r.open + ' of them ha' + (r.open === 1 ? 's' : 've') + ' an older review link that could not be locked. Their hub is held; tap 🎬 Review room on those to send a fresh link.' : ''));
+      }
+    }, held ? '🔒 Held until paid' : '🔒 Hold files until paid');
+  })(), React.createElement("button", {
     className: "btn danger sm",
     style: {
       alignSelf: 'flex-end'
@@ -14294,7 +14390,7 @@ function DeliverableRow({
       marginTop: 10,
       cursor: 'pointer'
     },
-    title: "While the order is unpaid, their review link shows a watermarked still, the amount and your pay link instead of the content — and their hub holds back the files. Mark the order Paid and it opens by itself."
+    title: "Works at any stage, also after it is delivered and approved. While the order is unpaid, their review link shows a watermarked still, the amount and your pay link instead of the content, and their hub stops offering the files. Mark the order Paid and it opens by itself."
   }, React.createElement("input", {
     type: "checkbox",
     style: {
@@ -14303,16 +14399,13 @@ function DeliverableRow({
     },
     checked: payLockWanted(d, client),
     onChange: e => {
-      updateDeliverable(d.id, {
+      if (window.__holdPiece) window.__holdPiece(d.id, e.target.checked);else updateDeliverable(d.id, {
         payLock: e.target.checked
       });
-      setTimeout(() => {
-        if (window.__revRelink && !window.__revRelink(d.id) && e.target.checked && !d.reviewQsFull && d.reviewUrl) showToast('🔒 Locks from the next time you tap 🎬 Review room');
-      }, 1200);
     }
-  }), React.createElement("span", null, "🔒 Lock the review until paid ", React.createElement("span", {
+  }), React.createElement("span", null, "🔒 Hold this piece until paid ", React.createElement("span", {
     className: "faint"
-  }, !payLockWanted(d, client) ? isPinnacle(client) ? '· off for Pinnacle agents unless you tick it' : client && (client.tier === 'unlimited' || client.tier === 'package') && d.payLock !== false ? '· off for monthly-plan clients unless you tick it' : '· off for this piece' : order.payment === 'paid' ? '· order paid — open' : !(orderTotals(order).total > 0) ? '· nothing owing on this order' : d.reviewLocked ? '· locked now — opens when you mark the order Paid' : '· they see a still + the amount until you mark the order Paid'))), React.createElement("div", {
+  }, !payLockWanted(d, client) ? isPinnacle(client) ? '· off for Pinnacle agents unless you tick it' : client && (client.tier === 'unlimited' || client.tier === 'package') && d.payLock !== false ? '· off for monthly-plan clients unless you tick it' : '· off for this piece' : order.payment === 'paid' ? '· order paid — open' : !(orderTotals(order).total > 0) ? '· nothing owing on this order' : d.reviewLocked ? '· held now · opens when you mark the order Paid' : d.payLock === true ? '· held in their hub now · opens when you mark the order Paid' : '· they see a still + the amount until you mark the order Paid'))), React.createElement("div", {
     className: "flex",
     style: {
       gap: 6,
@@ -19049,7 +19142,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-34</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-35</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
