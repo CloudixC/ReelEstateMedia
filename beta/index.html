@@ -485,7 +485,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-35) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-36) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -2467,6 +2467,31 @@ function approvedVerOf(body, nVers) {
    the high-quality download once approved. Anything else (a pasted link, a mixed photo+video batch) works as before. */
 const revUsesPv = d => !!(d && d.pvFolderUrl && d.pvFor && d.pvFor === d.dlvFolder && String(d.link || '').trim() === String(d.dlvFolderUrl || '').trim());
 const revSrcsOf = d => [revUsesPv(d) ? d.pvFolderUrl : String(d.link || '').trim(), mediaOf(d) === 'both' ? String(d.linkVideo || '').trim() : ''].filter(Boolean);
+/* 🎞 One version = one delivery folder. A delivery folder and the web-preview folder made for it are the same cut, so they share ONE
+   slot in the review's version list, and whichever the review should play right now (entry) holds that slot. Before, a review link
+   made while the preview was still recording (or before the piece had one) listed the folder itself as V1, and the preview then
+   landed as V2: the agent saw two versions and V1 played the clean full-quality file.
+   revHomeOf = the delivery folder a link belongs to (a preview folder points home through pvMap). */
+const revHomeOf = (d, u) => {
+  const id = (String(u || '').split(',')[0].match(/\/(?:folders|file\/d)\/([-\w]{20,})/) || [])[1] || '';
+  const pm = { ...(d && d.pvMap || {}) };
+  if (d && d.pvFolder && d.pvFor) pm[d.pvFolder] = d.pvFor;
+  return pm[id] || id;
+};
+const revVersWith = (d, entry) => {
+  const h = revHomeOf(d, entry), out = [];
+  let placed = false;
+  (d.reviewVersions || []).forEach(v => {
+    if (v === entry || h && revHomeOf(d, v) === h) {
+      if (!placed) {
+        out.push(entry);
+        placed = true;
+      }
+    } else out.push(v);
+  });
+  if (!placed) out.push(entry);
+  return out;
+};
 const revHQOf = d => { const h = isVideoDl(d) ? String(d.linkHQ || '').trim() : ''; return h || (revUsesPv(d) ? String(d.dlvFolderUrl || '').trim() : ''); };
 /* 🔒 Lock the review until paid: wanted when the switch is on (default: on for direct clients outside Pinnacle; off for Pinnacle and
    for monthly-plan clients — package / unlimited — who are billed by statement), and only while
@@ -5241,6 +5266,60 @@ function AppInner({
     return true;
   };
   window.__revRelink = revRelink;
+  /* 🎞 Put a review link that is already out right, without sending a new one: same short link, same place in the list.
+     Only for a version the agent was already sent (its delivery folder is in the list): the slot is switched to what the review
+     should play now (the web preview once it exists) and a double entry for one folder is folded into one. A version they were
+     never sent is left alone; that still needs 🎬 Review room. */
+  const revHeal = only => {
+    const db0 = dbRef.current;
+    if (IS_BETA || !db0.settings.inboxUrl) return 0;
+    const fix = {};
+    let n = 0;
+    db0.deliverables.forEach(d => {
+      if (only && d.id !== only) return;
+      if (!d.reviewQsFull || !d.reviewCode || !(d.reviewVersions || []).length) return;
+      const entry = revSrcsOf(d).join(',');
+      const h = entry && revHomeOf(d, entry);
+      if (!h || !d.reviewVersions.some(v => revHomeOf(d, v) === h)) return;
+      const vers = revVersWith(d, entry),
+        hq = revHQOf(d);
+      if (JSON.stringify(vers) === JSON.stringify(d.reviewVersions) && (d.reviewHQ || '') === hq) return;
+      let qs = d.reviewQsFull.replace(/(^|&)v=[^&]*/, '$1v=' + vers.map(encodeURIComponent).join('|'));
+      qs = /(^|&)hq=/.test(qs) ? qs.replace(/(^|&)hq=[^&]*/, hq ? '$1hq=' + encodeURIComponent(hq) : '') : hq ? qs + '&hq=' + encodeURIComponent(hq) : qs;
+      const o = db0.orders.find(x => x.id === d.orderId) || {},
+        c = db0.clients.find(x => x.id === o.clientId) || {};
+      const lk = lockOnFor(d, o, c);
+      fetch(db0.settings.inboxUrl, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: 'link',
+          ref: d.reviewCode,
+          project: o.project || d.group,
+          who: 'app',
+          body: lk ? lockedQs(qs, d, o, d.reviewCode, db0.settings.payUrl || '') : qs
+        })
+      }).catch(() => {});
+      fix[d.id] = {
+        reviewVersions: vers,
+        reviewQsFull: qs,
+        reviewSig: entry,
+        reviewHQ: hq,
+        reviewLocked: lk
+      };
+      n++;
+      logActivity('🎞 Review link put right: ' + dlTitle(d) + ' is one version (' + vers.length + ' in all) and plays ' + (revUsesPv(d) ? 'the web preview' : 'its files'));
+      if (c.id) setTimeout(() => pushHub(c.id), 1500);
+    });
+    if (n) setDb(p => ({
+      ...p,
+      deliverables: p.deliverables.map(x => fix[x.id] ? {
+        ...x,
+        ...fix[x.id]
+      } : x)
+    }));
+    return n;
+  };
+  window.__revHeal = revHeal;
   /* 🔒 Hold finished files until the order is paid. The lock already existed for reviews sent out locked; this makes it work
      on a piece at any stage, also one that is delivered and approved:
      · revAdopt: a review link made before the lock existed has no saved copy of its own contents here, so it is read back
@@ -6047,6 +6126,11 @@ function AppInner({
       UPPANEL.finish(wasCancelled ? '✕ Upload cancelled. Files already at 100% are in the folder; the rest didn’t go up.' : '⚠ Upload stopped — ' + (err && err.message || 'error') + '. Tap 📦 to retry (same folder, nothing lost).', false);
     } finally {
       window.__upBusy = false;
+      setTimeout(() => {
+        try {
+          revHeal(dlId);
+        } catch (eH) {}
+      }, 2000);
     }
   };
   window.runDeliverUpload = runDeliverUpload;
@@ -6179,11 +6263,10 @@ function AppInner({
           const hqLink2 = revHQOf(cur);
           const oDe = db.orders.find(x => x.id === cur.orderId) || {};
           const de2 = dlSub(cur, oDe);
-          if (!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (cur.reviewHQ || '') === hqLink2 && (!isHeadshotDl(cur) || cur.reviewPick) && (cur.reviewDe || '') === de2)) {
+          if (!(cur.reviewUrl && cur.reviewUrl.indexOf('?x=') > -1 && cur.reviewSig === entry2 && (cur.reviewHQ || '') === hqLink2 && (!isHeadshotDl(cur) || cur.reviewPick) && (cur.reviewDe || '') === de2 && revVersWith(cur, entry2).length === (cur.reviewVersions || []).length)) {
             const o2 = db.orders.find(x => x.id === cur.orderId) || {};
             const c2 = db.clients.find(x => x.id === o2.clientId) || {};
-            const vers2 = [...(cur.reviewVersions || [])];
-            if (!vers2.includes(entry2)) vers2.push(entry2);
+            const vers2 = revVersWith(cur, entry2);
             const pin2 = isPinnacle(c2);
             const full2 = base2 + '?p=' + encodeURIComponent(o2.project || cur.group) + '&d=' + encodeURIComponent(dlTitle(cur)) + '&ty=' + encodeURIComponent(shootType(cur)) + (de2 ? '&de=' + encodeURIComponent(de2) : '') + '&n=' + encodeURIComponent((c2.name || '').split(' ')[0]) + '&t=' + (pin2 ? 'pin' : 'rem') + (getBrief(cur).orientation === 'Vertical' ? '&o=v' : '') + (mediaOf(cur) === 'both' ? '&m=both' : '') + (dueDateOf(cur) ? '&due=' + dueDateOf(cur) : '') + '&r=' + encodeURIComponent(cur.id) + '&e=' + encodeURIComponent(db.settings.inboxUrl) + '&v=' + vers2.map(encodeURIComponent).join('|') + (hqLink2 ? '&hq=' + encodeURIComponent(hqLink2) : '') + pickParams(cur) + (db.settings.driveApiKey ? '&k=' + encodeURIComponent(db.settings.driveApiKey) : '') + (c2 && (c2.hubKey || c2.hubId) ? '&hk=' + encodeURIComponent(c2.hubKey || c2.hubId) + '&an=' + encodeURIComponent(c2.name || '') : '');
             const code2 = ((cur.reviewUrl || '').match(/[?&]x=([a-z0-9]+)/) || [])[1] || Math.random().toString(36).slice(2, 9);
@@ -6606,6 +6689,17 @@ function AppInner({
     return ids.length;
   };
   window.__pushAllHubs = pushAllHubs;
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (!window.__bootDone) return;
+      clearInterval(iv);
+      try {
+        const n = revHeal();
+        if (n) showToast('🎞 ' + n + ' review link' + (n === 1 ? '' : 's') + ' put right: the full-quality upload and its web preview were showing as two versions.');
+      } catch (eH) {}
+    }, window.__HUBS_MS || 5000);
+    return () => clearInterval(iv);
+  }, []);
   useEffect(() => {
     if (!db.settings.inboxUrl || db.settings.hubsRev === HUBS_REV) return;
     const iv = setInterval(() => {
@@ -10741,6 +10835,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-36',
+  items: [['🎞', 'An upload is one version, not two', 'If a piece was sent to review before its web preview had finished (or before it had one), the review showed the full-quality files as V1 and the web preview as V2. A delivery and its web preview now always share one version, and the review plays the preview. Links already out are put right by themselves, on the same link: after the upload finishes, and once when the Command Centre opens.']]
+}, {
   v: '2026.11.16-35',
   items: [['🔒', 'Hold files until paid, also after delivery', 'An unpaid order now has a \u201c🔒 Hold files until paid\u201d button beside Invoice. It stops offering every piece of that order: the review links show a still, the amount and your pay link, and the agent\u2019s hub holds the downloads back. It works on pieces that are already delivered and approved, and for Pinnacle agents too. Mark the order Paid and everything opens by itself. The switch on a single piece does the same for that piece. It cannot take back a file they already downloaded, and someone who saved the Drive folder link can still open it.']]
 }, {
@@ -14523,14 +14620,13 @@ function DeliverableRow({
         }
       }
       const hqLink = revHQOf(d);
-      if (!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (d.reviewHQ || '') === hqLink && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client) && (d.reviewDe || '') === dlSub(d, order)) {
+      if (!approveExtra && d.reviewUrl && d.reviewUrl.indexOf('?x=') > -1 && d.reviewSig === entry && (d.reviewHQ || '') === hqLink && (!isHeadshotDl(d) || d.reviewPick) && d.reviewPin === isPinnacle(client) && (d.reviewDe || '') === dlSub(d, order) && revVersWith(d, entry).length === (d.reviewVersions || []).length) {
         copyText(reviewShareText(d, order, client, d.reviewUrl));
         window.open(d.reviewUrl, '_blank');
         showToast('🔗 Same versions — link copied with the project name, ready to paste');
         return;
       }
-      const vers = [...(d.reviewVersions || [])];
-      if (!vers.includes(entry)) vers.push(entry);
+      const vers = revVersWith(d, entry);
       if (/\/drive\/(?:u\/\d+\/)?folders\//.test(d.link) && !db.settings.driveApiKey) {
         const k = await uiPrompt('Optional, one-time: a Google Drive API key lets the review room show folder photos in a branded gallery with per-photo comments. Paste it here, or Cancel to use the plain folder view.\n\n(console.cloud.google.com → enable Drive API → Credentials → API key)');
         if (k && k.trim()) updateSettings({
@@ -19142,7 +19238,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-35</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-36</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
