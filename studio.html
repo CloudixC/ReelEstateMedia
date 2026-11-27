@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>/* a doubled slash in the address is put right before anything reads it */(function(){try{var p=location.pathname;if(/\/\//.test(p))history.replaceState(null,'',p.replace(/\/{2,}/g,'/')+location.search+location.hash);}catch(e){}})();</script>
 <!--REM-STAGE-SHIM--><script>
 /* 🧪 STAGING + FALLBACK
    /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
@@ -485,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-37) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-38) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -2015,6 +2016,19 @@ function migrate(d) {
     if (!d.settings.emailMap) d.settings.emailMap = {};
     if (!d.settings.eventMap) d.settings.eventMap = {};
     if (d.settings.briefFormUrl === 'https://cloudixc.github.io/brief-form.html') d.settings.briefFormUrl = 'https://cloudixc.github.io/ReelEstateMedia/brief-form.html';
+    {
+      /* 🔗 "https://site//review.html" opens, but the page then rebuilds its own address from the path and a path that starts
+         with two slashes is read as a server name ("https://review.html"). One slash, here and on links already made. */
+      const one = u => typeof u === 'string' ? u.replace(/^(https?:\/\/[^\/]+)\/{2,}/, '$1/') : u;
+      ['reviewPageUrl', 'briefFormUrl'].forEach(k => {
+        if (d.settings[k]) d.settings[k] = one(d.settings[k]);
+      });
+      if (d.deliverables) d.deliverables = d.deliverables.map(x => x.reviewUrl && one(x.reviewUrl) !== x.reviewUrl || x.formUrl && one(x.formUrl) !== x.formUrl ? {
+        ...x,
+        ...(x.reviewUrl ? { reviewUrl: one(x.reviewUrl) } : {}),
+        ...(x.formUrl ? { formUrl: one(x.formUrl) } : {})
+      } : x);
+    }
     if (!d.pendingBookings) d.pendingBookings = [];
     if (!d.importedIds) d.importedIds = [];
     if (!d.activity) d.activity = [];
@@ -4485,10 +4499,10 @@ function AppInner({
   useEffect(() => {
     try {
       if (/\/(beta|prev)\//.test(location.pathname) || /^(localhost|127\.)/.test(location.hostname)) return;
-      const base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+      const base = location.origin + location.pathname.replace(/\/{2,}/g, '/').replace(/[^\/]*$/, '');
       const fix = u => {
         const m = String(u || '').match(/^https?:\/\/[^\/]+\/(?:.*\/)?([\w-]+\.html)$/);
-        return m && u.indexOf(base) !== 0 ? base + m[1] : u;
+        return m && (u.indexOf(base) !== 0 || /^https?:\/\/[^\/]+\/.*\/\//.test(u) || /^https?:\/\/[^\/]+\/\//.test(u)) ? base + m[1] : u;
       };
       const st = dbRef.current.settings;
       const patch = {};
@@ -10853,6 +10867,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-38',
+  items: [['🔗', 'Review links open again', 'A review or brief link could open “Safari can’t find the server”. The saved address of the review page had picked up a doubled slash. It is put right by itself, links already sent work again, and it can’t be saved that way any more.']]
+}, {
   v: '2026.11.16-37',
   items: [['🎬', 'One standard reel, Tier 1 is an upgrade', 'Dynamic Shoot and Podcast / Sitdown Shoot no longer carry a tier label, here, in every hub, on both websites and on Calendly. Anything already saved under the old names is renamed with them. For a longer or higher-quality reel add the new line Tier 1 Upgrade (per reel): $100 a reel on every rate card, billing only, so it makes no deliverable. Set its quantity to the number of reels being upgraded. The Luxury Property Film Package still includes its Tier 1 reel.']]
 }, {
@@ -19259,7 +19276,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-37</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-38</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){

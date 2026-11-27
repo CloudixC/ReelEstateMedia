@@ -1,4 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<script>/* a doubled slash in the address is put right before anything reads it */(function(){try{var p=location.pathname;if(/\/\//.test(p))history.replaceState(null,'',p.replace(/\/{2,}/g,'/')+location.search+location.hash);}catch(e){}})();</script>
 <!--REM-STAGE-SHIM--><script>
 /* 🧪 STAGING + FALLBACK
    /beta/  — the next version, tried against a COPY of this browser's data. It can read everything,
@@ -98,7 +99,7 @@
   fetch(RESOLVER + '?link=' + encodeURIComponent(x))
     .then(function(r){ return r.json(); })
     .then(function(j){
-      if(j.ok && j.qs) location.replace(location.pathname + '?' + j.qs);
+      if(j.ok && j.qs) location.replace(location.pathname.replace(/\/{2,}/g, '/') + '?' + j.qs);
       else splash('This review link looks expired or invalid — please ask for a fresh one.');
     })
     .catch(function(){ splash('Couldn’t load the review — check your connection and refresh.'); });
@@ -2086,7 +2087,7 @@ if(endpoint && ref){
       busy = false;
       if(j && j.ok && j.qs && new URLSearchParams(j.qs).get('lock') !== '1'){
         var f = document.getElementById('lkfine'); if(f) f.textContent = '🔓 Payment confirmed — opening…';
-        location.replace(location.pathname + '?' + j.qs);
+        location.replace(location.pathname.replace(/\/{2,}/g, '/') + '?' + j.qs);
       }
     }).catch(function(){ busy = false; });
   };
@@ -2106,4 +2107,4 @@ if(endpoint && ref){
     el.innerHTML = '<a href="' + base + 'hub.html' + qs + '">⌂ My hub</a><a href="' + base + 'vault.html' + qs + '">🗄 Library</a><a class="on" href="#" onclick="return false">👀 Review</a>';
   }catch(e){}
 })();
-</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-8</div></div></body></html>
+</script><div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="display:block;width:max-content;margin:30px auto 0;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.5);padding:3px 6px;user-select:none">REVIEW v2026.11.16-9</div></div></body></html>

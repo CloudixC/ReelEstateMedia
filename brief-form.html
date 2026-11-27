@@ -1,6 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shoot Brief</title>
+<script>/* a doubled slash in the address is put right before anything reads it */(function(){try{var p=location.pathname;if(/\/\//.test(p))history.replaceState(null,'',p.replace(/\/{2,}/g,'/')+location.search+location.hash);}catch(e){}})();</script>
 <script>
 (function(){
   var xs = new URLSearchParams(location.search);
@@ -15,7 +16,7 @@
   fetch(RESOLVER + '?link=' + encodeURIComponent(x))
     .then(function(r){ return r.json(); })
     .then(function(j){
-      if(j.ok && j.qs) location.replace(location.pathname + '?' + j.qs);
+      if(j.ok && j.qs) location.replace(location.pathname.replace(/\/{2,}/g, '/') + '?' + j.qs);
       else splash('This review link looks expired or invalid — please ask for a fresh one.');
     })
     .catch(function(){ splash('Couldn’t load the review — check your connection and refresh.'); });
