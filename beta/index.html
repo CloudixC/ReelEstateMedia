@@ -486,7 +486,7 @@
 <body>
 <div id="root"></div>
 <script>
-/* BUILT FILE (CMD v2026.11.16-38) — do not edit here. Source: index.src.html → node build.js */
+/* BUILT FILE (CMD v2026.11.16-39) — do not edit here. Source: index.src.html → node build.js */
 const {
   useState,
   useEffect,
@@ -1118,6 +1118,15 @@ function setCustomCatalog(list) {
 const STATUSES = ['Booked', 'Scheduled', 'Shot', 'Editing', 'Client Review', 'Changes', 'Review 2', 'Changes 2', 'Review 3', 'Delivered'];
 const REVIEW_STAGES = ['Client Review', 'Review 2', 'Review 3'];
 const isReviewStage = s => REVIEW_STAGES.includes(s);
+/* ✅ "Out for review" = the agent can be looking at it right now: the card is in a review stage, or it is still on an
+   in-flight card (Shot / Editing / Changes) but a review link was made for it. An approval or a comment counts for both.
+   revAfterStage: only what the agent did AFTER the card entered its current stage counts, so nothing from an earlier round
+   is applied again. revFinalsReady: there is something full-quality to hand over (a separate high-quality link, the delivery
+   folder that 📦 Upload fills, or for photos the link itself). */
+const revMs = v => { const n = new Date(v).getTime(); return isNaN(n) ? 0 : n; };
+const revOut = d => !!d && (isReviewStage(d.status) || ['Shot', 'Editing', 'Changes', 'Changes 2'].includes(d.status) && !!d.reviewUrl && (d.reviewVersions || []).length > 0);
+const revAfterStage = (d, t) => d.stAt ? revMs(t) > revMs(d.stAt) : !(d.reviewDate && revMs(t) < revMs(d.reviewDate + 'T00:00'));
+const revFinalsReady = d => !!(String(d.linkHQ || '').trim() || d.dlvFolder || mediaOf(d) === 'photo' && String(d.link || '').trim());
 const stClass = s => (s || '').toLowerCase().replace(/\s+/g, '-');
 const STATUS_LABEL = s => s === 'Booked' ? 'To Schedule' : s;
 const SCRIPT_STATES = ['Needed', 'Drafted', 'Approved', 'N/A'];
@@ -3188,7 +3197,7 @@ function SubmissionsInbox({
   useEffect(() => {
     if (!cfg) return;
     load();
-    const t = setInterval(load, 5 * 60 * 1000);
+    const t = setInterval(load, 2 * 60 * 1000);
     const onVis = () => {
       if (!document.hidden) load();
     };
@@ -6424,10 +6433,10 @@ function AppInner({
         });
         const sibs = db.deliverables.filter(x => x.orderId === cur.orderId);
         const packDone = sibs.length > 1 && sibs.every(x => x.id === id || x.status === 'Delivered');
-        showToast(`✓ ${dlTitle(cur)} delivered` + (packDone ? ' · 🔁 package complete — rebook offer waiting on Home' : ' · ✉ client message copied'), actions);
+        showToast((auto ? `✅ ${(c.name || 'Agent').split(' ')[0]} approved ${dlTitle(cur)} → Delivered` : `✓ ${dlTitle(cur)} delivered`) + (packDone ? ' · 🔁 package complete — rebook offer waiting on Home' : auto ? '' : ' · ✉ client message copied'), actions);
         const hk6 = c && (c.hubKey || c.hubId);
         if (hk6 && db.settings.inboxUrl && !cur.dlvMsgTs) {
-          const link6 = String(patch.dlvFolderUrl || cur.dlvFolderUrl || patch.link || cur.link || '').trim();
+          const link6 = lockOnFor(cur, o, c) ? '' : String(patch.dlvFolderUrl || cur.dlvFolderUrl || patch.link || cur.link || '').trim();
           fetch(db.settings.inboxUrl, {
             method: 'POST',
             body: JSON.stringify({
@@ -6677,11 +6686,12 @@ function AppInner({
   const applyFeedback = (dref, body, ts, who) => {
     if (!dref) return;
     const d = db.deliverables.find(x => x.id === dref);
-    if (!d || !isReviewStage(d.status)) return;
+    if (!d || !revOut(d)) return;
     if (d.changeReq && String(d.changeReq.ts || '') >= String(ts || '')) return;
+    if (!revAfterStage(d, ts)) return;
     const txt = String(body || '').trim();
     if (txt.length < 220 && /\b(all good|looks? (great|good|perfect)|love (it|them)|perfect|approved?|no changes|good to go|send (the )?finals?)\b/i.test(txt)) return;
-    const nxt = d.status === 'Client Review' ? 'Changes' : d.status === 'Review 2' ? 'Changes 2' : d.status;
+    const nxt = d.status === 'Client Review' ? 'Changes' : d.status === 'Review 2' ? 'Changes 2' : isReviewStage(d.status) || /^Changes/.test(d.status) ? d.status : 'Changes';
     setDb(p => ({
       ...p,
       deliverables: p.deliverables.map(x => x.id === dref ? {
@@ -6695,7 +6705,7 @@ function AppInner({
       } : x)
     }));
     logActivity('🔧 ' + (who || 'Agent') + ' requested changes on ' + dlTitle(d) + (nxt !== d.status ? ' → ' + nxt : ''));
-    showToast('🔧 ' + (who || 'Agent') + ' asked for changes on ' + dlTitle(d) + ' — card moved to ' + STATUS_LABEL(nxt));
+    showToast('🔧 ' + (who || 'Agent') + ' asked for changes on ' + dlTitle(d) + (nxt !== d.status ? ' — card moved to ' + STATUS_LABEL(nxt) : ' — new notes are on the card'));
   };
   const hubQueue = React.useRef(new Set());
   const queueHubPush = clientId => {
@@ -6786,6 +6796,19 @@ function AppInner({
       const c = cur0.clients.find(x => x.id === o.clientId);
       return c && (c.hubKey || c.hubId) && cur0.settings.inboxUrl ? c.id : '';
     };
+    const finalsReady = revFinalsReady(d);
+    const fresh = Date.now() - ms(t) < 14 * 86400000;
+    const oA = cur0.orders.find(x => x.id === d.orderId) || {};
+    const held = lockOnFor(d, oA, cur0.clients.find(x => x.id === oA.clientId) || {});
+    window.__autoDlv = window.__autoDlv || {};
+    const deliver = () => {
+      if (window.__autoDlv[dref]) return;
+      window.__autoDlv[dref] = 1;
+      setTimeout(() => updateDeliverableRef.current && updateDeliverableRef.current(dref, {
+        status: 'Delivered',
+        _auto: true
+      }), 400);
+    };
     if (known || d.status === 'Delivered') {
       if (ver && !(d.approved && d.approved.ver === ver && d.approved.src === src)) {
         setDb(p => ({
@@ -6794,23 +6817,78 @@ function AppInner({
         }));
         queueHubPush(cOf());
       }
+      /* approved earlier and still sitting there (its files were ready all along): deliver it now */
+      if (known && d.status !== 'Delivered' && revOut(d) && revAfterStage(d, t) && finalsReady && fresh && !held) deliver();
       return;
     }
-    if (!isReviewStage(d.status)) return;
-    if (d.stAt ? !(ms(t) > ms(d.stAt)) : d.reviewDate && ms(t) < ms(d.reviewDate + 'T00:00')) return;
-    const finalsReady = isVideoDl(d) ? !!String(d.linkHQ || '').trim() : !!(d.dlvFolder || String(d.link || '').trim());
+    if (!revOut(d)) return;
+    if (!revAfterStage(d, t)) return;
     setDb(p => ({
       ...p,
       deliverables: p.deliverables.map(x => x.id === dref ? stamp(x) : x)
     }));
     queueHubPush(cOf());
     logActivity('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (ver && vers.length > 1 ? ' (V' + ver + ')' : ''));
-    const fresh = Date.now() - ms(t) < 3 * 86400000;
-    if (finalsReady && fresh) setTimeout(() => updateDeliverableRef.current && updateDeliverableRef.current(dref, {
-      status: 'Delivered',
-      _auto: true
-    }), 400);else showToast('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (finalsReady ? ' — one tap to deliver' : ' — add the final and deliver') + ' (it\u2019s in your Needs-you queue)');
+    if (finalsReady && fresh && !held) deliver();else showToast('✅ ' + (who || 'Agent') + ' approved ' + dlTitle(d) + (held ? ' — held until paid, so not delivered yet' : finalsReady ? ' — one tap to deliver' : ' — add the final and deliver') + ' (it\u2019s in your Needs-you queue)');
   };
+  /* 📥 Approvals and comments are picked up on every screen, not only Home (which runs its own, fuller check). */
+  const applyFeedbackRef = React.useRef(null), applyApprovalRef = React.useRef(null), fbViewRef = React.useRef(view);
+  applyFeedbackRef.current = applyFeedback;
+  applyApprovalRef.current = applyApproval;
+  fbViewRef.current = view;
+  const fbWatch = React.useRef({
+    rows: [],
+    busy: false
+  });
+  const fbPoll = async () => {
+    const w = fbWatch.current, st = (dbRef.current || db).settings || {};
+    if (!st.inboxUrl || !st.inboxToken || w.busy || document.hidden || fbViewRef.current === 'dashboard') return 0;
+    w.busy = true;
+    let n = 0;
+    try {
+      const base = (window.__remRows || []).length > w.rows.length ? window.__remRows : w.rows;
+      const last = base.reduce((m, x) => Math.max(m, +String(x.id || '').replace(/^r/, '') || 0), 0);
+      const j = await fetch(st.inboxUrl + '?token=' + encodeURIComponent(st.inboxToken) + (last ? '&after=' + last : '')).then(r => r.json());
+      if (j && j.ok) {
+        let rows = j.rows || [];
+        if (j.partial && last) {
+          const seen = {};
+          base.forEach(x => {
+            seen[x.id] = 1;
+          });
+          rows = base.concat(rows.filter(x => !seen[x.id]));
+        }
+        w.rows = rows;
+        window.__remRows = rows;
+        const latest = {};
+        rows.forEach(r0 => {
+          if (r0.kind === 'feedback' && r0.ref) latest[r0.ref] = r0.id;
+        });
+        rows.forEach(r2 => {
+          if (r2.kind !== 'feedback' || !r2.ref) return;
+          n++;
+          if (String(r2.body || '').indexOf('\u2713 APPROVED') > -1 && latest[r2.ref] === r2.id) applyApprovalRef.current(r2.ref, r2.ts, r2.who, r2.body);else applyFeedbackRef.current(r2.ref, r2.body, r2.ts, r2.who);
+        });
+      }
+    } catch (e) {}
+    w.busy = false;
+    return n;
+  };
+  window.__fbPoll = fbPoll;
+  useEffect(() => {
+    const tick = () => {
+      if (window.__bootDone) fbPoll();
+    };
+    const iv = setInterval(tick, window.__FB_MS || 2 * 60 * 1000);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
   const applyAgentBrief = (dref, cc, ts, who) => {
     if (!dref || !cc || !ts) return;
     const d = db.deliverables.find(x => x.id === dref);
@@ -9370,7 +9448,7 @@ function staleReason(db, d, td) {
     when: due,
     age: dayDiff(due, td)
   };
-  if (d.approved && isReviewStage(d.status) && d.approved.ts && daysSince(String(d.approved.ts).slice(0, 10)) >= 7) return {
+  if (d.approved && revOut(d) && d.approved.ts && daysSince(String(d.approved.ts).slice(0, 10)) >= 7) return {
     why: 'approved ' + daysSince(String(d.approved.ts).slice(0, 10)) + ' days ago, never marked delivered',
     when: String(d.approved.ts).slice(0, 10),
     age: daysSince(String(d.approved.ts).slice(0, 10))
@@ -10867,6 +10945,9 @@ function pubIdOf(key) {
   return PUBIDS[key];
 }
 const WHATS_NEW = [{
+  v: '2026.11.16-39',
+  items: [['✅', 'Approved means Delivered', 'When an agent taps Approve on the review page, the piece moves to Delivered by itself and they get the delivered message. A comment moves it to Changes with their notes on the card. Before, a piece uploaded with 📦 stopped at “approved, one tap to deliver” because it had no separate high-quality link. It also works when the review link went out while the card was still in Editing, and on every screen, not only Home (checked every 2 minutes). A piece held until paid is not delivered until it is paid, and a comment from an earlier round no longer pushes the next round into Changes.']]
+}, {
   v: '2026.11.16-38',
   items: [['🔗', 'Review links open again', 'A review or brief link could open “Safari can’t find the server”. The saved address of the review page had picked up a doubled slash. It is put right by itself, links already sent work again, and it can’t be saved that way any more.']]
 }, {
@@ -11295,7 +11376,7 @@ function ActionQueue({
   const clOf = d => db.clients.find(c => c.id === ordOf(d).clientId) || {};
   const firstOf = c => (c && c.name || 'Client').split(' ')[0];
   const items = [];
-  db.deliverables.filter(d => d.approved && isReviewStage(d.status)).forEach(d => {
+  db.deliverables.filter(d => d.approved && revOut(d)).forEach(d => {
     items.push({
       pri: 0,
       icon: '✅',
@@ -19276,7 +19357,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   }catch(e){}
 })();
 </script>
-<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-38</div>
+<div id="verstamp" title="App version. If this isn't the newest, you're on a cached/old copy — hard-refresh with Cmd/Ctrl+Shift+R." style="position:fixed;bottom:4px;right:6px;z-index:2147483647;font:600 9.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.05em;color:rgba(150,150,150,.72);background:rgba(128,128,128,.15);padding:3px 6px;border-radius:5px;pointer-events:none;user-select:none">CMD v2026.11.16-39</div>
 <script>
 /* ✨ New-version banner — checks the server for a newer build of this page and offers a one-tap refresh */
 (function(){
