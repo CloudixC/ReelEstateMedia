@@ -343,7 +343,7 @@ body.selmode .tile .ck{display:grid}
 </head>
 <body>
 <div id="app"></div>
-<div id="verstamp" title="App version">VAULT v2026.11.18-3</div>
+<div id="verstamp" title="App version">VAULT v2026.11.18-4</div>
 <script>
 (function(){
   'use strict';
@@ -413,7 +413,17 @@ body.selmode .tile .ck{display:grid}
     });
     return best;
   }
-  function finalSource(d, media){
+  /* The agent reviews a small "web preview" copy kept in its own folder (pvFolder). A finished piece is shown from the
+     full-quality folder that preview was made from, never from the preview. */
+  function finalSource(d, media){ return fullQuality(d, pickSource(d, media)); }
+  function fullQuality(d, fs){
+    if(!fs.folder || !d.pvFolder || fs.folder!==d.pvFolder) return fs;
+    var hq=String(d.reviewHQ||'');
+    if(/\/file\/d\//.test(hq)) return {file:driveId(hq), folder:''};
+    var f=(isFolder(hq)?driveId(hq):'')||d.pvFor||d.dlvFolder||'';
+    return (f && f!==d.pvFolder) ? {file:'', folder:f} : fs;
+  }
+  function pickSource(d, media){
     var vers=d.reviewVersions||[];
     var src=(d.approved&&d.approved.src)||'';
     if(!src && APPR[d.id] && vers.length) src=vers[Math.min(APPR[d.id], vers.length)-1]||'';
@@ -483,7 +493,10 @@ body.selmode .tile .ck{display:grid}
   /* ---------------- Drive listings: cached locally, refreshed in the background ---------------- */
   var DRIVE_KEY='';
   var folderCache={}, AUDIT={};
-  function filesIn(folderId){
+  function filesIn(folderId){   // review copies never show in the Vault
+    return filesInAll(folderId).then(function(fs){ return (fs||[]).filter(function(f){ return !/web\s*preview/i.test(f.name||''); }); });
+  }
+  function filesInAll(folderId){
     if(!folderId) return Promise.resolve([]);
     if(folderCache[folderId]) return folderCache[folderId];
     var key=DRIVE_KEY, ck='vault_f2_'+folderId, cached=null;
